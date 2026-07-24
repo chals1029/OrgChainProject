@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">SSC seal placeholder</title>
+  <desc id="desc">Round Supreme Student Council seal placeholder using the SSC palette.</desc>
+  <circle cx="120" cy="120" r="112" fill="#FBE5C1" stroke="#6F735F" stroke-width="12"/>
+  <circle cx="120" cy="120" r="78" fill="#F7EBD7" stroke="#F49322" stroke-width="6"/>
+  <path d="M120 48 138 94 188 96 148 126 162 174 120 146 78 174 92 126 52 96 102 94Z" fill="#6BB2B3"/>
+  <text x="120" y="208" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#4F564C">SSC</text>
+</svg>

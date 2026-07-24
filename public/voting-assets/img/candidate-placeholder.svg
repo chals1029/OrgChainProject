@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Candidate pubmat placeholder</title>
+  <desc id="desc">Candidate publication material placeholder using the SSC palette.</desc>
+  <rect width="800" height="600" fill="#F7EBD7"/>
+  <rect x="40" y="40" width="720" height="520" rx="18" fill="#FBE5C1" stroke="#6F735F" stroke-width="10"/>
+  <circle cx="400" cy="225" r="82" fill="#6BB2B3"/>
+  <path d="M236 466c22-98 92-148 164-148s142 50 164 148" fill="#6BB2B3"/>
+  <text x="400" y="92" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#4F564C">CANDIDATE</text>
+  <text x="400" y="530" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#4F564C">Photo / Pubmat</text>
+</svg>
