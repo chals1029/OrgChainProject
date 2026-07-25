@@ -25,7 +25,14 @@ class Mailer
         return $this->sendEmail($to, $subject, $text, $html);
     }
 
-    public function sendVoteReceipt(string $to, array $voter, array $election, string $reference, string $submittedAt): bool
+    public function sendVoteReceipt(
+        string $to,
+        array $voter,
+        array $election,
+        string $reference,
+        string $submittedAt,
+        array $chain = []
+    ): bool
     {
         $appName = (string) voting_config('app_name', 'Supreme Student Council');
         $subject = $appName . ' official ballot receipt';
@@ -33,24 +40,63 @@ class Mailer
         $electionTitle = (string) ($election['title'] ?? 'Supreme Student Council Election');
         $submittedDisplay = date('F j, Y g:i A', strtotime($submittedAt) ?: time());
 
+        $blockHash = trim((string) ($chain['block_hash'] ?? ''));
+        $previousHash = trim((string) ($chain['previous_hash'] ?? ''));
+        $ballotRoot = trim((string) ($chain['ballot_root'] ?? ''));
+        $nodesConfirmed = (int) ($chain['nodes_confirmed'] ?? 0);
+
         $text = "Hello {$voterName},\n\n"
             . "Your official ballot for {$electionTitle} has been received.\n\n"
             . "Receipt reference: {$reference}\n"
-            . "Submitted: {$submittedDisplay}\n\n"
-            . "This receipt confirms that your ballot was successfully submitted and your voter record was marked as voted. It does not disclose your candidate selections.\n\n"
+            . "Submitted: {$submittedDisplay}\n";
+
+        if ($blockHash !== '') {
+            $text .= "\nBlockchain integrity seal\n"
+                . "Block hash: {$blockHash}\n";
+            if ($previousHash !== '') {
+                $text .= "Previous hash: {$previousHash}\n";
+            }
+            if ($ballotRoot !== '') {
+                $text .= "Ballot root: {$ballotRoot}\n";
+            }
+            if ($nodesConfirmed > 0) {
+                $text .= "Nodes confirmed: {$nodesConfirmed}/3\n";
+            }
+        }
+
+        $text .= "\nThis receipt confirms that your ballot was successfully submitted and your voter record was marked as voted. It does not disclose your candidate selections.\n\n"
             . "{$appName}";
+
+        $rows = $this->detailRow('Reference Code', $reference, true)
+            . $this->detailRow('Election', $electionTitle)
+            . $this->detailRow('Voter', $voterName)
+            . $this->detailRow('Submitted', $submittedDisplay);
+
+        if ($blockHash !== '') {
+            $rows .= $this->detailRow('Block Hash', $blockHash, false, true);
+            if ($previousHash !== '') {
+                $rows .= $this->detailRow('Previous Hash', $previousHash, false, true);
+            }
+            if ($ballotRoot !== '') {
+                $rows .= $this->detailRow('Ballot Root', $ballotRoot, false, true);
+            }
+            if ($nodesConfirmed > 0) {
+                $rows .= $this->detailRow('Nodes Confirmed', $nodesConfirmed . ' / 3');
+            }
+        }
+
+        $chainNote = $blockHash !== ''
+            ? '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">Your ballot was sealed to the local 3-node hash chain. Keep this receipt so you can verify the block hash later. For privacy, your selected candidates are not included in this email.</p>'
+            : '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">This receipt confirms successful ballot submission only. For privacy, your selected candidates are not included in this email.</p>';
 
         $html = $this->template(
             'Official Ballot Receipt',
             'Vote Submitted',
             'Your official ballot has been received and recorded by the Supreme Student Council election system.',
             '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0 10px;margin-top:6px;">'
-            . $this->detailRow('Reference Code', $reference, true)
-            . $this->detailRow('Election', $electionTitle)
-            . $this->detailRow('Voter', $voterName)
-            . $this->detailRow('Submitted', $submittedDisplay)
+            . $rows
             . '</table>'
-            . '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">This receipt confirms successful ballot submission only. For privacy, your selected candidates are not included in this email.</p>'
+            . $chainNote
         );
 
         return $this->sendEmail($to, $subject, $text, $html);
@@ -328,14 +374,18 @@ class Mailer
             . '</body></html>';
     }
 
-    private function detailRow(string $label, string $value, bool $highlight = false): string
+    private function detailRow(string $label, string $value, bool $highlight = false, bool $mono = false): string
     {
         $valueStyle = $highlight
             ? 'font-size:18px;letter-spacing:1px;font-weight:900;color:#1f1e1b;'
             : 'font-size:14px;font-weight:800;color:#1f1e1b;';
 
+        if ($mono) {
+            $valueStyle = 'font-size:12px;font-weight:700;color:#1f1e1b;font-family:Consolas,Monaco,monospace;word-break:break-all;line-height:1.45;';
+        }
+
         return '<tr>'
-            . '<td style="width:150px;background:#f7ebd7;border-radius:10px 0 0 10px;padding:12px 14px;color:#6f735f;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;">' . e($label) . '</td>'
+            . '<td style="width:150px;background:#f7ebd7;border-radius:10px 0 0 10px;padding:12px 14px;color:#6f735f;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;vertical-align:top;">' . e($label) . '</td>'
             . '<td style="background:#fffbea;border-radius:0 10px 10px 0;padding:12px 14px;' . $valueStyle . '">' . e($value) . '</td>'
             . '</tr>';
     }

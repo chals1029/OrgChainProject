@@ -289,7 +289,7 @@
                         <div>
                             <strong>Review choices</strong>
                         </div>
-                        <button class="btn btn-brown btn-lg" type="button" id="reviewBtnMobile">
+                        <button class="btn btn-brown btn-lg" type="button" id="reviewBtnMobileStrip">
                             <i class="bi bi-shield-lock-fill"></i> Review & Submit
                         </button>
                     </div>
@@ -379,8 +379,8 @@
         </main>
     </div>
 
-    <div class="ballot-mobile-dock">
-        <button type="button" class="btn btn-review-mobile" id="reviewBtnMobile">
+    <div class="ballot-mobile-dock" id="ballotMobileDock">
+        <button type="button" class="btn btn-review-mobile" id="reviewBtnMobileDock">
             <i class="bi bi-eye"></i> Review & Submit
         </button>
     </div>

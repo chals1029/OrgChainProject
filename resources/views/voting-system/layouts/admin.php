@@ -81,7 +81,7 @@
                     <h2><?= e($portalTitle) ?></h2>
                     <p><?= e($portalSubtitle) ?></p>
                 </div>
-                <button class="btn d-lg-none border-0 p-1 no-print" type="button" data-bs-toggle="collapse" data-bs-target="#adminSidebarCollapse" aria-expanded="false" aria-controls="adminSidebarCollapse" style="color: var(--ssc-brown);">
+                <button class="btn d-lg-none border-0 p-1 no-print" type="button" data-bs-toggle="collapse" data-bs-target="#adminSidebarCollapse" aria-expanded="false" aria-controls="adminSidebarCollapse" style="color: var(--ssc-ink);">
                     <i class="bi bi-list fs-2"></i>
                 </button>
             </div>
@@ -133,7 +133,7 @@
                 <?php else: ?>
                 <div class="sidebar-quick-guide sidebar-quick-guide--canvass">
                     <h4 class="guide-title"><i class="bi bi-easel-fill"></i> CANVASSING PORTAL</h4>
-                    <p class="text-muted small px-3 mb-0 pb-3" style="line-height:1.55;">Dashboard shows turnout and summaries. Live Tally is the granular filterable results view. Reports are print-ready canvass outputs.</p>
+                    <p class="small px-3 mb-0 pb-3" style="line-height:1.55; color: rgba(31,24,23,0.72);">Dashboard shows turnout and summaries. Live Tally is the granular filterable results view. Reports are print-ready canvass outputs.</p>
                 </div>
                 <?php endif; ?>
 

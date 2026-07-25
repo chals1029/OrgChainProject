@@ -458,9 +458,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sidebarProgressText.innerText = '100%';
             }
             const reviewBtnSidebarEarly = document.getElementById('reviewBtnSidebar');
-            const reviewBtnMobileEarly = document.getElementById('reviewBtnMobile');
             if (reviewBtnSidebarEarly) reviewBtnSidebarEarly.classList.add('btn-ready-green');
-            if (reviewBtnMobileEarly) reviewBtnMobileEarly.classList.add('btn-ready-green');
+            document.querySelectorAll('#reviewBtnMobileStrip, #reviewBtnMobileDock').forEach((btn) => {
+                btn.classList.add('btn-ready-green');
+            });
             return;
         }
 
@@ -532,10 +533,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const reviewBtnSidebar = document.getElementById('reviewBtnSidebar');
-        const reviewBtnMobile = document.getElementById('reviewBtnMobile');
         if (positionBlocksAll.length > 0) {
             if (reviewBtnSidebar) reviewBtnSidebar.classList.add('btn-ready-green');
-            if (reviewBtnMobile) reviewBtnMobile.classList.add('btn-ready-green');
+            document.querySelectorAll('#reviewBtnMobileStrip, #reviewBtnMobileDock').forEach((btn) => {
+                btn.classList.add('btn-ready-green');
+            });
         }
     }
 
@@ -612,9 +614,16 @@ document.addEventListener('DOMContentLoaded', () => {
     /** Ballot may include blank lines (implicit abstain); review/submit always allowed once code is verified. */
     let currentReviewBallotComplete = false;
 
-    // Bind to both review buttons (sidebar and mobile)
+    // Bind to review buttons (sidebar, in-page strip, and mobile dock)
     const reviewBtnSidebar = document.getElementById('reviewBtnSidebar');
-    const reviewBtnMobile = document.getElementById('reviewBtnMobile');
+    const reviewBtnsMobile = Array.from(document.querySelectorAll('#reviewBtnMobileStrip, #reviewBtnMobileDock'));
+
+    function setReviewModalOpen(isOpen) {
+        if (!reviewModal) return;
+
+        reviewModal.style.display = isOpen ? 'flex' : 'none';
+        document.body.classList.toggle('ballot-review-open', isOpen);
+    }
 
     function closeCandidatePhotoPreview() {
         if (!candidatePhotoPreview) return;
@@ -879,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentReviewBallotComplete = true;
         updateBallotCodeControls();
-        reviewModal.style.display = 'flex';
+        setReviewModalOpen(true);
     }
 
     if (sendBallotCodeBtn) {
@@ -983,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (reviewBtnSidebar) reviewBtnSidebar.addEventListener('click', openReviewModal);
-    if (reviewBtnMobile) reviewBtnMobile.addEventListener('click', openReviewModal);
+    reviewBtnsMobile.forEach((btn) => btn.addEventListener('click', openReviewModal));
 
     // Ballot liquid-glass mobile drawer + position chips
     (function initBallotMobileNav() {
@@ -1042,13 +1051,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
-            reviewModal.style.display = 'none';
+            setReviewModalOpen(false);
         });
     }
 
     if (editVoteBtn) {
         editVoteBtn.addEventListener('click', () => {
-            reviewModal.style.display = 'none';
+            setReviewModalOpen(false);
         });
     }
 

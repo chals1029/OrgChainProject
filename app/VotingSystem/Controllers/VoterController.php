@@ -249,6 +249,7 @@ class VoterController extends Controller
             $submittedVoter = (new Voter())->find((int) $voterId);
 
             $receiptEmail = trim((string) ($submittedVoter['email'] ?? ''));
+            $chainSeal = $this->receiptChainSeal($reference);
 
             if ($submittedVoter && filter_var($receiptEmail, FILTER_VALIDATE_EMAIL) !== false) {
                 try {
@@ -257,7 +258,8 @@ class VoterController extends Controller
                         $submittedVoter,
                         $election,
                         $reference,
-                        (string) ($submittedVoter['voted_at'] ?? date('Y-m-d H:i:s'))
+                        (string) ($submittedVoter['voted_at'] ?? date('Y-m-d H:i:s')),
+                        $chainSeal
                     );
 
                     if (!$sent) {
@@ -314,6 +316,33 @@ class VoterController extends Controller
             'reference' => $reference,
             'receipt' => $receipt,
         ]);
+    }
+
+    /**
+     * @return array{block_hash?: string, previous_hash?: string, ballot_root?: string, nodes_confirmed?: int}
+     */
+    private function receiptChainSeal(string $reference): array
+    {
+        try {
+            $pdo = \App\VotingSystem\Core\Database::connection();
+            $statement = $pdo->prepare(
+                'SELECT block_hash, previous_hash, ballot_root, nodes_confirmed
+                 FROM vote_receipts
+                 WHERE reference_code = :reference_code
+                 LIMIT 1'
+            );
+            $statement->execute(['reference_code' => $reference]);
+            $row = $statement->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+            return [
+                'block_hash' => (string) ($row['block_hash'] ?? ''),
+                'previous_hash' => (string) ($row['previous_hash'] ?? ''),
+                'ballot_root' => (string) ($row['ballot_root'] ?? ''),
+                'nodes_confirmed' => (int) ($row['nodes_confirmed'] ?? 0),
+            ];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function isAllowedSchoolEmail(string $email): bool

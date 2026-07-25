@@ -37,7 +37,13 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {
-    Route::get('/', [OfficePortalController::class, 'home'])->name('home');
+    Route::get('/', [OfficePortalController::class, 'dashboard'])->name('home');
+    Route::get('/analytics', [OfficePortalController::class, 'analytics'])->name('analytics');
+    Route::get('/activities', [OfficePortalController::class, 'activities'])->name('activities');
+    Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
+    Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
+    Route::get('/financial-report', [OfficePortalController::class, 'financial'])->name('financial');
+    Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
 });
 
 /*

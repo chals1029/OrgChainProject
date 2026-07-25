@@ -1,26 +1,26 @@
-:root {
-    /* OrgChain theme - Batangas State University red and white */
-    --ssc-teal: #9b1b30;
-    --ssc-sage: #c43b52;
-    --ssc-stone: #6b4a50;
-    --ssc-light: #faf7f7;
-    --ssc-orange: #c43b52;
-    --ssc-amber: #9b1b30;
-    --ssc-yellow: #f3d6db;
-    --ssc-soft-yellow: #f8eef0;
-    --ssc-beige: #faf7f7;
-    --ssc-cream: #fff8f9;
-    --ssc-gold: #9b1b30;
-    --ssc-brown: #6f1020;
-    --ssc-body: #1a0a0d;
-    --ssc-nav: #9b1b30;
+﻿:root {
+    /* VotingSystemOfSSC theme palette */
+    --ssc-teal: #6BB2B3;
+    --ssc-sage: #9CA18E;
+    --ssc-stone: #6F735F;
+    --ssc-light: #F7EBD7;
+    --ssc-orange: #F49322;
+    --ssc-amber: #E4803F;
+    --ssc-yellow: #FBE5C1;
+    --ssc-soft-yellow: #F7D6A7;
+    --ssc-beige: #F7EBD7;
+    --ssc-cream: #FBE5C1;
+    --ssc-gold: #F49322;
+    --ssc-brown: #4F564C;
+    --ssc-body: #2F312A;
+    --ssc-nav: #3F6665;
     --ssc-white: #FFFFFF;
-    --ssc-border: rgba(155, 27, 48, 0.2);
-    --ssc-green: #9b1b30;
-    --ssc-red: #9b1b30;
-    --ssc-ink: #4a0a15;
-    --shadow-soft: 0 16px 40px rgba(74, 10, 21, 0.12);
-    --shadow-hover: 0 24px 48px rgba(74, 10, 21, 0.18);
+    --ssc-border: rgba(111, 115, 95, 0.35);
+    --ssc-green: #6BB2B3;
+    --ssc-red: #E4803F;
+    --ssc-ink: #1f1e1b;
+    --shadow-soft: 0 16px 40px rgba(63, 102, 101, 0.16);
+    --shadow-hover: 0 24px 48px rgba(63, 102, 101, 0.22);
 }
 
 * {
@@ -29,7 +29,7 @@
 
 body {
     margin: 0;
-    background: #faf7f7;
+    background: #F7EBD7;
     /* Slightly cleaner background */
     color: var(--ssc-body);
     font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif !important;
@@ -56,7 +56,7 @@ h4 {
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(155, 27, 48, 0.12);
+    border-bottom: 1px solid rgba(63, 102, 101, 0.12);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -86,7 +86,7 @@ h4 {
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    color: var(--ssc-red-dark, #6f1020);
+    color: var(--ssc-red-dark, #4F564C);
 }
 
 .brand-sub {
@@ -104,7 +104,7 @@ h4 {
 
 .brand-mark {
     align-items: center;
-    background: linear-gradient(145deg, #9b1b30, #6f1020);
+    background: linear-gradient(145deg, #3F6665, #4F564C);
     border: 0;
     border-radius: 12px;
     color: #fff;
@@ -114,7 +114,7 @@ h4 {
     justify-content: center;
     overflow: hidden;
     width: 2.45rem;
-    box-shadow: 0 6px 14px rgba(155, 27, 48, 0.28);
+    box-shadow: 0 6px 14px rgba(63, 102, 101, 0.28);
 }
 
 .brand-mark img {
@@ -163,9 +163,9 @@ h4 {
 
 .hero-intro-pubmat {
     background: rgba(255, 255, 255, 0.56);
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 12px;
-    box-shadow: 0 18px 44px rgba(74, 10, 21, 0.14);
+    box-shadow: 0 18px 44px rgba(63, 102, 101, 0.14);
     margin: 1.4rem 0 0;
     max-width: min(420px, 100%);
     overflow: hidden;
@@ -189,7 +189,7 @@ h4 {
 .hero-status {
     align-items: center;
     background: rgba(255, 255, 255, 0.62);
-    border: 1px solid rgba(155, 27, 48, 0.14);
+    border: 1px solid rgba(63, 102, 101, 0.14);
     border-radius: 8px;
     box-shadow: var(--shadow-soft);
     display: grid;
@@ -215,7 +215,7 @@ h4 {
 .hero-pubmat {
     aspect-ratio: 1 / 1;
     border-radius: 8px;
-    box-shadow: 0 10px 22px rgba(74, 10, 21, 0.12);
+    box-shadow: 0 10px 22px rgba(63, 102, 101, 0.12);
     height: 140px;
     object-fit: contain;
     object-position: center;
@@ -229,7 +229,7 @@ h4 {
 .btn-google-bsu {
     align-items: center;
     background: #fff;
-    border: 1.5px solid rgba(155, 27, 48, 0.22);
+    border: 1.5px solid rgba(63, 102, 101, 0.22);
     border-radius: 8px;
     color: #3c4043;
     display: flex;
@@ -256,7 +256,7 @@ h4 {
 
 .btn-google-bsu.is-disabled {
     background: #f8fafc;
-    border-color: rgba(155, 27, 48, 0.16);
+    border-color: rgba(63, 102, 101, 0.16);
     box-shadow: none;
     color: #7a8178;
     cursor: not-allowed;
@@ -266,7 +266,7 @@ h4 {
 
 .btn-google-bsu.is-disabled:hover {
     background: #f8fafc;
-    border-color: rgba(155, 27, 48, 0.16);
+    border-color: rgba(63, 102, 101, 0.16);
     box-shadow: none;
     color: #7a8178;
     transform: none;
@@ -279,7 +279,7 @@ h4 {
 .data-privacy-consent {
     align-items: flex-start;
     background: rgba(243, 214, 219, 0.55);
-    border: 1px solid rgba(155, 27, 48, 0.14);
+    border: 1px solid rgba(63, 102, 101, 0.14);
     border-radius: 8px;
     display: flex;
     gap: 0.55rem;
@@ -289,7 +289,7 @@ h4 {
 }
 
 .data-privacy-consent .form-check-input {
-    border-color: rgba(155, 27, 48, 0.45);
+    border-color: rgba(63, 102, 101, 0.45);
     flex: 0 0 auto;
     margin: 0.16rem 0 0;
 }
@@ -330,8 +330,8 @@ h4 {
 
 .google-access-note {
     align-items: center;
-    background: rgba(155, 27, 48, 0.08);
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    background: rgba(63, 102, 101, 0.08);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 8px;
     color: var(--ssc-nav);
     display: flex;
@@ -400,7 +400,7 @@ h4 {
 .btn-brown:focus {
     background: linear-gradient(135deg, var(--ssc-nav), var(--ssc-ink));
     color: var(--ssc-yellow);
-    box-shadow: 0 8px 24px rgba(111, 16, 32, 0.25);
+    box-shadow: 0 8px 24px rgba(63, 102, 101, 0.25);
 }
 
 .btn-outline-brown {
@@ -422,7 +422,7 @@ h4 {
 }
 
 .content-band {
-    background: #faf7f7;
+    background: #F7EBD7;
     padding: 3.5rem 0 4.5rem;
 }
 
@@ -442,9 +442,9 @@ h4 {
 
 .metric-card {
     background: var(--ssc-white);
-    border: 1px solid rgba(155, 27, 48, 0.22);
+    border: 1px solid rgba(63, 102, 101, 0.22);
     border-radius: 12px;
-    box-shadow: 0 10px 24px rgba(155, 27, 48, 0.08);
+    box-shadow: 0 10px 24px rgba(63, 102, 101, 0.08);
     padding: 1.25rem;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -509,7 +509,7 @@ h4 {
 }
 
 .compact-page {
-    background: linear-gradient(135deg, var(--ssc-yellow), #fff 58%, #faf7f7);
+    background: linear-gradient(135deg, var(--ssc-yellow), #fff 58%, #F7EBD7);
     min-height: calc(100vh - 124px);
     padding: 4rem 0;
 }
@@ -530,7 +530,7 @@ h4 {
 .form-control:focus,
 .form-select:focus {
     border-color: var(--ssc-brown);
-    box-shadow: 0 0 0 0.2rem rgba(155, 27, 48, 0.18);
+    box-shadow: 0 0 0 0.2rem rgba(63, 102, 101, 0.18);
 }
 
 .form-label {
@@ -574,7 +574,7 @@ h4 {
 }
 
 .ballot-page {
-    background: #faf7f7;
+    background: #F7EBD7;
     padding: 2rem 0 4rem;
 }
 
@@ -653,7 +653,7 @@ h4 {
 
 .candidate-card:hover {
     border-color: rgba(122, 63, 0, 0.4);
-    box-shadow: 0 12px 22px rgba(155, 27, 48, 0.12);
+    box-shadow: 0 12px 22px rgba(63, 102, 101, 0.12);
     transform: translateY(-2px);
 }
 
@@ -668,7 +668,7 @@ h4 {
 
 .candidate-card:has(input:checked) {
     border-color: var(--ssc-brown);
-    box-shadow: 0 14px 26px rgba(155, 27, 48, 0.14);
+    box-shadow: 0 14px 26px rgba(63, 102, 101, 0.14);
 }
 
 .candidate-card img {
@@ -746,7 +746,7 @@ h4 {
 }
 
 .admin-shell {
-    background: #faf7f7;
+    background: #F7EBD7;
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
     min-height: 100vh;
@@ -804,7 +804,7 @@ h4 {
 
 .admin-nav a:hover,
 .admin-nav a:focus {
-    background: rgba(155, 27, 48, 0.12);
+    background: rgba(63, 102, 101, 0.12);
     color: var(--ssc-yellow);
 }
 
@@ -929,7 +929,7 @@ h4 {
 }
 
 .election-settings-section-announcement {
-    background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #FFF8ED 0%, #ffffff 100%);
     border-color: rgba(176, 106, 36, 0.24);
 }
 
@@ -1323,7 +1323,7 @@ h4 {
 /* --- Professional Upload Zones --- */
 .import-upload-zone {
     position: relative;
-    border: 2px dashed rgba(155, 27, 48, 0.16);
+    border: 2px dashed rgba(63, 102, 101, 0.16);
     border-radius: 16px;
     padding: 2.5rem 1.5rem;
     text-align: center;
@@ -1407,7 +1407,7 @@ h4 {
 
 .result-card {
     background: var(--ssc-cream);
-    border: 1px solid rgba(155, 27, 48, 0.22);
+    border: 1px solid rgba(63, 102, 101, 0.22);
     border-radius: 8px;
     padding: 1rem;
 }
@@ -1442,7 +1442,7 @@ h4 {
 }
 
 .result-bar {
-    background: rgba(155, 27, 48, 0.12);
+    background: rgba(63, 102, 101, 0.12);
     border-radius: 999px;
     height: 0.55rem;
     margin-top: 0.35rem;
@@ -1597,7 +1597,7 @@ h4 {
 }
 
 .admin-profile-menu {
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 12px;
     box-shadow: 0 18px 36px rgba(47, 49, 42, 0.16);
     min-width: 220px;
@@ -1768,7 +1768,7 @@ h4 {
 
 .admin-signout:hover,
 .admin-signout:focus {
-    background: rgba(155, 27, 48, 0.08);
+    background: rgba(63, 102, 101, 0.08);
     color: var(--ssc-brown);
 }
 
@@ -1912,7 +1912,7 @@ h4 {
 .dashboard-stat-card:hover {
     transform: translateY(-5px) !important;
     box-shadow: 0 20px 40px rgba(38, 50, 72, 0.12) !important;
-    border-color: rgba(155, 27, 48, 0.16) !important;
+    border-color: rgba(63, 102, 101, 0.16) !important;
 }
 
 .dashboard-stat-card span,
@@ -2341,7 +2341,7 @@ h4 {
 
 .stat-icon {
     align-items: center;
-    background: #faf7f7;
+    background: #F7EBD7;
     border-radius: 50%;
     box-shadow: 0 10px 24px rgba(38, 50, 72, 0.08);
     display: inline-flex;
@@ -2683,7 +2683,7 @@ h4 {
 .result-card:hover {
     transform: translateY(-4px) !important;
     box-shadow: 0 16px 32px rgba(38, 50, 72, 0.08) !important;
-    border-color: rgba(155, 27, 48, 0.2) !important;
+    border-color: rgba(63, 102, 101, 0.2) !important;
 }
 
 .result-card h3 {
@@ -2916,7 +2916,7 @@ h4 {
 /* --- Left Sidebar --- */
 .ballot-sidebar {
     width: 300px;
-    background: linear-gradient(160deg, #6f1020 0%, #4a0a15 55%, #2a060c 100%);
+    background: linear-gradient(135deg, var(--ssc-teal) 0%, var(--ssc-sage) 48%, var(--ssc-orange) 100%);
     color: var(--ssc-white);
     display: flex;
     flex-direction: column;
@@ -3137,7 +3137,7 @@ h4 {
 }
 
 .selection-counter {
-    background: rgba(155, 27, 48, 0.12);
+    background: rgba(63, 102, 101, 0.12);
     color: var(--ssc-brown);
     padding: 0.4rem 0.8rem;
     border-radius: 8px;
@@ -3198,7 +3198,7 @@ h4 {
 .candidate-card-new:hover {
     border-color: rgba(122, 63, 0, 0.3);
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(155, 27, 48, 0.08);
+    box-shadow: 0 8px 16px rgba(63, 102, 101, 0.08);
 }
 
 .candidate-card-new:has(input:checked),
@@ -3567,7 +3567,7 @@ h4 {
 }
 
 .admin-displayed-code {
-    background: #faf7f7;
+    background: #F7EBD7;
     border: 1px dashed rgba(176, 106, 36, 0.55);
     border-radius: 12px;
     color: var(--ssc-ink);
@@ -3614,8 +3614,8 @@ h4 {
 }
 
 .ballot-email-code-panel {
-    background: rgba(155, 27, 48, 0.08);
-    border: 1px solid rgba(155, 27, 48, 0.18);
+    background: rgba(63, 102, 101, 0.08);
+    border: 1px solid rgba(63, 102, 101, 0.18);
     border-radius: 12px;
     padding: 1rem;
     width: 100%;
@@ -3642,7 +3642,7 @@ h4 {
 }
 
 .ballot-displayed-code {
-    background: #faf7f7;
+    background: #F7EBD7;
     border: 1px dashed rgba(176, 106, 36, 0.55);
     border-radius: 12px;
     color: var(--ssc-ink);
@@ -3847,8 +3847,8 @@ h4 {
 
 /* --- Top Bar --- */
 .ballot-topbar {
-    background: linear-gradient(135deg, #9b1b30 0%, #6f1020 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--ssc-teal) 0%, var(--ssc-sage) 48%, var(--ssc-orange) 100%);
+    color: var(--ssc-ink);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3857,8 +3857,8 @@ h4 {
     position: sticky;
     top: 0;
     z-index: 2000;
-    border-bottom: 3px solid #4a0a15;
-    box-shadow: 0 8px 24px rgba(74, 10, 21, 0.2);
+    border-bottom: 3px solid rgba(31, 30, 27, 0.16);
+    box-shadow: var(--shadow-soft);
 }
 
 .topbar-left {
@@ -4055,8 +4055,8 @@ h4 {
 /* --- Left Sidebar --- */
 .ballot-sidebar {
     width: 280px !important;
-    background: linear-gradient(160deg, #6f1020 0%, #4a0a15 55%, #2a060c 100%) !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--ssc-teal) 0%, var(--ssc-sage) 48%, var(--ssc-orange) 100%) !important;
+    color: var(--ssc-ink) !important;
     display: flex !important;
     flex-direction: column !important;
     padding: 0 !important;
@@ -4064,7 +4064,7 @@ h4 {
     top: 56px !important;
     height: calc(100vh - 56px) !important;
     overflow-y: auto !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-right: 1px solid rgba(31, 30, 27, 0.12) !important;
 }
 
 .sidebar-header {
@@ -4085,7 +4085,7 @@ h4 {
 }
 
 .sidebar-header-titles h2 {
-    color: #1f1817 !important;
+    color: var(--ssc-ink) !important;
     font-size: 1.2rem !important;
     margin: 0 0 0.2rem 0 !important;
 }
@@ -4128,7 +4128,7 @@ h4 {
 }
 
 .voter-info .status-pill {
-    background: rgba(155, 27, 48, 0.16) !important;
+    background: rgba(63, 102, 101, 0.16) !important;
     color: var(--ssc-nav) !important;
     border: 1px solid var(--ssc-teal) !important;
     font-size: 0.65rem !important;
@@ -4196,7 +4196,7 @@ h4 {
 
 /* Admin Sidebar Typography */
 .admin-shell .jump-nav-title {
-    color: #000000 !important;
+    color: var(--ssc-ink) !important;
     font-size: 0.75rem !important;
     font-weight: 900 !important;
     letter-spacing: 0.1em !important;
@@ -4210,7 +4210,7 @@ h4 {
 
 /* Ballot Sidebar Typography - Slightly Smaller */
 .ballot-global-layout:not(.admin-shell) .jump-nav-title {
-    color: #000000 !important;
+    color: var(--ssc-ink) !important;
     font-size: 0.7rem !important;
     font-weight: 900 !important;
     letter-spacing: 0.1em !important;
@@ -4238,7 +4238,7 @@ h4 {
     justify-content: space-between;
     padding: 0.5rem 1rem;
     border-radius: 8px;
-    color: #000000 !important;
+    color: var(--ssc-ink) !important;
     font-size: 0.9rem !important;
     font-weight: 800 !important;
     cursor: pointer;
@@ -4253,7 +4253,7 @@ h4 {
     justify-content: space-between;
     padding: 0.45rem 1rem;
     border-radius: 8px;
-    color: #000000 !important;
+    color: var(--ssc-ink) !important;
     font-size: 0.8rem !important;
     font-weight: 800 !important;
     cursor: pointer;
@@ -4262,8 +4262,8 @@ h4 {
 }
 
 .jump-nav li:hover {
-    background: rgba(255, 255, 255, 0.4);
-    color: #1f1817 !important;
+    background: rgba(255, 255, 255, 0.42);
+    color: var(--ssc-ink) !important;
     transform: none !important;
 }
 
@@ -4275,7 +4275,7 @@ h4 {
 
 .jump-nav-name i {
     font-size: 1.35rem;
-    color: rgba(0, 0, 0, 0.2) !important;
+    color: rgba(31, 30, 27, 0.28) !important;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -4287,7 +4287,7 @@ h4 {
 
 .jump-nav-arrow {
     font-size: 0.9rem;
-    color: #000000 !important;
+    color: rgba(31, 30, 27, 0.55) !important;
 }
 
 .admin-sidebar-actions {
@@ -4538,7 +4538,7 @@ h4 {
 }
 
 .security-events-table {
-    border: 1px solid rgba(155, 27, 48, 0.14);
+    border: 1px solid rgba(63, 102, 101, 0.14);
     border-radius: 10px;
     max-height: 560px;
     overflow: auto;
@@ -4623,7 +4623,7 @@ h4 {
 }
 
 .security-ip-address {
-    background: rgba(155, 27, 48, 0.1);
+    background: rgba(63, 102, 101, 0.1);
     border-radius: 999px;
     padding: 0.22rem 0.48rem;
 }
@@ -4640,7 +4640,7 @@ h4 {
 }
 
 .security-severity.is-low {
-    background: rgba(155, 27, 48, 0.12);
+    background: rgba(63, 102, 101, 0.12);
     color: var(--ssc-nav);
 }
 
@@ -4734,7 +4734,7 @@ h4 {
 .btn-bright-green:hover {
     background: var(--ssc-teal) !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(155, 27, 48, 0.22) !important;
+    box-shadow: 0 6px 16px rgba(63, 102, 101, 0.22) !important;
 }
 
 /* --- Right Main Panel --- */
@@ -5068,7 +5068,7 @@ h4 {
 
 .turnout-progress .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #9b1b30, #6f1020);
+    background: linear-gradient(90deg, #3F6665, #4F564C);
     border-radius: 10px;
 }
 
@@ -5080,7 +5080,7 @@ h4 {
 
 .hiraya-ballot-poster {
     background: rgba(255, 255, 255, 0.68);
-    border: 1px solid rgba(155, 27, 48, 0.14);
+    border: 1px solid rgba(63, 102, 101, 0.14);
     border-radius: 10px;
     box-shadow: 0 12px 28px rgba(47, 49, 42, 0.16);
     margin: 0;
@@ -5097,7 +5097,7 @@ h4 {
 
 .btn-toggle-activity {
     background: rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 8px;
     color: var(--ssc-brown);
     cursor: pointer;
@@ -5178,7 +5178,7 @@ h4 {
 }
 
 .canvassing-command-panel {
-    background: linear-gradient(135deg, rgba(155, 27, 48, 0.08), rgba(196, 59, 82, 0.08)), #ffffff;
+    background: linear-gradient(135deg, rgba(63, 102, 101, 0.08), rgba(107, 178, 179, 0.08)), #ffffff;
 }
 
 .canvassing-command-status {
@@ -5747,51 +5747,39 @@ body.candidate-preview-open {
 body,
 .admin-shell,
 .ballot-global-layout {
-    background:
-        radial-gradient(900px 500px at 10% -10%, rgba(196, 59, 82, 0.1), transparent 55%),
-        linear-gradient(180deg, #ffffff 0%, #faf7f7 50%, #f7f1f2 100%) !important;
+    background: linear-gradient(135deg, #FFF8ED 0%, var(--ssc-light) 46%, rgba(107, 178, 179, 0.18) 100%) !important;
     color: var(--ssc-body);
 }
 
-.site-navbar {
-    background: rgba(255, 255, 255, 0.94) !important;
-    border-color: rgba(155, 27, 48, 0.12) !important;
-    color: var(--ssc-nav) !important;
-}
-
+.site-navbar,
 .admin-topbar,
-.ballot-topbar {
-    background: linear-gradient(135deg, #9b1b30 0%, #6f1020 100%) !important;
-    border-color: #4a0a15 !important;
-    color: #ffffff !important;
-}
-
+.ballot-topbar,
 .ballot-sidebar {
-    background: linear-gradient(160deg, #6f1020 0%, #4a0a15 55%, #2a060c 100%) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--ssc-teal) 0%, var(--ssc-sage) 48%, var(--ssc-orange) 100%) !important;
+    border-color: rgba(31, 30, 27, 0.16) !important;
+    color: var(--ssc-ink) !important;
 }
 
 .brand-mark,
 .admin-brand .brand-mark {
-    background: linear-gradient(145deg, #9b1b30, #6f1020) !important;
+    background: transparent !important;
     border: 0 !important;
-    box-shadow: 0 6px 14px rgba(155, 27, 48, 0.28) !important;
-    color: #fff !important;
+    box-shadow: none !important;
+    color: var(--ssc-brown) !important;
 }
 
 .topbar-logo-box,
 .sidebar-icon-box {
-    background: #fff !important;
+    background: transparent !important;
     border: 0 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(74, 10, 21, 0.18) !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
     overflow: hidden !important;
 }
 
 .admin-sidebar {
-    background: linear-gradient(180deg, #6f1020 0%, #4a0a15 100%) !important;
-    color: #ffffff !important;
+    background: linear-gradient(180deg, rgba(251, 229, 193, 0.92) 0%, rgba(247, 235, 215, 0.96) 52%, rgba(107, 178, 179, 0.18) 100%) !important;
+    color: var(--ssc-body) !important;
 }
 
 .admin-brand,
@@ -5811,13 +5799,13 @@ body,
 .progress-ring-text-small,
 .sidebar-progress-text strong,
 .progress-box>span:last-child {
-    color: inherit !important;
+    color: var(--ssc-ink) !important;
 }
 
 .ballot-topbar .sys-title,
 .ballot-topbar .session-timer,
 .ballot-topbar .sys-subtitle {
-    color: #ffffff !important;
+    color: var(--ssc-ink) !important;
 }
 
 .admin-brand small,
@@ -5840,19 +5828,19 @@ body,
 .ballot-sidebar .sidebar-header-titles p,
 .ballot-sidebar .guide-title,
 .ballot-sidebar .guide-list {
-    color: rgba(255, 255, 255, 0.88) !important;
+    color: rgba(31, 30, 27, 0.78) !important;
 }
 
 .ballot-sidebar .jump-nav li.filled,
 .ballot-sidebar .jump-nav li:hover {
-    background: rgba(255, 255, 255, 0.12) !important;
-    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.42) !important;
+    color: var(--ssc-ink) !important;
 }
 
 .jump-nav li,
 .jump-nav-arrow,
 .selection-counter-box small {
-    color: rgba(31, 30, 27, 0.68) !important;
+    color: rgba(31, 30, 27, 0.72) !important;
 }
 
 .admin-nav a,
@@ -5875,11 +5863,11 @@ body,
 .voter-identity-card {
     background: rgba(255, 255, 255, 0.76) !important;
     border-color: rgba(111, 115, 95, 0.28) !important;
-    box-shadow: 0 16px 34px rgba(155, 27, 48, 0.14) !important;
+    box-shadow: 0 16px 34px rgba(63, 102, 101, 0.14) !important;
 }
 
 .hero-band {
-    background: linear-gradient(135deg, #f3d6db 0%, #ffffff 48%, #faf7f7 100%) !important;
+    background: linear-gradient(135deg, var(--ssc-teal) 0%, var(--ssc-sage) 42%, var(--ssc-orange) 100%) !important;
 }
 
 .section-band,
@@ -5889,7 +5877,7 @@ body,
 .candidate-img-wrapper,
 .inline-error {
     background: var(--ssc-light) !important;
-    border-color: rgba(155, 27, 48, 0.22) !important;
+    border-color: rgba(63, 102, 101, 0.22) !important;
     color: var(--ssc-stone) !important;
 }
 
@@ -6020,7 +6008,7 @@ main {
 }
 
 .home-announcement-band {
-    background: linear-gradient(135deg, #fff8f9 0%, #f3d6db 100%);
+    background: linear-gradient(135deg, #FFF8ED 0%, #FBE5C1 100%);
     border-bottom: 1px solid rgba(176, 106, 36, 0.18);
     color: var(--ssc-body);
     padding: 0.85rem 0;
@@ -6250,7 +6238,7 @@ main {
     align-items: center;
     gap: 0.35rem;
     background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 999px;
     padding: 0.3rem 0.75rem;
     font-size: 0.75rem;
@@ -6296,7 +6284,7 @@ main {
 }
 
 .hero-band {
-    background: linear-gradient(135deg, var(--ssc-yellow) 0%, #fff 60%, #faf7f7 100%) !important;
+    background: linear-gradient(135deg, var(--ssc-yellow) 0%, #fff 60%, #F7EBD7 100%) !important;
     min-height: 85vh;
     display: flex;
     align-items: center;
@@ -6350,7 +6338,7 @@ main {
 
 .vf-step-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 25px 50px rgba(155, 27, 48, 0.1);
+    box-shadow: 0 25px 50px rgba(63, 102, 101, 0.1);
     border-color: var(--ssc-nav);
 }
 
@@ -6373,7 +6361,7 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 15px rgba(155, 27, 48, 0.2);
+    box-shadow: 0 6px 15px rgba(63, 102, 101, 0.2);
 }
 
 .vf-icon {
@@ -6439,7 +6427,7 @@ main {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgba(155, 27, 48, 0.08);
+    background: rgba(63, 102, 101, 0.08);
     color: var(--ssc-nav);
     border-radius: 999px;
     padding: 0.35rem 0.85rem;
@@ -6501,7 +6489,7 @@ main {
 }
 
 .privacy-guide-content {
-    border: 1px solid rgba(155, 27, 48, 0.16);
+    border: 1px solid rgba(63, 102, 101, 0.16);
     border-radius: 14px;
     max-height: min(78vh, 520px);
     overflow: hidden;
@@ -6528,7 +6516,7 @@ main {
 
 .privacy-guide-section {
     background: rgba(247, 235, 215, 0.72);
-    border: 1px solid rgba(155, 27, 48, 0.14);
+    border: 1px solid rgba(63, 102, 101, 0.14);
     border-radius: 10px;
     padding: 0.7rem;
 }
@@ -6772,7 +6760,7 @@ main {
     .ballot-global-layout:not(.admin-shell) .candidate-party {
         align-items: flex-start !important;
         background: rgba(229, 247, 237, 0.92) !important;
-        border: 1px solid rgba(155, 27, 48, 0.08) !important;
+        border: 1px solid rgba(63, 102, 101, 0.08) !important;
         border-radius: 14px !important;
         color: #56594f !important;
         display: inline-flex !important;
@@ -7578,14 +7566,21 @@ html {
     }
 
     .ballot-global-layout:not(.admin-shell) .modal-overlay {
-        align-items: flex-start;
-        padding: 0.45rem;
+        align-items: center;
+        justify-content: center;
+        padding: max(5.25rem, 10vh) 0.75rem 6.25rem;
+        z-index: 2300;
     }
 
     .ballot-global-layout:not(.admin-shell) .modal-content {
         border-radius: 14px;
-        max-height: calc(100dvh - 0.9rem);
+        max-height: min(78dvh, calc(100dvh - 11.5rem));
         overflow-y: auto;
+        margin-top: 0;
+    }
+
+    body.ballot-review-open .ballot-mobile-dock {
+        display: none !important;
     }
 
     .ballot-global-layout:not(.admin-shell) .modal-header {
@@ -7713,6 +7708,27 @@ html {
     width: 260px !important;
 }
 
+.admin-shell .jump-nav-title,
+.admin-shell .jump-nav li,
+.admin-shell .jump-nav-name,
+.admin-shell .jump-nav-arrow,
+.admin-shell .sidebar-header-titles h2,
+.admin-shell .sidebar-header-titles p,
+.admin-shell .guide-title,
+.admin-shell .guide-list,
+.admin-shell .step-content strong,
+.admin-shell .step-content p {
+    color: var(--ssc-ink) !important;
+}
+
+.admin-shell .jump-nav-name i {
+    color: rgba(31, 30, 27, 0.35) !important;
+}
+
+.admin-shell .jump-nav li.filled .jump-nav-name i {
+    color: #059669 !important;
+}
+
 .admin-shell .admin-main {
     flex: 1 1 auto;
     min-width: 0;
@@ -7816,9 +7832,9 @@ html {
 
     .admin-shell #adminSidebarCollapse {
         background: rgba(251, 229, 193, 0.98);
-        border: 1px solid rgba(155, 27, 48, 0.14);
+        border: 1px solid rgba(63, 102, 101, 0.14);
         border-radius: 0 0 16px 16px;
-        box-shadow: 0 16px 36px rgba(155, 27, 48, 0.14);
+        box-shadow: 0 16px 36px rgba(63, 102, 101, 0.14);
         left: 0;
         padding: 0.75rem 1rem 1rem;
         position: absolute;
@@ -8159,16 +8175,9 @@ html {
 
 .step-content strong {
     font-size: 0.85rem;
-    color: #1f1817;
+    color: var(--ssc-ink);
     font-weight: 800;
     line-height: 1.2;
-}
-
-.step-content p {
-    font-size: 0.75rem;
-    color: rgba(31, 24, 23, 0.7);
-    margin: 0;
-    line-height: 1.5;
 }
 
 .step-content p {
@@ -8229,9 +8238,9 @@ html {
    section background starts behind the floating pill. */
 body {
     background:
-        radial-gradient(1100px 560px at 10% -6%, rgba(196, 59, 82, 0.1), transparent 55%),
-        radial-gradient(820px 460px at 100% 14%, rgba(155, 27, 48, 0.07), transparent 52%),
-        linear-gradient(180deg, #ffffff 0%, #faf6f7 45%, #f7f1f2 100%) !important;
+        radial-gradient(1100px 560px at 10% -6%, rgba(107, 178, 179, 0.1), transparent 55%),
+        radial-gradient(820px 460px at 100% 14%, rgba(63, 102, 101, 0.07), transparent 52%),
+        linear-gradient(180deg, #ffffff 0%, #FFF8ED 45%, #FFF8ED 100%) !important;
 }
 
 .hero-band {
@@ -8253,11 +8262,11 @@ body {
     -webkit-backdrop-filter: blur(24px) saturate(1.9) !important;
     border: 1px solid rgba(255, 255, 255, 0.72) !important;
     box-shadow:
-        0 10px 40px rgba(74, 10, 21, 0.14),
-        0 2px 8px rgba(74, 10, 21, 0.06),
+        0 10px 40px rgba(63, 102, 101, 0.14),
+        0 2px 8px rgba(63, 102, 101, 0.06),
         inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
         inset 0 -1px 1px rgba(255, 255, 255, 0.4) !important;
-    color: #6f1020 !important;
+    color: #4F564C !important;
     overflow: visible !important;
 }
 
@@ -8277,11 +8286,11 @@ body {
 }
 
 .home-topbar .sys-title {
-    color: #6f1020 !important;
+    color: #4F564C !important;
 }
 
 .home-topbar .sys-subtitle {
-    color: rgba(111, 16, 32, 0.7) !important;
+    color: rgba(63, 102, 101, 0.7) !important;
 }
 
 .home-topbar .topbar-logo-box {
@@ -8290,11 +8299,11 @@ body {
 }
 
 .home-topbar .btn-how-to-vote {
-    color: #6f1020 !important;
+    color: #4F564C !important;
     background: rgba(255, 255, 255, 0.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     box-shadow:
-        0 2px 10px rgba(74, 10, 21, 0.08),
+        0 2px 10px rgba(63, 102, 101, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
     transition: background 0.2s ease, transform 0.2s ease !important;
 }
@@ -8312,7 +8321,7 @@ body {
     -webkit-backdrop-filter: blur(16px) saturate(1.5) !important;
     border: 1px solid rgba(255, 255, 255, 0.75) !important;
     box-shadow:
-        0 14px 34px rgba(74, 10, 21, 0.1),
+        0 14px 34px rgba(63, 102, 101, 0.1),
         inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8323,7 +8332,7 @@ body {
     -webkit-backdrop-filter: blur(12px) saturate(1.5) !important;
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
     box-shadow:
-        0 4px 14px rgba(74, 10, 21, 0.07),
+        0 4px 14px rgba(63, 102, 101, 0.07),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8335,7 +8344,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.78) !important;
     border-radius: 18px !important;
     box-shadow:
-        0 18px 44px rgba(74, 10, 21, 0.14),
+        0 18px 44px rgba(63, 102, 101, 0.14),
         inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8348,8 +8357,8 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
     border-radius: 22px !important;
     box-shadow:
-        0 24px 60px rgba(74, 10, 21, 0.16),
-        0 4px 16px rgba(74, 10, 21, 0.06),
+        0 24px 60px rgba(63, 102, 101, 0.16),
+        0 4px 16px rgba(63, 102, 101, 0.06),
         inset 0 1.5px 1px rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -8357,7 +8366,7 @@ body {
     border-radius: 21px 21px 0 0 !important;
     background:
         linear-gradient(145deg, rgba(255, 255, 255, 0.14), transparent 45%),
-        linear-gradient(135deg, #6f1020, #9b1b30) !important;
+        linear-gradient(135deg, #4F564C, #3F6665) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -8368,7 +8377,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.9) !important;
     border-radius: 14px !important;
     box-shadow:
-        0 6px 18px rgba(74, 10, 21, 0.08),
+        0 6px 18px rgba(63, 102, 101, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -8386,7 +8395,7 @@ body {
 }
 
 .google-access-note {
-    background: rgba(155, 27, 48, 0.07) !important;
+    background: rgba(63, 102, 101, 0.07) !important;
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
     border: 1px solid rgba(255, 255, 255, 0.65) !important;
@@ -8400,7 +8409,7 @@ body {
     -webkit-backdrop-filter: blur(14px) saturate(1.5) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     box-shadow:
-        0 6px 18px rgba(74, 10, 21, 0.07),
+        0 6px 18px rgba(63, 102, 101, 0.07),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8412,7 +8421,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.78) !important;
     border-radius: 22px !important;
     box-shadow:
-        0 10px 28px rgba(74, 10, 21, 0.07),
+        0 10px 28px rgba(63, 102, 101, 0.07),
         inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
     transition: transform 0.25s ease, box-shadow 0.25s ease !important;
 }
@@ -8421,7 +8430,7 @@ body {
 .vf-step-card:focus-visible {
     transform: translateY(-5px);
     box-shadow:
-        0 20px 44px rgba(74, 10, 21, 0.13),
+        0 20px 44px rgba(63, 102, 101, 0.13),
         inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8429,7 +8438,7 @@ body {
 .section-band,
 .content-band {
     background:
-        radial-gradient(720px 380px at 88% 0%, rgba(196, 59, 82, 0.07), transparent 55%),
+        radial-gradient(720px 380px at 88% 0%, rgba(107, 178, 179, 0.07), transparent 55%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(250, 246, 247, 0.85)) !important;
 }
 
@@ -8443,7 +8452,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     border-radius: 22px !important;
     box-shadow:
-        0 24px 60px rgba(74, 10, 21, 0.22),
+        0 24px 60px rgba(63, 102, 101, 0.22),
         inset 0 1.5px 1px rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -8455,7 +8464,7 @@ body {
     -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.7) !important;
     box-shadow:
-        0 8px 30px rgba(74, 10, 21, 0.08),
+        0 8px 30px rgba(63, 102, 101, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8466,7 +8475,7 @@ body {
     -webkit-backdrop-filter: blur(14px) saturate(1.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     box-shadow:
-        0 8px 24px rgba(74, 10, 21, 0.14),
+        0 8px 24px rgba(63, 102, 101, 0.14),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -8488,9 +8497,10 @@ body {
 
 .ballot-glass-shell {
     background:
-        radial-gradient(900px 480px at 8% -8%, rgba(196, 59, 82, 0.12), transparent 55%),
-        radial-gradient(720px 420px at 100% 12%, rgba(155, 27, 48, 0.08), transparent 50%),
-        linear-gradient(180deg, #ffffff 0%, #faf6f7 50%, #f7f1f2 100%) !important;
+        
+        radial-gradient(900px 480px at 8% -8%, rgba(107, 178, 179, 0.18), transparent 55%),
+        radial-gradient(720px 420px at 100% 12%, rgba(244, 147, 34, 0.12), transparent 50%),
+        linear-gradient(180deg, #ffffff 0%, #FFF8ED 50%, var(--ssc-light) 100%) !important;
 }
 
 /* ---- Floating glass topbar ---- */
@@ -8510,29 +8520,29 @@ body {
     -webkit-backdrop-filter: blur(24px) saturate(1.85) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     box-shadow:
-        0 12px 36px rgba(74, 10, 21, 0.12),
+        0 12px 36px rgba(63, 102, 101, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-    color: #6f1020 !important;
+    color: #4F564C !important;
     z-index: 2200 !important;
     gap: 0.75rem;
 }
 
 .ballot-glass-shell .ballot-topbar .sys-title {
-    color: #6f1020 !important;
+    color: #4F564C !important;
     font-size: 0.95rem !important;
 }
 
 .ballot-glass-shell .ballot-topbar .sys-subtitle {
-    color: rgba(111, 16, 32, 0.7) !important;
+    color: rgba(63, 102, 101, 0.7) !important;
 }
 
 .ballot-glass-shell .ballot-topbar .session-timer,
 .ballot-glass-shell .ballot-topbar .ballot-voter-name {
-    color: #6f1020 !important;
+    color: #4F564C !important;
 }
 
 .ballot-glass-shell .ballot-topbar .ballot-voter-college {
-    color: rgba(111, 16, 32, 0.65) !important;
+    color: rgba(63, 102, 101, 0.65) !important;
 }
 
 .ballot-glass-shell .topbar-logo-box {
@@ -8555,8 +8565,8 @@ body {
 }
 
 .ballot-glass-shell .ballot-voter-avatar-circle {
-    background: rgba(155, 27, 48, 0.1) !important;
-    color: #9b1b30 !important;
+    background: rgba(63, 102, 101, 0.1) !important;
+    color: #3F6665 !important;
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
@@ -8580,7 +8590,7 @@ body {
     display: block;
     height: 2px;
     width: 100%;
-    background: #9b1b30;
+    background: #3F6665;
     border-radius: 2px;
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
@@ -8614,20 +8624,20 @@ body {
 /* ---- Glass sidebar: floating rounded panel, matches the pill ---- */
 .ballot-glass-shell .ballot-sidebar {
     background:
-        linear-gradient(160deg, rgba(111, 16, 32, 0.92), rgba(74, 10, 21, 0.95) 55%, rgba(42, 6, 12, 0.97)) !important;
+        linear-gradient(160deg, rgba(107, 178, 179, 0.94), rgba(156, 161, 142, 0.92) 48%, rgba(244, 147, 34, 0.9)) !important;
     backdrop-filter: blur(20px) saturate(1.4) !important;
     -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
     border-radius: 24px !important;
     margin: 0.85rem 0 0.85rem 0.7rem !important;
     top: calc(0.7rem + 58px + 0.85rem) !important;
     height: calc(100vh - 0.7rem - 58px - 2.4rem) !important;
     box-shadow:
-        0 16px 40px rgba(74, 10, 21, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+        0 16px 40px rgba(63, 102, 101, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
     overflow-y: auto !important;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+    scrollbar-color: rgba(31, 30, 27, 0.28) transparent;
 }
 
 .ballot-glass-shell .ballot-sidebar::-webkit-scrollbar {
@@ -8639,7 +8649,7 @@ body {
 }
 
 .ballot-glass-shell .ballot-sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.28);
+    background: rgba(31, 30, 27, 0.28);
     border-radius: 999px;
 }
 
@@ -8655,6 +8665,23 @@ body {
     gap: 0.75rem;
 }
 
+.ballot-glass-shell .jump-nav-title,
+.ballot-glass-shell .jump-nav li,
+.ballot-glass-shell .jump-nav-name,
+.ballot-glass-shell .jump-nav-arrow,
+.ballot-glass-shell .sidebar-header-titles h2,
+.ballot-glass-shell .sidebar-header-titles p {
+    color: var(--ssc-ink) !important;
+}
+
+.ballot-glass-shell .jump-nav-name i {
+    color: rgba(31, 30, 27, 0.35) !important;
+}
+
+.ballot-glass-shell .jump-nav li.filled .jump-nav-name i {
+    color: #059669 !important;
+}
+
 .ballot-glass-shell .jump-nav li {
     border-radius: 14px !important;
     border: 1px solid transparent !important;
@@ -8663,27 +8690,27 @@ body {
 
 .ballot-glass-shell .jump-nav li:hover,
 .ballot-glass-shell .jump-nav li.filled {
-    background: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
+    background: rgba(255, 255, 255, 0.42) !important;
+    border-color: rgba(255, 255, 255, 0.55) !important;
 }
 
 .ballot-glass-shell .sidebar-footer {
     background: transparent !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-top: 1px solid rgba(31, 30, 27, 0.12) !important;
     padding: 1rem 1.1rem 1.2rem !important;
     margin-top: auto !important;
 }
 
 .ballot-glass-shell .btn-review-sidebar {
-    background: linear-gradient(180deg, #ffffff 0%, #f6edef 100%) !important;
-    color: #6f1020 !important;
+    background: linear-gradient(180deg, #ffffff 0%, var(--ssc-cream) 100%) !important;
+    color: var(--ssc-ink) !important;
     border: 1px solid rgba(255, 255, 255, 0.95) !important;
     border-radius: 999px !important;
     padding: 0.85rem 1rem !important;
     font-weight: 800 !important;
     letter-spacing: 0.01em;
     box-shadow:
-        0 10px 26px rgba(0, 0, 0, 0.28),
+        0 10px 26px rgba(63, 102, 101, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
 }
@@ -8691,16 +8718,16 @@ body {
 .ballot-glass-shell .btn-review-sidebar:hover,
 .ballot-glass-shell .btn-review-sidebar:focus {
     background: #ffffff !important;
-    color: #4a0a15 !important;
+    color: var(--ssc-brown) !important;
     border-color: #ffffff !important;
     transform: translateY(-1px);
     box-shadow:
-        0 14px 32px rgba(0, 0, 0, 0.32),
+        0 14px 32px rgba(63, 102, 101, 0.24),
         inset 0 1px 0 #ffffff !important;
 }
 
 .ballot-glass-shell .btn-review-sidebar .bi {
-    color: #9b1b30 !important;
+    color: var(--ssc-nav) !important;
 }
 
 /* ---- Main content glass cards ---- */
@@ -8715,9 +8742,9 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     border-radius: 18px !important;
     box-shadow:
-        0 8px 24px rgba(74, 10, 21, 0.08),
+        0 8px 24px rgba(63, 102, 101, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
-    color: #6f1020 !important;
+    color: #4F564C !important;
 }
 
 .ballot-glass-shell .hiraya-ballot-brief {
@@ -8726,10 +8753,10 @@ body {
     backdrop-filter: blur(18px) saturate(1.5) !important;
     -webkit-backdrop-filter: blur(18px) saturate(1.5) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
-    border-left: 4px solid #9b1b30 !important;
+    border-left: 4px solid #3F6665 !important;
     border-radius: 22px !important;
     box-shadow:
-        0 14px 36px rgba(74, 10, 21, 0.08),
+        0 14px 36px rgba(63, 102, 101, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -8739,7 +8766,7 @@ body {
     -webkit-backdrop-filter: blur(12px) !important;
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
     border-radius: 16px !important;
-    box-shadow: 0 8px 22px rgba(74, 10, 21, 0.06) !important;
+    box-shadow: 0 8px 22px rgba(63, 102, 101, 0.06) !important;
 }
 
 .ballot-glass-shell .position-block-new {
@@ -8750,7 +8777,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     border-radius: 22px !important;
     box-shadow:
-        0 12px 32px rgba(74, 10, 21, 0.07),
+        0 12px 32px rgba(63, 102, 101, 0.07),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -8761,21 +8788,21 @@ body {
     border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
     border-radius: 18px !important;
     box-shadow:
-        0 8px 22px rgba(74, 10, 21, 0.06),
+        0 8px 22px rgba(63, 102, 101, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
 .ballot-glass-shell .candidate-card-new:hover {
     transform: translateY(-3px);
-    box-shadow: 0 16px 36px rgba(74, 10, 21, 0.12) !important;
+    box-shadow: 0 16px 36px rgba(63, 102, 101, 0.12) !important;
 }
 
 .ballot-glass-shell .candidate-card-new:has(input:checked) {
-    border-color: rgba(155, 27, 48, 0.55) !important;
+    border-color: rgba(63, 102, 101, 0.55) !important;
     box-shadow:
-        0 0 0 3px rgba(155, 27, 48, 0.12),
-        0 14px 32px rgba(74, 10, 21, 0.12) !important;
+        0 0 0 3px rgba(63, 102, 101, 0.12),
+        0 14px 32px rgba(63, 102, 101, 0.12) !important;
 }
 
 /* Mobile chips strip (hidden on desktop) */
@@ -8943,13 +8970,13 @@ body {
         border: 1px solid rgba(255, 255, 255, 0.9);
         background: rgba(255, 255, 255, 0.72);
         backdrop-filter: blur(10px);
-        color: #6f1020;
+        color: #4F564C;
         font-size: 0.72rem;
         font-weight: 750;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        box-shadow: 0 4px 12px rgba(74, 10, 21, 0.08);
+        box-shadow: 0 4px 12px rgba(63, 102, 101, 0.08);
         cursor: pointer;
     }
 
@@ -8984,18 +9011,21 @@ body {
         z-index: 2100;
     }
 
+    .ballot-glass-shell .submit-strip-mobile {
+        display: none !important;
+    }
+
     .btn-review-mobile {
         width: 100%;
         min-height: 52px;
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 999px;
-        background:
-            linear-gradient(135deg, #9b1b30, #6f1020);
+        background: linear-gradient(135deg, var(--ssc-teal), var(--ssc-nav));
         color: #fff;
         font-weight: 800;
         font-size: 0.95rem;
         box-shadow:
-            0 14px 36px rgba(74, 10, 21, 0.35),
+            0 14px 36px rgba(63, 102, 101, 0.28),
             inset 0 1px 0 rgba(255, 255, 255, 0.25);
         backdrop-filter: blur(12px);
         display: inline-flex;

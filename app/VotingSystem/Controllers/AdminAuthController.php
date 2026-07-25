@@ -78,7 +78,7 @@ class AdminAuthController extends Controller
             $this->redirect(admin_login_path());
         }
 
-        $this->view('admin/login', ['title' => 'Admin Login'], 'public');
+        $this->view('admin/login', ['title' => 'Admin Login'], 'staff-login');
     }
 
     public function logout(): void
