@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\OfficeUser;
-use App\Models\Student;
+use App\Models\UserAccount;
 use App\Models\User;
 
 return [
@@ -78,7 +78,7 @@ return [
         ],
         'students' => [
             'driver' => 'eloquent',
-            'model' => Student::class,
+            'model' => UserAccount::class,
         ],
         'office_users' => [
             'driver' => 'eloquent',

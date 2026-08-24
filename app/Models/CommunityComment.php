@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CommunityComment extends Model
 {
+    protected $connection = 'orgchain';
+
     protected $fillable = [
         'post_id',
         'student_id',
@@ -20,6 +22,6 @@ class CommunityComment extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class);
+        return $this->belongsTo(UserAccount::class, 'student_id', 'user_id');
     }
 }

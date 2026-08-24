@@ -448,59 +448,104 @@
                     </div>
                 </div>
                 <h2 id="loginTitle">Student Login</h2>
-                <p>Sign in with your SR Code and password to access OrgChain.</p>
+                <p>Sign in with your BatStateU institutional account, or request a verification code with your SR Code.</p>
             </div>
 
-            <form class="login-form" id="studentLoginForm" method="POST" action="{{ url('/student/login') }}">
-                @csrf
-                <div class="form-field">
-                    <label for="sr_code">SR Code</label>
-                    <div class="input-wrap">
-                        <svg class="input-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h4M7 12h10M7 16h6"/></svg>
-                        <input
-                            type="text"
-                            id="sr_code"
-                            name="sr_code"
-                            placeholder="e.g. 21-12345"
-                            autocomplete="username"
-                            required
-                            pattern="[0-9]{2}-[0-9]{5}"
-                            title="Format: YY-XXXXX (e.g. 21-12345)"
-                            value="{{ old('sr_code') }}"
-                        >
-                    </div>
-                    <span class="field-hint">Use your official BatStateU SR Code</span>
-                </div>
-                <div class="form-field">
-                    <label for="password">Password</label>
-                    <div class="password-wrap input-wrap">
-                        <svg class="input-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                            required
-                            minlength="6"
-                        >
-                        <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password">Show</button>
-                    </div>
+            <div class="login-auth-stack">
+                <a href="{{ route('student.auth.google') }}" class="btn-google-bsu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        <path fill="none" d="M0 0h48v48H0z"/>
+                    </svg>
+                    <span>Continue with Institutional Account</span>
+                </a>
+
+                <div class="login-divider" role="separator" aria-label="Or">
+                    <span>or</span>
                 </div>
 
-                @if ($errors->any())
-                    <div class="form-alert" role="alert">{{ $errors->first() }}</div>
+                @if (session('code_sent'))
+                    <form class="login-form" id="studentVerifyForm" method="POST" action="{{ route('student.code.verify') }}">
+                        @csrf
+                        <input type="hidden" name="sr_code" value="{{ session('code_sr', old('sr_code')) }}">
+                        <div class="form-field">
+                            <label for="code">Verification Code</label>
+                            <div class="input-wrap">
+                                <svg class="input-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
+                                <input
+                                    type="text"
+                                    id="code"
+                                    name="code"
+                                    placeholder="e.g. 123456"
+                                    inputmode="numeric"
+                                    autocomplete="one-time-code"
+                                    maxlength="6"
+                                    pattern="[0-9]{6}"
+                                    required
+                                    autofocus
+                                    value="{{ old('code') }}"
+                                >
+                            </div>
+                            <span class="field-hint">Code sent to {{ session('code_email', 'your email') }} · expires in 10 min</span>
+                        </div>
+
+                        @if ($errors->any())
+                            <div class="form-alert" role="alert">{{ $errors->first() }}</div>
+                        @endif
+
+                        <button type="submit" class="btn btn-primary btn-block btn-login-submit">
+                            <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                            Verify &amp; Log In
+                        </button>
+
+                        <div class="login-step-switch">
+                            <button type="button" class="link-btn" id="backToSrCode">&larr; Use a different SR Code</button>
+                            <button type="button" class="link-btn" id="resendCode">Resend code</button>
+                        </div>
+                    </form>
+                @else
+                    <form class="login-form" id="studentCodeForm" method="POST" action="{{ route('student.code.send') }}">
+                        @csrf
+                        <div class="form-field">
+                            <label for="sr_code">SR Code</label>
+                            <div class="input-wrap">
+                                <svg class="input-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h4M7 12h10M7 16h6"/></svg>
+                                <input
+                                    type="text"
+                                    id="sr_code"
+                                    name="sr_code"
+                                    placeholder="e.g. 21-12345"
+                                    autocomplete="username"
+                                    required
+                                    pattern="[0-9]{2}-[0-9]{5}"
+                                    title="Format: YY-XXXXX (e.g. 21-12345)"
+                                    value="{{ old('sr_code') }}"
+                                    autofocus
+                                >
+                            </div>
+                            <span class="field-hint">We'll email a 6-digit code to your registered BatStateU email</span>
+                        </div>
+
+                        @if ($errors->any())
+                            <div class="form-alert" role="alert">{{ $errors->first() }}</div>
+                        @endif
+
+                        @if (session('status'))
+                            <div class="form-alert form-alert-info" role="status">{{ session('status') }}</div>
+                        @endif
+
+                        <button type="submit" class="btn btn-primary btn-block btn-login-submit">
+                            <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                            Send Verification Code
+                        </button>
+                    </form>
                 @endif
 
-                @if (session('status'))
-                    <div class="form-alert form-alert-info" role="status">{{ session('status') }}</div>
-                @endif
-
-                <button type="submit" class="btn btn-primary btn-block btn-login-submit">
-                    <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    Log In
-                </button>
-            </form>
+                <p class="login-google-note">Institutional sign-in uses your @g.batstate-u.edu.ph Google Workspace account.</p>
+            </div>
         </div>
     </div>
 
@@ -510,11 +555,49 @@
     @endif
 
     <script>
-        @if ($errors->any() || request()->boolean('login') || session('status') || session('login'))
+        @if ($errors->any() || request()->boolean('login') || session('status') || session('login') || session('code_sent'))
             document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('openLoginBtn')?.click();
             });
         @endif
+
+        // Login modal — step switching helpers
+        document.addEventListener('DOMContentLoaded', function () {
+            // "Use a different SR Code" — reload the page without the code_sent session flag.
+            document.getElementById('backToSrCode')?.addEventListener('click', function () {
+                window.location.href = '{{ url("/?login=1") }}';
+            });
+
+            // "Resend code" — re-submit the send-code form for the same SR Code.
+            document.getElementById('resendCode')?.addEventListener('click', function () {
+                const form = document.getElementById('studentVerifyForm');
+                if (!form) return;
+                const sr = form.querySelector('input[name="sr_code"]')?.value;
+                if (!sr) return;
+
+                const resendForm = document.createElement('form');
+                resendForm.method = 'POST';
+                resendForm.action = '{{ route("student.code.send") }}';
+
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+                if (csrf) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = csrf;
+                    resendForm.appendChild(csrfInput);
+                }
+
+                const srInput = document.createElement('input');
+                srInput.type = 'hidden';
+                srInput.name = 'sr_code';
+                srInput.value = sr;
+                resendForm.appendChild(srInput);
+
+                document.body.appendChild(resendForm);
+                resendForm.submit();
+            });
+        });
     </script>
 </body>
 </html>

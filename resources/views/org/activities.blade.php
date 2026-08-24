@@ -8,12 +8,45 @@
 @endsection
 
 @section('actions')
-    <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
+    <a href="{{ route('office.activities.create') }}" class="org-btn org-btn-primary">
         <i class="bi bi-plus-lg"></i> Create
     </a>
 @endsection
 
 @section('content')
+    @if ($submissions->isNotEmpty())
+        <section class="org-submission-list">
+            <div class="org-section-heading">
+                <div>
+                    <span class="org-eyebrow"><i class="bi bi-file-earmark-check-fill"></i> Activity proposals</span>
+                    <h2>Your saved submissions</h2>
+                </div>
+                <span>{{ $submissions->count() }} total</span>
+            </div>
+            @foreach ($submissions as $submission)
+                @php $activity = $submission->activity; $attachments = $submission->attachments ?? []; $isOffCampus = $submission->isOffCampus(); @endphp
+                <article class="org-submission-card liquid-glass">
+                    <div>
+                        <span class="org-submission-type">
+                            <i class="bi {{ $isOffCampus ? 'bi-geo-alt-fill' : 'bi-building-check' }}"></i> 
+                            {{ $isOffCampus ? 'Local off-campus activity' : 'In-campus activity' }}
+                        </span>
+                        <h2>{{ $activity?->title ?? 'Untitled activity' }}</h2>
+                        <p>
+                            @if ($activity?->starts_at)<span><i class="bi bi-calendar3"></i> {{ $activity->starts_at->format('M j, Y g:i A') }}</span>@endif
+                            @if ($activity?->location)<span><i class="bi bi-geo-alt-fill"></i> {{ $activity->location }}</span>@endif
+                            <span><i class="bi bi-paperclip"></i> {{ collect($attachments)->filter(fn ($value, $key) => $key !== 'conditions' && is_array($value) && !empty($value['path']))->count() }} attachment(s)</span>
+                        </p>
+                    </div>
+                    <div class="org-submission-actions">
+                        <span class="org-status org-status-{{ $submission->status === 'submitted' ? 'verification' : 'created' }}">{{ ucfirst($submission->status) }}</span>
+                        <a href="{{ route('office.activities.edit', $submission) }}" class="org-btn org-btn-ghost"><i class="bi bi-pencil-square"></i> {{ $submission->status === 'submitted' ? 'View' : 'Continue' }}</a>
+                    </div>
+                </article>
+            @endforeach
+        </section>
+    @endif
+
     <div class="org-activity-list">
         @foreach ($activities as $activity)
             <article class="org-activity-card liquid-glass">
@@ -25,6 +58,9 @@
                             <p>
                                 <span class="org-meta-chip"><i class="bi bi-calendar3"></i> {{ $activity['date'] }}</span>
                                 <span class="org-meta-chip"><i class="bi bi-cash-stack"></i> Php {{ number_format($activity['budget']) }}</span>
+                                @if (!empty($activity['location']))
+                                    <span class="org-meta-chip"><i class="bi bi-geo-alt-fill"></i> {{ $activity['location'] }}</span>
+                                @endif
                             </p>
                         </div>
                     </div>

@@ -1,0 +1,223 @@
+{
+  "main": {
+    "id": "63035a47af5b9f48",
+    "type": "split",
+    "children": [
+      {
+        "id": "bbfcc63ff64c8465",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1adda574ab9772ed",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "f35904efe2c66326",
+    "type": "split",
+    "children": [
+      {
+        "id": "cfca32284ef15722",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3bb644228431ceec",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "39a0eeeaa2e0160e",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "f754acb501632e1e",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "a84f3e1cb36618e9",
+    "type": "split",
+    "children": [
+      {
+        "id": "a1ceb7ef4f72c18b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "af2a5474f08dbe83",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "19d095cc3d254be5",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "463a1cee83782d6b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "d4de345434d493da",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "45ab662467d73158",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "1adda574ab9772ed",
+  "lastOpenFiles": [
+    "00 - Home and Index/Dashboard.md",
+    "01 - System Architecture/System Overview and Vision.md",
+    "Welcome.md",
+    "07 - Project Roadmap and Future Enhancements/Known Limitations and Technical Debt.md",
+    "07 - Project Roadmap and Future Enhancements/Future Milestones and Features.md",
+    "07 - Project Roadmap and Future Enhancements",
+    "06 - Operations Deployment and Runbooks/Testing and Quality Assurance Guide.md",
+    "06 - Operations Deployment and Runbooks/Security Incident and Rate Limit Response Runbook.md",
+    "06 - Operations Deployment and Runbooks/Maintenance Resync and Ledger Purge Runbook.md",
+    "06 - Operations Deployment and Runbooks/Local Development Setup Laragon PHP 8.3.md",
+    "06 - Operations Deployment and Runbooks/Environment Variables dot-env Specification.md",
+    "06 - Operations Deployment and Runbooks",
+    "05 - API and Route Specifications/Web and Portal Route Map.md",
+    "05 - API and Route Specifications/Voting System Controller and API Spec.md",
+    "05 - API and Route Specifications/Office Portal API and Action Endpoints.md",
+    "05 - API and Route Specifications/Middleware and Request Filters.md",
+    "05 - API and Route Specifications",
+    "04 - Workflows and Business Processes/Local Off-Campus Compliance and CHED Workflow.md",
+    "04 - Workflows and Business Processes/In-Campus Activity Proposal Checklist.md",
+    "04 - Workflows and Business Processes/Expense Review and Financial Liquidation Flow.md",
+    "04 - Workflows and Business Processes/Election Lifecycle and Tallying Flow.md",
+    "04 - Workflows and Business Processes",
+    "03 - Database and Data Models/Database Seeders and Demo Fixtures.md",
+    "03 - Database and Data Models/Models/Model - Vote and VoteReceipt.md",
+    "03 - Database and Data Models/Models/Model - Student and UserAccount.md",
+    "03 - Database and Data Models/Models/Model - InCampusActivitySubmission and OrgActivity.md",
+    "03 - Database and Data Models/Models/Model - Election Position Candidate.md",
+    "03 - Database and Data Models/Models/Model - CommunityPost Comment Like.md",
+    "03 - Database and Data Models/Models/Model - BudgetItem and ExpenseReceiptReview.md",
+    "03 - Database and Data Models/Models/Model - AuditLog and SecurityEvent.md",
+    "03 - Database and Data Models/Models",
+    "03 - Database and Data Models",
+    "02 - Subsystems and Modules/Authentication and Access Control",
+    "02 - Subsystems and Modules/Student Portal and Community Hub",
+    "02 - Subsystems and Modules/Office Portal and Administrative Desk",
+    "02 - Subsystems and Modules/Voting System and VoteChain"
+  ]
+}

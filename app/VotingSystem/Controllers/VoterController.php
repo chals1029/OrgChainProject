@@ -251,9 +251,12 @@ class VoterController extends Controller
             $receiptEmail = trim((string) ($submittedVoter['email'] ?? ''));
             $chainSeal = $this->receiptChainSeal($reference);
 
+            $emailSent = false;
+            $emailError = null;
+
             if ($submittedVoter && filter_var($receiptEmail, FILTER_VALIDATE_EMAIL) !== false) {
                 try {
-                    $sent = (new Mailer())->sendVoteReceipt(
+                    $emailSent = (new Mailer())->sendVoteReceipt(
                         $receiptEmail,
                         $submittedVoter,
                         $election,
@@ -262,18 +265,26 @@ class VoterController extends Controller
                         $chainSeal
                     );
 
-                    if (!$sent) {
+                    if (!$emailSent) {
+                        $emailError = 'Mail server could not deliver the email.';
                         error_log('Vote receipt email failed for reference ' . $reference . '.');
                     }
                 } catch (\Throwable $exception) {
+                    $emailError = $exception->getMessage();
                     error_log('Vote receipt email failed for reference ' . $reference . ': ' . $exception->getMessage());
                 }
             } else {
+                $emailError = 'Invalid or missing voter email address.';
                 error_log('Vote receipt email skipped for reference ' . $reference . ' because the voter email is invalid.');
             }
 
             (new AuditLog())->record('vote_submitted', 'Ballot reference ' . $reference . ' was submitted.');
             $_SESSION['last_vote_reference'] = $reference;
+            $_SESSION['last_vote_email'] = $receiptEmail;
+            $_SESSION['last_vote_email_sent'] = $emailSent;
+            $_SESSION['last_vote_email_error'] = $emailError;
+            $_SESSION['last_vote_voter_id'] = (int) $voterId;
+
             unset($_SESSION['verified_voter_id'], $_SESSION['pending_voter_ballot_code']);
             $this->redirect('/vote/receipt');
         } catch (InvalidArgumentException $exception) {
@@ -294,7 +305,9 @@ class VoterController extends Controller
             $this->redirect('/');
         }
 
-        unset($_SESSION['last_vote_reference']);
+        $email = $_SESSION['last_vote_email'] ?? '';
+        $emailSent = !empty($_SESSION['last_vote_email_sent']);
+        $emailError = $_SESSION['last_vote_email_error'] ?? null;
 
         $receipt = null;
         try {
@@ -315,7 +328,60 @@ class VoterController extends Controller
             'title' => 'Vote Submitted',
             'reference' => $reference,
             'receipt' => $receipt,
+            'email' => $email,
+            'emailSent' => $emailSent,
+            'emailError' => $emailError,
         ]);
+    }
+
+    public function resendReceipt(): void
+    {
+        $this->requirePost();
+        $reference = $_SESSION['last_vote_reference'] ?? null;
+        $voterId = $_SESSION['last_vote_voter_id'] ?? null;
+
+        if (!$reference || !$voterId) {
+            voting_flash('warning', 'No active voting session found to resend receipt.');
+            $this->redirect('/');
+        }
+
+        $election = (new Election())->current();
+        $submittedVoter = (new Voter())->find((int) $voterId);
+        $receiptEmail = trim((string) ($submittedVoter['email'] ?? ''));
+        $chainSeal = $this->receiptChainSeal($reference);
+
+        if ($submittedVoter && filter_var($receiptEmail, FILTER_VALIDATE_EMAIL) !== false) {
+            try {
+                $sent = (new Mailer())->sendVoteReceipt(
+                    $receiptEmail,
+                    $submittedVoter,
+                    $election ?? [],
+                    $reference,
+                    (string) ($submittedVoter['voted_at'] ?? date('Y-m-d H:i:s')),
+                    $chainSeal
+                );
+
+                if ($sent) {
+                    $_SESSION['last_vote_email_sent'] = true;
+                    $_SESSION['last_vote_email_error'] = null;
+                    voting_flash('success', 'Official ballot receipt successfully re-sent to ' . $receiptEmail . '.');
+                } else {
+                    $_SESSION['last_vote_email_sent'] = false;
+                    $_SESSION['last_vote_email_error'] = 'Mail server could not send the email.';
+                    voting_flash('error', 'Could not deliver receipt email to ' . $receiptEmail . '. Check mail configuration or try again.');
+                }
+            } catch (\Throwable $exception) {
+                $_SESSION['last_vote_email_sent'] = false;
+                $_SESSION['last_vote_email_error'] = $exception->getMessage();
+                voting_flash('error', 'Error re-sending receipt email: ' . $exception->getMessage());
+            }
+        } else {
+            $_SESSION['last_vote_email_sent'] = false;
+            $_SESSION['last_vote_email_error'] = 'Invalid voter email address.';
+            voting_flash('error', 'Invalid voter email address.');
+        }
+
+        $this->redirect('/vote/receipt');
     }
 
     /**

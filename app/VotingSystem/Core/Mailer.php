@@ -211,8 +211,16 @@ class Mailer
             return false;
         }
 
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+            ],
+        ]);
+
         $remote = ($encryption === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
-        $socket = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
+        $socket = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $context);
 
         if (!is_resource($socket)) {
             error_log("SMTP connection failed: {$errno} {$errstr}");
@@ -227,8 +235,14 @@ class Mailer
 
             if ($encryption === 'tls') {
                 $this->command($socket, 'STARTTLS', [220]);
-                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                    throw new \RuntimeException('Unable to start SMTP TLS encryption.');
+                $cryptoMethod = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+                if (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT')) {
+                    $cryptoMethod |= STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+                }
+                if (!@stream_socket_enable_crypto($socket, true, $cryptoMethod)) {
+                    if (!@stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                        throw new \RuntimeException('Unable to start SMTP TLS encryption.');
+                    }
                 }
                 $this->command($socket, 'EHLO ' . $this->smtpDomain(), [250]);
             }
@@ -255,7 +269,7 @@ class Mailer
                 fclose($socket);
             }
 
-            return false;
+            throw $exception;
         }
     }
 

@@ -19,7 +19,7 @@ class EnsureStudentAuthenticated
 
         $student = Auth::guard('student')->user();
 
-        if (! $student || ! $student->is_active) {
+        if (! $student || ! $student->isActive()) {
             Auth::guard('student')->logout();
 
             return redirect('/')

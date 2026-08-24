@@ -12,8 +12,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::post('/student/login', [StudentAuthController::class, 'login'])->name('student.login');
+Route::post('/student/login/code', [StudentAuthController::class, 'sendCode'])->name('student.code.send');
+Route::post('/student/login/verify', [StudentAuthController::class, 'verifyCode'])->name('student.code.verify');
 Route::post('/student/logout', [StudentAuthController::class, 'logout'])->name('student.logout');
+Route::get('/student/auth/google', [StudentAuthController::class, 'redirectToGoogle'])->name('student.auth.google');
+Route::get('/student/auth/google/callback', [StudentAuthController::class, 'handleGoogleCallback'])->name('student.auth.google.callback');
 
 $officeLoginPath = '/'.trim((string) config('orgchain.office_login_path', '/orgchain-office-access-a9e2f71c4b83'), '/');
 Route::match(['GET', 'POST'], $officeLoginPath, function (\Illuminate\Http\Request $request) {
@@ -40,10 +43,19 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/', [OfficePortalController::class, 'dashboard'])->name('home');
     Route::get('/analytics', [OfficePortalController::class, 'analytics'])->name('analytics');
     Route::get('/activities', [OfficePortalController::class, 'activities'])->name('activities');
+    Route::get('/activities/create', [OfficePortalController::class, 'createActivity'])->name('activities.create');
+    Route::post('/activities', [OfficePortalController::class, 'storeActivity'])->name('activities.store');
+    Route::get('/activities/{submission}/edit', [OfficePortalController::class, 'editActivity'])->name('activities.edit');
+    Route::put('/activities/{submission}', [OfficePortalController::class, 'updateActivity'])->name('activities.update');
     Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
     Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
+    Route::post('/budget-utilization/receipt-reviews', [OfficePortalController::class, 'storeReceiptReview'])->name('budget.receipts.store');
     Route::get('/financial-report', [OfficePortalController::class, 'financial'])->name('financial');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
+    Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
+    Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
+    Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
+    Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');
 });
 
 /*
@@ -84,6 +96,7 @@ $runVoting = static function (): void {
 };
 
 // Explicit high-traffic paths (guaranteed match)
+Route::match(['GET', 'POST'], '/voting-system/api/{segment}', $runVoting)->where('segment', '.*');
 Route::match(['GET', 'POST'], '/voting-system/auth/google', $runVoting);
 Route::match(['GET', 'POST'], '/voting-system/auth/google/callback', $runVoting);
 Route::match(['GET', 'POST'], '/voting-system/vote/{segment}', $runVoting)->where('segment', '.*');

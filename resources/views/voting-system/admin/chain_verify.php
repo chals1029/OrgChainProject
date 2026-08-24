@@ -93,3 +93,94 @@
         <?php endif; ?>
     </div>
 <?php endif; ?>
+
+<div class="admin-panel-card mt-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="h5 m-0"><i class="bi bi-code-square"></i> Blockchain REST API Explorer</h2>
+            <p class="text-muted small m-0">Expose live 3-node blockchain integrity verification to external auditors, apps, and student clients.</p>
+        </div>
+        <span class="badge bg-primary">v1.0 REST API</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="p-3 border rounded bg-light">
+                <strong class="d-block text-primary"><i class="bi bi-shield-check"></i> Verify Reference API</strong>
+                <small class="text-muted d-block mb-2">Verify SHA-256 seal and 3-node consensus for a receipt reference.</small>
+                <code>GET <?= e(voting_url('/api/blockchain/verify?reference=REF')) ?></code>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border rounded bg-light">
+                <strong class="d-block text-success"><i class="bi bi-cpu"></i> Ledger Status API</strong>
+                <small class="text-muted d-block mb-2">Check block count, latest hash, genesis anchor, and 3-node health.</small>
+                <code>GET <?= e(voting_url('/api/blockchain/status')) ?></code>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border rounded bg-light">
+                <strong class="d-block text-warning"><i class="bi bi-box-seam"></i> Block Detail API</strong>
+                <small class="text-muted d-block mb-2">Inspect raw ledger block data by index or block hash.</small>
+                <code>GET <?= e(voting_url('/api/blockchain/block?index=1')) ?></code>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-3 border-0 bg-dark text-white rounded">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <strong class="text-warning"><i class="bi bi-terminal"></i> Interactive API Response Tester</strong>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-light active" id="btnApiStatus">Ledger Status</button>
+                <button type="button" class="btn btn-outline-light" id="btnApiVerify">Verify Ref</button>
+                <button type="button" class="btn btn-outline-light" id="btnApiBlock">Block #1</button>
+            </div>
+        </div>
+        <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text bg-secondary text-white border-secondary">Endpoint URL</span>
+            <input type="text" class="form-control bg-secondary text-white border-secondary font-monospace" id="apiEndpointUrl" readonly value="<?= e(voting_url('/api/blockchain/status')) ?>">
+            <button class="btn btn-primary" type="button" id="btnExecuteApi"><i class="bi bi-play-fill"></i> Execute API Call</button>
+        </div>
+        <pre class="bg-black text-success p-3 rounded font-monospace small mb-0" id="apiOutput" style="max-height: 280px; overflow-y: auto;">Click "Execute API Call" to test the live JSON response...</pre>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const urlInput = document.getElementById('apiEndpointUrl');
+    const output = document.getElementById('apiOutput');
+    const executeBtn = document.getElementById('btnExecuteApi');
+    const baseUrl = '<?= e(voting_url('/api/blockchain/')) ?>';
+    const sampleRef = '<?= e($reference ?: 'DEMO-REF-1234') ?>';
+
+    document.getElementById('btnApiStatus')?.addEventListener('click', function() {
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        urlInput.value = baseUrl + 'status';
+    });
+
+    document.getElementById('btnApiVerify')?.addEventListener('click', function() {
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        urlInput.value = baseUrl + 'verify?reference=' + sampleRef;
+    });
+
+    document.getElementById('btnApiBlock')?.addEventListener('click', function() {
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        urlInput.value = baseUrl + 'block?index=1';
+    });
+
+    executeBtn?.addEventListener('click', async () => {
+        const targetUrl = urlInput.value;
+        output.textContent = '// Executing GET ' + targetUrl + ' ...';
+        try {
+            const res = await fetch(targetUrl);
+            const data = await res.json();
+            output.textContent = '// Status: ' + res.status + ' ' + res.statusText + '\n\n' + JSON.stringify(data, null, 2);
+        } catch (err) {
+            output.textContent = '// Error executing API call:\n' + err.message;
+        }
+    });
+});
+</script>

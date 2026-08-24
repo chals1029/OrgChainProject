@@ -30,7 +30,7 @@
             ['label' => 'Ballot card', 'icon' => 'bi-card-text', 'url' => '/admin/ballot-content', 'roles' => ['admin']],
             ['label' => 'Live Tally', 'icon' => 'bi-bar-chart-line', 'url' => canvassing_path(), 'roles' => ['canvassing', 'view_only']],
             ['label' => 'Reports', 'icon' => 'bi-printer', 'url' => staff_reports_path_for($authUser), 'roles' => ['admin', 'canvassing', 'view_only']],
-            ['label' => 'Chain Verify', 'icon' => 'bi-link-45deg', 'url' => '/admin/chain-verify', 'roles' => ['admin', 'canvassing', 'view_only']],
+            ['label' => 'Chain Verify', 'icon' => 'bi-link-45deg', 'url' => '/admin/chain-verify', 'roles' => ['admin']],
             ['label' => 'Security', 'icon' => 'bi-shield-lock', 'url' => '/admin/security', 'roles' => ['admin']],
         ];
     ?>

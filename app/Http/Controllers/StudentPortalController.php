@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BudgetItem;
 use App\Models\CommunityPost;
 use App\Models\OrgActivity;
+use App\Models\UserAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;

@@ -15,7 +15,7 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet">
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
     @endif
-    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=9">
+    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=14">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="org-body">
@@ -74,6 +74,15 @@
                     <span>Accomplishment Report</span>
                     <em class="org-badge-count">{{ $navBadges['ar_attachments'] ?? 3 }}</em>
                 </a>
+                <a href="{{ route('office.updates') }}" class="org-nav-link {{ ($activeNav ?? '') === 'updates' ? 'is-active' : '' }}">
+                    <i class="bi bi-megaphone-fill"></i>
+                    <span>Updates</span>
+                    <em class="org-badge-count">3</em>
+                </a>
+                <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
+                    <i class="bi bi-archive-fill"></i>
+                    <span>Archive</span>
+                </a>
             </nav>
 
             <div class="org-officer">
@@ -113,5 +122,6 @@
             </div>
         </div>
     </div>
+    @stack('scripts')
 </body>
 </html>

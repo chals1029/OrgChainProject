@@ -8,7 +8,7 @@
 @endsection
 
 @section('actions')
-    <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
+    <a href="{{ route('office.activities.create') }}" class="org-btn org-btn-primary">
         <i class="bi bi-plus-lg"></i> Create An Activity/Event
     </a>
     <a href="{{ route('office.calendar') }}" class="org-btn org-btn-ghost">

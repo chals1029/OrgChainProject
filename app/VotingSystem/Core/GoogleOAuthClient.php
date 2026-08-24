@@ -9,6 +9,11 @@ class GoogleOAuthClient
     private const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
+    public function __construct(
+        private readonly ?string $redirectUriOverride = null,
+    ) {
+    }
+
     public function isConfigured(): bool
     {
         return $this->clientId() !== '' && $this->clientSecret() !== '';
@@ -24,7 +29,7 @@ class GoogleOAuthClient
             'state' => $state,
             'nonce' => $nonce,
             'prompt' => 'select_account',
-            'hd' => voting_config('google.allowed_domain', 'g.batstate-u.edu.ph'),
+            'hd' => $this->config('google.allowed_domain', 'g.batstate-u.edu.ph'),
         ]);
     }
 
@@ -50,7 +55,13 @@ class GoogleOAuthClient
 
     public function redirectUri(): string
     {
-        $configured = trim((string) voting_config('google.redirect_uri', ''));
+        $override = trim((string) ($this->redirectUriOverride ?? ''));
+
+        if ($override !== '') {
+            return $override;
+        }
+
+        $configured = trim((string) $this->config('google.redirect_uri', ''));
 
         if ($configured !== '') {
             return $configured;
@@ -204,11 +215,27 @@ class GoogleOAuthClient
 
     private function clientId(): string
     {
-        return trim((string) voting_config('google.client_id', ''));
+        return trim((string) $this->config('google.client_id', ''));
     }
 
     private function clientSecret(): string
     {
-        return trim((string) voting_config('google.client_secret', ''));
+        return trim((string) $this->config('google.client_secret', ''));
+    }
+
+    /**
+     * Read a voting config value, working both inside the voting system
+     * runtime (where the voting_config() helper exists) and inside a normal
+     * Laravel request (where we fall back to Laravel's config()).
+     */
+    private function config(string $key, mixed $default = null): mixed
+    {
+        if (function_exists('App\VotingSystem\Core\voting_config')
+            || function_exists('voting_config')
+        ) {
+            return voting_config($key, $default);
+        }
+
+        return config('voting.' . $key, $default);
     }
 }

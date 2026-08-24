@@ -1,11 +1,15 @@
 <section class="compact-page">
     <div class="container">
+        <?php include dirname(__DIR__) . '/partials/flash.php'; ?>
+
         <div class="empty-state receipt-state">
             <i class="bi bi-check-circle-fill"></i>
             <p class="eyebrow">Vote Submitted</p>
             <h1>Thank you for voting.</h1>
             <p>Your ballot was received, sealed on the local 3-node chain, and your voter record has been marked as voted.</p>
             <div class="receipt-code"><?= e($reference) ?></div>
+
+
 
             <?php if (!empty($receipt['block_hash'])): ?>
                 <div class="receipt-chain mt-4 text-start" style="max-width: 36rem; margin-inline: auto;">

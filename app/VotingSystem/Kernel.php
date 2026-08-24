@@ -4,6 +4,7 @@ namespace App\VotingSystem;
 
 use App\VotingSystem\Controllers\AdminAuthController;
 use App\VotingSystem\Controllers\AdminController;
+use App\VotingSystem\Controllers\ApiController;
 use App\VotingSystem\Controllers\HomeController;
 use App\VotingSystem\Controllers\MediaController;
 use App\VotingSystem\Controllers\VoterController;
@@ -50,8 +51,16 @@ class Kernel
         $router->post('/vote/send-code', [VoterController::class, 'sendBallotCode']);
         $router->post('/vote/submit', [VoterController::class, 'submit']);
         $router->get('/vote/receipt', [VoterController::class, 'receipt']);
+        $router->post('/vote/resend-receipt', [VoterController::class, 'resendReceipt']);
         $router->get('/auth/google', [VoterController::class, 'googleRedirect']);
         $router->get('/auth/google/callback', [VoterController::class, 'googleCallback']);
+
+        $router->get('/api/blockchain/verify', [ApiController::class, 'verify']);
+        $router->get('/api/blockchain/status', [ApiController::class, 'status']);
+        $router->get('/api/blockchain/block', [ApiController::class, 'block']);
+        $router->post('/api/blockchain/node-receive', [ApiController::class, 'receiveBlock']);
+        $router->get('/api/blockchain/node-status', [ApiController::class, 'nodeStatus']);
+        $router->get('/api/blockchain/node-verify-block', [ApiController::class, 'nodeVerifyBlock']);
         $router->get('/media/candidate', [MediaController::class, 'candidate']);
 
         $adminLoginPath = admin_login_path();

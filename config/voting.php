@@ -59,4 +59,16 @@ return [
         'session_idle_seconds' => (int) env('SECURITY_SESSION_IDLE_SECONDS', 1800),
         'session_absolute_seconds' => (int) env('SECURITY_SESSION_ABSOLUTE_SECONDS', 28800),
     ],
+
+    'nodes' => [
+        'current_node' => (int) env('BLOCKCHAIN_CURRENT_NODE', 1),
+        'secret_token' => env('BLOCKCHAIN_NODE_SECRET', 'orgchain-node-auth-secret-2026'),
+        'timeout_seconds' => (int) env('BLOCKCHAIN_NODE_TIMEOUT', 3),
+        'urls' => [
+            1 => env('BLOCKCHAIN_NODE_1_URL', 'local'),
+            2 => env('BLOCKCHAIN_NODE_2_URL', 'local'),
+            3 => env('BLOCKCHAIN_NODE_3_URL', 'local'),
+        ],
+    ],
 ];
+

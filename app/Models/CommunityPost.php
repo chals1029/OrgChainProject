@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityPost extends Model
 {
+    protected $connection = 'orgchain';
+
     protected $fillable = [
         'student_id',
         'activity_id',
@@ -19,7 +21,7 @@ class CommunityPost extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class);
+        return $this->belongsTo(UserAccount::class, 'student_id', 'user_id');
     }
 
     public function activity(): BelongsTo
@@ -37,7 +39,7 @@ class CommunityPost extends Model
         return $this->hasMany(CommunityLike::class, 'post_id');
     }
 
-    public function likedBy(?Student $student): bool
+    public function likedBy(?UserAccount $student): bool
     {
         if (! $student) {
             return false;

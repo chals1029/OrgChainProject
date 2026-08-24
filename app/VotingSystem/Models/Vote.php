@@ -167,6 +167,7 @@ class Vote extends Model
             $resetVoter->execute(['id' => $voterId]);
 
             $pdo->commit();
+            (new VoteBlockchain())->resyncNodeLedgers();
         } catch (\Throwable $throwable) {
             $pdo->rollBack();
             throw $throwable;

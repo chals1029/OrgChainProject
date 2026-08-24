@@ -84,6 +84,45 @@ class VoteBlockchain
         }
     }
 
+    public function resyncNodeLedgers(int $electionId = 1): void
+    {
+        $pdo = Database::connection();
+        $statement = $pdo->prepare(
+            'SELECT reference_code, previous_hash, block_hash, ballot_root, voter_commitment, created_at
+             FROM vote_receipts
+             WHERE election_id = :election_id
+               AND block_hash IS NOT NULL
+               AND block_hash != ""
+             ORDER BY id ASC'
+        );
+        $statement->execute(['election_id' => $electionId]);
+        $receipts = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        for ($node = 1; $node <= self::NODE_COUNT; $node++) {
+            $path = $this->nodeLedgerPath($node, $electionId);
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        foreach ($receipts as $index => $receipt) {
+            $block = [
+                'index' => $index + 1,
+                'election_id' => $electionId,
+                'reference_code' => $receipt['reference_code'],
+                'previous_hash' => $receipt['previous_hash'],
+                'block_hash' => $receipt['block_hash'],
+                'ballot_root' => $receipt['ballot_root'],
+                'voter_commitment' => $receipt['voter_commitment'],
+                'created_at' => $receipt['created_at'],
+                'sealed_at' => $receipt['created_at'],
+            ];
+            for ($node = 1; $node <= self::NODE_COUNT; $node++) {
+                $this->appendToNode($node, $electionId, $block);
+            }
+        }
+    }
+
     public function verify(string $referenceCode): array
     {
         $pdo = Database::connection();
@@ -167,6 +206,66 @@ class VoteBlockchain
         return is_string($hash) && $hash !== '' ? $hash : self::GENESIS_HASH;
     }
 
+    public function getChainStatus(int $electionId = 1): array
+    {
+        $path = $this->nodeLedgerPath(1, $electionId);
+        $totalBlocks = 0;
+        $latestHash = self::GENESIS_HASH;
+
+        if (is_file($path)) {
+            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+            $totalBlocks = count($lines);
+            if ($totalBlocks > 0) {
+                $lastRow = json_decode(end($lines), true);
+                if (is_array($lastRow) && ! empty($lastRow['block_hash'])) {
+                    $latestHash = $lastRow['block_hash'];
+                }
+            }
+        }
+
+        return [
+            'chain_name' => 'OrgChain 3-Node Vote Ledger',
+            'election_id' => $electionId,
+            'node_count' => self::NODE_COUNT,
+            'total_sealed_blocks' => $totalBlocks,
+            'latest_block_hash' => $latestHash,
+            'genesis_hash' => self::GENESIS_HASH,
+            'nodes_health' => [
+                'node_1' => is_file($this->nodeLedgerPath(1, $electionId)) ? 'online' : 'ready',
+                'node_2' => is_file($this->nodeLedgerPath(2, $electionId)) ? 'online' : 'ready',
+                'node_3' => is_file($this->nodeLedgerPath(3, $electionId)) ? 'online' : 'ready',
+            ],
+            'consensus_algorithm' => 'Multi-node SHA-256 Hash Chain Proof',
+            'status' => 'Operational',
+        ];
+    }
+
+    public function getBlock(int $electionId = 1, ?string $hash = null, ?int $index = null): ?array
+    {
+        $path = $this->nodeLedgerPath(1, $electionId);
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        foreach ($lines as $lineIndex => $line) {
+            $block = json_decode($line, true);
+            if (! is_array($block)) {
+                continue;
+            }
+
+            $currentIndex = $lineIndex + 1;
+            if ($index !== null && $currentIndex === $index) {
+                return $block;
+            }
+            if ($hash !== null && (($block['block_hash'] ?? '') === $hash || ($block['reference_code'] ?? '') === $hash)) {
+                return $block;
+            }
+        }
+
+        return null;
+    }
+
     private function nextIndex(int $electionId): int
     {
         $path = $this->nodeLedgerPath(1, $electionId);
@@ -198,12 +297,26 @@ class VoteBlockchain
 
     private function appendToNode(int $node, int $electionId, array $block): array
     {
+        $nodeUrl = $this->getNodeUrl($node);
+
+        if ($nodeUrl !== 'local' && (str_starts_with($nodeUrl, 'http://') || str_starts_with($nodeUrl, 'https://'))) {
+            $remoteResult = $this->sendBlockToRemoteNode($node, $nodeUrl, $electionId, $block);
+            // Also maintain local replica for fallback and local audit verification
+            $this->appendBlockToLocalLedger($node, $electionId, $block);
+            return $remoteResult;
+        }
+
+        return $this->appendBlockToLocalLedger($node, $electionId, $block);
+    }
+
+    public function appendBlockToLocalLedger(int $node, int $electionId, array $block): array
+    {
         $dir = $this->nodeDir($node);
         if (! is_dir($dir) && ! @mkdir($dir, 0775, true) && ! is_dir($dir)) {
             return [
                 'node' => $node,
                 'status' => 'error',
-                'message' => 'Could not create node storage.',
+                'message' => 'Could not create node storage directory.',
             ];
         }
 
@@ -215,7 +328,7 @@ class VoteBlockchain
             return [
                 'node' => $node,
                 'status' => 'error',
-                'message' => 'Failed to append block.',
+                'message' => 'Failed to append block to local ledger.',
             ];
         }
 
@@ -227,14 +340,89 @@ class VoteBlockchain
         ];
     }
 
+    private function sendBlockToRemoteNode(int $node, string $nodeUrl, int $electionId, array $block): array
+    {
+        $baseUrl = rtrim($nodeUrl, '/');
+        $endpoint = (str_contains($baseUrl, '/voting-system') ? $baseUrl : $baseUrl.'/voting-system').'/api/blockchain/node-receive';
+        $secret = (string) (voting_config('nodes.secret_token', 'orgchain-node-auth-secret-2026') ?? '');
+        $timeout = (int) (voting_config('nodes.timeout_seconds', 3) ?? 3);
+
+        $payload = json_encode([
+            'target_node' => $node,
+            'block' => $block,
+        ], JSON_UNESCAPED_SLASHES);
+
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => $timeout,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'X-Node-Token: '.$secret,
+                'User-Agent: OrgChain-VoteBlockchain/1.0',
+            ],
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $httpCode !== 200) {
+            return [
+                'node' => $node,
+                'status' => 'error',
+                'message' => 'Remote node RPC broadcast failed: '.($curlError ?: "HTTP {$httpCode}"),
+                'url' => $endpoint,
+            ];
+        }
+
+        $decoded = json_decode($response, true);
+        if (is_array($decoded) && ($decoded['status'] ?? '') === 'ok') {
+            return [
+                'node' => $node,
+                'status' => 'ok',
+                'block_hash' => $block['block_hash'],
+                'remote' => true,
+                'url' => $endpoint,
+            ];
+        }
+
+        return [
+            'node' => $node,
+            'status' => 'error',
+            'message' => $decoded['error'] ?? 'Remote node rejected block payload.',
+            'url' => $endpoint,
+        ];
+    }
+
     private function findOnNode(int $node, int $electionId, string $referenceCode, string $blockHash): array
+    {
+        $nodeUrl = $this->getNodeUrl($node);
+
+        if ($nodeUrl !== 'local' && (str_starts_with($nodeUrl, 'http://') || str_starts_with($nodeUrl, 'https://'))) {
+            $remoteFind = $this->findOnRemoteNode($node, $nodeUrl, $electionId, $referenceCode, $blockHash);
+            if (($remoteFind['status'] ?? '') === 'ok') {
+                return $remoteFind;
+            }
+        }
+
+        return $this->findOnLocalNode($node, $electionId, $referenceCode, $blockHash);
+    }
+
+    public function findOnLocalNode(int $node, int $electionId, string $referenceCode, string $blockHash): array
     {
         $path = $this->nodeLedgerPath($node, $electionId);
         if (! is_file($path)) {
             return [
                 'node' => $node,
                 'status' => 'missing',
-                'message' => 'Node ledger not found.',
+                'message' => 'Node ledger file not found.',
             ];
         }
 
@@ -243,7 +431,7 @@ class VoteBlockchain
             return [
                 'node' => $node,
                 'status' => 'error',
-                'message' => 'Could not read node ledger.',
+                'message' => 'Could not read node ledger file.',
             ];
         }
 
@@ -263,8 +451,87 @@ class VoteBlockchain
         return [
             'node' => $node,
             'status' => $matched ? 'ok' : 'mismatch',
-            'message' => $matched ? 'Block present on node.' : 'Block not found on node.',
+            'message' => $matched ? 'Block present and verified on node.' : 'Block not found on node ledger.',
         ];
+    }
+
+    private function findOnRemoteNode(int $node, string $nodeUrl, int $electionId, string $referenceCode, string $blockHash): array
+    {
+        $baseUrl = rtrim($nodeUrl, '/');
+        $endpoint = (str_contains($baseUrl, '/voting-system') ? $baseUrl : $baseUrl.'/voting-system')
+            .'/api/blockchain/node-verify-block?'.http_build_query([
+                'election_id' => $electionId,
+                'node' => $node,
+                'reference' => $referenceCode,
+                'block_hash' => $blockHash,
+            ]);
+
+        $timeout = (int) (voting_config('nodes.timeout_seconds', 3) ?? 3);
+        $secret = (string) (voting_config('nodes.secret_token', 'orgchain-node-auth-secret-2026') ?? '');
+
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => $timeout,
+            CURLOPT_HTTPHEADER => [
+                'X-Node-Token: '.$secret,
+            ],
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response !== false && $httpCode === 200) {
+            $decoded = json_decode($response, true);
+            if (is_array($decoded) && isset($decoded['result'])) {
+                $res = $decoded['result'];
+                $res['remote'] = true;
+                return $res;
+            }
+        }
+
+        return [
+            'node' => $node,
+            'status' => 'remote_unreachable',
+            'message' => 'Could not query remote validator node.',
+        ];
+    }
+
+    public function getNodeStatus(int $node, int $electionId = 1): array
+    {
+        $path = $this->nodeLedgerPath($node, $electionId);
+        $totalBlocks = 0;
+        $latestHash = self::GENESIS_HASH;
+
+        if (is_file($path)) {
+            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+            $totalBlocks = count($lines);
+            if ($totalBlocks > 0) {
+                $lastRow = json_decode(end($lines), true);
+                if (is_array($lastRow) && ! empty($lastRow['block_hash'])) {
+                    $latestHash = $lastRow['block_hash'];
+                }
+            }
+        }
+
+        return [
+            'node' => $node,
+            'election_id' => $electionId,
+            'status' => is_file($path) ? 'online' : 'ready',
+            'total_blocks' => $totalBlocks,
+            'latest_block_hash' => $latestHash,
+            'ledger_file' => 'node-'.$node.'/election-'.$electionId.'.jsonl',
+        ];
+    }
+
+    private function getNodeUrl(int $node): string
+    {
+        $urls = voting_config('nodes.urls', []);
+        return is_array($urls) && isset($urls[$node]) ? trim((string) $urls[$node]) : 'local';
     }
 
     private function previousHashMatchesChain(int $electionId, string $referenceCode, string $previousHash): bool

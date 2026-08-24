@@ -764,7 +764,7 @@ class AdminController extends Controller
 
     public function chainVerify(): void
     {
-        $this->requireAuth(['admin', 'canvassing', 'view_only']);
+        $this->requireAuth(['admin']);
 
         $reference = trim((string) ($_GET['reference'] ?? $_POST['reference'] ?? ''));
         $result = null;
