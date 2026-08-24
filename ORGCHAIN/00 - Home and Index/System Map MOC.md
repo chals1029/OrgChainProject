@@ -86,6 +86,7 @@ This Map of Content indexes every architectural document, module specification, 
 
 ## 🚀 06 - Operations & Runbooks
 - [[Local Development Setup Laragon PHP 8.3]]: Installation, Laragon vhost setup, artisan commands.
+- [[Multi-Laptop 3-Node Blockchain Setup Runbook]]: Complete multi-laptop node topology, Cloudflare tunnels, and RPC setup.
 - [[Environment Variables dot-env Specification]]: `.env` parameter reference and default values.
 - [[Maintenance Resync and Ledger Purge Runbook]]: Blockchain recovery, ledger resynchronization, cache clearing.
 - [[Security Incident and Rate Limit Response Runbook]]: Incident analysis, SQL injection mitigation, IP unbanning.
