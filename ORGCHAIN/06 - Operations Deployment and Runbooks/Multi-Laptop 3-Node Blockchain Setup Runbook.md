@@ -2,6 +2,7 @@
 title: Multi-Laptop 3-Node Blockchain Setup Runbook
 tags: [operations, blockchain, nodes, consensus, multi-device, runbook]
 created: 2026-08-24
+updated: 2026-08-26
 status: active
 ---
 
@@ -39,29 +40,19 @@ sequenceDiagram
 
 ---
 
-## 🚀 Step-by-Step Multi-Laptop Configuration
+## ⚙️ Prerequisites & Tool Installation
 
-### 💻 Laptop 1: Primary Leader Node (Database + Admin + Voter Ingestion)
-
-1. Ensure MySQL and Laragon/PHP are running on Laptop 1.
-2. In Laptop 1's `.env`, configure:
-   ```env
-   BLOCKCHAIN_CURRENT_NODE=1
-   BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
-   BLOCKCHAIN_NODE_TIMEOUT=5
-
-   BLOCKCHAIN_NODE_1_URL=local
-   BLOCKCHAIN_NODE_2_URL=https://node2.trycloudflare.com
-   BLOCKCHAIN_NODE_3_URL=https://node3.trycloudflare.com
-   ```
-   *(Replace `BLOCKCHAIN_NODE_2_URL` and `BLOCKCHAIN_NODE_3_URL` with the actual Cloudflare URLs or LAN IPs from Laptop 2 & Laptop 3).*
-
-3. Start the application server:
-   ```powershell
-   php artisan serve --host=0.0.0.0 --port=8000
-   ```
+### 1. Install Cloudflare Tunnel (`cloudflared`)
+If `cloudflared` is not yet installed on your machine, run in PowerShell:
+```powershell
+winget install Cloudflare.cloudflared
+```
+> [!IMPORTANT]
+> Close and reopen PowerShell after installing so that the `cloudflared` command is added to your environment `PATH`.
 
 ---
+
+## 🚀 Step-by-Step Multi-Laptop Configuration
 
 ### 💻 Laptop 2: Validator Node 2 (Auditor Desk)
 
@@ -70,23 +61,30 @@ sequenceDiagram
    git clone https://github.com/chals1029/OrgChainProject.git
    cd OrgChainProject
    composer install
+   npm install
+   npm run build
    cp .env.example .env
    php artisan key:generate
    ```
+
 2. In Laptop 2's `.env`, configure:
    ```env
    BLOCKCHAIN_CURRENT_NODE=2
    BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
    ```
-3. Start the node server:
+
+3. Start the application server in Terminal 1:
    ```powershell
    php artisan serve --port=8000
    ```
-4. Expose the node over the internet (if remote/far away):
+
+4. In Terminal 2, start Cloudflare Tunnel:
    ```powershell
    cloudflared tunnel --url http://localhost:8000
    ```
-   *(Send the generated `https://...trycloudflare.com` URL to Laptop 1).*
+   *Cloudflare will output a public URL, for example:*
+   `https://reuters-accompanied-tuesday-implementation.trycloudflare.com`
+   👉 **Copy and send this URL to Laptop 1.**
 
 ---
 
@@ -97,39 +95,87 @@ sequenceDiagram
    git clone https://github.com/chals1029/OrgChainProject.git
    cd OrgChainProject
    composer install
+   npm install
+   npm run build
    cp .env.example .env
    php artisan key:generate
    ```
+
 2. In Laptop 3's `.env`, configure:
    ```env
    BLOCKCHAIN_CURRENT_NODE=3
    BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
    ```
-3. Start the node server:
+
+3. Start the application server in Terminal 1:
    ```powershell
    php artisan serve --port=8000
    ```
-4. Expose the node over the internet (if remote/far away):
+
+4. In Terminal 2, start Cloudflare Tunnel:
    ```powershell
    cloudflared tunnel --url http://localhost:8000
    ```
-   *(Send the generated `https://...trycloudflare.com` URL to Laptop 1).*
+   *Cloudflare will output a public URL, for example:*
+   `https://cherry-lemon-green-example.trycloudflare.com`
+   👉 **Copy and send this URL to Laptop 1.**
+
+---
+
+### 💻 Laptop 1: Primary Leader Node (Database + Ingestion Server)
+
+1. In Laptop 1's `.env`, paste the generated URLs from Laptop 2 and Laptop 3:
+   ```env
+   BLOCKCHAIN_CURRENT_NODE=1
+   BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
+   BLOCKCHAIN_NODE_TIMEOUT=5
+
+   BLOCKCHAIN_NODE_1_URL=local
+   BLOCKCHAIN_NODE_2_URL=https://reuters-accompanied-tuesday-implementation.trycloudflare.com
+   BLOCKCHAIN_NODE_3_URL=https://cherry-lemon-green-example.trycloudflare.com
+   ```
+
+2. Start the primary server on Laptop 1:
+   ```powershell
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+
+---
+
+## 🗄️ Database Setup & Import Guide
+
+The project includes a ready-to-use UTF-8 SQL dump in `database/sql_dumps/`:
+* `database/sql_dumps/orgchain_full_database_dump.sql` (Contains both `votingsystem` and `orgchain` databases).
+
+### How to Import on Laptop 2 & Laptop 3:
+* **Option A (Laragon HeidiSQL - Easiest):**
+  1. Click **Database** in Laragon $\rightarrow$ Click **Open**.
+  2. Go to **File** $\rightarrow$ **Load SQL file...** $\rightarrow$ select `orgchain_full_database_dump.sql`.
+  3. Press **F9** to execute.
+* **Option B (XAMPP Shell):**
+  ```powershell
+  mysql -u root < "database/sql_dumps/orgchain_full_database_dump.sql"
+  ```
+* **Option C (Laravel Built-in Fresh Seed):**
+  ```powershell
+  php artisan migrate:fresh --seed
+  ```
 
 ---
 
 ## 🔍 Verification & Demonstration Runbook
 
 ### 1. Live Ballot Sealing
-- Submit a vote on **Laptop 1** (or from any voter station).
+- Submit a vote on **Laptop 1** (or from any connected voter station).
 - The voter receipt displays the SHA-256 block hash and confirmations (`nodes_confirmed: 3`).
 
-### 2. Physical File Verification
+### 2. Physical File Verification on All 3 Laptops
 Inspect the local ledger file on each machine:
 - **Laptop 1:** `storage/app/voting/chain/node-1/election-1.jsonl`
 - **Laptop 2:** `storage/app/voting/chain/node-2/election-1.jsonl`
 - **Laptop 3:** `storage/app/voting/chain/node-3/election-1.jsonl`
 
-All 3 files will contain identical, cryptographically chained block entries.
+All 3 files will contain identical, cryptographically chained block entries in real time!
 
 ### 3. API Node Verification Endpoint
 Query the verification API on Laptop 1:
@@ -154,13 +200,13 @@ Response:
 ## 🇵🇭 Gabay sa Taglish (Quick Reference para sa Team)
 
 1. **Laptop 2 at Laptop 3**:
-   - I-run: `git pull origin main` o `git clone https://github.com/chals1029/OrgChainProject.git`
-   - I-set sa `.env` ang `BLOCKCHAIN_CURRENT_NODE=2` (para kay Laptop 2) o `BLOCKCHAIN_CURRENT_NODE=3` (para kay Laptop 3).
+   - I-run: `git pull origin main`
+   - I-set sa `.env` ang `BLOCKCHAIN_CURRENT_NODE=2` (Laptop 2) o `BLOCKCHAIN_CURRENT_NODE=3` (Laptop 3).
    - I-run: `php artisan serve --port=8000`
-   - I-run sa pangalawang terminal: `cloudflared tunnel --url http://localhost:8000`
-   - I-send ang Cloudflare link kay Laptop 1.
+   - I-run sa 2nd terminal: `cloudflared tunnel --url http://localhost:8000`
+   - I-send ang lumabas na `https://...trycloudflare.com` URL kay Laptop 1.
 2. **Laptop 1**:
-   - Ilagay sa `.env` ang mga link nina Laptop 2 at Laptop 3 sa `BLOCKCHAIN_NODE_2_URL` at `BLOCKCHAIN_NODE_3_URL`.
+   - Ilagay sa `.env` ang mga natanggap na link sa `BLOCKCHAIN_NODE_2_URL` at `BLOCKCHAIN_NODE_3_URL`.
    - I-run: `php artisan serve --port=8000`.
 3. **Pagkaboto**:
-   - Sabay-sabay magse-save ang block sa hard drive ng bawat laptop (`node-1`, `node-2`, at `node-3`).
+   - Sabay-sabay magse-save ang sealed block sa hard drive ng bawat laptop (`node-1`, `node-2`, at `node-3`).
