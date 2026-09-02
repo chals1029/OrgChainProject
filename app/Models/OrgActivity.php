@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrgActivity extends Model
 {
+    protected $connection = 'mysql';
+
     protected $fillable = [
         'title',
         'description',

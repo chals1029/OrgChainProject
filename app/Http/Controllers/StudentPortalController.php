@@ -36,13 +36,13 @@ class StudentPortalController extends Controller
         $upcoming = OrgActivity::query()
             ->whereIn('status', ['upcoming', 'ongoing'])
             ->orderBy('starts_at')
-            ->limit(6)
+            ->limit(50)
             ->get();
 
         $recentActivities = OrgActivity::query()
             ->where('status', 'completed')
             ->orderByDesc('starts_at')
-            ->limit(6)
+            ->limit(50)
             ->get();
 
         $posts = CommunityPost::query()
@@ -59,6 +59,30 @@ class StudentPortalController extends Controller
             ->limit(20)
             ->get();
 
+        $announcements = [
+            [
+                'title' => 'Deadline Extension for Activity Proposals',
+                'body' => 'The deadline for submitting activity proposals for the 2nd Semester has been extended to April 15, 2026.',
+                'author' => 'OSO Admin',
+                'time' => '2 hrs ago',
+                'priority' => 'high',
+            ],
+            [
+                'title' => 'General Assembly & Org Orientation',
+                'body' => 'All student leaders and active members are invited to attend the annual assembly at the University Amphitheater.',
+                'author' => 'Student Affairs',
+                'time' => 'Yesterday',
+                'priority' => 'normal',
+            ],
+            [
+                'title' => 'Budget Liquidation Submission Guidelines',
+                'body' => 'Please submit all receipts and liquidation reports within 5 working days following completed events.',
+                'author' => 'Finance Desk',
+                'time' => '3 days ago',
+                'priority' => 'normal',
+            ],
+        ];
+
         return view('portal.index', [
             'student' => $student,
             'tab' => $tab,
@@ -69,6 +93,7 @@ class StudentPortalController extends Controller
             'recentActivities' => $recentActivities,
             'posts' => $posts,
             'activities' => $activities,
+            'announcements' => $announcements,
         ]);
     }
 }

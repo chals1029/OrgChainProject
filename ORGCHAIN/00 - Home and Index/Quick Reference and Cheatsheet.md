@@ -18,16 +18,16 @@ status: active
 
 ## 🔑 Default Test Accounts & Credentials
 
-| Role | Username / Identifier | Password | Access URL |
-| :--- | :--- | :--- | :--- |
-| **SO Officer** | `so.office` | `Office@2026!` | `/orgchain-office-access-a9e2f71c4b83` |
-| **OSO Officer** | `oso.office` | `Office@2026!` | `/orgchain-office-access-a9e2f71c4b83` |
-| **SDO Officer** | `sdo.office` | `Office@2026!` | `/orgchain-office-access-a9e2f71c4b83` |
-| **OVCAA Officer** | `ovcaa.office` | `Office@2026!` | `/orgchain-office-access-a9e2f71c4b83` |
-| **Student 1** | `21-00001` (Charles) | `Student@2026!` / OTP | `/` (Home login modal) |
-| **Student 2** | `21-00002` (Maria) | `Student@2026!` / OTP | `/` (Home login modal) |
-| **Voting Admin** | `admin@batstate-u.edu.ph` | Configured in DB | `/voting-system/ssc-access-c7b4f2e91a6d` |
-| **Canvassing Staff**| `canvassing@batstate-u.edu.ph`| Configured in DB | `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91` |
+| Role                 | Username / Identifier          | Password              | Access URL                                             |
+| :------------------- | :----------------------------- | :-------------------- | :----------------------------------------------------- |
+| **SO Officer**       | `so.office`                    | `Office@2026!`        | `/orgchain-office-access-a9e2f71c4b83`                 |
+| **OSO Officer**      | `oso.office`                   | `Office@2026!`        | `/orgchain-office-access-a9e2f71c4b83`                 |
+| **SDO Officer**      | `sdo.office`                   | `Office@2026!`        | `/orgchain-office-access-a9e2f71c4b83`                 |
+| **OVCAA Officer**    | `ovcaa.office`                 | `Office@2026!`        | `/orgchain-office-access-a9e2f71c4b83`                 |
+| **Student 1**        | `21-00001` (Charles)           | `Student@2026!` / OTP | `/` (Home login modal)                                 |
+| **Student 2**        | `21-00002` (Maria)             | `Student@2026!` / OTP | `/` (Home login modal)                                 |
+| **Voting Admin**     | `admin@batstate-u.edu.ph`      | Configured in DB      | `/voting-system/ssc-access-c7b4f2e91a6d`               |
+| **Canvassing Staff** | `canvassing@batstate-u.edu.ph` | Configured in DB      | `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91` |
 
 ---
 
