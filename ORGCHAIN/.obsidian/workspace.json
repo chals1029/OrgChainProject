@@ -83,7 +83,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "a84f3e1cb36618e9",
@@ -187,10 +188,25 @@
   },
   "active": "1adda574ab9772ed",
   "lastOpenFiles": [
+<<<<<<< HEAD
     "01 - System Architecture/Security Architecture and Guardrails.md",
     "01 - System Architecture/Tech Stack and Dependencies.md",
     "01 - System Architecture/System Overview and Vision.md",
     "01 - System Architecture/End-to-End Data Flow.md",
+=======
+    "Welcome.md",
+    "00 - Home and Index/Quick Reference and Cheatsheet.md",
+    "02 - Subsystems and Modules/Authentication and Access Control/Session Management and Lifetime Policies.md",
+    "02 - Subsystems and Modules/Authentication and Access Control/Obfuscated Admin and Office Route Endpoints.md",
+    "02 - Subsystems and Modules/Authentication and Access Control/Google OAuth2 and BatStateU Domain Filter.md",
+    "02 - Subsystems and Modules/Authentication and Access Control/6-Digit Email OTP Verification.md",
+    "00 - Home and Index/System Map MOC.md",
+    "00 - Home and Index/Dashboard.md",
+    "01 - System Architecture/Security Architecture and Guardrails.md",
+    "01 - System Architecture/High-Level Technical Architecture.md",
+    "01 - System Architecture/End-to-End Data Flow.md",
+    "01 - System Architecture/System Overview and Vision.md",
+>>>>>>> 8393ec6 (Made changes on the layout and interfaces of SO, OSO and some of SDO)
     "07 - Project Roadmap and Future Enhancements/Known Limitations and Technical Debt.md",
     "07 - Project Roadmap and Future Enhancements/Future Milestones and Features.md",
     "03 - Database and Data Models/Models/Model - AdminUser and OfficeUser.md",
@@ -214,9 +230,16 @@
     "05 - API and Route Specifications/Office Portal API and Action Endpoints.md",
     "05 - API and Route Specifications/Middleware and Request Filters.md",
     "05 - API and Route Specifications",
+<<<<<<< HEAD
     "04 - Workflows and Business Processes",
     "03 - Database and Data Models/Database Seeders and Demo Fixtures.md",
     "03 - Database and Data Models/Models/Model - Vote and VoteReceipt.md",
+=======
+    "04 - Workflows and Business Processes/Local Off-Campus Compliance and CHED Workflow.md",
+    "04 - Workflows and Business Processes/In-Campus Activity Proposal Checklist.md",
+    "04 - Workflows and Business Processes/Expense Review and Financial Liquidation Flow.md",
+    "04 - Workflows and Business Processes",
+>>>>>>> 8393ec6 (Made changes on the layout and interfaces of SO, OSO and some of SDO)
     "03 - Database and Data Models/Models",
     "03 - Database and Data Models",
     "02 - Subsystems and Modules/Authentication and Access Control",

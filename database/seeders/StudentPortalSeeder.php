@@ -39,6 +39,19 @@ class StudentPortalSeeder extends Seeder
             ]
         );
 
+        Student::query()->updateOrCreate(
+            ['sr_code' => '23-73600'],
+            [
+                'name' => 'Student User',
+                'email' => '23-73600@g.batstate-u.edu.ph',
+                'password' => 'Student@2026!',
+                'college' => 'College of Informatics and Computing Sciences',
+                'program' => 'BS Information Technology',
+                'year_level' => '3rd Year',
+                'is_active' => true,
+            ]
+        );
+
         if (BudgetItem::query()->count() === 0) {
             BudgetItem::insert([
                 [

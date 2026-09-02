@@ -90,13 +90,13 @@ php artisan test
 
 ## 📁 Key File System Locations
 
-| Component | Path | Purpose |
-| :--- | :--- | :--- |
-| **VoteChain Node 1** | `storage/app/voting/chain/node-1/` | JSONL Ledger for Node 1 |
-| **VoteChain Node 2** | `storage/app/voting/chain/node-2/` | JSONL Ledger for Node 2 |
-| **VoteChain Node 3** | `storage/app/voting/chain/node-3/` | JSONL Ledger for Node 3 |
-| **Uploaded Archive Docs** | `storage/app/public/archive_documents/` | Archived compliance files |
-| **OCR Expense Receipts** | `storage/app/public/receipts/` | Scanned expense receipts |
-| **Voting Mail Log** | `storage/logs/voting-mail.log` | Simulated SMTP email logs |
-| **In-Campus Templates** | `In Campus/` | Official MS Word docx templates |
-| **Off-Campus Templates** | `Local Off Campus/` | Official CHED compliance docx |
+| Component                 | Path                                    | Purpose                         |
+| :------------------------ | :-------------------------------------- | :------------------------------ |
+| **VoteChain Node 1**      | `storage/app/voting/chain/node-1/`      | JSONL Ledger for Node 1         |
+| **VoteChain Node 2**      | `storage/app/voting/chain/node-2/`      | JSONL Ledger for Node 2         |
+| **VoteChain Node 3**      | `storage/app/voting/chain/node-3/`      | JSONL Ledger for Node 3         |
+| **Uploaded Archive Docs** | `storage/app/public/archive_documents/` | Archived compliance files       |
+| **OCR Expense Receipts**  | `storage/app/public/receipts/`          | Scanned expense receipts        |
+| **Voting Mail Log**       | `storage/logs/voting-mail.log`          | Simulated SMTP email logs       |
+| **In-Campus Templates**   | `In Campus/`                            | Official MS Word docx templates |
+| **Off-Campus Templates**  | `Local Off Campus/`                     | Official CHED compliance docx   |

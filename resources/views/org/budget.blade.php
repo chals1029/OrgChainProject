@@ -1,471 +1,902 @@
 @extends('org.layout')
 
+@php
+    $role = $office->office_role ?? '';
+    $isOso = $role === 'oso';
+    $isSdo = $role === 'sdo';
+    $isOvcaa = $role === 'ovcaa';
+    $isSo = !$isOso && !$isSdo && !$isOvcaa;
+    $canRecordExpense = $isSo;
+@endphp
+
 @section('title', 'Budget Utilization')
 
 @section('header')
-    <h1>Budget Utilization</h1>
-    <p class="org-welcome">Welcome, {{ $brand['role'] }}</p>
+    <h1><strong>Budget Utilization</strong></h1>
+    @if ($isOso)
+        <p class="org-welcome">Monitor and review budget allocations, utilization rates, and expense logs across student organization activities.</p>
+    @elseif ($isSdo)
+        <p class="org-welcome">Monitor and track sustainability budget allocations, resource utilization, and activity financial records.</p>
+    @elseif ($isOvcaa)
+        <p class="org-welcome">Review overall university budget utilization and financial execution records across student activities.</p>
+    @else
+        <p class="org-welcome">Record and track actual expenses for each approved activity.</p>
+    @endif
 @endsection
 
 @section('content')
-    @php
-        $firstActivity = $budget['activities'][0] ?? null;
-    @endphp
+    <style>
+        .org-budget-page-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.4rem;
+        }
 
-    @if (session('success'))
-        <div class="org-alert org-alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-    @endif
+        /* Top 3 Summary Cards */
+        .org-budget-top-kpis {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
 
-    <section class="org-budget-hero liquid-glass">
-        <div class="org-budget-hero-copy">
-            <p class="org-eyebrow">Actual expense recording</p>
-            <h2>Budget Utilization</h2>
-            <p>
-                Record actual expenses for each approved activity. These item-level entries become the source
-                records for the semester Financial Report and public transparency review.
-            </p>
-        </div>
-        <div class="org-budget-hero-stats">
-            <article>
-                <span>Approved</span>
-                <strong>{{ $budget['approved_count'] }}</strong>
+        .org-bkpi-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1.5px solid #f0e6e8;
+            padding: 1.35rem 1.6rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .org-bkpi-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .org-bkpi-icon.is-gold { background: #fef9c3; color: #ca8a04; }
+        .org-bkpi-icon.is-red { background: #fee2e2; color: #dc2626; }
+        .org-bkpi-icon.is-green { background: #dcfce7; color: #16a34a; }
+
+        .org-bkpi-label {
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .org-bkpi-card.is-alloc .org-bkpi-label { color: #ca8a04; }
+        .org-bkpi-card.is-used .org-bkpi-label { color: #dc2626; }
+        .org-bkpi-card.is-bal .org-bkpi-label { color: #16a34a; }
+
+        .org-bkpi-amount {
+            font-size: 1.95rem;
+            font-weight: 800;
+            color: #1a1618;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        .org-bkpi-sub {
+            font-size: 0.78rem;
+            color: #7a7074;
+            margin: 0;
+        }
+
+        /* Overall Budget Utilization Banner */
+        .org-overall-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1.5px solid #f0e6e8;
+            padding: 1.25rem 1.6rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
+        }
+
+        .org-overall-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin-bottom: 0.65rem;
+        }
+
+        .org-overall-track {
+            height: 8px;
+            border-radius: 9999px;
+            background: #f1e8e9;
+            overflow: hidden;
+            margin-bottom: 0.65rem;
+        }
+
+        .org-overall-fill {
+            height: 100%;
+            background: #7a1222;
+            border-radius: 9999px;
+        }
+
+        .org-overall-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: #7a7074;
+        }
+
+        /* Activity Budget Cards Section */
+        .org-act-budget-section {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1.5px solid #f0e6e8;
+            padding: 1.35rem 1.6rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
+        }
+
+        .org-act-budget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.15rem;
+        }
+
+        .org-act-budget-header h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin: 0;
+        }
+
+        .org-act-budget-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.15rem;
+        }
+
+        .org-act-budget-card {
+            border: 1.5px solid #f0e6e8;
+            border-radius: 16px;
+            padding: 1.15rem 1.25rem;
+            background: #faf4f5;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .org-act-budget-card:hover {
+            transform: translateY(-2px);
+            border-color: #d8c2c7;
+            box-shadow: 0 6px 18px rgba(90, 15, 30, 0.06);
+        }
+
+        .org-act-budget-card.is-active {
+            background: #7a1222;
+            border-color: #7a1222;
+            color: #ffffff;
+            box-shadow: 0 8px 24px rgba(122, 18, 34, 0.25);
+        }
+
+        .org-act-budget-card.is-active .org-act-card-title {
+            color: #ffffff !important;
+        }
+
+        .org-act-budget-card.is-active .org-act-card-nums span,
+        .org-act-budget-card.is-active .org-act-card-nums strong,
+        .org-act-budget-card.is-active .org-act-card-footer span {
+            color: #fce8eb !important;
+        }
+
+        .org-act-budget-card.is-active .org-act-card-nums strong {
+            color: #ffffff !important;
+        }
+
+        .org-act-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .org-act-card-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .org-scope-badge-mini {
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            background: #ffffff;
+            color: #7a1222;
+            border: 1px solid #e8d0d4;
+            flex-shrink: 0;
+        }
+
+        .org-act-budget-card.is-active .org-scope-badge-mini {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .org-act-card-nums {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: #7a7074;
+        }
+
+        .org-act-card-nums strong {
+            color: #1a1618;
+            font-weight: 700;
+        }
+
+        .org-act-progress-track {
+            height: 6px;
+            background: #e8dedf;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .org-act-budget-card.is-active .org-act-progress-track {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .org-act-progress-fill {
+            height: 100%;
+            border-radius: 9999px;
+        }
+
+        .org-act-progress-fill.is-green { background: #16a34a; }
+        .org-act-progress-fill.is-amber { background: #ca8a04; }
+
+        .org-act-budget-card.is-active .org-act-progress-fill {
+            background: #ffffff !important;
+        }
+
+        .org-act-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #7a7074;
+            font-weight: 600;
+        }
+
+        /* 4. Bottom 2-Column Split: Expense Log & Record New Expense Form */
+        .org-budget-bottom-split {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .org-budget-bottom-split.is-oso-full {
+            grid-template-columns: 1fr;
+        }
+
+        .org-budget-card-panel {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1.5px solid #f0e6e8;
+            padding: 1.4rem 1.6rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .org-panel-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.35rem;
+        }
+
+        .org-panel-header-row h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin: 0;
+        }
+
+        .org-panel-budget-tag {
+            font-size: 0.8rem;
+            color: #7a7074;
+        }
+
+        .org-panel-budget-tag strong {
+            color: #7a1222;
+        }
+
+        .org-panel-sub-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #7a7074;
+            margin-bottom: 0.85rem;
+            display: block;
+        }
+
+        .org-expense-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .org-expense-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.85rem 1rem;
+            background: #faf4f5;
+            border-radius: 12px;
+            border: 1px solid #f2e6e8;
+        }
+
+        .org-expense-item-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .org-expense-item-left i {
+            color: #7a1222;
+            font-size: 1.1rem;
+        }
+
+        .org-expense-item-info strong {
+            display: block;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #1a1618;
+        }
+
+        .org-expense-item-info small {
+            display: block;
+            font-size: 0.74rem;
+            color: #7a7074;
+            margin-top: 0.1rem;
+        }
+
+        .org-expense-item-right {
+            text-align: right;
+        }
+
+        .org-expense-item-right strong {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #1a1618;
+        }
+
+        .org-expense-item-right small {
+            display: block;
+            font-size: 0.72rem;
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .org-expense-total-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 0.85rem;
+            border-top: 1.5px solid #f0e6e8;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin-top: auto;
+        }
+
+        .org-expense-total-row strong {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #7a1222;
+        }
+
+        /* Form Styles */
+        .org-form-group {
+            margin-bottom: 0.9rem;
+        }
+
+        .org-form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #4b4548;
+            margin-bottom: 0.35rem;
+        }
+
+        .org-form-group input,
+        .org-form-group select,
+        .org-form-group textarea {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border-radius: 10px;
+            border: 1px solid #d8c2c7;
+            background: #ffffff;
+            font-family: inherit;
+            font-size: 0.86rem;
+            color: #1a1618;
+            transition: all 0.15s ease;
+        }
+
+        .org-form-group input:focus,
+        .org-form-group select:focus,
+        .org-form-group textarea:focus {
+            outline: none;
+            border-color: #7a1222;
+            box-shadow: 0 0 0 3px rgba(122, 18, 34, 0.1);
+        }
+
+        .org-form-row-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.85rem;
+        }
+
+        .org-upload-receipt-box {
+            border: 1.5px dashed #d8c2c7;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            background: #faf4f5;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+        }
+
+        .org-upload-receipt-box:hover {
+            border-color: #7a1222;
+            background: #f8eaec;
+        }
+
+        .org-upload-receipt-box i {
+            font-size: 1.4rem;
+            color: #7a1222;
+        }
+
+        .org-upload-receipt-box span {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #554d50;
+        }
+
+        .org-warning-box-yellow {
+            background: #fefce8;
+            border: 1px solid #fef08a;
+            border-radius: 10px;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.78rem;
+            color: #854d0e;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .org-btn-save-expense {
+            padding: 0.75rem 1.5rem;
+            background: #7a1222;
+            color: #ffffff;
+            border: none;
+            border-radius: 9999px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 14px rgba(122, 18, 34, 0.25);
+            transition: all 0.15s ease;
+        }
+
+        .org-btn-save-expense:hover {
+            background: #600e1b;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(122, 18, 34, 0.35);
+        }
+    </style>
+
+    <div class="org-budget-page-grid">
+        {{-- 1. Top 3 Summary Cards --}}
+        <div class="org-budget-top-kpis">
+            <article class="org-bkpi-card is-alloc">
+                <div class="org-bkpi-icon is-gold">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <span class="org-bkpi-label">Total Allocated Budget</span>
+                <span class="org-bkpi-amount">₱185,000</span>
+                <p class="org-bkpi-sub">AY 2025-2026 · 1st Semester</p>
             </article>
-            <article class="is-utilized">
-                <span>Utilized</span>
-                <strong>Php {{ number_format($budget['used'], 2) }}</strong>
+
+            <article class="org-bkpi-card is-used">
+                <div class="org-bkpi-icon is-red">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <span class="org-bkpi-label">Total Utilized</span>
+                <span class="org-bkpi-amount">₱115,150</span>
+                <p class="org-bkpi-sub">Across all 5 activities (62.2%)</p>
+            </article>
+
+            <article class="org-bkpi-card is-bal">
+                <div class="org-bkpi-icon is-green">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <span class="org-bkpi-label">Remaining Balance</span>
+                <span class="org-bkpi-amount">₱69,850</span>
+                <p class="org-bkpi-sub">Available allocation (37.8%)</p>
             </article>
         </div>
-    </section>
 
-    <section class="org-budget-kpis">
-        <article class="liquid-glass">
-            <div class="org-budget-kpi-icon" aria-hidden="true"><i class="bi bi-currency-exchange"></i></div>
-            <p class="org-eyebrow">Budget allocation</p>
-            <strong>Php {{ number_format($budget['allocated'], 2) }}</strong>
-            <small>Total proposed budgets from your activity records</small>
-        </article>
-        <article class="liquid-glass">
-            <div class="org-budget-kpi-icon" aria-hidden="true"><i class="bi bi-receipt"></i></div>
-            <p class="org-eyebrow">Actual expenses</p>
-            <strong>Php {{ number_format($budget['used'], 2) }}</strong>
-            <small>Total utilization already encoded</small>
-        </article>
-        <article class="liquid-glass">
-            <div class="org-budget-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></div>
-            <p class="org-eyebrow">Coverage</p>
-            <strong>{{ $budget['covered_count'] }}/{{ $budget['approved_count'] }}</strong>
-            <small>Approved activities with saved expense records</small>
-        </article>
-    </section>
+        {{-- 2. Overall Budget Utilization Banner --}}
+        <section class="org-overall-card">
+            <div class="org-overall-head">
+                <span>Overall Budget Utilization</span>
+                <strong>62.2%</strong>
+            </div>
+            <div class="org-overall-track">
+                <div class="org-overall-fill" style="width: 62.2%;"></div>
+            </div>
+            <div class="org-overall-footer">
+                <span>₱115,150 utilized of ₱185,000</span>
+                <span>₱69,850 remaining</span>
+            </div>
+        </section>
 
-    <section class="org-panel liquid-glass org-budget-overview">
-        <div class="org-panel-head">
-            <h2><i class="bi bi-pie-chart-fill"></i> Budget Overview</h2>
-        </div>
+        {{-- 3. Activity Budget Cards Section --}}
+        <section class="org-act-budget-section">
+            <div class="org-act-budget-header">
+                <h3>Activity Budget Cards</h3>
+                <span style="font-size: 0.8rem; color: #7a7074;">Select an activity to view expense logs</span>
+            </div>
 
-        <div class="org-budget-overview-grid">
-            <div class="org-budget-metric">
-                <span class="org-budget-metric-ico is-alloc"><i class="bi bi-wallet2"></i></span>
-                <div>
-                    <small>Allocated</small>
-                    <strong>₱{{ number_format($budget['allocated'], 2) }}</strong>
+            <div class="org-act-budget-cards-grid">
+                {{-- Card 1: Innovation Fair Booth Series (Active by default) --}}
+                <article class="org-act-budget-card is-active" id="actCard-innovation" onclick="selectActivityBudget('innovation')">
+                    <div class="org-act-card-head">
+                        <h4 class="org-act-card-title" style="color: #ffffff;">Innovation Fair Booth ...</h4>
+                        <span class="org-scope-badge-mini">IC</span>
+                    </div>
+                    <div class="org-act-card-nums">
+                        <span>Allocated <strong>₱15,000</strong></span>
+                        <span>Used <strong>₱15,000</strong></span>
+                    </div>
+                    <div class="org-act-progress-track">
+                        <div class="org-act-progress-fill is-green" style="width: 100%;"></div>
+                    </div>
+                    <div class="org-act-card-footer">
+                        <span>₱0 left</span>
+                        <span>100%</span>
+                    </div>
+                </article>
+
+                {{-- Card 2: Volunteer Appreciation Day --}}
+                <article class="org-act-budget-card" id="actCard-volunteer" onclick="selectActivityBudget('volunteer')">
+                    <div class="org-act-card-head">
+                        <h4 class="org-act-card-title" style="color: #1a1618;">Volunteer Appreciati...</h4>
+                        <span class="org-scope-badge-mini">IC</span>
+                    </div>
+                    <div class="org-act-card-nums">
+                        <span>Allocated <strong>₱12,500</strong></span>
+                        <span>Used <strong>₱12,500</strong></span>
+                    </div>
+                    <div class="org-act-progress-track">
+                        <div class="org-act-progress-fill is-green" style="width: 100%;"></div>
+                    </div>
+                    <div class="org-act-card-footer">
+                        <span>₱0 left</span>
+                        <span>100%</span>
+                    </div>
+                </article>
+
+                {{-- Card 3: Campus Wellness Week --}}
+                <article class="org-act-budget-card" id="actCard-wellness" onclick="selectActivityBudget('wellness')">
+                    <div class="org-act-card-head">
+                        <h4 class="org-act-card-title" style="color: #1a1618;">Campus Wellness ...</h4>
+                        <span class="org-scope-badge-mini">IC</span>
+                    </div>
+                    <div class="org-act-card-nums">
+                        <span>Allocated <strong>₱42,500</strong></span>
+                        <span>Used <strong>₱24,900</strong></span>
+                    </div>
+                    <div class="org-act-progress-track">
+                        <div class="org-act-progress-fill is-amber" style="width: 58.5%;"></div>
+                    </div>
+                    <div class="org-act-card-footer">
+                        <span>₱17,600 left</span>
+                        <span>58.5%</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        {{-- 4. Bottom Section: Expense Log (Full width on OSO / SDO / OVCAA) & Record New Expense Form (Only for Student Org) --}}
+        <div class="org-budget-bottom-split {{ !$canRecordExpense ? 'is-oso-full' : '' }}">
+            {{-- Left: Expense Log --}}
+            <section class="org-budget-card-panel">
+                <div class="org-panel-header-row">
+                    <h3>Expense Log</h3>
+                    <span class="org-panel-budget-tag" id="expenseLogBudget">Budget <strong>₱15,000</strong></span>
                 </div>
-            </div>
-            <div class="org-budget-metric">
-                <span class="org-budget-metric-ico is-used"><i class="bi bi-cash-stack"></i></span>
-                <div>
-                    <small>Used</small>
-                    <strong>₱{{ number_format($budget['used'], 2) }}</strong>
+                <span class="org-panel-sub-label" id="expenseLogTitle">Innovation Fair Booth Series</span>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #554d50; margin-bottom: 0.35rem;">
+                    <span id="expenseLogUsed">Used ₱15,000 (100%)</span>
+                    <span id="expenseLogLeft">Left ₱0</span>
                 </div>
-            </div>
-            <div class="org-budget-metric">
-                <span class="org-budget-metric-ico is-remain"><i class="bi bi-piggy-bank"></i></span>
-                <div>
-                    <small>Remaining</small>
-                    <strong>₱{{ number_format($budget['remaining'], 2) }}</strong>
-                </div>
-            </div>
-        </div>
-
-        <div class="org-budget-util-row">
-            <div>
-                <span>Budget Utilization</span>
-                <strong>{{ $budget['percent'] }}%</strong>
-            </div>
-            <div class="org-budget-util-bar" role="progressbar" aria-valuenow="{{ $budget['percent'] }}" aria-valuemin="0" aria-valuemax="100">
-                <span style="width: {{ min(100, $budget['percent']) }}%"></span>
-            </div>
-            <p class="org-budget-complete">
-                <i class="bi bi-check-circle-fill"></i>
-                {{ $budget['covered_count'] }} of {{ $budget['approved_count'] }} Activities submitted
-            </p>
-        </div>
-    </section>
-
-    <div class="org-budget-split">
-        <section class="org-panel liquid-glass">
-            <div class="org-panel-head">
-                <h2><i class="bi bi-journal-plus"></i> Record Expense</h2>
-                <button type="button" class="org-text-btn" id="budgetResetBtn">Reset Form</button>
-            </div>
-
-            <form class="org-budget-form" id="budgetExpenseForm" method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data">
-                @csrf
-                <label>
-                    <span>Select Activity</span>
-                    <select name="activity" id="budgetActivitySelect">
-                        @foreach ($budget['activity_options'] as $option)
-                            <option value="{{ $option['title'] }}" data-remaining="{{ $option['remaining'] }}">
-                                {{ $option['title'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <small id="budgetRemainingHint">
-                        Remaining Budget: ₱{{ number_format($firstActivity['remaining'] ?? 0, 2) }}
-                    </small>
-                </label>
-
-                <label>
-                    <span>Merchant / Item Name</span>
-                    <input type="text" name="item_name" placeholder="e.g. Portable sound system rental">
-                </label>
-
-                <div class="org-budget-form-row">
-                    <label>
-                        <span>Category</span>
-                        <select name="category">
-                            <option value="">Select category</option>
-                            <option>Equipment Rental</option>
-                            <option>Supplies</option>
-                            <option>Food &amp; Refreshments</option>
-                            <option>Transportation</option>
-                            <option>Printing</option>
-                            <option>Other</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Quantity</span>
-                        <input type="number" name="quantity" min="1" value="1">
-                    </label>
+                <div class="org-overall-track" style="margin-bottom: 1.15rem;">
+                    <div class="org-overall-fill" id="expenseLogProgressFill" style="width: 100%; background: #16a34a;"></div>
                 </div>
 
-                <div class="org-budget-form-row">
-                    <label>
-                        <span>Unit Cost</span>
-                        <div class="org-input-peso">
-                            <em>₱</em>
-                            <input type="number" name="unit_cost" min="0" step="0.01" placeholder="0.00">
+                <div class="org-expense-list" id="expenseLogItems">
+                    <div class="org-expense-item">
+                        <div class="org-expense-item-left">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="org-expense-item-info">
+                                <strong>AV Equipment Rental</strong>
+                                <small>Jul 3, 2026 · Equipment · Qty 1</small>
+                            </div>
                         </div>
-                    </label>
-                    <label>
-                        <span>Expense Date</span>
-                        <input type="date" name="expense_date" value="{{ now()->toDateString() }}">
-                    </label>
-                </div>
+                        <div class="org-expense-item-right">
+                            <strong>₱8,000</strong>
+                            <small><i class="bi bi-check2"></i> Receipt</small>
+                        </div>
+                    </div>
 
-                <label class="org-budget-upload">
-                    <span>Proof of purchase <em class="org-pill-soft">Proof required</em></span>
-                    <input type="file" name="receipt" id="receiptUpload" accept="image/*,.pdf">
-                </label>
+                    <div class="org-expense-item">
+                        <div class="org-expense-item-left">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="org-expense-item-info">
+                                <strong>Printing – Booth Backdrops</strong>
+                                <small>Jul 2, 2026 · Supplies · Qty 5</small>
+                            </div>
+                        </div>
+                        <div class="org-expense-item-right">
+                            <strong>₱4,500</strong>
+                            <small><i class="bi bi-check2"></i> Receipt</small>
+                        </div>
+                    </div>
 
-                <div class="org-receipt-verification" id="receiptVerification" aria-live="polite">
-                    <div class="org-receipt-verification-icon"><i class="bi bi-receipt"></i></div>
-                    <div>
-                        <strong id="receiptVerificationTitle">Receipt verification</strong>
-                        <p id="receiptVerificationText">Upload a clear receipt image to scan and pre-fill the expense details.</p>
-                        <small id="receiptVerificationMeta">Scanning runs locally in your browser. Review all detected information before submitting.</small>
+                    <div class="org-expense-item">
+                        <div class="org-expense-item-left">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="org-expense-item-info">
+                                <strong>Snacks &amp; Refreshments</strong>
+                                <small>Jul 4, 2026 · Food &amp; Beverage · Qty 50</small>
+                            </div>
+                        </div>
+                        <div class="org-expense-item-right">
+                            <strong>₱2,500</strong>
+                            <small><i class="bi bi-check2"></i> Receipt</small>
+                        </div>
                     </div>
                 </div>
-                <label class="org-receipt-confirm" id="receiptReviewConfirm" hidden>
-                    <input type="checkbox" name="receipt_reviewed" value="1">
-                    <span>I reviewed the detected receipt details and confirm they are correct.</span>
-                </label>
-                <input type="hidden" name="ocr_confidence" id="ocrConfidence">
-                <input type="hidden" name="receipt_detected" id="receiptDetected" value="0">
-                @if ($errors->any())
-                    <div class="org-alert"><i class="bi bi-exclamation-triangle-fill"></i> {{ $errors->first() }}</div>
-                @endif
 
-                <button type="submit" class="org-btn org-btn-primary org-budget-submit">
-                    <i class="bi bi-save2"></i> Save Expense for Review
-                </button>
-            </form>
-        </section>
+                <div class="org-expense-total-row">
+                    <span>Total Logged</span>
+                    <strong id="expenseLogTotal">₱15,000</strong>
+                </div>
+            </section>
 
-        <section class="org-panel liquid-glass">
-            <div class="org-panel-head">
-                <h2><i class="bi bi-bar-chart-line-fill"></i> Activity Summary</h2>
-                <span>{{ count($budget['activities']) }} ready</span>
-            </div>
+            {{-- Right: Record New Expense Form (Only for Student Org) --}}
+            @if ($canRecordExpense)
+            <section class="org-budget-card-panel">
+                <div class="org-panel-header-row" style="margin-bottom: 1.15rem;">
+                    <h3>Record New Expense</h3>
+                    <span class="org-chip" id="formActivityChip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.74rem;">
+                        Innovation Fair Booth Series
+                    </span>
+                </div>
 
-            <div class="org-budget-activity-list">
-                @foreach ($budget['activities'] as $activity)
-                    <details class="org-budget-activity" {{ $loop->first ? 'open' : '' }}>
-                        <summary>
-                            <strong>{{ $activity['title'] }}</strong>
-                            <i class="bi bi-chevron-down"></i>
-                        </summary>
-                        <div class="org-budget-activity-body">
-                            <div class="org-budget-activity-metrics">
-                                <div>
-                                    <small>Budget</small>
-                                    <strong>₱{{ number_format($activity['budget'], 2) }}</strong>
-                                </div>
-                                <div>
-                                    <small>Spent</small>
-                                    <strong class="is-spent">₱{{ number_format($activity['spent'], 2) }}</strong>
-                                </div>
-                                <div>
-                                    <small>Remaining</small>
-                                    <strong class="is-remain">₱{{ number_format($activity['remaining'], 2) }}</strong>
-                                </div>
-                            </div>
-                            <div class="org-budget-util-bar is-thin">
-                                <span style="width: {{ min(100, $activity['percent']) }}%"></span>
-                            </div>
+                <form onsubmit="event.preventDefault(); alert('Expense record saved successfully!');">
+                    <div class="org-form-group">
+                        <label>Select Activity *</label>
+                        <select id="expenseFormActivitySelect" required onchange="handleDropdownActivityChange(this.value)">
+                            <option value="innovation">Innovation Fair Booth Series</option>
+                            <option value="volunteer">Volunteer Appreciation Day</option>
+                            <option value="wellness">Campus Wellness Week</option>
+                        </select>
+                    </div>
 
-                            <div class="org-budget-expense-head">
-                                <span>Recent Expenses</span>
-                                <a href="#">View All</a>
-                            </div>
-                            <ul class="org-budget-expense-list">
-                                @foreach ($activity['expenses'] as $expense)
-                                    <li>
-                                        <div>
-                                            <strong>{{ $expense['name'] }}</strong>
-                                            <small>{{ $expense['date'] }} · Qty {{ $expense['qty'] }}</small>
-                                        </div>
-                                        <div class="org-budget-expense-meta">
-                                            <em>₱{{ number_format($expense['total'], 2) }}</em>
-                                            @if ($expense['receipt'])
-                                                <span class="org-receipt-ok"><i class="bi bi-check-lg"></i> Receipt Attached</span>
-                                            @endif
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
+                    <div class="org-form-group">
+                        <label>Merchant / Item Name *</label>
+                        <input type="text" required placeholder="e.g. Portable sound system rental">
+                    </div>
+
+                    <div class="org-form-row-2col">
+                        <div class="org-form-group">
+                            <label>Category *</label>
+                            <select required>
+                                <option value="Select Category" selected>Select Category</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Supplies">Supplies</option>
+                                <option value="Food & Beverage">Food &amp; Beverage</option>
+                                <option value="Transportation">Transportation</option>
+                            </select>
                         </div>
-                    </details>
-                @endforeach
-            </div>
-        </section>
+                        <div class="org-form-group">
+                            <label>Expense Date *</label>
+                            <input type="date" required value="2026-09-02">
+                        </div>
+                    </div>
+
+                    <div class="org-form-row-2col">
+                        <div class="org-form-group">
+                            <label>Quantity *</label>
+                            <input type="number" min="1" value="1" required>
+                        </div>
+                        <div class="org-form-group">
+                            <label>Unit Cost (₱) *</label>
+                            <input type="number" min="0" step="0.01" value="0.00" required>
+                        </div>
+                    </div>
+
+                    <div class="org-form-group">
+                        <label>Notes / Description</label>
+                        <textarea rows="2" placeholder="Optional description of this expense..."></textarea>
+                    </div>
+
+                    <div class="org-form-group">
+                        <label style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>Proof of Purchase</span>
+                            <span class="org-chip" style="background: #fee2e2; color: #dc2626; font-size: 0.68rem; font-weight: 700;">Required</span>
+                        </label>
+                        <div class="org-upload-receipt-box" onclick="document.getElementById('receiptFileInput').click()">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <span id="receiptFileName">Upload receipt image (JPG, PNG, PDF)</span>
+                        </div>
+                        <input type="file" id="receiptFileInput" style="display: none;" onchange="if(this.files[0]) document.getElementById('receiptFileName').textContent = this.files[0].name;">
+                    </div>
+
+                    <div class="org-warning-box-yellow" id="formBudgetWarning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span id="formWarningText">Budget fully utilized. Additional expenses require OSO approval.</span>
+                    </div>
+
+                    <button type="submit" class="org-btn-save-expense" style="width: 100%;">
+                        <i class="bi bi-download"></i> Save Expense Entry
+                    </button>
+                </form>
+            </section>
+            @endif
+        </div>
     </div>
 
-    @if ($receiptReviews->isNotEmpty())
-        <section class="org-panel liquid-glass org-receipt-review-list">
-            <div class="org-panel-head">
-                <h2><i class="bi bi-clipboard2-check-fill"></i> Receipt verification queue</h2>
-                <span>{{ $receiptReviews->count() }} submitted</span>
-            </div>
-            <div class="org-receipt-review-items">
-                @foreach ($receiptReviews as $review)
-                    <article>
-                        <span class="org-receipt-review-icon"><i class="bi bi-receipt-cutoff"></i></span>
-                        <div>
-                            <strong>{{ $review->item_name }}</strong>
-                            <p>{{ $review->activity_title }} · {{ $review->expense_date->format('M j, Y') }} · Qty {{ $review->quantity }}</p>
-                            <small><i class="bi bi-paperclip"></i> <a href="{{ asset('storage/'.$review->receipt_path) }}" target="_blank" rel="noopener">{{ $review->receipt_name }}</a></small>
-                        </div>
-                        <div>
-                            <strong>₱{{ number_format((float) $review->unit_cost * $review->quantity, 2) }}</strong>
-                            <span class="org-receipt-review-status"><i class="bi bi-hourglass-split"></i> Ready for review</span>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    <div class="org-budget-tip liquid-glass">
-        <p><i class="bi bi-lightbulb"></i> Tip: Make sure to upload clear receipts or proof of purchase for all expenses.</p>
-        <a href="#">? Need Help?</a>
-    </div>
-
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
     <script>
-    (() => {
-        const select = document.getElementById('budgetActivitySelect');
-        const hint = document.getElementById('budgetRemainingHint');
-        const form = document.getElementById('budgetExpenseForm');
-        const resetBtn = document.getElementById('budgetResetBtn');
-        const receiptUpload = document.getElementById('receiptUpload');
-        const verification = document.getElementById('receiptVerification');
-        const verificationTitle = document.getElementById('receiptVerificationTitle');
-        const verificationText = document.getElementById('receiptVerificationText');
-        const verificationMeta = document.getElementById('receiptVerificationMeta');
-        const reviewConfirm = document.getElementById('receiptReviewConfirm');
-        const reviewCheckbox = reviewConfirm?.querySelector('input');
-        const ocrConfidence = document.getElementById('ocrConfidence');
-        const receiptDetectedInput = document.getElementById('receiptDetected');
-        const itemName = form?.elements.namedItem('item_name');
-        const unitCost = form?.elements.namedItem('unit_cost');
-        const expenseDate = form?.elements.namedItem('expense_date');
-        const quantity = form?.elements.namedItem('quantity');
-
-        const syncHint = () => {
-            if (!select || !hint) return;
-            const option = select.options[select.selectedIndex];
-            const remaining = Number(option?.dataset?.remaining || 0);
-            hint.textContent = `Remaining Budget: ₱${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        };
-
-        const setVerification = (state, title, text, meta = '') => {
-            if (!verification) return;
-            verification.dataset.state = state;
-            verificationTitle.textContent = title;
-            verificationText.textContent = text;
-            verificationMeta.textContent = meta;
-        };
-
-        const isReceiptContentValid = (text, confidence) => {
-            if (!text || text.trim().length < 8) return false;
-            if (confidence !== null && confidence < 12) return false;
-
-            const hasKeyword = /(receipt|invoice|official|total|subtotal|amount|due|cash|change|vat|tax|tin|or#|item|qty|price|sales|vendor|merchant|store|store#|php|₱|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b)/i.test(text);
-            const hasPrice = /(?:₱|PHP|Php|P)?\s*[0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})|[0-9]+\.\d{2}/i.test(text);
-
-            return hasKeyword || hasPrice;
-        };
-
-        const parseReceipt = (text) => {
-            const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-            const merchant = lines.find(line => (
-                /[a-z]/i.test(line)
-                && !/(receipt|invoice|date|time|cashier|total|change|thank you|vat|tel|tin)/i.test(line)
-                && line.length > 2
-            ));
-            const dateMatch = text.match(/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{2,4})\b/i);
-            const totalLine = lines.find(line => /(grand\s*total|total\s*(due|amount|sale)?|amount\s*due|net\s*amount)/i.test(line));
-            const getAmount = (value = '') => {
-                const matches = [...value.matchAll(/(?:₱|PHP|Php|P)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})|[0-9]+\.\d{2})/gi)];
-                return matches.length ? Number(matches.at(-1)[1].replace(/,/g, '')) : null;
-            };
-            const amount = getAmount(totalLine) ?? Math.max(
-                0,
-                ...[...text.matchAll(/(?:₱|PHP|Php|P)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})|[0-9]+\.\d{2})/gi)]
-                    .map(match => Number(match[1].replace(/,/g, '')))
-            );
-            return { merchant, date: dateMatch?.[1] ?? null, amount: amount || null };
-        };
-
-        const normalizeDate = (value) => {
-            if (!value) return null;
-            const parsed = new Date(value);
-            return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
-        };
-
-        const checkCompleteness = (confidence = null) => {
-            if (!receiptUpload?.files?.length) return;
-            if (receiptDetectedInput && receiptDetectedInput.value === "0") return;
-
-            const missing = [];
-            if (!itemName?.value.trim()) missing.push('merchant or item name');
-            if (!Number(unitCost?.value)) missing.push('amount');
-            if (!expenseDate?.value) missing.push('expense date');
-
-            if (missing.length) {
-                reviewConfirm.hidden = true;
-                setVerification('needs-review', 'Needs review', `Complete the missing receipt details: ${missing.join(', ')}.`, 'OCR is a helper only. Check the receipt before submitting.');
-                return;
+        const activityBudgetData = {
+            innovation: {
+                name: 'Innovation Fair Booth Series',
+                budget: '₱15,000',
+                used: '₱15,000 (100%)',
+                left: '₱0',
+                percent: 100,
+                color: '#16a34a',
+                totalLogged: '₱15,000',
+                warning: 'Budget fully utilized. Additional expenses require OSO approval.',
+                items: [
+                    { title: 'AV Equipment Rental', meta: 'Jul 3, 2026 · Equipment · Qty 1', amount: '₱8,000' },
+                    { title: 'Printing – Booth Backdrops', meta: 'Jul 2, 2026 · Supplies · Qty 5', amount: '₱4,500' },
+                    { title: 'Snacks & Refreshments', meta: 'Jul 4, 2026 · Food & Beverage · Qty 50', amount: '₱2,500' }
+                ]
+            },
+            volunteer: {
+                name: 'Volunteer Appreciation Day',
+                budget: '₱12,500',
+                used: '₱12,500 (100%)',
+                left: '₱0',
+                percent: 100,
+                color: '#16a34a',
+                totalLogged: '₱12,500',
+                warning: 'Budget fully utilized. Additional expenses require OSO approval.',
+                items: [
+                    { title: 'Catering & Packed Meals', meta: 'Aug 10, 2026 · Food & Beverage · Qty 60', amount: '₱7,500' },
+                    { title: 'Tokens & Certificates', meta: 'Aug 8, 2026 · Supplies · Qty 45', amount: '₱3,200' },
+                    { title: 'Venue Décor & Ribbons', meta: 'Aug 9, 2026 · Supplies · Qty 1', amount: '₱1,800' }
+                ]
+            },
+            wellness: {
+                name: 'Campus Wellness Week',
+                budget: '₱42,500',
+                used: '₱24,900 (58.5%)',
+                left: '₱17,600',
+                percent: 58.5,
+                color: '#d97706',
+                totalLogged: '₱24,900',
+                warning: '₱17,600 remaining allocation available for encoding.',
+                items: [
+                    { title: 'Sound System & Stage Lights', meta: 'Sep 1, 2026 · Equipment · Qty 1', amount: '₱14,500' },
+                    { title: 'Water Stations & Energy Snacks', meta: 'Sep 2, 2026 · Food & Beverage · Qty 120', amount: '₱6,400' },
+                    { title: 'Event T-Shirts for Facilitators', meta: 'Aug 28, 2026 · Supplies · Qty 30', amount: '₱4,000' }
+                ]
             }
-
-            reviewConfirm.hidden = false;
-            const confidenceNote = confidence === null ? '' : ` OCR confidence: ${Math.round(confidence)}%.`;
-            if (ocrConfidence && confidence !== null) ocrConfidence.value = Math.round(confidence);
-            setVerification('complete', 'Complete — ready for your review', 'Required receipt details are filled in. Please compare them with the original receipt, then confirm below.', `The system cannot guarantee accuracy.${confidenceNote}`);
         };
 
-        const scanReceipt = async (file) => {
-            reviewConfirm.hidden = true;
+        function selectActivityBudget(key) {
+            const data = activityBudgetData[key];
+            if (!data) return;
 
-            if (file.type === 'application/pdf') {
-                if (receiptDetectedInput) receiptDetectedInput.value = "1";
-                setVerification('needs-review', 'PDF proof attached', 'Enter the receipt details from this PDF manually.', 'You can submit the PDF as official proof of purchase.');
-                return;
-            }
-
-            if (!file.type.startsWith('image/')) {
-                if (receiptDetectedInput) receiptDetectedInput.value = "0";
-                setVerification('rejected', 'REJECTED — Unsupported file format', 'Upload a clear receipt image (JPG, PNG) or PDF.', 'Form submission is disabled until a valid receipt file is provided.');
-                return;
-            }
-
-            if (!window.Tesseract) {
-                if (receiptDetectedInput) receiptDetectedInput.value = "1";
-                setVerification('needs-review', 'Scanner unavailable', 'The local receipt scanner could not load. Enter the details manually.', 'Check your internet connection and refresh to load the scanner.');
-                return;
-            }
-
-            setVerification('scanning', 'Scanning receipt…', 'Reading the receipt image and looking for merchant, date, and total.', 'Keep this page open while the scan finishes.');
-            try {
-                const { data } = await window.Tesseract.recognize(file, 'eng');
-                const text = data.text || '';
-                const confidence = data.confidence || 0;
-
-                const isValidReceipt = isReceiptContentValid(text, confidence);
-                if (!isValidReceipt) {
-                    if (receiptDetectedInput) receiptDetectedInput.value = "0";
-                    reviewConfirm.hidden = true;
-                    setVerification('rejected', 'REJECTED — No receipt detected', 'The uploaded file does not contain a recognizable receipt or proof of purchase.', 'Please upload a clear, legible receipt photo or official invoice image.');
-                    return;
+            // 1. Update Card Active Classes
+            ['innovation', 'volunteer', 'wellness'].forEach(k => {
+                const card = document.getElementById('actCard-' + k);
+                const title = card ? card.querySelector('.org-act-card-title') : null;
+                if (card) {
+                    if (k === key) {
+                        card.classList.add('is-active');
+                        if (title) title.style.color = '#ffffff';
+                    } else {
+                        card.classList.remove('is-active');
+                        if (title) title.style.color = '#1a1618';
+                    }
                 }
+            });
 
-                if (receiptDetectedInput) receiptDetectedInput.value = "1";
-                const detected = parseReceipt(text);
-                if (!itemName?.value.trim() && detected.merchant) itemName.value = detected.merchant;
-                if (!unitCost?.value && detected.amount) {
-                    unitCost.value = detected.amount.toFixed(2);
-                    if (quantity && !quantity.value) quantity.value = 1;
-                }
-                if (!expenseDate?.value && detected.date) {
-                    const date = normalizeDate(detected.date);
-                    if (date) expenseDate.value = date;
-                }
-                checkCompleteness(confidence);
-            } catch (error) {
-                if (receiptDetectedInput) receiptDetectedInput.value = "0";
-                setVerification('rejected', 'REJECTED — Receipt scan failed', 'The uploaded file could not be parsed as a valid receipt.', 'Upload a clear, uncorrupted receipt image or PDF.');
-            }
-        };
-
-        select?.addEventListener('change', syncHint);
-        receiptUpload?.addEventListener('change', () => {
-            reviewCheckbox.checked = false;
-            if (ocrConfidence) ocrConfidence.value = '';
-            const file = receiptUpload.files?.[0];
-            if (file) scanReceipt(file);
-        });
-        [itemName, unitCost, expenseDate].forEach((input) => input?.addEventListener('input', () => checkCompleteness()));
-        resetBtn?.addEventListener('click', () => {
-            form?.reset();
-            reviewConfirm.hidden = true;
-            if (receiptDetectedInput) receiptDetectedInput.value = "0";
-            setVerification('idle', 'Receipt verification', 'Upload a clear receipt image to scan and pre-fill the expense details.', 'Scanning runs locally in your browser. Review all detected information before submitting.');
-            syncHint();
-        });
-        form?.addEventListener('submit', (event) => {
-            if (!receiptUpload?.files?.length) {
-                event.preventDefault();
-                setVerification('rejected', 'REJECTED — Receipt file required', 'Please attach a proof of purchase before saving the expense.', 'Upload a clear receipt image or PDF file.');
-                alert('Expense submission rejected: Please upload a receipt file.');
-                return;
+            // 2. Update Expense Log Panel
+            const budgetEl = document.getElementById('expenseLogBudget');
+            if (budgetEl) budgetEl.innerHTML = `Budget <strong>${data.budget}</strong>`;
+            const titleEl = document.getElementById('expenseLogTitle');
+            if (titleEl) titleEl.textContent = data.name;
+            const usedEl = document.getElementById('expenseLogUsed');
+            if (usedEl) usedEl.textContent = `Used ${data.used}`;
+            const leftEl = document.getElementById('expenseLogLeft');
+            if (leftEl) leftEl.textContent = `Left ${data.left}`;
+            
+            const fill = document.getElementById('expenseLogProgressFill');
+            if (fill) {
+                fill.style.width = data.percent + '%';
+                fill.style.background = data.color;
             }
 
-            if (receiptDetectedInput && receiptDetectedInput.value === "0") {
-                event.preventDefault();
-                setVerification('rejected', 'REJECTED — No receipt detected', 'Submission blocked: The uploaded file was rejected because no valid receipt was detected.', 'Re-upload a clear receipt image or PDF to proceed.');
-                alert('Expense submission rejected: No valid receipt detected in the uploaded file.');
-                return;
+            const itemsContainer = document.getElementById('expenseLogItems');
+            if (itemsContainer) {
+                itemsContainer.innerHTML = data.items.map(item => `
+                    <div class="org-expense-item">
+                        <div class="org-expense-item-left">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="org-expense-item-info">
+                                <strong>${item.title}</strong>
+                                <small>${item.meta}</small>
+                            </div>
+                        </div>
+                        <div class="org-expense-item-right">
+                            <strong>${item.amount}</strong>
+                            <small><i class="bi bi-check2"></i> Receipt</small>
+                        </div>
+                    </div>
+                `).join('');
             }
 
-            if (!reviewCheckbox?.checked) {
-                event.preventDefault();
-                setVerification('needs-review', 'Review required', 'Confirm that the scanned receipt details match the original receipt before submitting.', 'Edit any incorrect details, then tick the confirmation box.');
-            }
-        });
-        syncHint();
-    })();
+            const totalEl = document.getElementById('expenseLogTotal');
+            if (totalEl) totalEl.textContent = data.totalLogged;
+
+            // 3. Update Record New Expense Form if present
+            const chipEl = document.getElementById('formActivityChip');
+            if (chipEl) chipEl.textContent = data.name;
+            const select = document.getElementById('expenseFormActivitySelect');
+            if (select) select.value = key;
+            const warnEl = document.getElementById('formWarningText');
+            if (warnEl) warnEl.textContent = data.warning;
+        }
+
+        function handleDropdownActivityChange(key) {
+            selectActivityBudget(key);
+        }
     </script>
-    @endpush
 @endsection

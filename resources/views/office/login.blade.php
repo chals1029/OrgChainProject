@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <title>Office Access | OrgChain</title>
+    <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
 
     @fonts
 

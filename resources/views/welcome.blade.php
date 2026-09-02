@@ -7,6 +7,7 @@
     <meta name="description" content="OrgChain — Blockchain-powered student organization management for Batangas State University.">
 
     <title>OrgChain | Batangas State University</title>
+    <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
 
     @fonts
 

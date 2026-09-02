@@ -44,5 +44,26 @@ class OrgChainUserAccountsSeeder extends Seeder
                 'created_at' => now(),
             ]
         );
+
+        $existingUser = UserAccount::query()->where('sr_code', '23-73600')->first();
+        $nextUserId = $existingUser?->user_id ?? ((int) UserAccount::query()->max('user_id') + 1);
+
+        UserAccount::query()->updateOrCreate(
+            ['sr_code' => '23-73600'],
+            [
+                'user_id' => $nextUserId,
+                'org_id' => null,
+                'sr_code' => '23-73600',
+                'full_name' => 'Lilian Christine',
+                'password_hash' => null,
+                'email' => '23-73600@g.batstate-u.edu.ph',
+                'college' => 'College of Informatics and Computing Sciences',
+                'program' => 'BS Information Technology',
+                'year_level' => '4th Year',
+                'role' => 'student',
+                'account_status' => 'active',
+                'created_at' => now(),
+            ]
+        );
     }
 }

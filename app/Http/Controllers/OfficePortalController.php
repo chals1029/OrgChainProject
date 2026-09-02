@@ -63,18 +63,24 @@ class OfficePortalController extends Controller
 
         $approved = collect($pipeline)->whereIn('status_key', ['ovcaa_approved', 'completed'])->count();
         $pending = collect($pipeline)->whereIn('status_key', ['created', 'verification', 'pending', 'returned'])->count();
-        $expenses = (int) BudgetItem::query()->sum('utilized');
 
         return view('org.dashboard', array_merge($this->deskContext(), [
             'activeNav' => 'dashboard',
             'stats' => [
-                'total' => count($pipeline),
-                'approved' => $approved,
-                'pending' => $pending,
-                'expenses' => $expenses > 0 ? $expenses : 25250,
+                'total' => 5,
+                'approved' => 2,
+                'pending' => 3,
+                'expenses' => 115150,
+            ],
+            'transparency' => [
+                'allocated' => 185000,
+                'utilized' => 115150,
+                'remaining' => 69850,
+                'percent' => 62,
+                'remaining_percent' => 38,
             ],
             'upcoming' => $upcoming,
-            'tracker' => array_slice($pipeline, 0, 4),
+            'tracker' => array_slice($pipeline, 0, 3),
             'updates' => $pipeline,
         ]));
     }
@@ -88,30 +94,132 @@ class OfficePortalController extends Controller
             ->map(fn ($rows) => $rows->count())
             ->all();
 
+        $activityFinancials = [
+            [
+                'name' => 'Innovation Fair Booth Series',
+                'scope' => 'in_campus',
+                'scope_label' => 'In-Campus',
+                'allocated' => 15000,
+                'utilized' => 15000,
+                'remaining' => 0,
+                'burn_rate' => 100,
+                'status' => 'Completed',
+                'status_style' => 'green',
+                'month' => 'Jul',
+                'year' => 2026,
+            ],
+            [
+                'name' => 'Leadership Summit 2026',
+                'scope' => 'local_off_campus',
+                'scope_label' => 'Off-Campus',
+                'allocated' => 75000,
+                'utilized' => 42750,
+                'remaining' => 32250,
+                'burn_rate' => 57,
+                'status' => 'In Review',
+                'status_style' => 'blue',
+                'month' => 'Aug',
+                'year' => 2026,
+            ],
+            [
+                'name' => 'Volunteer Appreciation Day',
+                'scope' => 'in_campus',
+                'scope_label' => 'In-Campus',
+                'allocated' => 12500,
+                'utilized' => 12500,
+                'remaining' => 0,
+                'burn_rate' => 100,
+                'status' => 'Completed',
+                'status_style' => 'green',
+                'month' => 'Mar',
+                'year' => 2026,
+            ],
+            [
+                'name' => 'Campus Wellness Week',
+                'scope' => 'in_campus',
+                'scope_label' => 'In-Campus',
+                'allocated' => 42500,
+                'utilized' => 24900,
+                'remaining' => 17600,
+                'burn_rate' => 58.5,
+                'status' => 'In Review',
+                'status_style' => 'blue',
+                'month' => 'May',
+                'year' => 2026,
+            ],
+            [
+                'name' => 'BatStateU Sportsfest 2026',
+                'scope' => 'in_campus',
+                'scope_label' => 'In-Campus',
+                'allocated' => 40000,
+                'utilized' => 20000,
+                'remaining' => 20000,
+                'burn_rate' => 50,
+                'status' => 'Pending Approval',
+                'status_style' => 'yellow',
+                'month' => 'Sep',
+                'year' => 2026,
+            ],
+        ];
+
         return view('org.analytics', array_merge($this->deskContext(), [
             'activeNav' => 'analytics',
             'byStatus' => $byStatus,
             'pipeline' => $pipeline,
             'budgetItems' => BudgetItem::query()->orderByDesc('utilized')->limit(6)->get(),
+            'activityFinancials' => $activityFinancials,
+            'overview' => [
+                'healthScore' => 84,
+                'totalAllocated' => 185000,
+                'totalUtilized' => 115150,
+                'remainingBalance' => 69850,
+                'burnRate' => 62.2,
+                'complianceRate' => 96.4,
+                'inCampusAllocated' => 110000,
+                'inCampusUtilized' => 72400,
+                'inCampusRemaining' => 37600,
+                'offCampusAllocated' => 75000,
+                'offCampusUtilized' => 42750,
+                'offCampusRemaining' => 32250,
+            ],
         ]));
     }
 
-    public function activities(): View
+    public function activities(Request $request): View
     {
+        $allActivities = $this->orgActivitiesList();
+        $selectedSlug = $request->query('activity');
+        $selectedActivity = null;
+
+        if ($selectedSlug) {
+            $selectedActivity = collect($allActivities)->firstWhere('slug', $selectedSlug)
+                ?? collect($allActivities)->first();
+        }
+
         return view('org.activities', array_merge($this->deskContext(), [
             'activeNav' => 'activities',
-            'activities' => $this->pipelineActivities(),
-            'submissions' => InCampusActivitySubmission::query()
-                ->with('activity')
-                ->latest()
-                ->get(),
+            'activities' => $allActivities,
+            'selectedActivity' => $selectedActivity,
+            'forApprovalCount' => collect($allActivities)->where('filter_category', 'for_approval')->count(),
+            'approvedCount' => collect($allActivities)->where('filter_category', 'approved')->count(),
+            'inReviewCount' => collect($allActivities)->where('filter_category', 'in_review')->count(),
+            'returnedCount' => collect($allActivities)->where('filter_category', 'returned')->count(),
         ]));
     }
 
-    public function createActivity(): View
+    public function createActivity(Request $request): View
     {
+        $allActivities = $this->orgActivitiesList();
+        $editSlug = $request->query('edit');
+        $editActivity = null;
+
+        if ($editSlug) {
+            $editActivity = collect($allActivities)->firstWhere('slug', $editSlug);
+        }
+
         return view('org.activity-create', array_merge($this->deskContext(), [
             'activeNav' => 'activities',
+            'editActivity' => $editActivity,
             'submission' => new InCampusActivitySubmission([
                 'activity_type' => 'in_campus',
                 'status' => 'draft',
@@ -763,10 +871,10 @@ class OfficePortalController extends Controller
         $typeLabel = $activityType === 'local_off_campus' ? 'local off-campus' : 'in-campus';
 
         return redirect()
-            ->route('office.activities.edit', $submission)
+            ->route('office.activities')
             ->with('success', $isSubmitting
                 ? "Your {$typeLabel} activity was submitted for review."
-                : "Your {$typeLabel} activity draft was saved.");
+                : "Your {$typeLabel} activity changes have been saved.");
     }
 
     /**
@@ -928,5 +1036,215 @@ class OfficePortalController extends Controller
         }
 
         return $demo;
+    }
+
+    private function orgActivitiesList(): array
+    {
+        return [
+            [
+                'slug' => 'innovation-fair-booth-series',
+                'title' => 'Innovation Fair Booth Series',
+                'status' => 'OVCAA Approved',
+                'status_key' => 'ovcaa_approved',
+                'badge_style' => 'purple',
+                'filter_category' => 'approved',
+                'date' => 'Jul 4, 2026',
+                'location' => 'Gymnasium',
+                'timestamp_note' => 'May 10, 2026 10:30 AM',
+                'activity_type' => 'Seminar / Conference',
+                'start_time' => 'July 4, 2026 08:00 AM',
+                'end_time' => 'July 4, 2026 05:00 PM',
+                'organization' => 'Supreme Student Council',
+                'rationale' => 'To showcase student innovations and promote creativity and entrepreneurship.',
+                'objectives' => [
+                    'Encourage student innovation and creativity.',
+                    'Promote collaboration among departments.',
+                    'Provide a platform for student-led projects.',
+                ],
+                'documents' => [
+                    [
+                        'name' => 'Activity Proposal',
+                        'type' => 'pdf',
+                        'status' => 'Completed',
+                        'status_style' => 'green',
+                        'uploaded_on' => 'May 12, 2026 9:41 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Budget Breakdown',
+                        'type' => 'xlsx',
+                        'status' => 'In Review',
+                        'status_style' => 'blue',
+                        'uploaded_on' => 'May 12, 2026 9:41 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Risk Assessment',
+                        'type' => 'pdf',
+                        'status' => 'Pending',
+                        'status_style' => 'yellow',
+                        'uploaded_on' => 'May 12, 2026 9:41 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Other Supporting Documents (Optional)',
+                        'type' => 'docx',
+                        'status' => 'Return for Revision',
+                        'status_style' => 'red',
+                        'uploaded_on' => 'May 11, 2026 2:15 PM',
+                        'note' => 'Please replace or resubmit the document.',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'leadership-summit-2026',
+                'title' => 'Leadership Summit 2026',
+                'status' => 'For Approval',
+                'status_key' => 'for_approval',
+                'badge_style' => 'yellow',
+                'filter_category' => 'for_approval',
+                'date' => 'Aug 12, 2026',
+                'location' => 'Taal Building',
+                'timestamp_note' => 'Submitted on May 12, 2026 9:45 AM',
+                'activity_type' => 'Leadership Training / Workshop',
+                'start_time' => 'August 12, 2026 09:00 AM',
+                'end_time' => 'August 12, 2026 05:00 PM',
+                'organization' => 'Supreme Student Council',
+                'rationale' => 'To equip student organization officers with leadership and strategic management skills.',
+                'objectives' => [
+                    'Develop core leadership competencies among student leaders.',
+                    'Enhance project planning, budgeting, and accountability.',
+                    'Strengthen inter-organization coordination across campuses.',
+                ],
+                'documents' => [
+                    [
+                        'name' => 'Activity Proposal',
+                        'type' => 'pdf',
+                        'status' => 'Completed',
+                        'status_style' => 'green',
+                        'uploaded_on' => 'May 12, 2026 9:45 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Budget Breakdown',
+                        'type' => 'xlsx',
+                        'status' => 'In Review',
+                        'status_style' => 'blue',
+                        'uploaded_on' => 'May 12, 2026 9:45 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Risk Assessment',
+                        'type' => 'pdf',
+                        'status' => 'Pending',
+                        'status_style' => 'yellow',
+                        'uploaded_on' => 'May 12, 2026 9:45 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Speaker Profiles & Program Flow',
+                        'type' => 'docx',
+                        'status' => 'Pending',
+                        'status_style' => 'yellow',
+                        'uploaded_on' => 'May 12, 2026 9:45 AM',
+                        'note' => null,
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'campus-wellness-week',
+                'title' => 'Campus Wellness Week',
+                'status' => 'In Review',
+                'status_key' => 'in_review',
+                'badge_style' => 'blue',
+                'filter_category' => 'for_approval',
+                'date' => 'Sep 8, 2026',
+                'location' => 'Gymnasium',
+                'timestamp_note' => 'Under review by OVCAA',
+                'activity_type' => 'Health & Wellness Campaign',
+                'start_time' => 'September 8, 2026 08:30 AM',
+                'end_time' => 'September 12, 2026 04:30 PM',
+                'organization' => 'Red Cross Youth Council',
+                'rationale' => 'To promote holistic student health, mental wellbeing, and safety on campus.',
+                'objectives' => [
+                    'Raise awareness on mental health and stress coping mechanisms.',
+                    'Offer free basic health checks and wellness activities.',
+                    'Encourage active, balanced lifestyle habits for college students.',
+                ],
+                'documents' => [
+                    [
+                        'name' => 'Activity Proposal',
+                        'type' => 'pdf',
+                        'status' => 'Completed',
+                        'status_style' => 'green',
+                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Budget Breakdown',
+                        'type' => 'xlsx',
+                        'status' => 'In Review',
+                        'status_style' => 'blue',
+                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Medical Clearance & Health Protocols',
+                        'type' => 'pdf',
+                        'status' => 'In Review',
+                        'status_style' => 'blue',
+                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
+                        'note' => null,
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'sportsfest-2026',
+                'title' => 'Sportsfest 2026',
+                'status' => 'Return for Revision',
+                'status_key' => 'returned',
+                'badge_style' => 'red',
+                'filter_category' => 'returned',
+                'date' => 'Oct 15, 2026',
+                'location' => 'Sports Complex',
+                'timestamp_note' => 'Returned on May 11, 2026 2:15 PM',
+                'activity_type' => 'Sports & Athletic Tournament',
+                'start_time' => 'October 15, 2026 08:00 AM',
+                'end_time' => 'October 18, 2026 06:00 PM',
+                'organization' => 'Athletics Club',
+                'rationale' => 'To foster camaraderie, discipline, and physical fitness through university sports.',
+                'objectives' => [
+                    'Encourage sportsmanship and inter-college participation.',
+                    'Identify athletic talents for university representative teams.',
+                    'Promote physical fitness and recreational wellness.',
+                ],
+                'documents' => [
+                    [
+                        'name' => 'Activity Proposal',
+                        'type' => 'pdf',
+                        'status' => 'Return for Revision',
+                        'status_style' => 'red',
+                        'uploaded_on' => 'May 11, 2026 2:15 PM',
+                        'note' => 'Please replace or resubmit the document.',
+                    ],
+                    [
+                        'name' => 'Budget Breakdown',
+                        'type' => 'xlsx',
+                        'status' => 'In Review',
+                        'status_style' => 'blue',
+                        'uploaded_on' => 'May 11, 2026 2:15 PM',
+                        'note' => null,
+                    ],
+                    [
+                        'name' => 'Venue Reservation & Security Plan',
+                        'type' => 'pdf',
+                        'status' => 'Completed',
+                        'status_style' => 'green',
+                        'uploaded_on' => 'May 10, 2026 1:00 PM',
+                        'note' => null,
+                    ],
+                ],
+            ],
+        ];
     }
 }
