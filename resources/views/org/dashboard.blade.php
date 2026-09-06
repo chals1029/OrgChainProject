@@ -15,7 +15,7 @@
     @if ($isOso)
         <p class="org-welcome">Welcome back, OSO Officer! </p>
     @elseif ($isSdo)
-        <p class="org-welcome">Welcome back, Sustainable Development Office! </p>
+        <p class="org-welcome">Track and evaluate activity and proposal submissions to ensure alignment with the UN Sustainable Development Goals (SDGs).</p>
     @elseif ($isOvcaa)
         <p class="org-welcome">Welcome back, OVCAA Reviewer! </p>
     @else
@@ -77,13 +77,6 @@
         .org-kpi-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(90, 15, 30, 0.06);
-        }
-
-        .org-kpi-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.25rem;
         }
 
         .org-kpi-icon {
@@ -852,1412 +845,851 @@
         }
 
         .org-btn-view-pill {
+            padding: 0.35rem 1.35rem;
+            border-radius: 9999px;
+            background: #7a1222;
+            color: #ffffff !important;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 104px;
-            height: 32px;
-            padding: 0 0.5rem;
-            border-radius: 9999px;
-            background: #8b1828;
-            color: #ffffff !important;
-            font-size: 0.78rem;
-            font-weight: 700;
-            line-height: 1;
-            text-decoration: none;
-            white-space: nowrap;
-            box-sizing: border-box;
-            transition: all 0.18s ease;
-            box-shadow: 0 2px 6px rgba(139, 24, 40, 0.15);
-            border: 1px solid transparent;
+            transition: all 0.15s ease;
         }
 
         .org-btn-view-pill:hover {
-            background: #6e101d;
+            background: #600e1b;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 24, 40, 0.28);
-            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(122, 18, 34, 0.25);
         }
 
-        .org-btn-view-pill:active {
-            transform: translateY(0);
-        }
-        /* =========================================================
-           OSO Officer Dedicated Analytics & Operations Dashboard
-           ========================================================= */
-        
-        .oso-analytics-kpi-row {
+        /* SDO Specific Dashboard Styles */
+        .sdo-kpi-row {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 1.25rem;
-            margin-bottom: 1.5rem;
         }
 
-        .oso-stat-card {
+        .sdo-kpi-card {
             background: #ffffff;
             border-radius: 20px;
             border: 1.5px solid #f0e6e8;
-            padding: 1.35rem 1.5rem;
-            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
+            padding: 1.4rem 1.6rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+            gap: 0.25rem;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .oso-stat-card:hover {
+        .sdo-kpi-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 26px rgba(139, 24, 40, 0.08);
-            border-color: #f1c0c9;
+            box-shadow: 0 8px 24px rgba(90, 15, 30, 0.06);
         }
 
-        .oso-stat-card-head {
+        .sdo-kpi-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.35rem;
         }
 
-        .oso-stat-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+        .sdo-kpi-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.15rem;
         }
 
-        .oso-stat-icon.is-maroon { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
-        .oso-stat-icon.is-amber { background: #fefce8; color: #b45309; border: 1px solid #fef08a; }
-        .oso-stat-icon.is-emerald { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .oso-stat-icon.is-sky { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .sdo-kpi-icon.is-pink { background: #fdf0f2; color: #8b1828; }
+        .sdo-kpi-icon.is-yellow { background: #fef9c3; color: #ca8a04; }
+        .sdo-kpi-icon.is-green { background: #dcfce7; color: #16a34a; }
 
-        .oso-stat-badge {
-            font-size: 0.72rem;
+        .sdo-kpi-trend {
+            font-size: 0.78rem;
             font-weight: 700;
-            padding: 0.2rem 0.55rem;
-            border-radius: 9999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
         }
 
-        .oso-stat-badge.is-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .oso-stat-badge.is-positive { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .oso-stat-badge.is-neutral { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+        .sdo-kpi-trend.is-pink { color: #8b1828; }
+        .sdo-kpi-trend.is-yellow { color: #ca8a04; }
+        .sdo-kpi-trend.is-green { color: #16a34a; }
 
-        .oso-stat-val {
-            font-size: 2.25rem;
+        .sdo-kpi-num {
+            font-size: 2.2rem;
             font-weight: 800;
+            line-height: 1;
             color: #1a1618;
-            line-height: 1.1;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.2rem;
+            margin: 0.4rem 0 0.1rem;
         }
 
-        .oso-stat-label {
-            font-size: 0.9rem;
+        .sdo-kpi-title {
+            font-size: 0.98rem;
             font-weight: 700;
-            color: #2b2427;
-            margin: 0 0 0.35rem;
+            color: #1a1618;
+            margin: 0 0 0.1rem;
         }
 
-        .oso-stat-desc {
+        .sdo-kpi-sub {
             font-size: 0.78rem;
-            color: #786f73;
+            color: #7a7074;
             margin: 0;
-            line-height: 1.4;
         }
 
-        /* 2-Column Analytics Grid */
-        .oso-analytics-2col {
+        .sdo-main-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 1.25rem;
         }
 
-        .oso-analytics-card {
+        .sdo-donut-wrap {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #22c55e 0% 33%,
+                #ffffff 33% 33.5%,
+                #eab308 33.5% 58%,
+                #ffffff 58% 58.5%,
+                #ef4444 58.5% 75%,
+                #ffffff 75% 75.5%,
+                #3b82f6 75.5% 92%,
+                #ffffff 92% 92.5%,
+                #a855f7 92.5% 99.5%,
+                #ffffff 99.5% 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        }
+
+        .sdo-donut-center {
+            width: 86px;
+            height: 86px;
+            border-radius: 50%;
             background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            padding: 1.35rem 1.65rem 1.5rem;
-            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-
-        .oso-card-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 0.85rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #f6eff0;
-        }
-
-        .oso-card-title-group h3 {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #1a1618;
-            margin: 0 0 0.2rem;
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-        }
-
-        .oso-card-title-group p {
-            font-size: 0.78rem;
-            color: #786f73;
-            margin: 0;
-        }
-
-        .oso-canvas-wrap {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            min-height: 250px;
-            height: 100%;
-        }
-
-        /* Donut Chart with Custom Legend */
-        .oso-donut-split {
-            display: grid;
-            grid-template-columns: 170px 1fr;
-            align-items: center;
-            gap: 1.5rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .oso-donut-center-wrap {
-            position: relative;
-            width: 165px;
-            height: 165px;
-            margin: 0 auto;
-        }
-
-        .oso-donut-center-label {
-            position: absolute;
-            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            pointer-events: none;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.04);
             text-align: center;
         }
 
-        .oso-donut-center-label strong {
-            font-size: 1.45rem;
+        .sdo-donut-center small {
+            font-size: 0.68rem;
+            color: #7a7074;
+            line-height: 1.1;
+        }
+
+        .sdo-donut-center strong {
+            font-size: 1.4rem;
             font-weight: 800;
             color: #1a1618;
-            line-height: 1;
+            line-height: 1.1;
         }
 
-        .oso-donut-center-label small {
-            font-size: 0.68rem;
-            font-weight: 700;
-            color: #786f73;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 0.2rem;
-        }
-
-        .oso-donut-legend-list {
+        .sdo-cat-list {
             display: flex;
             flex-direction: column;
-            gap: 0.55rem;
+            gap: 0.7rem;
+            flex: 1;
         }
 
-        .oso-donut-legend-row {
+        .sdo-cat-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 0.8rem;
-            padding: 0.35rem 0.55rem;
-            border-radius: 8px;
-            background: #faf6f7;
         }
 
-        .oso-donut-legend-left {
+        .sdo-cat-left {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.55rem;
+            color: #1a1618;
             font-weight: 600;
-            color: #2b2427;
         }
 
-        .oso-color-dot {
-            width: 9px;
-            height: 9px;
+        .sdo-cat-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             flex-shrink: 0;
         }
 
-        .oso-donut-legend-right {
+        .sdo-cat-right {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+        }
+
+        .sdo-cat-count {
             font-weight: 700;
             color: #1a1618;
         }
 
-        .oso-pct-pill {
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 0.1rem 0.35rem;
-            border-radius: 4px;
-            background: #ffffff;
-            color: #635b5e;
-            border: 1px solid #e8e2e4;
-        }
-
-        /* On-Campus vs Off-Campus Widget */
-        .oso-scope-panel {
-            background: #faf6f7;
-            border: 1px solid #f0e6e8;
-            border-radius: 14px;
-            padding: 0.85rem 1rem;
-            margin-top: 0.5rem;
-        }
-
-        .oso-scope-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .sdo-cat-pct {
+            color: #7a7074;
+            min-width: 30px;
+            text-align: right;
             font-size: 0.76rem;
-            font-weight: 800;
-            color: #706569;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-bottom: 0.5rem;
         }
 
-        .oso-scope-progress-bar {
-            height: 8px;
-            background: #fef08a;
-            border-radius: 9999px;
-            overflow: hidden;
-            display: flex;
-            margin-bottom: 0.65rem;
-        }
-
-        .oso-scope-bar-incampus {
-            height: 100%;
-            background: #8b1828;
-            border-radius: 9999px 0 0 9999px;
-        }
-
-        .oso-scope-metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-        }
-
-        .oso-scope-stat-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #ffffff;
-            padding: 0.45rem 0.75rem;
-            border-radius: 8px;
-            border: 1px solid #f0e6e8;
-        }
-
-        .oso-scope-stat-box.is-incampus { border-left: 3px solid #8b1828; }
-        .oso-scope-stat-box.is-offcampus { border-left: 3px solid #ca8a04; }
-
-        .oso-scope-stat-name {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #332d30;
-        }
-
-        .oso-scope-stat-num {
-            font-size: 0.84rem;
-            font-weight: 800;
-            color: #1a1618;
-        }
-
-        /* Horizontal Ranking Progress Bars */
-        .oso-rank-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.95rem;
-        }
-
-        .oso-rank-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-        }
-
-        .oso-rank-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            font-size: 0.84rem;
-        }
-
-        .oso-rank-name {
-            font-weight: 700;
-            color: #1a1618;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            min-width: 0;
-            word-break: break-word;
-        }
-
-        .oso-rank-stat {
-            font-size: 0.78rem;
-            color: #635b5e;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .oso-rank-bar-bg {
-            height: 8px;
-            background: #f4ecee;
-            border-radius: 9999px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .oso-rank-bar-fill {
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        /* Incomplete & Revision Causes List */
-        .oso-causes-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            margin-top: 0.85rem;
-        }
-
-        .oso-cause-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.65rem 0.85rem;
-            border-radius: 12px;
-            background: #fdfafb;
-            border: 1px solid #f6eaec;
-            font-size: 0.82rem;
-        }
-
-        .oso-cause-left {
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-            font-weight: 600;
-            color: #332d30;
-            min-width: 0;
-        }
-
-        .oso-cause-pct {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #8b1828;
-            background: #fdf0f2;
-            padding: 0.2rem 0.5rem;
+        .sdo-sdg-badge {
+            width: 34px;
+            height: 34px;
             border-radius: 6px;
-            border: 1px solid #fae0e5;
-            flex-shrink: 0;
-            white-space: nowrap;
-        }
-
-        /* Recent Transactions Table */
-        .oso-transactions-table-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            overflow: hidden;
-            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
-            margin-bottom: 1.5rem;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .oso-trx-table {
-            width: 100%;
-            min-width: 780px;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.86rem;
-        }
-
-        .oso-trx-table thead th {
-            background: #faf6f7;
-            padding: 0.85rem 1.15rem;
-            font-size: 0.76rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
             font-weight: 800;
-            color: #706569;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            border-bottom: 1px solid #eee4e6;
-            white-space: nowrap;
+            line-height: 1;
+            flex-shrink: 0;
         }
 
-        .oso-trx-table tbody tr {
-            border-bottom: 1px solid #f6eff0;
+        .sdo-sdg-badge span {
+            font-size: 0.7rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .sdo-sdg-badge i {
+            font-size: 0.65rem;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .sdo-table-row {
             transition: background 0.15s ease;
         }
 
-        .oso-trx-table tbody tr:hover {
-            background: #fdf8f9;
-        }
-
-        .oso-trx-table td {
-            padding: 0.95rem 1.15rem;
-            vertical-align: middle;
-            color: #1a1618;
-        }
-
-        .oso-type-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.74rem;
-            font-weight: 700;
-            padding: 0.2rem 0.55rem;
-            border-radius: 6px;
-            white-space: nowrap;
-        }
-
-        .oso-type-proposal { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
-        .oso-type-renewal { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
-        .oso-type-fr { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
-        .oso-type-ar { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-        .oso-type-tosa { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-
-        .oso-sla-pill {
-            font-size: 0.72rem;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.15rem 0.45rem;
-            border-radius: 4px;
-        }
-
-        .oso-sla-high { color: #dc2626; background: #fef2f2; }
-        .oso-sla-normal { color: #475569; background: #f1f5f9; }
-
-        /* ---------------------------------------------------------
-           Interactive Dashboard Period & Date Filter Toolbar
-           --------------------------------------------------------- */
-        .oso-filter-bar-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            padding: 0.95rem 1.35rem;
-            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.25rem;
-            flex-wrap: wrap;
-            margin-bottom: 0.25rem;
-        }
-
-        .oso-filter-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 1.15rem;
-            flex-wrap: wrap;
-            flex: 1;
-        }
-
-        .oso-filter-bar-title {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-            font-size: 0.84rem;
-            font-weight: 800;
-            color: #8b1828;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            margin-right: 0.25rem;
-        }
-
-        .oso-filter-group {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-        }
-
-        .oso-filter-label {
-            font-size: 0.76rem;
-            font-weight: 700;
-            color: #706569;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .oso-select-wrapper {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .oso-filter-select {
-            appearance: none;
-            -webkit-appearance: none;
-            background: #fdfafb;
-            border: 1.5px solid #f0e0e3;
-            border-radius: 9999px;
-            padding: 0.42rem 2.1rem 0.42rem 0.95rem;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #2b2427;
-            cursor: pointer;
-            outline: none;
-            font-family: inherit;
-            transition: all 0.18s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-
-        .oso-filter-select:hover {
-            background: #ffffff;
-            border-color: #8b1828;
-        }
-
-        .oso-filter-select:focus {
-            background: #ffffff;
-            border-color: #8b1828;
-            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.12);
-        }
-
-        .oso-select-arrow {
-            position: absolute;
-            right: 0.75rem;
-            pointer-events: none;
-            font-size: 0.65rem;
-            color: #8b1828;
-            transition: transform 0.15s ease;
-        }
-
-        .oso-filter-bar-right {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .oso-filter-reset-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.42rem 0.85rem;
-            border-radius: 9999px;
+        .sdo-table-row:hover {
             background: #faf4f5;
-            border: 1px solid #ebd5d8;
-            color: #7a2030;
-            font-size: 0.76rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .oso-filter-reset-btn:hover {
-            background: #8b1828;
-            color: #ffffff;
-            border-color: #8b1828;
-        }
-
-        .oso-filter-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 9999px;
-            background: #f0fdf4;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
-            font-size: 0.72rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        /* Responsive Behavior for Laptops & Mobile */
-        @media (max-width: 1280px) {
-            .org-kpi-row {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-            .oso-analytics-2col {
-                grid-template-columns: 1fr;
-                gap: 1.25rem;
-            }
-        }
-
-        @media (max-width: 992px) {
-            .oso-filter-bar-card {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .oso-filter-bar-right {
-                width: 100%;
-                justify-content: space-between;
-                padding-top: 0.5rem;
-                border-top: 1px solid #f6eff0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .oso-donut-split {
-                grid-template-columns: 1fr;
-                gap: 1.25rem;
-                justify-items: center;
-                text-align: center;
-            }
-            .oso-donut-legend-list {
-                width: 100%;
-            }
-            .oso-analytics-card {
-                padding: 1.25rem 1.35rem;
-            }
-            .oso-card-head {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-            .oso-scope-metrics-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 580px) {
-            .org-kpi-row {
-                grid-template-columns: 1fr;
-                gap: 0.85rem;
-            }
-            .oso-cause-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.35rem;
-            }
-            .oso-cause-pct {
-                align-self: flex-start;
-            }
         }
     </style>
 
     @if ($isOso)
-        {{-- ======================================================================
-             DEDICATED OSO OFFICER ANALYTICS & OPERATIONS DASHBOARD
-             ====================================================================== --}}
+        {{-- DEDICATED OSO OFFICER DASHBOARD --}}
         <div class="org-dash-grid">
-
-            {{-- 0. INTERACTIVE PERIOD & DATE FILTER TOOLBAR --}}
-            <section class="oso-filter-bar-card" aria-label="Dashboard Filters">
-                <div class="oso-filter-bar-left">
-                    <div class="oso-filter-bar-title">
-                        <i class="bi bi-funnel-fill"></i>
-                        <span>Filters:</span>
-                    </div>
-
-                    {{-- Academic Year Filter --}}
-                    <div class="oso-filter-group">
-                        <label for="osoYearSelect" class="oso-filter-label"><i class="bi bi-calendar2-range"></i> Year</label>
-                        <div class="oso-select-wrapper">
-                            <select id="osoYearSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                <option value="2025-2026" selected>A.Y. 2025–2026 (Current)</option>
-                                <option value="2024-2025">A.Y. 2024–2025</option>
-                                <option value="2023-2024">A.Y. 2023–2024</option>
-                                <option value="all">All Academic Years</option>
-                            </select>
-                            <i class="bi bi-chevron-down oso-select-arrow"></i>
-                        </div>
-                    </div>
-
-                    {{-- Semester Filter --}}
-                    <div class="oso-filter-group">
-                        <label for="osoSemesterSelect" class="oso-filter-label"><i class="bi bi-bookmark"></i> Semester</label>
-                        <div class="oso-select-wrapper">
-                            <select id="osoSemesterSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                <option value="all" selected>All Semesters</option>
-                                <option value="sem1">1st Semester</option>
-                                <option value="sem2">2nd Semester</option>
-                                <option value="midyear">Midyear Term</option>
-                            </select>
-                            <i class="bi bi-chevron-down oso-select-arrow"></i>
-                        </div>
-                    </div>
-
-                    {{-- Month Filter --}}
-                    <div class="oso-filter-group">
-                        <label for="osoMonthSelect" class="oso-filter-label"><i class="bi bi-calendar3"></i> Month</label>
-                        <div class="oso-select-wrapper">
-                            <select id="osoMonthSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                <option value="all" selected>All Months</option>
-                                <option value="Jan">January</option>
-                                <option value="Feb">February</option>
-                                <option value="Mar">March</option>
-                                <option value="Apr">April</option>
-                                <option value="May">May</option>
-                                <option value="Jun">June</option>
-                                <option value="Jul">July</option>
-                                <option value="Aug">August</option>
-                                <option value="Sep">September</option>
-                                <option value="Oct">October</option>
-                                <option value="Nov">November</option>
-                                <option value="Dec">December</option>
-                            </select>
-                            <i class="bi bi-chevron-down oso-select-arrow"></i>
-                        </div>
-                    </div>
-
-                    {{-- Scope Filter --}}
-                    <div class="oso-filter-group">
-                        <label for="osoScopeSelect" class="oso-filter-label"><i class="bi bi-geo-alt"></i> Scope</label>
-                        <div class="oso-select-wrapper">
-                            <select id="osoScopeSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                <option value="all" selected>All Scopes</option>
-                                <option value="in-campus">On-Campus Only</option>
-                                <option value="off-campus">Off-Campus Only</option>
-                            </select>
-                            <i class="bi bi-chevron-down oso-select-arrow"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="oso-filter-bar-right">
-                    <button type="button" class="oso-filter-reset-btn" onclick="resetOsoFilters()" title="Reset all filters">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reset
-                    </button>
-                    <span class="oso-filter-status-badge" id="osoActiveFilterBadge">
-                        <i class="bi bi-check2-circle"></i> Live Insights
-                    </span>
-                </div>
-            </section>
-
-            {{-- 1. TOP EXECUTIVE KPI CARDS (Matching Student Portal Card Style with Number on Right Side of Icon) --}}
-            <div class="org-kpi-row">
-                
+            {{-- 1. Top 3 KPI Cards for OSO --}}
+            <div class="oso-kpi-row">
                 {{-- Card 1: Total Organizations --}}
-                <article class="org-kpi-card">
-                    <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-pink">
-                            <i class="bi bi-building"></i>
-                        </div>
-                        <div class="org-kpi-num" id="kpiTotalOrgsNum">12</div>
-                    </div>
-                    <h3 class="org-kpi-title">Total Organizations</h3>
-                    <p class="org-kpi-sub" id="kpiTotalOrgsSub">8 Academic · 3 Non-Academic · 1 SSC</p>
+                <article class="oso-kpi-card is-pink">
+                    <div class="oso-kpi-num">12</div>
+                    <h3 class="oso-kpi-title">Total Organizations</h3>
+                    <p class="oso-kpi-sub">Student orgs monitored</p>
                 </article>
 
-                {{-- Card 2: Pending Transactions --}}
-                <article class="org-kpi-card">
-                    <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-amber">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                        <div class="org-kpi-num" id="kpiPendingTrxNum">7</div>
-                    </div>
-                    <h3 class="org-kpi-title">Pending Transactions</h3>
-                    <p class="org-kpi-sub" id="kpiPendingTrxSub">3 Proposals · 2 FR · 1 Renewal · 1 TOSA</p>
+                {{-- Card 2: Pending Proposals --}}
+                <article class="oso-kpi-card is-yellow">
+                    <div class="oso-kpi-num">2</div>
+                    <h3 class="oso-kpi-title">Pending Proposals</h3>
+                    <p class="oso-kpi-sub">For Approval or In Review</p>
                 </article>
 
-                {{-- Card 3: Total Submissions --}}
-                <article class="org-kpi-card">
-                    <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-green">
-                            <i class="bi bi-journal-check"></i>
-                        </div>
-                        <div class="org-kpi-num" id="kpiTotalSubmissionsNum">48</div>
-                    </div>
-                    <h3 class="org-kpi-title">Total Submissions</h3>
-                    <p class="org-kpi-sub" id="kpiTotalSubmissionsSub">Across all student org portfolios</p>
+                {{-- Card 3: Upcoming Activities --}}
+                <article class="oso-kpi-card is-green">
+                    <div class="oso-kpi-num">2</div>
+                    <h3 class="oso-kpi-title">Upcoming Activities</h3>
+                    <p class="oso-kpi-sub">Activities with future dates</p>
                 </article>
-
-                {{-- Card 4: Revision Rate --}}
-                <article class="org-kpi-card">
-                    <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-blue">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </div>
-                        <div class="org-kpi-num" id="kpiRevisionRateNum">14.2%</div>
-                    </div>
-                    <h3 class="org-kpi-title">Revision Rate</h3>
-                    <p class="org-kpi-sub" id="kpiRevisionRateSub">Returned for incomplete compliance</p>
-                </article>
-
             </div>
 
-            {{-- 2. MIDDLE ROW 1: Approval Status (Donut + On/Off Campus) & Submission Trend (Line Chart) --}}
-            <div class="oso-analytics-2col">
-
-                {{-- Card A: Approval Status + On-Campus/Off-Campus Breakdown (Required Table Item 3) --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-pie-chart-fill" style="color: #8b1828;"></i> Approval Status &amp; Scope Overview</h3>
-                            <p>Current distribution of all 48 transactions and venue scopes</p>
-                        </div>
-                        <span class="oso-stat-badge is-neutral" id="osoApprovalPeriodBadge">A.Y. 2025–2026</span>
+            {{-- 2. Middle Row: Proposal Status Overview & Upcoming Activities --}}
+            <div class="oso-middle-row">
+                {{-- Left: Proposal Status Overview --}}
+                <section class="org-dash-card">
+                    <div class="org-dash-card-header">
+                        <h3 class="org-dash-card-title">Proposal Status Overview</h3>
                     </div>
 
-                    {{-- Donut Chart & Legend --}}
-                    <div class="oso-donut-split">
-                        <div class="oso-donut-center-wrap">
-                            <canvas id="osoApprovalDonutChart"></canvas>
-                            <div class="oso-donut-center-label">
-                                <strong id="donutTotalCount">48</strong>
-                                <small>Total</small>
-                            </div>
+                    <div class="oso-chart-legend-container">
+                        <div class="oso-pie-chart-wrap">
+                            <div class="oso-pie-chart"></div>
                         </div>
 
-                        <div class="oso-donut-legend-list">
-                            <div class="oso-donut-legend-row">
-                                <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #10b981;"></span>
-                                    <span>Approved</span>
-                                </div>
-                                <div class="oso-donut-legend-right">
-                                    <span id="legendApprovedCount">27</span>
-                                    <span class="oso-pct-pill" id="legendApprovedPct">56.2%</span>
+                        <div class="oso-legend-list">
+                            <div class="oso-legend-item">
+                                <span class="oso-legend-dot is-maroon"></span>
+                                <div class="oso-legend-text">
+                                    <strong>Pending Review</strong>
+                                    <small>2 activities · 40%</small>
                                 </div>
                             </div>
 
-                            <div class="oso-donut-legend-row">
-                                <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #f59e0b;"></span>
-                                    <span>Pending Review</span>
-                                </div>
-                                <div class="oso-donut-legend-right">
-                                    <span id="legendPendingCount">11</span>
-                                    <span class="oso-pct-pill" id="legendPendingPct">22.9%</span>
+                            <div class="oso-legend-item">
+                                <span class="oso-legend-dot is-green"></span>
+                                <div class="oso-legend-text">
+                                    <strong>Approved</strong>
+                                    <small>2 activities · 40%</small>
                                 </div>
                             </div>
 
-                            <div class="oso-donut-legend-row">
-                                <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #e11d48;"></span>
-                                    <span>For Revision</span>
-                                </div>
-                                <div class="oso-donut-legend-right">
-                                    <span id="legendRevisionCount">7</span>
-                                    <span class="oso-pct-pill" id="legendRevisionPct">14.6%</span>
-                                </div>
-                            </div>
-
-                            <div class="oso-donut-legend-row">
-                                <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #64748b;"></span>
-                                    <span>Rejected</span>
-                                </div>
-                                <div class="oso-donut-legend-right">
-                                    <span id="legendRejectedCount">3</span>
-                                    <span class="oso-pct-pill" id="legendRejectedPct">6.3%</span>
+                            <div class="oso-legend-item">
+                                <span class="oso-legend-dot is-yellow"></span>
+                                <div class="oso-legend-text">
+                                    <strong>Returned</strong>
+                                    <small>1 activity · 20%</small>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- On-Campus vs Off-Campus Breakdown Total --}}
-                    <div class="oso-scope-panel">
-                        <div class="oso-scope-head">
-                            <span><i class="bi bi-geo-alt-fill" style="color: #8b1828; margin-right: 0.25rem;"></i> On-Campus vs Off-Campus Submissions</span>
-                            <span id="scopeTotalHeader">48 Activities Total</span>
-                        </div>
-                        <div class="oso-scope-progress-bar">
-                            <div class="oso-scope-bar-incampus" id="scopeInCampusBar" style="width: 79.2%;"></div>
-                        </div>
-                        <div class="oso-scope-metrics-grid">
-                            <div class="oso-scope-stat-box is-incampus">
-                                <div>
-                                    <span class="oso-scope-stat-name">On-Campus Activities</span>
-                                    <small id="scopeInCampusPct" style="display: block; color: #786f73; font-size: 0.7rem;">79.2% of total</small>
-                                </div>
-                                <span class="oso-scope-stat-num" id="scopeInCampusCount" style="color: #8b1828;">38</span>
+                    <div style="border-top: 1px solid #f2e6e8; padding-top: 1rem; margin-top: 0.25rem;">
+                        <span style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; color: #7a7074; text-transform: uppercase;">IN-CAMPUS VS OFF-CAMPUS</span>
+                        
+                        <div class="oso-scope-split-grid">
+                            <div class="oso-scope-box is-incampus">
+                                <span class="oso-scope-box-label">In-Campus</span>
+                                <span class="oso-scope-box-num">4</span>
+                                <span class="oso-scope-box-pct">80% of total</span>
                             </div>
-                            <div class="oso-scope-stat-box is-offcampus">
-                                <div>
-                                    <span class="oso-scope-stat-name">Off-Campus Activities</span>
-                                    <small id="scopeOffCampusPct" style="display: block; color: #786f73; font-size: 0.7rem;">20.8% of total</small>
-                                </div>
-                                <span class="oso-scope-stat-num" id="scopeOffCampusCount" style="color: #ca8a04;">10</span>
+
+                            <div class="oso-scope-box is-offcampus">
+                                <span class="oso-scope-box-label">Off-Campus</span>
+                                <span class="oso-scope-box-num">1</span>
+                                <span class="oso-scope-box-pct">20% of total</span>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                {{-- Card B: Submission Trend (Required Table Item 4 - Line Chart) --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-graph-up" style="color: #8b1828;"></i> Submission Volume Trend</h3>
-                            <p>Monthly frequency of proposals and compliance filings</p>
-                        </div>
-                        <div style="font-size: 0.78rem; font-weight: 700; color: #8b1828;" id="osoTrendPeakLabel">
-                            <i class="bi bi-dot" style="font-size: 1.2rem;"></i> Peak: Sep (22)
-                        </div>
+                {{-- Right: Upcoming Activities --}}
+                <section class="org-dash-card">
+                    <div class="org-dash-card-header">
+                        <h3 class="org-dash-card-title">Upcoming Activities</h3>
+                        <a href="{{ route('office.calendar') }}" class="org-dash-link">
+                            View All →
+                        </a>
                     </div>
 
-                    <div class="oso-canvas-wrap">
-                        <canvas id="osoSubmissionTrendChart"></canvas>
+                    <div class="org-upcoming-list">
+                        <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-upcoming-card-item">
+                            <div class="org-upcoming-left">
+                                <div class="org-date-badge">
+                                    <strong>8</strong>
+                                    <small>SEP</small>
+                                </div>
+                                <div class="org-upcoming-meta">
+                                    <strong>Campus Wellness Week</strong>
+                                    <small style="color: #7a7074; font-size: 0.76rem; display: block; margin-bottom: 0.2rem;">In-Campus</small>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">In-Campus</span>
+                                </div>
+                            </div>
+                            <span class="org-status-pill org-status-blue">
+                                <span class="org-status-dot"></span> In Review
+                            </span>
+                        </a>
+
+                        <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="org-upcoming-card-item">
+                            <div class="org-upcoming-left">
+                                <div class="org-date-badge">
+                                    <strong>15</strong>
+                                    <small>OCT</small>
+                                </div>
+                                <div class="org-upcoming-meta">
+                                    <strong>BatStateU Sportsfest 2026</strong>
+                                    <small style="color: #7a7074; font-size: 0.76rem; display: block; margin-bottom: 0.2rem;">In-Campus</small>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">In-Campus</span>
+                                </div>
+                            </div>
+                            <span class="org-status-pill org-status-red">
+                                <span class="org-status-dot"></span> Return for Revision
+                            </span>
+                        </a>
                     </div>
                 </section>
-
             </div>
 
-            {{-- 3. MIDDLE ROW 2: Transactions by Type (Bar) & Organization Activity (Horizontal Bar) --}}
-            <div class="oso-analytics-2col">
-
-                {{-- Card C: Transactions by Type (Required Table Item 5 - Bar Chart) --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-bar-chart-fill" style="color: #8b1828;"></i> Transactions by Type</h3>
-                            <p>Volume breakdown across proposals, reports, renewals, and awards</p>
-                        </div>
-                    </div>
-
-                    <div class="oso-canvas-wrap">
-                        <canvas id="osoTransactionTypeChart"></canvas>
-                    </div>
-                </section>
-
-                {{-- Card D: Organization Activity (Required Table Item 6 - Horizontal Bar) --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-trophy-fill" style="color: #8b1828;"></i> Organization Activity Ranking</h3>
-                            <p>Most to least active student organizations by total submissions</p>
-                        </div>
-                        <a href="{{ route('office.activities') }}" class="org-dash-link">View All Orgs &rarr;</a>
-                    </div>
-
-                    <div class="oso-rank-list">
-                        {{-- Org 1 --}}
-                        <div class="oso-rank-item">
-                            <div class="oso-rank-header">
-                                <span class="oso-rank-name">
-                                    <i class="bi bi-award-fill" style="color: #ca8a04;"></i> Supreme Student Council (SSC)
-                                </span>
-                                <span class="oso-rank-stat" id="rankOrgStat1"><strong>14</strong> submissions &middot; <span style="color: #16a34a;">92% pass</span></span>
-                            </div>
-                            <div class="oso-rank-bar-bg">
-                                <div class="oso-rank-bar-fill" id="rankOrgBar1" style="width: 100%; background: #8b1828;"></div>
-                            </div>
-                        </div>
-
-                        {{-- Org 2 --}}
-                        <div class="oso-rank-item">
-                            <div class="oso-rank-header">
-                                <span class="oso-rank-name">
-                                    <i class="bi bi-award" style="color: #94a3b8;"></i> Jr. Philippine Inst. of Civil Engineers (JPICE)
-                                </span>
-                                <span class="oso-rank-stat" id="rankOrgStat2"><strong>9</strong> submissions &middot; <span style="color: #16a34a;">88% pass</span></span>
-                            </div>
-                            <div class="oso-rank-bar-bg">
-                                <div class="oso-rank-bar-fill" id="rankOrgBar2" style="width: 64%; background: #9b1b30;"></div>
-                            </div>
-                        </div>
-
-                        {{-- Org 3 --}}
-                        <div class="oso-rank-item">
-                            <div class="oso-rank-header">
-                                <span class="oso-rank-name">
-                                    <i class="bi bi-award" style="color: #b45309;"></i> Jr. Philippine Computer Society (JPCS)
-                                </span>
-                                <span class="oso-rank-stat" id="rankOrgStat3"><strong>8</strong> submissions &middot; <span style="color: #16a34a;">85% pass</span></span>
-                            </div>
-                            <div class="oso-rank-bar-bg">
-                                <div class="oso-rank-bar-fill" id="rankOrgBar3" style="width: 57%; background: #b8233d;"></div>
-                            </div>
-                        </div>
-
-                        {{-- Org 4 --}}
-                        <div class="oso-rank-item">
-                            <div class="oso-rank-header">
-                                <span class="oso-rank-name">
-                                    <i class="bi bi-heart-pulse-fill" style="color: #dc2626;"></i> Red Cross Youth (RCY)
-                                </span>
-                                <span class="oso-rank-stat" id="rankOrgStat4"><strong>6</strong> submissions &middot; <span style="color: #16a34a;">100% pass</span></span>
-                            </div>
-                            <div class="oso-rank-bar-bg">
-                                <div class="oso-rank-bar-fill" id="rankOrgBar4" style="width: 43%; background: #c43b52;"></div>
-                            </div>
-                        </div>
-
-                        {{-- Org 5 --}}
-                        <div class="oso-rank-item">
-                            <div class="oso-rank-header">
-                                <span class="oso-rank-name">
-                                    <i class="bi bi-cpu-fill" style="color: #635b5e;"></i> Assoc. of Electronics Eng. Students (AECES)
-                                </span>
-                                <span class="oso-rank-stat" id="rankOrgStat5"><strong>5</strong> submissions &middot; <span style="color: #ca8a04;">80% pass</span></span>
-                            </div>
-                            <div class="oso-rank-bar-bg">
-                                <div class="oso-rank-bar-fill" id="rankOrgBar5" style="width: 35%; background: #d45d71;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-            </div>
-
-            {{-- 4. MIDDLE ROW 3: Incomplete/Revision Rate (Donut/Bar) & Processing Time --}}
-            <div class="oso-analytics-2col">
-
-                {{-- Card E: Incomplete/Revision Rate & Root Causes (Required Table Item 7 - Donut/Bar) --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-shield-exclamation" style="color: #8b1828;"></i> Incomplete / Revision Analysis</h3>
-                            <p>14.2% return rate and top compliance deficiencies</p>
-                        </div>
-                        <span class="oso-stat-badge is-neutral">Quality Audit</span>
-                    </div>
-
-                    <div>
-                        {{-- Top Return Causes List --}}
-                        <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #706569; margin-bottom: 0.4rem;">
-                            Top Reasons for Returned Submissions
-                        </div>
-                        <div class="oso-causes-list">
-                            <div class="oso-cause-item">
-                                <div class="oso-cause-left">
-                                    <i class="bi bi-pen-fill" style="color: #dc2626;"></i>
-                                    <span>Missing Faculty Adviser / Dean Signature</span>
-                                </div>
-                                <span class="oso-cause-pct">42% of returns</span>
-                            </div>
-
-                            <div class="oso-cause-item">
-                                <div class="oso-cause-left">
-                                    <i class="bi bi-calculator-fill" style="color: #d97706;"></i>
-                                    <span>Budget Itemization vs Receipt Discrepancy</span>
-                                </div>
-                                <span class="oso-cause-pct">28% of returns</span>
-                            </div>
-
-                            <div class="oso-cause-item">
-                                <div class="oso-cause-left">
-                                    <i class="bi bi-recycle" style="color: #16a34a;"></i>
-                                    <span>Lacking SDO Waste Policy (WPCF) Form</span>
-                                </div>
-                                <span class="oso-cause-pct">18% of returns</span>
-                            </div>
-
-                            <div class="oso-cause-item">
-                                <div class="oso-cause-left">
-                                    <i class="bi bi-file-earmark-medical-fill" style="color: #2563eb;"></i>
-                                    <span>Incomplete Safety Protocol &amp; Medical Clearance</span>
-                                </div>
-                                <span class="oso-cause-pct">12% of returns</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {{-- Card F: Processing Time Turnaround --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-clock-history" style="color: #8b1828;"></i> Average Processing Time (Days)</h3>
-                            <p>Turnaround speed per transaction type vs. SLA benchmark (3.0 Days)</p>
-                        </div>
-                        <span class="oso-stat-badge is-positive">Target &le; 3.0d</span>
-                    </div>
-
-                    <div class="oso-canvas-wrap">
-                        <canvas id="osoProcessingTimeChart"></canvas>
-                    </div>
-                </section>
-
-            </div>
-
-            {{-- 5. BOTTOM SECTION: Recent Transactions Table (Required Table Item 8 - Table, not chart) --}}
-            <section class="oso-transactions-table-card">
-                <div class="org-dash-card-header" style="padding: 1.25rem 1.65rem 1rem; border-bottom: 1px solid #f6eff0; margin-bottom: 0;">
-                    <div>
-                        <h3 class="org-dash-card-title">
-                            <i class="bi bi-table" style="color: #8b1828;"></i> Recent Transactions Requiring Action
-                        </h3>
-                        <span style="font-size: 0.78rem; color: #786f73;">Latest submitted student organization documents in the OSO review pipeline</span>
-                    </div>
+            {{-- 3. Bottom Row: Recent Proposals Card with Table --}}
+            <section class="org-dash-card">
+                <div class="org-dash-card-header">
+                    <h3 class="org-dash-card-title">Recent Proposals</h3>
                     <a href="{{ route('office.activities') }}" class="org-dash-link">
-                        View Full Pipeline &rarr;
+                        View All →
                     </a>
                 </div>
 
                 <div class="oso-table-container">
-                    <table class="oso-trx-table">
+                    <table class="oso-table">
                         <thead>
                             <tr>
-                                <th>Transaction / Activity</th>
-                                <th>Organization</th>
-                                <th>Type</th>
-                                <th>Date Submitted</th>
-                                <th>Urgency / SLA</th>
-                                <th>Status</th>
-                                <th style="text-align: right; width: 120px; min-width: 120px;">Action</th>
+                                <th>ACTIVITY</th>
+                                <th>ORGANIZATION</th>
+                                <th>SCOPE</th>
+                                <th>STATUS</th>
+                                <th>DATE SUBMITTED</th>
+                                <th style="text-align: right;">ACTION</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{-- Trx 1 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="off-campus">
+                            {{-- Row 1: Innovation Fair Booth Series --}}
+                            <tr>
+                                <td><strong>Innovation Fair Booth Series</strong></td>
+                                <td style="color: #63575b;">BSU Student Council</td>
                                 <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>Leadership Summit 2026</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0089 &middot; Off-Campus</small>
-                                    </div>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">In-Campus</span>
                                 </td>
                                 <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> Supreme Student Council
+                                    <span class="org-status-pill org-status-green">
+                                        <span class="org-status-dot"></span> Completed
                                     </span>
                                 </td>
+                                <td style="color: #7a7074; font-size: 0.82rem;">Jul 4, 2026</td>
+                                <td style="text-align: right;">
+                                    <a href="{{ route('office.activities', ['activity' => 'innovation-fair-booth-series']) }}" class="org-btn-view-pill">View</a>
+                                </td>
+                            </tr>
+
+                            {{-- Row 2: Volunteer Appreciation Day --}}
+                            <tr>
+                                <td><strong>Volunteer Appreciation Day</strong></td>
+                                <td style="color: #63575b;">BSU Student Council</td>
                                 <td>
-                                    <span class="oso-type-badge oso-type-proposal">
-                                        <i class="bi bi-file-earmark-text-fill"></i> Activity Proposal
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">In-Campus</span>
+                                </td>
+                                <td>
+                                    <span class="org-status-pill org-status-green">
+                                        <span class="org-status-dot"></span> Completed
                                     </span>
                                 </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 12, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-high"><i class="bi bi-clock-fill"></i> 1 Day Left</span></td>
+                                <td style="color: #7a7074; font-size: 0.82rem;">Mar 2, 2026</td>
+                                <td style="text-align: right;">
+                                    <a href="{{ route('office.activities', ['activity' => 'volunteer-appreciation-day']) }}" class="org-btn-view-pill">View</a>
+                                </td>
+                            </tr>
+
+                            {{-- Row 3: Leadership Summit 2026 --}}
+                            <tr>
+                                <td><strong>Leadership Summit 2026</strong></td>
+                                <td style="color: #63575b;">BSU Student Council</td>
+                                <td>
+                                    <span class="org-chip" style="background: #fef9c3; color: #ca8a04; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">Off-Campus</span>
+                                </td>
                                 <td>
                                     <span class="org-status-pill org-status-yellow">
                                         <span class="org-status-dot"></span> For Approval
                                     </span>
                                 </td>
+                                <td style="color: #7a7074; font-size: 0.82rem;">May 12, 2026</td>
                                 <td style="text-align: right;">
-                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="org-btn-view-pill">
-                                        Review
-                                    </a>
+                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="org-btn-view-pill">View</a>
                                 </td>
                             </tr>
 
-                            {{-- Trx 2 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="in-campus">
+                            {{-- Row 4: Campus Wellness Week --}}
+                            <tr>
+                                <td><strong>Campus Wellness Week</strong></td>
+                                <td style="color: #63575b;">BSU Student Council</td>
                                 <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>Semestral Financial Report 2026</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0092 &middot; 2nd Semester</small>
-                                    </div>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">In-Campus</span>
                                 </td>
-                                <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> Jr. PICE Student Chapter
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="oso-type-badge oso-type-fr">
-                                        <i class="bi bi-wallet2"></i> Financial Report (FR)
-                                    </span>
-                                </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 12, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-normal"><i class="bi bi-clock"></i> 2 Days Left</span></td>
                                 <td>
                                     <span class="org-status-pill org-status-blue">
                                         <span class="org-status-dot"></span> In Review
                                     </span>
                                 </td>
+                                <td style="color: #7a7074; font-size: 0.82rem;">Aug 20, 2026</td>
                                 <td style="text-align: right;">
-                                    <a href="{{ route('office.financial') }}" class="org-btn-view-pill">
-                                        Audit FR
-                                    </a>
+                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-btn-view-pill">View</a>
                                 </td>
                             </tr>
 
-                            {{-- Trx 3 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="in-campus">
+                            {{-- Row 5: BatStateU Sportsfest 2026 --}}
+                            <tr>
+                                <td><strong>BatStateU Sportsfest 2026</strong></td>
+                                <td style="color: #63575b;">BSU Student Council</td>
                                 <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>Accreditation Renewal Packet 2026-2027</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0095 &middot; Annual Filing</small>
-                                    </div>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">In-Campus</span>
                                 </td>
-                                <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> JPCS BatStateU
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="oso-type-badge oso-type-renewal">
-                                        <i class="bi bi-patch-check-fill"></i> Renewal
-                                    </span>
-                                </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 11, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-normal"><i class="bi bi-clock"></i> 3 Days Left</span></td>
-                                <td>
-                                    <span class="org-status-pill org-status-yellow">
-                                        <span class="org-status-dot"></span> Pending Verification
-                                    </span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <a href="{{ route('office.activities') }}" class="org-btn-view-pill">
-                                        Inspect
-                                    </a>
-                                </td>
-                            </tr>
-
-                            {{-- Trx 4 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="in-campus">
-                                <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>Campus Wellness Week</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0084 &middot; In-Campus</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> Red Cross Youth
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="oso-type-badge oso-type-proposal">
-                                        <i class="bi bi-file-earmark-text-fill"></i> Activity Proposal
-                                    </span>
-                                </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 10, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-normal"><i class="bi bi-check2"></i> Endorsed</span></td>
-                                <td>
-                                    <span class="org-status-pill org-status-blue">
-                                        <span class="org-status-dot"></span> In Review (SDO)
-                                    </span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-btn-view-pill">
-                                        Details
-                                    </a>
-                                </td>
-                            </tr>
-
-                            {{-- Trx 5 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="in-campus">
-                                <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>Ten Outstanding Student Award (TOSA) Portfolio</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0099 &middot; TOSA 2026</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> Supreme Student Council
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="oso-type-badge oso-type-tosa">
-                                        <i class="bi bi-trophy-fill"></i> TOSA
-                                    </span>
-                                </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 09, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-normal"><i class="bi bi-clock"></i> 4 Days Left</span></td>
-                                <td>
-                                    <span class="org-status-pill org-status-yellow">
-                                        <span class="org-status-dot"></span> Initial Screening
-                                    </span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <a href="{{ route('office.activities') }}" class="org-btn-view-pill">
-                                        Evaluate
-                                    </a>
-                                </td>
-                            </tr>
-
-                            {{-- Trx 6 --}}
-                            <tr class="oso-trx-row" data-year="2025-2026" data-sem="sem2" data-month="May" data-scope="in-campus">
-                                <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                                        <strong>BatStateU Sportsfest 2026</strong>
-                                        <small style="color: #786f73; font-size: 0.74rem;">TRX-2026-0078 &middot; In-Campus</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="org-grid-org-chip" style="font-size: 0.74rem;">
-                                        <i class="bi bi-building"></i> Assoc. of Electronics Eng.
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="oso-type-badge oso-type-proposal">
-                                        <i class="bi bi-file-earmark-text-fill"></i> Activity Proposal
-                                    </span>
-                                </td>
-                                <td><span style="font-size: 0.82rem; color: #554d50;">May 08, 2026</span></td>
-                                <td><span class="oso-sla-pill oso-sla-high"><i class="bi bi-arrow-counterclockwise"></i> Returned</span></td>
                                 <td>
                                     <span class="org-status-pill org-status-red">
-                                        <span class="org-status-dot"></span> For Revision
+                                        <span class="org-status-dot"></span> Return for Revision
                                     </span>
                                 </td>
+                                <td style="color: #7a7074; font-size: 0.82rem;">May 11, 2026</td>
                                 <td style="text-align: right;">
-                                    <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="org-btn-view-pill">
-                                        Remarks
-                                    </a>
-                                </td>
-                            </tr>
-
-                            {{-- Empty State Row --}}
-                            <tr id="osoNoTransactionsRow" style="display: none;">
-                                <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #786f73;">
-                                    <i class="bi bi-inbox" style="font-size: 1.75rem; color: #8b1828; display: block; margin-bottom: 0.5rem;"></i>
-                                    <strong style="font-size: 0.95rem; color: #1a1618;">No transactions found for this period</strong>
-                                    <p style="font-size: 0.78rem; margin: 0.25rem 0 0;">Try adjusting your Academic Year, Semester, Month, or Scope filters above.</p>
+                                    <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="org-btn-view-pill">View</a>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </section>
+        </div>
+    @elseif ($isSdo)
+        {{-- DEDICATED SDO OFFICER DASHBOARD --}}
+        <div class="org-dash-grid">
+            {{-- 1. Top 3 KPI Cards for SDO --}}
+            <div class="sdo-kpi-row">
+                {{-- Card 1: Total Submissions --}}
+                <article class="sdo-kpi-card">
+                    <div class="sdo-kpi-top">
+                        <div class="sdo-kpi-icon is-pink">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <span class="sdo-kpi-trend is-pink">↘ 2 new</span>
+                    </div>
+                    <div class="sdo-kpi-num">12</div>
+                    <h3 class="sdo-kpi-title">Total Submissions</h3>
+                    <p class="sdo-kpi-sub">All proposals and activity documents</p>
+                </article>
 
+                {{-- Card 2: Pending (for Review) --}}
+                <article class="sdo-kpi-card">
+                    <div class="sdo-kpi-top">
+                        <div class="sdo-kpi-icon is-yellow">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <span class="sdo-kpi-trend is-yellow">∨ 1 new</span>
+                    </div>
+                    <div class="sdo-kpi-num">5</div>
+                    <h3 class="sdo-kpi-title">Pending (for Review)</h3>
+                    <p class="sdo-kpi-sub">Awaiting SDO review</p>
+                </article>
+
+                {{-- Card 3: Approved --}}
+                <article class="sdo-kpi-card">
+                    <div class="sdo-kpi-top">
+                        <div class="sdo-kpi-icon is-green">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                        <span class="sdo-kpi-trend is-green">~ 1 new</span>
+                    </div>
+                    <div class="sdo-kpi-num">7</div>
+                    <h3 class="sdo-kpi-title">Approved</h3>
+                    <p class="sdo-kpi-sub">Aligned with SDGs</p>
+                </article>
+            </div>
+
+            {{-- 2. Middle Row: SDG Alignment by Category & Recent Submissions --}}
+            <div class="sdo-main-row">
+                {{-- Left: SDG Alignment by Category --}}
+                <section class="org-dash-card">
+                    <div class="org-dash-card-header">
+                        <div style="display: flex; align-items: center; gap: 0.55rem;">
+                            <div style="width: 26px; height: 26px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                                <i class="bi bi-pie-chart-fill"></i>
+                            </div>
+                            <h3 class="org-dash-card-title" style="margin: 0; font-size: 1.05rem;">SDG Alignment by Category</h3>
+                        </div>
+                        <a href="{{ route('office.activities') }}" class="org-dash-link">
+                            View Details →
+                        </a>
+                    </div>
+                    <p class="org-dash-card-sub" style="margin: 0.2rem 0 1.25rem; font-size: 0.78rem; color: #7a7074;">Percentage of submissions aligned with each SDG category.</p>
+
+                    <div style="display: flex; align-items: center; gap: 1.5rem; justify-content: space-between;">
+                        {{-- Donut Chart with Percentages inside the Circle Ring --}}
+                        <div style="position: relative; width: 145px; height: 145px; flex-shrink: 0;">
+                            <svg viewBox="0 0 160 160" width="145" height="145" style="transform: rotate(-90deg); border-radius: 50%; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.06));">
+                                {{-- 1. Quality Education (33%, Green) --}}
+                                <circle cx="80" cy="80" r="54" fill="transparent" stroke="#22c55e" stroke-width="26"
+                                    stroke-dasharray="111.96 339.29" stroke-dashoffset="0" />
+                                
+                                {{-- 2. Good Health & Well-being (25%, Yellow) --}}
+                                <circle cx="80" cy="80" r="54" fill="transparent" stroke="#eab308" stroke-width="26"
+                                    stroke-dasharray="84.82 339.29" stroke-dashoffset="-113.96" />
+                                
+                                {{-- 3. Reduced Inequalities (17%, Coral) --}}
+                                <circle cx="80" cy="80" r="54" fill="transparent" stroke="#ef4444" stroke-width="26"
+                                    stroke-dasharray="57.68 339.29" stroke-dashoffset="-200.78" />
+                                
+                                {{-- 4. Partnerships for the Goals (17%, Blue) --}}
+                                <circle cx="80" cy="80" r="54" fill="transparent" stroke="#3b82f6" stroke-width="26"
+                                    stroke-dasharray="57.68 339.29" stroke-dashoffset="-260.46" />
+                                
+                                {{-- 5. Sustainable Cities & Communities (8%, Purple) --}}
+                                <circle cx="80" cy="80" r="54" fill="transparent" stroke="#a855f7" stroke-width="26"
+                                    stroke-dasharray="27.14 339.29" stroke-dashoffset="-320.14" />
+                            </svg>
+
+                            {{-- Percentage Labels Inside the Circle Slices --}}
+                            <span style="position: absolute; top: 22px; right: 26px; font-size: 0.68rem; font-weight: 800; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); pointer-events: none;">33%</span>
+                            <span style="position: absolute; bottom: 20px; right: 34px; font-size: 0.68rem; font-weight: 800; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); pointer-events: none;">25%</span>
+                            <span style="position: absolute; bottom: 32px; left: 16px; font-size: 0.66rem; font-weight: 800; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); pointer-events: none;">17%</span>
+                            <span style="position: absolute; top: 40px; left: 14px; font-size: 0.66rem; font-weight: 800; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); pointer-events: none;">17%</span>
+                            <span style="position: absolute; top: 12px; left: 48px; font-size: 0.62rem; font-weight: 800; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); pointer-events: none;">8%</span>
+
+                            {{-- Center Circle --}}
+                            <div class="sdo-donut-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <small style="font-size: 0.64rem; color: #7a7074; line-height: 1;">Total</small>
+                                <strong style="font-size: 1.35rem; font-weight: 800; color: #1a1618; line-height: 1.15; margin: 2px 0;">12</strong>
+                                <small style="font-size: 0.58rem; color: #7a7074; line-height: 1;">Submissions</small>
+                            </div>
+                        </div>
+
+                        {{-- Category List --}}
+                        <div class="sdo-cat-list">
+                            {{-- Item 1: Quality Education --}}
+                            <div class="sdo-cat-item">
+                                <div class="sdo-cat-left">
+                                    <span class="sdo-cat-dot" style="background: #22c55e;"></span>
+                                    <span>Quality Education</span>
+                                </div>
+                                <div class="sdo-cat-right">
+                                    <span class="sdo-cat-count">4</span>
+                                    <span class="sdo-cat-pct">33%</span>
+                                </div>
+                            </div>
+
+                            {{-- Item 2: Good Health & Well-being --}}
+                            <div class="sdo-cat-item">
+                                <div class="sdo-cat-left">
+                                    <span class="sdo-cat-dot" style="background: #eab308;"></span>
+                                    <span>Good Health &amp; Well-being</span>
+                                </div>
+                                <div class="sdo-cat-right">
+                                    <span class="sdo-cat-count">3</span>
+                                    <span class="sdo-cat-pct">25%</span>
+                                </div>
+                            </div>
+
+                            {{-- Item 3: Reduced Inequalities --}}
+                            <div class="sdo-cat-item">
+                                <div class="sdo-cat-left">
+                                    <span class="sdo-cat-dot" style="background: #ef4444;"></span>
+                                    <span>Reduced Inequalities</span>
+                                </div>
+                                <div class="sdo-cat-right">
+                                    <span class="sdo-cat-count">2</span>
+                                    <span class="sdo-cat-pct">17%</span>
+                                </div>
+                            </div>
+
+                            {{-- Item 4: Partnerships for the Goals --}}
+                            <div class="sdo-cat-item">
+                                <div class="sdo-cat-left">
+                                    <span class="sdo-cat-dot" style="background: #3b82f6;"></span>
+                                    <span>Partnerships for the Goals</span>
+                                </div>
+                                <div class="sdo-cat-right">
+                                    <span class="sdo-cat-count">2</span>
+                                    <span class="sdo-cat-pct">17%</span>
+                                </div>
+                            </div>
+
+                            {{-- Item 5: Sustainable Cities & Communities --}}
+                            <div class="sdo-cat-item">
+                                <div class="sdo-cat-left">
+                                    <span class="sdo-cat-dot" style="background: #a855f7;"></span>
+                                    <span>Sustainable Cities &amp; Communities</span>
+                                </div>
+                                <div class="sdo-cat-right">
+                                    <span class="sdo-cat-count">1</span>
+                                    <span class="sdo-cat-pct">8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {{-- Right: Recent Submissions --}}
+                <section class="org-dash-card">
+                    <div class="org-dash-card-header">
+                        <div style="display: flex; align-items: center; gap: 0.55rem;">
+                            <div style="width: 26px; height: 26px; border-radius: 6px; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                                <i class="bi bi-file-earmark-text-fill"></i>
+                            </div>
+                            <h3 class="org-dash-card-title" style="margin: 0; font-size: 1.05rem;">Recent Submissions</h3>
+                        </div>
+                        <a href="{{ route('office.activities') }}" class="org-dash-link">
+                            View All →
+                        </a>
+                    </div>
+
+                    <div class="oso-table-container" style="margin-top: 0.35rem;">
+                        <table class="oso-table">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 0.35rem;">ACTIVITY</th>
+                                    <th>ORGANIZATION</th>
+                                    <th>SCOPE</th>
+                                    <th>DATE SUBMITTED</th>
+                                    <th style="text-align: right; padding-right: 0.5rem;">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{-- Row 1: BatStateU Sportsfest 2026 (SDG 4) --}}
+                                <tr class="sdo-table-row">
+                                    <td style="padding-left: 0.35rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div class="sdo-sdg-badge" style="background: #be123c;">
+                                                <span>4</span>
+                                                <i class="bi bi-book-half"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #1a1618; display: block;">BatStateU Sportsfest 2026</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.8rem; color: #63575b;">BSU Student Council</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #63575b;">Sports &amp; Athletics</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #7a7074;">Aug 25, 2026</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 0.5rem;">
+                                        <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;">
+                                            <span class="org-status-pill org-status-green" style="font-size: 0.74rem;">
+                                                <span class="org-status-dot"></span> Approved
+                                            </span>
+                                            <i class="bi bi-chevron-right" style="color: #a89fa3; font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                {{-- Row 2: Campus Wellness Week (SDG 3) --}}
+                                <tr class="sdo-table-row">
+                                    <td style="padding-left: 0.35rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div class="sdo-sdg-badge" style="background: #15803d;">
+                                                <span>3</span>
+                                                <i class="bi bi-heart-pulse"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #1a1618; display: block;">Campus Wellness Week</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.8rem; color: #63575b;">BSU Student Council</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #63575b;">Health &amp; Wellness</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #7a7074;">Aug 22, 2026</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 0.5rem;">
+                                        <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;">
+                                            <span class="org-status-pill org-status-yellow" style="font-size: 0.74rem;">
+                                                <span class="org-status-dot"></span> Pending
+                                            </span>
+                                            <i class="bi bi-chevron-right" style="color: #a89fa3; font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                {{-- Row 3: Leaderships Summit 2026 (SDG 4) --}}
+                                <tr class="sdo-table-row">
+                                    <td style="padding-left: 0.35rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div class="sdo-sdg-badge" style="background: #be123c;">
+                                                <span>4</span>
+                                                <i class="bi bi-book-half"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #1a1618; display: block;">Leaderships Summit 2026</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.8rem; color: #63575b;">BSU Student Council</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #63575b;">Education &amp; Training</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #7a7074;">Aug 20, 2026</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 0.5rem;">
+                                        <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;">
+                                            <span class="org-status-pill org-status-blue" style="font-size: 0.74rem;">
+                                                <span class="org-status-dot"></span> In Review
+                                            </span>
+                                            <i class="bi bi-chevron-right" style="color: #a89fa3; font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                {{-- Row 4: Innovation Fair Booth Series (SDG 11) --}}
+                                <tr class="sdo-table-row">
+                                    <td style="padding-left: 0.35rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div class="sdo-sdg-badge" style="background: #ea580c;">
+                                                <span>11</span>
+                                                <i class="bi bi-building"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #1a1618; display: block;">Innovation Fair Booth Series</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.8rem; color: #63575b;">BSU Student Council</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #63575b;">Community Development</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #7a7074;">Aug 18, 2026</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 0.5rem;">
+                                        <a href="{{ route('office.activities', ['activity' => 'innovation-fair-booth-series']) }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;">
+                                            <span class="org-status-pill org-status-green" style="font-size: 0.74rem;">
+                                                <span class="org-status-dot"></span> Approved
+                                            </span>
+                                            <i class="bi bi-chevron-right" style="color: #a89fa3; font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                {{-- Row 5: Volunteer Appreciation Day (SDG 17) --}}
+                                <tr class="sdo-table-row">
+                                    <td style="padding-left: 0.35rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div class="sdo-sdg-badge" style="background: #1e3a8a;">
+                                                <span>17</span>
+                                                <i class="bi bi-diagram-3"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #1a1618; display: block;">Volunteer Appreciation Day</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.8rem; color: #63575b;">BSU Student Council</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #63575b;">Partnerships &amp; Collaboration</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.78rem; color: #7a7074;">Aug 15, 2026</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 0.5rem;">
+                                        <a href="{{ route('office.activities', ['activity' => 'volunteer-appreciation-day']) }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;">
+                                            <span class="org-status-pill org-status-yellow" style="font-size: 0.74rem;">
+                                                <span class="org-status-dot"></span> Pending
+                                            </span>
+                                            <i class="bi bi-chevron-right" style="color: #a89fa3; font-size: 0.8rem;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </div>
     @else
-        {{-- SDO, OVCAA, AND STUDENT ORG DASHBOARDS --}}
+        {{-- OVCAA AND STUDENT ORG DASHBOARDS --}}
         <div class="org-dash-grid">
             {{-- 1. Top 4 KPI Cards --}}
             <div class="org-kpi-row">
-                @if ($isSdo)
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-pink">
-                            <i class="bi bi-leaf-fill"></i>
-                        </div>
-                        <div class="org-kpi-num">5</div>
-                        <h3 class="org-kpi-title">Total Monitored</h3>
-                        <p class="org-kpi-sub">All semester proposals</p>
-                    </article>
-
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-green">
-                            <i class="bi bi-check2-circle"></i>
-                        </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">SDG Verified</h3>
-                        <p class="org-kpi-sub">Endorsed to OVCAA</p>
-                    </article>
-
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-blue">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">Under SDG Review</h3>
-                        <p class="org-kpi-sub">Checking WPCF &amp; goals</p>
-                    </article>
-
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-amber">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                        </div>
-                        <div class="org-kpi-num">1</div>
-                        <h3 class="org-kpi-title">Needs SDG Revision</h3>
-                        <p class="org-kpi-sub">Missing sustainability doc</p>
-                    </article>
-                @elseif ($isOvcaa)
+                @if ($isOvcaa)
                     <article class="org-kpi-card">
                         <div class="org-kpi-icon is-blue">
                             <i class="bi bi-patch-check-fill"></i>
@@ -2334,122 +1766,7 @@
 
             {{-- 2. Middle Section --}}
             <div class="org-dash-2col">
-                @if ($isSdo)
-                    {{-- SDO: SDG Alignment & Monitoring Overview --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-leaf-fill" style="color: #15803d;"></i> SDG Alignment Monitoring
-                            </h3>
-                            <a href="{{ route('office.activities') }}" class="org-dash-link">
-                                Review Queue →
-                            </a>
-                        </div>
-
-                        <div class="org-budget-hero-box" style="background: linear-gradient(135deg, #14532d 0%, #15803d 100%);">
-                            <span style="color: #dcfce7;">Campus SDG Compliance</span>
-                            <h2>80% Verified</h2>
-                            <small style="color: #dcfce7; opacity: 0.95;">4 of 5 proposed activities aligned with UN SDGs</small>
-                        </div>
-
-                        <div class="org-budget-stat-row">
-                            <span>SDG Indicators Met</span>
-                            <strong style="color: #15803d;">4 / 5 Activities (80%)</strong>
-                        </div>
-                        <div class="org-mini-progress">
-                            <div class="org-mini-fill-green" style="width: 80%; background: #15803d;"></div>
-                        </div>
-
-                        <div class="org-budget-stat-row">
-                            <span>WPCF Protocol Compliance</span>
-                            <strong style="color: #ca8a04;">3 Cleared · 1 Pending</strong>
-                        </div>
-                        <div class="org-mini-progress">
-                            <div class="org-mini-fill-maroon" style="width: 75%; background: #ca8a04;"></div>
-                        </div>
-
-                        <div class="org-budget-sub-stats">
-                            <div class="org-budget-sub-box is-green" style="background: #f0fdf4; border: 1px solid #dcfce7;">
-                                <span style="color: #166534;">Top Priority Goal</span>
-                                <strong style="color: #15803d; font-size: 0.88rem;">SDG 4 Education</strong>
-                            </div>
-                            <div class="org-budget-sub-box is-pink" style="background: #fdf0f2; border: 1px solid #fae1e5;">
-                                <span style="color: #8b1828;">Awaiting SDG Review</span>
-                                <strong style="color: #8b1828; font-size: 0.88rem;">2 Proposals</strong>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 1rem;">
-                            <span class="org-chip" style="background: #f0fdf4; color: #166534; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 3 · Good Health</span>
-                            <span class="org-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 4 · Quality Education</span>
-                            <span class="org-chip" style="background: #fefce8; color: #a16207; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 11 · Sustainable Cities</span>
-                            <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 12 · Consumption</span>
-                        </div>
-                    </section>
-
-                    {{-- SDO SDG Action Items --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-clipboard-check-fill" style="color: #15803d;"></i> SDG Review Action Items
-                            </h3>
-                            <span class="org-badge-count" style="background: #15803d; color: #ffffff; width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 800;">3</span>
-                        </div>
-
-                        <div class="org-action-card-list">
-                            {{-- Action 1 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #f0fdf4; color: #15803d;">
-                                        <i class="bi bi-heart-pulse-fill"></i>
-                                    </div>
-                                    <div class="org-action-card-text">
-                                        <strong>Review Waste Protocol &amp; Health Plan</strong>
-                                        <small>Campus Wellness Week · SDG 3 Health alignment</small>
-                                    </div>
-                                </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">SDG 3</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
-                                </div>
-                            </a>
-
-                            {{-- Action 2 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #eff6ff; color: #2563eb;">
-                                        <i class="bi bi-award-fill"></i>
-                                    </div>
-                                    <div class="org-action-card-text">
-                                        <strong>Verify Zero Single-Use Plastics Dossier</strong>
-                                        <small>Leadership Summit 2026 · SDG 12 Consumption</small>
-                                    </div>
-                                </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #eff6ff; color: #2563eb; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">SDG 12</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
-                                </div>
-                            </a>
-
-                            {{-- Action 3 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #fef2f2; color: #dc2626;">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </div>
-                                    <div class="org-action-card-text">
-                                        <strong>Monitor Sustainability Revisions</strong>
-                                        <small>BatStateU Sportsfest 2026 · Returned for revision</small>
-                                    </div>
-                                </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">Needs Fix</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
-                                </div>
-                            </a>
-                        </div>
-                    </section>
-                @elseif ($isOvcaa)
+                @if ($isOvcaa)
                     {{-- OVCAA: Executive Approvals Overview --}}
                     <section class="org-dash-card">
                         <div class="org-dash-card-header">
@@ -2837,585 +2154,5 @@
                 </section>
             </div>
         </div>
-    @endif
-
-    @if ($isOso)
-        {{-- Chart.js CDN & OSO Dashboard Interactive Script --}}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            // Global Chart Instances
-            window.osoCharts = {
-                donut: null,
-                trend: null,
-                type: null,
-                time: null
-            };
-
-            const osoFilterData = {
-                '2025-2026': {
-                    totalOrgs: 12,
-                    orgSub: '8 Academic · 3 Non-Academic · 1 SSC',
-                    pendingTrx: 7,
-                    pendingSub: '3 Proposals · 2 FR · 1 Renewal · 1 TOSA',
-                    totalSubmissions: 48,
-                    submissionsSub: 'Across all student org portfolios',
-                    revisionRate: '14.2%',
-                    revisionSub: 'Returned for incomplete compliance',
-                    approvalDonut: [27, 11, 7, 3],
-                    scope: { inCampus: 38, offCampus: 10 },
-                    trend: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                        data: [4, 8, 12, 9, 15, 7, 14, 18, 22, 19]
-                    },
-                    typeBreakdown: [22, 10, 8, 5, 3],
-                    orgRanking: [
-                        { count: 14, pct: 100, pass: '92%' },
-                        { count: 9, pct: 64, pass: '88%' },
-                        { count: 8, pct: 57, pass: '85%' },
-                        { count: 6, pct: 43, pass: '100%' },
-                        { count: 5, pct: 35, pass: '80%' }
-                    ]
-                },
-                '2024-2025': {
-                    totalOrgs: 10,
-                    orgSub: '7 Academic · 2 Non-Academic · 1 SSC',
-                    pendingTrx: 1,
-                    pendingSub: '1 Archived Compliance Review',
-                    totalSubmissions: 64,
-                    submissionsSub: 'Full academic year record',
-                    revisionRate: '18.5%',
-                    revisionSub: 'A.Y. 2024–2025 Historical Rate',
-                    approvalDonut: [46, 3, 11, 4],
-                    scope: { inCampus: 51, offCampus: 13 },
-                    trend: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                        data: [6, 9, 14, 12, 18, 11, 8, 15, 25, 21, 16, 10]
-                    },
-                    typeBreakdown: [31, 14, 11, 6, 2],
-                    orgRanking: [
-                        { count: 18, pct: 100, pass: '90%' },
-                        { count: 14, pct: 78, pass: '86%' },
-                        { count: 12, pct: 67, pass: '84%' },
-                        { count: 10, pct: 56, pass: '95%' },
-                        { count: 10, pct: 56, pass: '82%' }
-                    ]
-                },
-                '2023-2024': {
-                    totalOrgs: 9,
-                    orgSub: '6 Academic · 2 Non-Academic · 1 SSC',
-                    pendingTrx: 0,
-                    pendingSub: 'All historical cycles closed',
-                    totalSubmissions: 52,
-                    submissionsSub: 'Full academic year record',
-                    revisionRate: '21.0%',
-                    revisionSub: 'A.Y. 2023–2024 Historical Rate',
-                    approvalDonut: [38, 0, 9, 5],
-                    scope: { inCampus: 42, offCampus: 10 },
-                    trend: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                        data: [5, 7, 10, 8, 14, 9, 6, 12, 19, 16, 12, 7]
-                    },
-                    typeBreakdown: [26, 10, 8, 5, 3],
-                    orgRanking: [
-                        { count: 15, pct: 100, pass: '87%' },
-                        { count: 11, pct: 73, pass: '82%' },
-                        { count: 10, pct: 67, pass: '80%' },
-                        { count: 9, pct: 60, pass: '92%' },
-                        { count: 7, pct: 47, pass: '78%' }
-                    ]
-                },
-                'all': {
-                    totalOrgs: 12,
-                    orgSub: 'Recognized student org network',
-                    pendingTrx: 7,
-                    pendingSub: 'Current active action queue',
-                    totalSubmissions: 164,
-                    submissionsSub: 'Cumulative multi-year repository',
-                    revisionRate: '17.4%',
-                    revisionSub: 'All-time average compliance rate',
-                    approvalDonut: [111, 14, 27, 12],
-                    scope: { inCampus: 131, offCampus: 33 },
-                    trend: {
-                        labels: ['2023-Q1', '2023-Q2', '2023-Q3', '2023-Q4', '2024-Q1', '2024-Q2', '2024-Q3', '2024-Q4', '2025-Q1', '2025-Q2'],
-                        data: [12, 23, 31, 19, 15, 30, 40, 26, 20, 28]
-                    },
-                    typeBreakdown: [79, 34, 27, 16, 8],
-                    orgRanking: [
-                        { count: 47, pct: 100, pass: '90%' },
-                        { count: 32, pct: 68, pass: '84%' },
-                        { count: 32, pct: 68, pass: '85%' },
-                        { count: 25, pct: 53, pass: '96%' },
-                        { count: 22, pct: 47, pass: '80%' }
-                    ]
-                }
-            };
-
-            // Dynamic Filter Engine
-            function applyOsoFilters() {
-                const yearSelect = document.getElementById('osoYearSelect');
-                const semSelect = document.getElementById('osoSemesterSelect');
-                const monthSelect = document.getElementById('osoMonthSelect');
-                const scopeSelect = document.getElementById('osoScopeSelect');
-
-                const selectedYear = yearSelect ? yearSelect.value : '2025-2026';
-                const selectedSem = semSelect ? semSelect.value : 'all';
-                const selectedMonth = monthSelect ? monthSelect.value : 'all';
-                const selectedScope = scopeSelect ? scopeSelect.value : 'all';
-
-                const data = osoFilterData[selectedYear] || osoFilterData['2025-2026'];
-
-                // 1. Calculate Multipliers based on Month/Semester filter
-                let multiplier = 1.0;
-                if (selectedMonth !== 'all') {
-                    multiplier = 0.22;
-                } else if (selectedSem === 'sem1' || selectedSem === 'sem2') {
-                    multiplier = 0.52;
-                } else if (selectedSem === 'midyear') {
-                    multiplier = 0.15;
-                }
-
-                const currentTotalSubs = Math.max(1, Math.round(data.totalSubmissions * multiplier * (selectedScope === 'all' ? 1.0 : (selectedScope === 'in-campus' ? 0.792 : 0.208))));
-                const currentPending = (selectedYear === '2025-2026' && selectedMonth === 'all' && selectedScope === 'all') ? data.pendingTrx : Math.max(0, Math.round(data.pendingTrx * multiplier));
-
-                // 2. Update KPI Cards
-                const kpiTotalOrgs = document.getElementById('kpiTotalOrgsNum');
-                const kpiTotalOrgsSub = document.getElementById('kpiTotalOrgsSub');
-                if (kpiTotalOrgs) kpiTotalOrgs.textContent = data.totalOrgs;
-                if (kpiTotalOrgsSub) kpiTotalOrgsSub.textContent = data.orgSub;
-
-                const kpiPending = document.getElementById('kpiPendingTrxNum');
-                const kpiPendingSub = document.getElementById('kpiPendingTrxSub');
-                if (kpiPending) kpiPending.textContent = currentPending;
-                if (kpiPendingSub) kpiPendingSub.textContent = (selectedMonth !== 'all' || selectedYear !== '2025-2026') ? `${currentPending} pending in selected period` : data.pendingSub;
-
-                const kpiSubs = document.getElementById('kpiTotalSubmissionsNum');
-                const kpiSubsSub = document.getElementById('kpiTotalSubmissionsSub');
-                if (kpiSubs) kpiSubs.textContent = currentTotalSubs;
-                if (kpiSubsSub) kpiSubsSub.textContent = selectedMonth !== 'all' ? `Submissions in ${selectedMonth}` : data.submissionsSub;
-
-                const kpiRev = document.getElementById('kpiRevisionRateNum');
-                const kpiRevSub = document.getElementById('kpiRevisionRateSub');
-                if (kpiRev) kpiRev.textContent = data.revisionRate;
-                if (kpiRevSub) kpiRevSub.textContent = data.revisionSub;
-
-                // 3. Update Approval Donut Chart & Legends
-                const donutDataset = [
-                    Math.round(data.approvalDonut[0] * multiplier),
-                    Math.max(0, Math.round(data.approvalDonut[1] * multiplier)),
-                    Math.round(data.approvalDonut[2] * multiplier),
-                    Math.max(0, Math.round(data.approvalDonut[3] * multiplier))
-                ];
-                const donutSum = donutDataset.reduce((a, b) => a + b, 0) || currentTotalSubs;
-
-                if (window.osoCharts.donut) {
-                    window.osoCharts.donut.data.datasets[0].data = donutDataset;
-                    window.osoCharts.donut.update();
-                }
-
-                const donutLabel = document.getElementById('donutTotalCount');
-                if (donutLabel) donutLabel.textContent = donutSum;
-
-                const approvedCount = document.getElementById('legendApprovedCount');
-                const approvedPct = document.getElementById('legendApprovedPct');
-                if (approvedCount) approvedCount.textContent = donutDataset[0];
-                if (approvedPct) approvedPct.textContent = donutSum ? `${((donutDataset[0] / donutSum) * 100).toFixed(1)}%` : '0%';
-
-                const pendingCount = document.getElementById('legendPendingCount');
-                const pendingPct = document.getElementById('legendPendingPct');
-                if (pendingCount) pendingCount.textContent = donutDataset[1];
-                if (pendingPct) pendingPct.textContent = donutSum ? `${((donutDataset[1] / donutSum) * 100).toFixed(1)}%` : '0%';
-
-                const revCount = document.getElementById('legendRevisionCount');
-                const revPct = document.getElementById('legendRevisionPct');
-                if (revCount) revCount.textContent = donutDataset[2];
-                if (revPct) revPct.textContent = donutSum ? `${((donutDataset[2] / donutSum) * 100).toFixed(1)}%` : '0%';
-
-                const rejCount = document.getElementById('legendRejectedCount');
-                const rejPct = document.getElementById('legendRejectedPct');
-                if (rejCount) rejCount.textContent = donutDataset[3];
-                if (rejPct) rejPct.textContent = donutSum ? `${((donutDataset[3] / donutSum) * 100).toFixed(1)}%` : '0%';
-
-                // 4. Update Scope Panel
-                const inCount = Math.round(data.scope.inCampus * multiplier * (selectedScope === 'off-campus' ? 0 : 1));
-                const offCount = Math.round(data.scope.offCampus * multiplier * (selectedScope === 'in-campus' ? 0 : 1));
-                const scopeTotal = inCount + offCount || 1;
-                const inPct = ((inCount / scopeTotal) * 100).toFixed(1);
-                const offPct = ((offCount / scopeTotal) * 100).toFixed(1);
-
-                const scopeHeader = document.getElementById('scopeTotalHeader');
-                if (scopeHeader) scopeHeader.textContent = `${scopeTotal} Activities Total`;
-
-                const scopeBar = document.getElementById('scopeInCampusBar');
-                if (scopeBar) scopeBar.style.width = `${inPct}%`;
-
-                const scopeInCountEl = document.getElementById('scopeInCampusCount');
-                const scopeInPctEl = document.getElementById('scopeInCampusPct');
-                if (scopeInCountEl) scopeInCountEl.textContent = inCount;
-                if (scopeInPctEl) scopeInPctEl.textContent = `${inPct}% of total`;
-
-                const scopeOffCountEl = document.getElementById('scopeOffCampusCount');
-                const scopeOffPctEl = document.getElementById('scopeOffCampusPct');
-                if (scopeOffCountEl) scopeOffCountEl.textContent = offCount;
-                if (scopeOffPctEl) scopeOffPctEl.textContent = `${offPct}% of total`;
-
-                // 5. Update Trend Line Chart
-                if (window.osoCharts.trend) {
-                    window.osoCharts.trend.data.labels = data.trend.labels;
-                    window.osoCharts.trend.data.datasets[0].data = data.trend.data;
-
-                    // Dynamically calculate and update peak label
-                    const maxVal = Math.max(...data.trend.data);
-                    const maxIdx = data.trend.data.indexOf(maxVal);
-                    const peakMonth = data.trend.labels[maxIdx] || 'Sep';
-
-                    const peakEl = document.getElementById('osoTrendPeakLabel');
-                    if (peakEl) {
-                        peakEl.innerHTML = `<i class="bi bi-dot" style="font-size: 1.2rem;"></i> Peak: ${peakMonth} (${maxVal})`;
-                    }
-
-                    if (window.osoCharts.trend.options.scales.y) {
-                        window.osoCharts.trend.options.scales.y.suggestedMax = Math.max(25, Math.ceil(maxVal / 5) * 5);
-                        delete window.osoCharts.trend.options.scales.y.max;
-                    }
-                    window.osoCharts.trend.update();
-                }
-
-                // 6. Update Type Bar Chart
-                if (window.osoCharts.type) {
-                    const adjTypeData = data.typeBreakdown.map(v => Math.round(v * multiplier));
-                    window.osoCharts.type.data.datasets[0].data = adjTypeData;
-                    const maxTypeVal = Math.max(...adjTypeData);
-                    if (window.osoCharts.type.options.scales.y) {
-                        window.osoCharts.type.options.scales.y.suggestedMax = Math.max(25, Math.ceil((maxTypeVal * 1.2) / 5) * 5);
-                        delete window.osoCharts.type.options.scales.y.max;
-                    }
-                    window.osoCharts.type.update();
-                }
-
-                // 7. Update Organization Ranking Bars
-                if (data.orgRanking) {
-                    data.orgRanking.forEach((org, idx) => {
-                        const rankStat = document.getElementById(`rankOrgStat${idx + 1}`);
-                        const rankBar = document.getElementById(`rankOrgBar${idx + 1}`);
-                        const adjCount = Math.max(1, Math.round(org.count * multiplier));
-                        if (rankStat) {
-                            rankStat.innerHTML = `<strong>${adjCount}</strong> submissions &middot; <span style="color: #16a34a;">${org.pass} pass</span>`;
-                        }
-                        if (rankBar) {
-                            rankBar.style.width = `${org.pct}%`;
-                        }
-                    });
-                }
-
-                // 8. Filter Table Rows
-                let visibleCount = 0;
-                const rows = document.querySelectorAll('.oso-trx-row');
-                rows.forEach(row => {
-                    const rowYear = row.getAttribute('data-year');
-                    const rowSem = row.getAttribute('data-sem');
-                    const rowMonth = row.getAttribute('data-month');
-                    const rowScope = row.getAttribute('data-scope');
-
-                    const matchYear = (selectedYear === 'all' || rowYear === selectedYear);
-                    const matchSem = (selectedSem === 'all' || rowSem === selectedSem);
-                    const matchMonth = (selectedMonth === 'all' || rowMonth === selectedMonth);
-                    const matchScope = (selectedScope === 'all' || rowScope === selectedScope);
-
-                    if (matchYear && matchSem && matchMonth && matchScope) {
-                        row.style.display = '';
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-
-                const noRowsEl = document.getElementById('osoNoTransactionsRow');
-                if (noRowsEl) {
-                    noRowsEl.style.display = (visibleCount === 0) ? '' : 'none';
-                }
-
-                // 9. Update Approval Card Period Badge
-                const approvalPeriodBadge = document.getElementById('osoApprovalPeriodBadge');
-                if (approvalPeriodBadge) {
-                    let yearText = 'A.Y. 2025–2026';
-                    if (selectedYear === '2024-2025') yearText = 'A.Y. 2024–2025';
-                    else if (selectedYear === '2023-2024') yearText = 'A.Y. 2023–2024';
-                    else if (selectedYear === 'all') yearText = 'All Academic Years';
-
-                    if (selectedMonth !== 'all') {
-                        approvalPeriodBadge.textContent = `${yearText} · ${selectedMonth}`;
-                    } else if (selectedSem !== 'all') {
-                        const semNames = { 'sem1': '1st Sem', 'sem2': '2nd Sem', 'midyear': 'Midyear' };
-                        approvalPeriodBadge.textContent = `${yearText} · ${semNames[selectedSem] || selectedSem}`;
-                    } else {
-                        approvalPeriodBadge.textContent = yearText;
-                    }
-                }
-
-                // 10. Update Active Filter Status Badge
-                const badge = document.getElementById('osoActiveFilterBadge');
-                if (badge) {
-                    let text = 'Live Insights';
-                    if (selectedYear !== '2025-2026' || selectedMonth !== 'all' || selectedSem !== 'all' || selectedScope !== 'all') {
-                        const parts = [];
-                        if (selectedYear !== '2025-2026') parts.push(selectedYear === 'all' ? 'All Years' : selectedYear);
-                        if (selectedSem !== 'all') parts.push(selectedSem.toUpperCase());
-                        if (selectedMonth !== 'all') parts.push(selectedMonth);
-                        if (selectedScope !== 'all') parts.push(selectedScope === 'in-campus' ? 'In-Campus' : 'Off-Campus');
-                        text = `Filtered: ${parts.join(' · ')}`;
-                    }
-                    badge.innerHTML = `<i class="bi bi-funnel-fill"></i> ${text}`;
-                }
-            }
-
-            // Reset All Filters
-            function resetOsoFilters() {
-                const yearSelect = document.getElementById('osoYearSelect');
-                const semSelect = document.getElementById('osoSemesterSelect');
-                const monthSelect = document.getElementById('osoMonthSelect');
-                const scopeSelect = document.getElementById('osoScopeSelect');
-
-                if (yearSelect) yearSelect.value = '2025-2026';
-                if (semSelect) semSelect.value = 'all';
-                if (monthSelect) monthSelect.value = 'all';
-                if (scopeSelect) scopeSelect.value = 'all';
-
-                applyOsoFilters();
-            }
-
-            document.addEventListener('DOMContentLoaded', function () {
-                Chart.defaults.font.family = "'Instrument Sans', system-ui, -apple-system, sans-serif";
-                Chart.defaults.color = '#786f73';
-
-                // 1. Approval Status Donut Chart
-                const donutCanvas = document.getElementById('osoApprovalDonutChart');
-                if (donutCanvas) {
-                    window.osoCharts.donut = new Chart(donutCanvas.getContext('2d'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Approved', 'Pending Review', 'For Revision', 'Rejected'],
-                            datasets: [{
-                                data: [27, 11, 7, 3],
-                                backgroundColor: ['#10b981', '#f59e0b', '#e11d48', '#64748b'],
-                                borderWidth: 3,
-                                borderColor: '#ffffff',
-                                hoverOffset: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            cutout: '72%',
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: '#1a1618',
-                                    titleFont: { size: 12, weight: 'bold' },
-                                    bodyFont: { size: 12 },
-                                    padding: 10,
-                                    cornerRadius: 8,
-                                    displayColors: true,
-                                    callbacks: {
-                                        label: function (ctx) {
-                                            const val = ctx.raw || 0;
-                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 48;
-                                            const pct = ((val / total) * 100).toFixed(1);
-                                            return ` ${ctx.label}: ${val} (${pct}%)`;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // 2. Submission Trend Line Chart
-                const trendCanvas = document.getElementById('osoSubmissionTrendChart');
-                if (trendCanvas) {
-                    const ctx = trendCanvas.getContext('2d');
-                    const grad = ctx.createLinearGradient(0, 0, 0, 220);
-                    grad.addColorStop(0, 'rgba(139, 24, 40, 0.22)');
-                    grad.addColorStop(1, 'rgba(139, 24, 40, 0.00)');
-
-                    window.osoCharts.trend = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                            datasets: [{
-                                label: 'Monthly Submissions',
-                                data: [4, 8, 12, 9, 15, 7, 14, 18, 22, 19],
-                                borderColor: '#8b1828',
-                                borderWidth: 2.5,
-                                backgroundColor: grad,
-                                fill: true,
-                                tension: 0.38,
-                                pointBackgroundColor: '#8b1828',
-                                pointBorderColor: '#ffffff',
-                                pointBorderWidth: 2,
-                                pointRadius: 4.5,
-                                pointHoverRadius: 6.5
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: '#1a1618',
-                                    padding: 10,
-                                    cornerRadius: 8,
-                                    displayColors: false,
-                                    callbacks: {
-                                        label: (ctx) => ` ${ctx.parsed.y} Submissions Filed`
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { font: { size: 11, weight: '600' } }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    suggestedMax: 25,
-                                    grid: { color: '#f5eaec', drawBorder: false },
-                                    ticks: { stepSize: 5, font: { size: 11 } }
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // 3. Transactions by Type Bar Chart
-                const typeCanvas = document.getElementById('osoTransactionTypeChart');
-                if (typeCanvas) {
-                    window.osoCharts.type = new Chart(typeCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: ['Activity Proposal', 'Renewal', 'Financial (FR)', 'Accomplishment (AR)', 'TOSA Award'],
-                            datasets: [{
-                                label: 'Transactions',
-                                data: [22, 10, 8, 5, 3],
-                                backgroundColor: [
-                                    '#8b1828',
-                                    '#ca8a04',
-                                    '#1d4ed8',
-                                    '#7e22ce',
-                                    '#15803d'
-                                ],
-                                borderRadius: 8,
-                                maxBarThickness: 38
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: '#1a1618',
-                                    padding: 10,
-                                    cornerRadius: 8,
-                                    displayColors: false,
-                                    callbacks: {
-                                        label: (ctx) => ` ${ctx.parsed.y} Documents Filed`
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { 
-                                        font: { size: 11, weight: '600' },
-                                        callback: function (val, index) {
-                                            const labels = ['Proposals', 'Renewal', 'Fin. (FR)', 'Accomp. (AR)', 'TOSA'];
-                                            return labels[index] || this.getLabelForValue(val);
-                                        }
-                                    }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    suggestedMax: 25,
-                                    grace: '10%',
-                                    grid: { color: '#f5eaec' },
-                                    ticks: { stepSize: 5, font: { size: 11 } }
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // 4. Processing Time Analysis Bar/Line Chart
-                const timeCanvas = document.getElementById('osoProcessingTimeChart');
-                if (timeCanvas) {
-                    window.osoCharts.time = new Chart(timeCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: ['Proposals', 'Renewal', 'Financial (FR)', 'Accomp. (AR)', 'TOSA'],
-                            datasets: [
-                                {
-                                    type: 'line',
-                                    label: 'Target SLA Benchmark (3.0 Days)',
-                                    data: [3.0, 3.0, 3.0, 3.0, 3.0],
-                                    borderColor: '#dc2626',
-                                    borderWidth: 1.5,
-                                    borderDash: [5, 5],
-                                    pointRadius: 0,
-                                    fill: false
-                                },
-                                {
-                                    type: 'bar',
-                                    label: 'Avg Turnaround (Days)',
-                                    data: [1.8, 3.2, 2.5, 1.9, 2.1],
-                                    backgroundColor: [
-                                        '#10b981',
-                                        '#f59e0b',
-                                        '#10b981',
-                                        '#10b981',
-                                        '#10b981'
-                                    ],
-                                    borderRadius: 8,
-                                    maxBarThickness: 34
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { 
-                                    display: true, 
-                                    position: 'top', 
-                                    align: 'end',
-                                    labels: { boxWidth: 12, boxHeight: 12, font: { size: 11, weight: '600' } } 
-                                },
-                                tooltip: {
-                                    backgroundColor: '#1a1618',
-                                    padding: 10,
-                                    cornerRadius: 8
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { font: { size: 11, weight: '600' } }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    max: 4.0,
-                                    grid: { color: '#f5eaec' },
-                                    ticks: {
-                                        stepSize: 1,
-                                        callback: (val) => `${val}d`
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-        </script>
     @endif
 @endsection
