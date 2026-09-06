@@ -1147,6 +1147,15 @@
     text-align: left;
 }
 
+.org-dropdown-settings-btn {
+    color: var(--org-ink);
+}
+
+.org-dropdown-settings-btn:hover {
+    background: #fdf0f2;
+    color: var(--org-red);
+}
+
 .org-dropdown-logout-btn {
     color: #dc2626;
 }

@@ -119,6 +119,14 @@
                     </a>
                 @endif
             </nav>
+
+            <div style="margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--org-line); display: flex; flex-direction: column; gap: 0.35rem;">
+                <button type="button" class="org-nav-link org-sidebar-settings-btn" onclick="openSettingsModal()" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.75rem; font-family: inherit;">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Settings</span>
+                    <em class="org-badge-count" style="margin-left: auto; background: rgba(139, 24, 40, 0.08); color: var(--org-red); border: 1px solid rgba(139, 24, 40, 0.15); font-size: 0.65rem;">Config</em>
+                </button>
+            </div>
         </aside>
 
         <div class="org-main">
@@ -172,6 +180,11 @@
 
                             <div class="org-dropdown-divider"></div>
 
+                            <button type="button" class="org-dropdown-item org-dropdown-settings-btn" onclick="openSettingsModal()">
+                                <i class="bi bi-gear-wide-connected" style="color: var(--org-red);"></i>
+                                <span>Settings</span>
+                            </button>
+
                             <button type="button" class="org-dropdown-item org-dropdown-logout-btn" onclick="openLogoutModal()">
                                 <i class="bi bi-box-arrow-left"></i>
                                 <span>Logout</span>
@@ -186,6 +199,9 @@
             </div>
         </div>
     </div>
+
+    {{-- Executive Settings Hub Component (Front-End Only) --}}
+    @include('org.settings-modal')
 
     {{-- Hidden Logout Form --}}
     <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" style="display: none;">
