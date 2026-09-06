@@ -112,24 +112,13 @@
                         <i class="bi bi-archive-fill"></i>
                         <span>Archive</span>
                     </a>
+                    <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
+                        <i class="bi bi-award-fill"></i>
+                        <span>TOSA Module</span>
+                        <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
+                    </a>
                 @endif
             </nav>
-
-            <div class="org-officer">
-                <span class="org-officer-avatar" aria-hidden="true">{{ $office->initials() }}</span>
-                <div class="org-officer-meta">
-                    <strong>{{ $office->name }}</strong>
-                    <span>{{ $brand['role'] }}</span>
-                </div>
-            </div>
-
-            <form method="post" action="{{ route('office.logout') }}" class="org-logout" id="orgLogoutForm">
-                @csrf
-                <button type="button" onclick="openLogoutModal()">
-                    <i class="bi bi-box-arrow-left"></i>
-                    <span>Logout</span>
-                </button>
-            </form>
         </aside>
 
         <div class="org-main">
@@ -150,10 +139,45 @@
                 </div>
                 <div class="org-top-actions">
                     @yield('actions')
+                    
                     <button type="button" class="org-bell" aria-label="Notifications">
                         <i class="bi bi-bell-fill"></i>
                         <span class="org-bell-dot"></span>
                     </button>
+
+                    {{-- User Profile Pill Menu (Right side of Bell) --}}
+                    <div class="org-user-menu-wrap">
+                        <button type="button" class="org-user-pill" id="orgUserMenuBtn" aria-expanded="false" aria-haspopup="true" aria-label="User menu" onclick="toggleOrgUserDropdown(event)">
+                            <div class="org-user-avatar">
+                                <span>{{ $office->initials() }}</span>
+                            </div>
+                            <div class="org-user-pill-info">
+                                <span class="org-user-pill-name">{{ $office->name }}</span>
+                                <span class="org-user-pill-role">{{ $brand['role'] }}</span>
+                            </div>
+                            <i class="bi bi-chevron-down org-user-chevron"></i>
+                        </button>
+
+                        <div class="org-user-dropdown liquid-glass" id="orgUserDropdown">
+                            <div class="org-dropdown-header">
+                                <div class="org-dropdown-avatar">
+                                    <span>{{ $office->initials() }}</span>
+                                </div>
+                                <div class="org-dropdown-user-meta">
+                                    <strong class="org-dropdown-name">{{ $office->name }}</strong>
+                                    <span class="org-dropdown-role">{{ $brand['role'] }}</span>
+                                    <small class="org-dropdown-email">{{ $office->email }}</small>
+                                </div>
+                            </div>
+
+                            <div class="org-dropdown-divider"></div>
+
+                            <button type="button" class="org-dropdown-item org-dropdown-logout-btn" onclick="openLogoutModal()">
+                                <i class="bi bi-box-arrow-left"></i>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -162,6 +186,11 @@
             </div>
         </div>
     </div>
+
+    {{-- Hidden Logout Form --}}
+    <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" style="display: none;">
+        @csrf
+    </form>
 
     {{-- Logout Confirmation Modal --}}
     <div id="logoutConfirmModal" class="org-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
@@ -185,12 +214,50 @@
     </div>
 
     <script>
+        function toggleOrgUserDropdown(e) {
+            e.stopPropagation();
+            const btn = document.getElementById('orgUserMenuBtn');
+            const dropdown = document.getElementById('orgUserDropdown');
+            if (!dropdown || !btn) return;
+            
+            const isOpen = dropdown.classList.contains('is-open');
+            if (isOpen) {
+                closeOrgUserDropdown();
+            } else {
+                dropdown.classList.add('is-open');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        function closeOrgUserDropdown() {
+            const btn = document.getElementById('orgUserMenuBtn');
+            const dropdown = document.getElementById('orgUserDropdown');
+            if (dropdown) dropdown.classList.remove('is-open');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+
+        document.addEventListener('click', function(e) {
+            const menuWrap = document.querySelector('.org-user-menu-wrap');
+            if (menuWrap && !menuWrap.contains(e.target)) {
+                closeOrgUserDropdown();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeOrgUserDropdown();
+                closeLogoutModal();
+            }
+        });
+
         function openLogoutModal() {
+            closeOrgUserDropdown();
             const modal = document.getElementById('logoutConfirmModal');
             if (modal) {
                 modal.style.display = 'flex';
             }
         }
+
         function closeLogoutModal() {
             const modal = document.getElementById('logoutConfirmModal');
             if (modal) {

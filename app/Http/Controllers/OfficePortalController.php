@@ -442,40 +442,123 @@ class OfficePortalController extends Controller
             'activeNav' => 'updates',
             'announcements' => [
                 [
-                    'title' => 'Deadline Extension for Activity Proposals',
-                    'body' => 'The deadline for submitting activity proposals for the 2nd Semester has been extended to April 15, 2026. All organizations must comply with the updated requirements.',
-                    'author' => 'OSO Admin',
+                    'id' => 1,
+                    'title' => 'Deadline Extension for Activity Proposals (AY 2026-2027)',
+                    'type' => 'Deadline',
+                    'body' => 'The deadline for submitting student activity proposals and financial plans for the 2nd Semester has been officially extended to April 15, 2026. All student organizations must comply with the updated clearance requirements and submit via OrgChain portal.',
+                    'author' => 'Office of Student Organizations (OSO)',
                     'time' => '2 hours ago',
                     'priority' => 'high',
+                    'attachment' => 'Activity_Proposal_Guidelines_AY2526.pdf',
+                    'attachment_size' => '1.2 MB',
                 ],
                 [
-                    'title' => 'New Template for Budget Allocation',
-                    'body' => 'A revised Budget Allocation template is now available for download. All new proposals must use this updated format.',
-                    'author' => 'OSO Admin',
+                    'id' => 2,
+                    'title' => 'Revised Budget Allocation & Expense Liquidation Sheet',
+                    'type' => 'Guideline',
+                    'body' => 'A revised Budget Allocation template is now available for download. All new proposals requiring university student fund utilization must use this updated format with detailed line-item breakdowns.',
+                    'author' => 'Office of Student Organizations (OSO)',
                     'time' => '1 day ago',
                     'priority' => 'normal',
+                    'attachment' => 'Budget_Allocation_Sheet_v2.xlsx',
+                    'attachment_size' => '180 KB',
                 ],
                 [
-                    'title' => 'Reminder: OSO Clearance for Events',
-                    'body' => 'All organizations must secure OSO clearance at least 2 weeks before the scheduled event date. Please plan accordingly.',
-                    'author' => 'OSO Admin',
+                    'id' => 3,
+                    'title' => 'Mandatory OSO Clearance & Risk Assessment Protocols',
+                    'type' => 'Reminder',
+                    'body' => 'All campus events, off-campus excursions, and general assemblies must secure verified OSO clearance at least 2 weeks before the scheduled event date. Ensure venue reservations and safety matrices are attached.',
+                    'author' => 'Office of Student Organizations (OSO)',
                     'time' => '3 days ago',
-                    'priority' => 'normal',
+                    'priority' => 'high',
+                    'attachment' => null,
+                    'attachment_size' => null,
                 ],
                 [
-                    'title' => 'Welcome to the New Semester',
-                    'body' => 'We welcome all student organizations to the 1st Semester of AY 2026-2027. Please review the updated guidelines for activity proposals.',
-                    'author' => 'OSO Admin',
+                    'id' => 4,
+                    'title' => 'Welcome to Academic Year 2026-2027: Accreditation & Calendar',
+                    'type' => 'General Announcement',
+                    'body' => 'We warmly welcome all student leaders and organizations to the new academic term. Please review the institutional calendar and ensure officer credentials are up-to-date in the system.',
+                    'author' => 'Office of Student Organizations (OSO)',
                     'time' => '1 week ago',
                     'priority' => 'normal',
+                    'attachment' => 'Accreditation_Notice_AY2026.pdf',
+                    'attachment_size' => '850 KB',
                 ],
             ],
             'templates' => [
-                ['name' => 'Activity Proposal Form', 'category' => 'Proposal', 'size' => '245 KB', 'downloads' => 42, 'icon' => 'file-earmark-pdf-fill', 'color' => 'red'],
-                ['name' => 'Budget Allocation Sheet', 'category' => 'Finance', 'size' => '180 KB', 'downloads' => 38, 'icon' => 'file-earmark-spreadsheet-fill', 'color' => 'green'],
-                ['name' => 'Attendance Sheet Template', 'category' => 'Forms', 'size' => '120 KB', 'downloads' => 28, 'icon' => 'file-earmark-text-fill', 'color' => 'blue'],
-                ['name' => 'Accomplishment Report Template', 'category' => 'Report', 'size' => '210 KB', 'downloads' => 31, 'icon' => 'file-earmark-richtext-fill', 'color' => 'gold'],
-                ['name' => 'Letter of Request Template', 'category' => 'Forms', 'size' => '95 KB', 'downloads' => 25, 'icon' => 'file-earmark-text-fill', 'color' => 'violet'],
+                [
+                    'id' => 1,
+                    'name' => 'Activity Proposal Form',
+                    'category' => 'Proposal',
+                    'format' => 'PDF',
+                    'size' => '245 KB',
+                    'downloads' => 142,
+                    'icon' => 'file-earmark-pdf-fill',
+                    'color' => 'red',
+                    'updated' => 'Aug 28, 2026',
+                    'description' => 'Official standard proposal form for on-campus and off-campus student org activities.'
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Budget Allocation Sheet',
+                    'category' => 'Finance',
+                    'format' => 'XLSX',
+                    'size' => '180 KB',
+                    'downloads' => 98,
+                    'icon' => 'file-earmark-spreadsheet-fill',
+                    'color' => 'green',
+                    'updated' => 'Aug 15, 2026',
+                    'description' => 'Pre-formatted spreadsheet template with automated subtotal formulas for itemized org budgeting.'
+                ],
+                [
+                    'id' => 3,
+                    'name' => 'Attendance Sheet Template',
+                    'category' => 'Forms',
+                    'format' => 'DOCX',
+                    'size' => '120 KB',
+                    'downloads' => 64,
+                    'icon' => 'file-earmark-text-fill',
+                    'color' => 'blue',
+                    'updated' => 'Jul 10, 2026',
+                    'description' => 'Standardized sign-in roster for general assemblies, workshops, and student meetings.'
+                ],
+                [
+                    'id' => 4,
+                    'name' => 'Accomplishment Report Template',
+                    'category' => 'Report',
+                    'format' => 'DOCX',
+                    'size' => '210 KB',
+                    'downloads' => 88,
+                    'icon' => 'file-earmark-richtext-fill',
+                    'color' => 'gold',
+                    'updated' => 'Sep 01, 2026',
+                    'description' => 'Comprehensive narrative & metric template for end-of-semester accomplishment submissions.'
+                ],
+                [
+                    'id' => 5,
+                    'name' => 'Letter of Request Template',
+                    'category' => 'Forms',
+                    'format' => 'DOCX',
+                    'size' => '95 KB',
+                    'downloads' => 52,
+                    'icon' => 'file-earmark-text-fill',
+                    'color' => 'violet',
+                    'updated' => 'Jul 22, 2026',
+                    'description' => 'Formal letterhead format for requesting venue permits, equipment loan, and excuses.'
+                ],
+                [
+                    'id' => 6,
+                    'name' => 'Liquidation & Expense Matrix',
+                    'category' => 'Finance',
+                    'format' => 'XLSX',
+                    'size' => '155 KB',
+                    'downloads' => 76,
+                    'icon' => 'file-earmark-spreadsheet-fill',
+                    'color' => 'green',
+                    'updated' => 'Aug 04, 2026',
+                    'description' => 'Official financial liquidation report form with receipt verification table.'
+                ],
             ],
         ]));
     }
@@ -545,6 +628,13 @@ class OfficePortalController extends Controller
             'documents' => $savedDocuments->concat($demoDocuments),
             'savedFolders' => $savedFolders,
             'selectedFolder' => 'BSIT Society',
+        ]));
+    }
+
+    public function tosa(): View
+    {
+        return view('org.tosa', array_merge($this->deskContext(), [
+            'activeNav' => 'tosa',
         ]));
     }
 

@@ -11153,3 +11153,36 @@ body[data-portal-tab="activities"] #spTopSearchBox {
       font-size: 0.76rem;
    }
 }
+
+/* ==========================================================================
+   Office Login Portal Card & Shell (Unslop & Impeccable Style)
+   ========================================================================== */
+.office-login-body {
+   min-height: 100vh;
+   min-height: 100dvh;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 1.5rem;
+   box-sizing: border-box;
+}
+
+.office-login-shell {
+   width: 100%;
+   max-width: 440px;
+   margin: auto;
+   display: flex;
+   justify-content: center;
+}
+
+.office-login-card {
+   width: 100%;
+   background: rgba(255, 255, 255, 0.92);
+   backdrop-filter: blur(24px);
+   -webkit-backdrop-filter: blur(24px);
+   border: 1.5px solid #f0e6e8;
+   border-radius: 24px;
+   padding: 2.25rem 2rem;
+   box-shadow: 0 20px 50px rgba(139, 24, 40, 0.08), 0 4px 16px rgba(0, 0, 0, 0.03);
+   box-sizing: border-box;
+}

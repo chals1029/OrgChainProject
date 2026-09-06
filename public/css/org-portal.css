@@ -6,23 +6,24 @@
    ========================================================================== */
 
 :root {
-    --org-red: #9b1b30;
-    --org-red-dark: #6f1020;
+    --org-red: #8b1828;
+    --org-red-dark: #62101c;
     --org-red-deep: #4a0a15;
     --org-red-soft: #c43b52;
-    --org-red-muted: #f3d6db;
-    --org-gold: #c9a227;
-    --org-gold-dark: #8a6a10;
-    --org-gold-bright: #d4a017;
-    --org-ink: #1a0a0d;
-    --org-muted: #6b4a50;
-    --org-line: rgba(155, 27, 48, 0.1);
-    --org-green: #0a7d57;
-    --org-blue: #1e50c8;
-    --org-violet: #6b28d9;
-    --org-shadow-sm: 0 2px 8px rgba(74, 10, 21, 0.06), 0 10px 30px rgba(74, 10, 21, 0.08);
-    --org-shadow-md: 0 14px 36px rgba(74, 10, 21, 0.12), 0 3px 10px rgba(74, 10, 21, 0.06);
-    --org-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --org-red-muted: #fdf0f2;
+    --org-gold: #d97706;
+    --org-gold-dark: #b45309;
+    --org-gold-bright: #f59e0b;
+    --org-ink: #1a1618;
+    --org-muted: #7a7074;
+    --org-line: #f0e6e8;
+    --org-green: #16a34a;
+    --org-blue: #0284c7;
+    --org-violet: #7c3aed;
+    --org-shadow-sm: 0 4px 16px rgba(90, 15, 30, 0.03);
+    --org-shadow-md: 0 8px 24px rgba(90, 15, 30, 0.06);
+    --org-shadow-hover: 0 12px 32px rgba(90, 15, 30, 0.08);
+    --org-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Same canvas as .landing-body */
@@ -943,6 +944,216 @@
     border-radius: 50%;
     background: var(--org-red);
     border: 2px solid #fff;
+}
+
+/* User Profile Menu Pill & Dropdown (Student Portal Style) -------------- */
+.org-user-menu-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.org-user-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.3rem 0.85rem 0.3rem 0.35rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid var(--org-line);
+    cursor: pointer;
+    transition: all 0.18s var(--org-ease);
+    user-select: none;
+    font-family: inherit;
+    box-shadow: 0 2px 8px rgba(90, 15, 30, 0.04);
+}
+
+.org-user-pill:hover,
+.org-user-pill[aria-expanded="true"] {
+    background: #ffffff;
+    border-color: rgba(139, 24, 40, 0.25);
+    box-shadow: var(--org-shadow-sm);
+    transform: translateY(-1px);
+}
+
+.org-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--org-red-soft), var(--org-red-dark));
+    box-shadow: 0 2px 8px rgba(139, 24, 40, 0.25);
+    flex-shrink: 0;
+}
+
+.org-user-pill-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.org-user-pill-name {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: var(--org-ink);
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.org-user-pill-role {
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: var(--org-muted);
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.org-user-chevron {
+    font-size: 0.72rem;
+    color: var(--org-muted);
+    transition: transform 0.2s ease;
+    margin-left: 0.15rem;
+}
+
+@media (max-width: 640px) {
+    .org-user-pill-role {
+        display: none;
+    }
+    .org-user-pill-name {
+        max-width: 90px;
+    }
+}
+
+.org-user-pill[aria-expanded="true"] .org-user-chevron {
+    transform: rotate(180deg);
+}
+
+.org-user-dropdown {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 0;
+    min-width: 240px;
+    padding: 0.65rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px solid var(--org-line);
+    box-shadow: 0 16px 40px rgba(90, 15, 30, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    z-index: 1000;
+    display: none;
+    animation: orgDropdownFade 0.18s var(--org-ease);
+}
+
+.org-user-dropdown.is-open {
+    display: block;
+}
+
+@keyframes orgDropdownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.org-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem 0.75rem;
+}
+
+.org-dropdown-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, var(--org-red-soft), var(--org-red-dark));
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(139, 24, 40, 0.2);
+}
+
+.org-dropdown-user-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.org-dropdown-name {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--org-ink);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.org-dropdown-role {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--org-red);
+    margin-top: 0.15rem;
+}
+
+.org-dropdown-email {
+    font-size: 0.72rem;
+    color: var(--org-muted);
+    margin-top: 0.1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.org-dropdown-divider {
+    height: 1px;
+    background: var(--org-line);
+    margin: 0.35rem 0;
+}
+
+.org-dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--org-ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.org-dropdown-logout-btn {
+    color: #dc2626;
+}
+
+.org-dropdown-logout-btn:hover {
+    background: var(--org-red-muted);
+    color: var(--org-red);
 }
 
 /* Content ------------------------------------------------------------------ */
@@ -3221,6 +3432,7 @@
     margin-bottom: 4px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

@@ -53,6 +53,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/financial-report', [OfficePortalController::class, 'financial'])->name('financial');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
+    Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
     Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');

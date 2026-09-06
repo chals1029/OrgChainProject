@@ -133,23 +133,32 @@
            Activities List & Detail Styles (Pixel-Perfect Matching)
            ========================================================= */
         
-        /* Top Filter Pills */
+        /* Top Toolbar & Filter Pills */
+        .org-controls-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
         .org-filter-pills-row {
             display: flex;
             align-items: center;
-            gap: 0.65rem;
-            margin-bottom: 1.5rem;
+            gap: 0.5rem;
             overflow-x: auto;
-            padding-bottom: 0.35rem;
+            padding-bottom: 0.2rem;
+            flex-wrap: wrap;
         }
 
         .org-filter-pill-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.5rem 1.15rem;
+            padding: 0.45rem 1rem;
             border-radius: 9999px;
-            font-size: 0.86rem;
+            font-size: 0.84rem;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
@@ -171,6 +180,398 @@
             color: #ffffff;
             border-color: #8b1828;
             box-shadow: 0 4px 14px rgba(139, 24, 40, 0.22);
+        }
+
+        .org-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: auto;
+        }
+
+        .org-proposals-search-box {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .org-proposals-search-box i.bi-search {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8c8286;
+            font-size: 0.82rem;
+            pointer-events: none;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .org-proposals-search-box input {
+            padding: 0.45rem 1rem 0.45rem 2.3rem;
+            font-size: 0.84rem;
+            font-family: inherit;
+            border: 1px solid #e8e2e4;
+            border-radius: 9999px;
+            background: #ffffff;
+            color: #1a1618;
+            width: 210px;
+            transition: all 0.2s ease;
+            outline: none;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            line-height: 1.4;
+        }
+
+        .org-proposals-search-box input:focus {
+            border-color: #8b1828;
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.1);
+            width: 250px;
+            background: #ffffff;
+        }
+
+        /* View Mode Switcher Toggle */
+        .org-view-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: #f4ecee;
+            padding: 0.2rem;
+            border-radius: 10px;
+            border: 1px solid #e8e0e2;
+            gap: 0.15rem;
+        }
+
+        .org-view-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            color: #635b5e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .org-view-btn i {
+            font-size: 0.9rem;
+        }
+
+        .org-view-btn:hover {
+            color: #1a1618;
+        }
+
+        .org-view-btn.is-active {
+            background: #ffffff;
+            color: #8b1828;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+
+        /* ----------------------------------------------------
+           Grid View Cards (Unslop & Tasteful Craft)
+           ---------------------------------------------------- */
+        .org-activity-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .org-grid-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1.5px solid #f0e6e8;
+            padding: 1.4rem;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .org-grid-card:hover {
+            transform: translateY(-3px);
+            border-color: #f1c0c9;
+            box-shadow: 0 10px 28px rgba(139, 24, 40, 0.09);
+        }
+
+        .org-grid-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .org-grid-org-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #fdf0f2;
+            color: #8b1828;
+            font-size: 0.74rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid #fae0e5;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .org-grid-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin: 0 0 0.5rem;
+            line-height: 1.35;
+            letter-spacing: -0.01em;
+        }
+
+        .org-grid-card-type {
+            font-size: 0.78rem;
+            color: #786f73;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .org-grid-card-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.82rem;
+            color: #635b5e;
+            padding: 0.75rem 0;
+            border-top: 1px dashed #f2e9eb;
+            border-bottom: 1px dashed #f2e9eb;
+            margin-bottom: 1rem;
+        }
+
+        .org-grid-card-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .org-grid-card-meta i {
+            color: #8b1828;
+            font-size: 0.85rem;
+        }
+
+        .org-grid-card-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 0.25rem;
+        }
+
+        .org-grid-doc-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #635b5e;
+            background: #faf6f7;
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            border: 1px solid #f0e6e8;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .org-grid-action-link {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #8b1828;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: transform 0.15s ease;
+        }
+
+        .org-grid-card:hover .org-grid-action-link {
+            transform: translateX(3px);
+        }
+
+        /* ----------------------------------------------------
+           List Table View (Crisp, High-Craft Data Table)
+           ---------------------------------------------------- */
+        .org-activity-table-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1.5px solid #f0e6e8;
+            overflow: hidden;
+            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
+            margin-bottom: 1.75rem;
+        }
+
+        .org-table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .org-proposals-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .org-proposals-table thead th {
+            background: #faf6f7;
+            padding: 0.85rem 1.15rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #706569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid #eee4e6;
+            white-space: nowrap;
+        }
+
+        .org-proposals-table tbody tr {
+            border-bottom: 1px solid #f6eff0;
+            transition: background 0.15s ease;
+            cursor: pointer;
+        }
+
+        .org-proposals-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .org-proposals-table tbody tr:hover {
+            background: #fdf8f9;
+        }
+
+        .org-proposals-table td {
+            padding: 1rem 1.15rem;
+            vertical-align: middle;
+            color: #1a1618;
+        }
+
+        .org-table-title-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .org-table-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #fdf0f2;
+            color: #961b2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            border: 1px solid #fae0e5;
+        }
+
+        .org-table-title-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+        }
+
+        .org-table-main-title {
+            font-weight: 700;
+            color: #1a1618;
+            font-size: 0.92rem;
+            margin: 0;
+            text-decoration: none;
+        }
+
+        .org-table-sub-text {
+            font-size: 0.78rem;
+            color: #786f73;
+        }
+
+        .org-table-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            width: 96px;
+            height: 32px;
+            padding: 0 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #8b1828;
+            background: #fdf0f2;
+            border: 1px solid #f8d7dc;
+            text-decoration: none;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+
+        .org-table-action-btn:hover {
+            background: #8b1828;
+            color: #ffffff;
+            border-color: #8b1828;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(139, 24, 40, 0.15);
+        }
+
+        .org-table-action-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Empty State */
+        .org-empty-state {
+            padding: 3.5rem 1.5rem;
+            text-align: center;
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1.5px dashed #e8dedf;
+            margin-bottom: 1.75rem;
+            display: none;
+        }
+
+        .org-empty-state-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #fdf0f2;
+            color: #8b1828;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .org-empty-state h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a1618;
+            margin: 0 0 0.35rem;
+        }
+
+        .org-empty-state p {
+            font-size: 0.86rem;
+            color: #786f73;
+            margin: 0 0 1.25rem;
         }
 
         /* Activity List Rows */
@@ -998,19 +1399,19 @@
 
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1rem;">
-                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Step 1: Student Org</span>
-                            <strong style="display: block; font-size: 0.88rem; color: #0f172a; margin: 0.2rem 0;">Proposal Submitted</strong>
+                        <div style="background: #ffffff; border: 1.5px solid #f0e6e8; border-radius: 14px; padding: 0.85rem 1rem;">
+                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #7a7074; text-transform: uppercase;">Step 1: Student Org</span>
+                            <strong style="display: block; font-size: 0.88rem; color: #1a1618; margin: 0.2rem 0;">Proposal Submitted</strong>
                             <small style="color: #16a34a; font-weight: 700;"><i class="bi bi-check2"></i> Complete Dossier</small>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1rem;">
-                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Step 2: OSO Desk</span>
-                            <strong style="display: block; font-size: 0.88rem; color: #0f172a; margin: 0.2rem 0;">Initial Endorsement</strong>
+                        <div style="background: #ffffff; border: 1.5px solid #f0e6e8; border-radius: 14px; padding: 0.85rem 1rem;">
+                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #7a7074; text-transform: uppercase;">Step 2: OSO Desk</span>
+                            <strong style="display: block; font-size: 0.88rem; color: #1a1618; margin: 0.2rem 0;">Initial Endorsement</strong>
                             <small style="color: #16a34a; font-weight: 700;"><i class="bi bi-check2"></i> Compliance Verified</small>
                         </div>
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1rem;">
-                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Step 3: SDO Desk</span>
-                            <strong style="display: block; font-size: 0.88rem; color: #0f172a; margin: 0.2rem 0;">SDG Certified</strong>
+                        <div style="background: #ffffff; border: 1.5px solid #f0e6e8; border-radius: 14px; padding: 0.85rem 1rem;">
+                            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #7a7074; text-transform: uppercase;">Step 3: SDO Desk</span>
+                            <strong style="display: block; font-size: 0.88rem; color: #1a1618; margin: 0.2rem 0;">SDG Certified</strong>
                             <small style="color: #16a34a; font-weight: 700;"><i class="bi bi-check2"></i> SDG 4 &amp; 12 Aligned</small>
                         </div>
                     </div>
@@ -1124,70 +1525,195 @@
         </script>
 
     @else
-        {{-- ============================ ACTIVITIES LIST VIEW ============================ --}}
+        {{-- ============================ ACTIVITIES & PROPOSALS LIST VIEW ============================ --}}
         
-        {{-- Top Filter Pills (Excluded Draft and Completed as requested) --}}
-        <div class="org-filter-pills-row" id="orgFilterPills">
-            <button type="button" class="org-filter-pill-btn is-active" data-filter="all">
-                All Activities ({{ count($activities) }})
-            </button>
-            <button type="button" class="org-filter-pill-btn" data-filter="for_approval">
-                For Approval ({{ $forApprovalCount }})
-            </button>
-            <button type="button" class="org-filter-pill-btn" data-filter="approved">
-                Approved ({{ $approvedCount }})
-            </button>
-            <button type="button" class="org-filter-pill-btn" data-filter="in_review">
-                In Review ({{ $inReviewCount }})
-            </button>
-            <button type="button" class="org-filter-pill-btn" data-filter="returned">
-                Returned ({{ $returnedCount }})
-            </button>
+        {{-- Controls Toolbar: Filter Pills, Search Bar & Grid/Table Switcher --}}
+        <div class="org-controls-toolbar">
+            <div class="org-filter-pills-row" id="orgFilterPills">
+                <button type="button" class="org-filter-pill-btn is-active" data-filter="all">
+                    All {{ $isOso ? 'Proposals' : 'Activities' }} ({{ count($activities) }})
+                </button>
+                <button type="button" class="org-filter-pill-btn" data-filter="for_approval">
+                    For Approval ({{ $forApprovalCount }})
+                </button>
+                <button type="button" class="org-filter-pill-btn" data-filter="approved">
+                    Approved ({{ $approvedCount }})
+                </button>
+                <button type="button" class="org-filter-pill-btn" data-filter="in_review">
+                    In Review ({{ $inReviewCount }})
+                </button>
+                <button type="button" class="org-filter-pill-btn" data-filter="returned">
+                    Returned ({{ $returnedCount }})
+                </button>
+            </div>
+
+            <div class="org-toolbar-actions">
+                {{-- Live Search Input --}}
+                <div class="org-proposals-search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="orgProposalSearch" placeholder="Search {{ $isOso ? 'proposals' : 'activities' }}..." aria-label="Search proposals">
+                </div>
+
+                {{-- Grid vs List Table View Switcher --}}
+                <div class="org-view-toggle" role="group" aria-label="View layout switcher">
+                    <button type="button" class="org-view-btn is-active" id="viewToggleGrid" data-view="grid" title="Grid View">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Grid</span>
+                    </button>
+                    <button type="button" class="org-view-btn" id="viewToggleTable" data-view="table" title="List Table View">
+                        <i class="bi bi-view-list"></i>
+                        <span>Table</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        {{-- Activity Cards List --}}
-        <div class="org-activity-rows-container" id="orgActivityList">
+        {{-- 1. GRID VIEW (Cards Grid) --}}
+        <div class="org-activity-grid-container" id="orgActivityGrid">
             @foreach ($activities as $item)
-                <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" class="org-activity-row-card" data-category="{{ $item['filter_category'] }}">
-                    <div class="org-activity-row-left">
-                        <div class="org-activity-icon-badge">
-                            @if ($isSdo)
-                                <i class="bi bi-leaf-fill"></i>
-                            @elseif ($isOvcaa)
-                                <i class="bi bi-patch-check-fill"></i>
+                <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" 
+                   class="org-grid-card org-item-element" 
+                   data-category="{{ $item['filter_category'] }}"
+                   data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
+                    
+                    <div>
+                        <div class="org-grid-card-head">
+                            @if (!empty($item['organization']))
+                                <span class="org-grid-org-chip" title="{{ $item['organization'] }}">
+                                    <i class="bi bi-building"></i> {{ $item['organization'] }}
+                                </span>
                             @else
-                                <i class="bi bi-lightning-charge-fill"></i>
+                                <span></span>
                             @endif
-                        </div>
-                        <div class="org-activity-row-info">
-                            <h3 class="org-activity-row-title">{{ $item['title'] }}</h3>
-                            <div class="org-activity-row-meta">
-                                <span><i class="bi bi-calendar3"></i> {{ $item['date'] }}</span>
-                                <span><i class="bi bi-geo-alt-fill"></i> {{ $item['location'] }}</span>
-                                @if (!empty($item['organization']))
-                                    <span><i class="bi bi-building"></i> {{ $item['organization'] }}</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="org-activity-row-right">
-                        <div class="org-activity-row-status-col">
                             <span class="org-status-pill org-status-{{ $item['badge_style'] }}">
                                 <span class="org-status-dot"></span> {{ $item['status'] }}
                             </span>
-                            <small class="org-status-timestamp">{{ $item['timestamp_note'] }}</small>
                         </div>
-                        <div class="org-activity-chevron-btn" aria-hidden="true">
-                            <i class="bi bi-chevron-right"></i>
+
+                        <h3 class="org-grid-card-title">{{ $item['title'] }}</h3>
+                        
+                        @if (!empty($item['activity_type']))
+                            <div class="org-grid-card-type">
+                                <i class="bi bi-tag-fill" style="color: #8b1828;"></i> {{ $item['activity_type'] }}
+                            </div>
+                        @endif
+
+                        <div class="org-grid-card-meta">
+                            <span><i class="bi bi-calendar3"></i> {{ $item['date'] }}</span>
+                            <span><i class="bi bi-geo-alt-fill"></i> {{ $item['location'] }}</span>
                         </div>
+                    </div>
+
+                    <div class="org-grid-card-foot">
+                        <span class="org-grid-doc-badge">
+                            <i class="bi bi-file-earmark-text-fill" style="color: #8b1828;"></i>
+                            {{ count($item['documents'] ?? []) }} Docs attached
+                        </span>
+                        <span class="org-grid-action-link">
+                            {{ $isOso ? 'Review Proposal' : 'View Details' }} <i class="bi bi-arrow-right"></i>
+                        </span>
                     </div>
                 </a>
             @endforeach
         </div>
 
+        {{-- 2. LIST TABLE VIEW (Structured Data Table) --}}
+        <div class="org-activity-table-card" id="orgActivityTableWrap" style="display: none;">
+            <div class="org-table-responsive">
+                <table class="org-proposals-table">
+                    <thead>
+                        <tr>
+                            <th>{{ $isOso ? 'Activity Proposal' : 'Activity Name' }}</th>
+                            <th>Submitting Org</th>
+                            <th>Type</th>
+                            <th>Schedule &amp; Location</th>
+                            <th>Documents</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orgProposalsTableBody">
+                        @foreach ($activities as $item)
+                            <tr class="org-table-row org-item-element" 
+                                onclick="window.location.href='{{ route('office.activities', ['activity' => $item['slug']]) }}'"
+                                data-category="{{ $item['filter_category'] }}"
+                                data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
+                                <td>
+                                    <div class="org-table-title-cell">
+                                        <div class="org-table-icon">
+                                            @if ($isSdo)
+                                                <i class="bi bi-leaf-fill"></i>
+                                            @elseif ($isOvcaa)
+                                                <i class="bi bi-patch-check-fill"></i>
+                                            @else
+                                                <i class="bi bi-file-earmark-check-fill"></i>
+                                            @endif
+                                        </div>
+                                        <div class="org-table-title-wrap">
+                                            <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" class="org-table-main-title">
+                                                {{ $item['title'] }}
+                                            </a>
+                                            <span class="org-table-sub-text">{{ $item['timestamp_note'] }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!empty($item['organization']))
+                                        <span class="org-grid-org-chip" style="max-width: 170px;">
+                                            <i class="bi bi-building"></i> {{ $item['organization'] }}
+                                        </span>
+                                    @else
+                                        <span style="color: #8c8286;">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.8rem; font-weight: 600; color: #4b4548;">
+                                        {{ $item['activity_type'] ?? 'General' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.8rem; color: #554d50;">
+                                        <span><i class="bi bi-calendar3" style="color: #8b1828; margin-right: 0.25rem;"></i> {{ $item['date'] }}</span>
+                                        <span style="color: #786f73;"><i class="bi bi-geo-alt-fill" style="color: #8b1828; margin-right: 0.25rem;"></i> {{ $item['location'] }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="org-grid-doc-badge">
+                                        <i class="bi bi-file-earmark-text" style="color: #8b1828;"></i> {{ count($item['documents'] ?? []) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="org-status-pill org-status-{{ $item['badge_style'] }}">
+                                        <span class="org-status-dot"></span> {{ $item['status'] }}
+                                    </span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" class="org-table-action-btn" onclick="event.stopPropagation();">
+                                        {{ $isOso ? 'Review' : 'View' }} <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Empty Search / Filter State --}}
+        <div class="org-empty-state" id="orgEmptyState">
+            <div class="org-empty-state-icon">
+                <i class="bi bi-inbox"></i>
+            </div>
+            <h3>No matching {{ $isOso ? 'proposals' : 'activities' }} found</h3>
+            <p>Try adjusting your search query or filter category to find what you're looking for.</p>
+            <button type="button" class="org-btn org-btn-outline" id="orgResetFilterBtn" style="padding: 0.4rem 1.2rem; font-size: 0.84rem;">
+                Reset Filters
+            </button>
+        </div>
+
         {{-- Pagination Footer --}}
-        <div class="org-pagination-footer">
-            <span id="orgActivityCountText">Showing 1 to {{ count($activities) }} of {{ count($activities) }} activities</span>
+        <div class="org-pagination-footer" id="orgPaginationFooter">
+            <span id="orgActivityCountText">Showing 1 to {{ count($activities) }} of {{ count($activities) }} {{ $isOso ? 'proposals' : 'activities' }}</span>
             <div class="org-pagination-controls">
                 <button type="button" class="org-page-btn" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>
                 <button type="button" class="org-page-btn is-active">1</button>
@@ -1196,36 +1722,127 @@
             </div>
         </div>
 
-        {{-- Front-End Filter Interactivity --}}
+        {{-- Front-End View Toggle, Live Search & Filter Script --}}
         <script>
             document.addEventListener('DOMContentLoaded', function () {
+                const gridView = document.getElementById('orgActivityGrid');
+                const tableView = document.getElementById('orgActivityTableWrap');
+                const btnGrid = document.getElementById('viewToggleGrid');
+                const btnTable = document.getElementById('viewToggleTable');
+                const searchInput = document.getElementById('orgProposalSearch');
                 const filterBtns = document.querySelectorAll('#orgFilterPills .org-filter-pill-btn');
-                const activityCards = document.querySelectorAll('#orgActivityList .org-activity-row-card');
+                const emptyState = document.getElementById('orgEmptyState');
                 const countText = document.getElementById('orgActivityCountText');
+                const resetBtn = document.getElementById('orgResetFilterBtn');
+                const paginationFooter = document.getElementById('orgPaginationFooter');
+                const isOso = {{ $isOso ? 'true' : 'false' }};
+                const entityName = isOso ? 'proposals' : 'activities';
 
+                let currentView = localStorage.getItem('org_proposal_view_mode') || 'grid';
+                let currentFilter = 'all';
+                let currentSearch = '';
+
+                function setViewMode(mode) {
+                    currentView = mode;
+                    localStorage.setItem('org_proposal_view_mode', mode);
+
+                    if (mode === 'grid') {
+                        gridView.style.display = 'grid';
+                        tableView.style.display = 'none';
+                        btnGrid.classList.add('is-active');
+                        btnTable.classList.remove('is-active');
+                    } else {
+                        gridView.style.display = 'none';
+                        tableView.style.display = 'block';
+                        btnGrid.classList.remove('is-active');
+                        btnTable.classList.add('is-active');
+                    }
+                    applyFilters();
+                }
+
+                btnGrid.addEventListener('click', () => setViewMode('grid'));
+                btnTable.addEventListener('click', () => setViewMode('table'));
+
+                // Initialize view preference
+                setViewMode(currentView);
+
+                function applyFilters() {
+                    const gridItems = gridView.querySelectorAll('.org-grid-card');
+                    const tableItems = tableView.querySelectorAll('.org-table-row');
+                    let visibleCount = 0;
+
+                    const activeItems = currentView === 'grid' ? gridItems : tableItems;
+
+                    // Filter grid items
+                    gridItems.forEach(item => {
+                        const matchesCategory = currentFilter === 'all' || item.getAttribute('data-category') === currentFilter;
+                        const matchesSearch = !currentSearch || item.getAttribute('data-search').includes(currentSearch);
+                        const isVisible = matchesCategory && matchesSearch;
+                        item.style.display = isVisible ? 'flex' : 'none';
+                    });
+
+                    // Filter table items
+                    tableItems.forEach(item => {
+                        const matchesCategory = currentFilter === 'all' || item.getAttribute('data-category') === currentFilter;
+                        const matchesSearch = !currentSearch || item.getAttribute('data-search').includes(currentSearch);
+                        const isVisible = matchesCategory && matchesSearch;
+                        item.style.display = isVisible ? '' : 'none';
+                        if (isVisible) visibleCount++;
+                    });
+
+                    // In case grid is active, compute count
+                    if (currentView === 'grid') {
+                        visibleCount = Array.from(gridItems).filter(item => item.style.display === 'flex').length;
+                    }
+
+                    // Handle empty state & count
+                    if (visibleCount === 0) {
+                        emptyState.style.display = 'block';
+                        if (currentView === 'grid') gridView.style.display = 'none';
+                        if (currentView === 'table') tableView.style.display = 'none';
+                        if (paginationFooter) paginationFooter.style.display = 'none';
+                    } else {
+                        emptyState.style.display = 'none';
+                        if (currentView === 'grid') gridView.style.display = 'grid';
+                        if (currentView === 'table') tableView.style.display = 'block';
+                        if (paginationFooter) paginationFooter.style.display = 'flex';
+                    }
+
+                    if (countText) {
+                        countText.textContent = `Showing 1 to ${visibleCount} of ${visibleCount} ${entityName}`;
+                    }
+                }
+
+                // Filter Pill Click Handlers
                 filterBtns.forEach(btn => {
                     btn.addEventListener('click', function () {
                         filterBtns.forEach(b => b.classList.remove('is-active'));
                         this.classList.add('is-active');
-
-                        const filter = this.getAttribute('data-filter');
-                        let visibleCount = 0;
-
-                        activityCards.forEach(card => {
-                            const category = card.getAttribute('data-category');
-                            if (filter === 'all' || category === filter) {
-                                card.style.display = 'flex';
-                                visibleCount++;
-                            } else {
-                                card.style.display = 'none';
-                            }
-                        });
-
-                        if (countText) {
-                            countText.textContent = `Showing 1 to ${visibleCount} of ${visibleCount} activities`;
-                        }
+                        currentFilter = this.getAttribute('data-filter');
+                        applyFilters();
                     });
                 });
+
+                // Search Input Handler
+                if (searchInput) {
+                    searchInput.addEventListener('input', function () {
+                        currentSearch = this.value.toLowerCase().trim();
+                        applyFilters();
+                    });
+                }
+
+                // Reset Filters
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', function () {
+                        currentFilter = 'all';
+                        currentSearch = '';
+                        if (searchInput) searchInput.value = '';
+                        filterBtns.forEach(b => {
+                            b.classList.toggle('is-active', b.getAttribute('data-filter') === 'all');
+                        });
+                        applyFilters();
+                    });
+                }
             });
         </script>
     @endif

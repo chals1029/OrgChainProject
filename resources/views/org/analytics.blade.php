@@ -3,7 +3,7 @@
 @section('title', 'Analytics & Financial Intelligence')
 
 @section('header')
-    <h1><strong>Activity Performance and Reporting insights</h1>
+    <h1><strong>Activity Performance and Reporting insights</strong></h1>
     <p class="org-welcome">Comprehensive budget utilization, allocation trends, and activity financial breakdowns.</p>
 @endsection
 
@@ -15,106 +15,154 @@
 
 @section('content')
     <style>
-        /* Connected Filter Toolbar (Matching Mockup) */
-        .org-connected-filter-bar {
+        /* ---------------------------------------------------------
+           Interactive Dashboard Period & Date Filter Toolbar (Unslop & Impeccable Style)
+           --------------------------------------------------------- */
+        .oso-filter-bar-card {
             background: #ffffff;
             border-radius: 20px;
-            border: 1.5px solid #eae0e2;
-            padding: 0.5rem 0.85rem 0.5rem 1.15rem;
-            margin-bottom: 1.75rem;
+            border: 1.5px solid #f0e6e8;
+            padding: 0.95rem 1.35rem;
+            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 4px 20px rgba(90, 15, 30, 0.04);
+            gap: 1.25rem;
             flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .oso-filter-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 1.15rem;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .oso-filter-bar-title {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #8b1828;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-right: 0.25rem;
+        }
+
+        .oso-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .oso-filter-label {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #706569;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .oso-select-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .oso-filter-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background: #fdfafb;
+            border: 1.5px solid #f0e0e3;
+            border-radius: 9999px;
+            padding: 0.42rem 2.1rem 0.42rem 0.95rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #2b2427;
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .oso-filter-select:hover {
+            background: #ffffff;
+            border-color: #8b1828;
+        }
+
+        .oso-filter-select:focus {
+            background: #ffffff;
+            border-color: #8b1828;
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.12);
+        }
+
+        .oso-select-arrow {
+            position: absolute;
+            right: 0.75rem;
+            pointer-events: none;
+            font-size: 0.65rem;
+            color: #8b1828;
+            transition: transform 0.15s ease;
+        }
+
+        .oso-filter-bar-right {
+            display: flex;
+            align-items: center;
             gap: 0.75rem;
         }
 
-        .org-filter-controls-group {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .org-filter-calendar-badge {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            background: #e0f2fe;
-            color: #0284c7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            margin-right: 1rem;
-            border: 1.5px solid #bae6fd;
-            flex-shrink: 0;
-        }
-
-        .org-filter-segment {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            position: relative;
-            font-size: 0.92rem;
-            font-weight: 500;
-            color: #4b4548;
-        }
-
-        .org-filter-label {
-            color: #3b3336;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .org-filter-dropdown {
-            appearance: none;
-            -webkit-appearance: none;
-            background: transparent;
-            border: none;
-            outline: none;
-            font-family: inherit;
-            font-size: 0.92rem;
-            font-weight: 700;
-            color: #1a1618;
-            cursor: pointer;
-            padding-right: 1.15rem;
-        }
-
-        .org-select-chevron {
-            font-size: 0.72rem;
-            color: #7a7074;
-            pointer-events: none;
-            margin-left: -0.85rem;
-        }
-
-        .org-filter-divider {
-            width: 1.5px;
-            height: 22px;
-            background: #e2d8da;
-            margin: 0 1.25rem;
-            display: inline-block;
-        }
-
-        .org-btn-export-bar {
-            background: #4a0d18;
-            color: #ffffff;
-            padding: 0.55rem 1.35rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.86rem;
-            border: none;
-            cursor: pointer;
+        .oso-filter-reset-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.35rem;
+            padding: 0.42rem 0.85rem;
+            border-radius: 9999px;
+            background: #faf4f5;
+            border: 1px solid #ebd5d8;
+            color: #7a2030;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
             transition: all 0.15s ease;
-            box-shadow: 0 3px 12px rgba(74, 10, 21, 0.25);
         }
 
-        .org-btn-export-bar:hover {
-            background: #6a1020;
-            transform: translateY(-1px);
+        .oso-filter-reset-btn:hover {
+            background: #8b1828;
+            color: #ffffff;
+            border-color: #8b1828;
+            box-shadow: 0 2px 8px rgba(139, 24, 40, 0.2);
+        }
+
+        .oso-filter-reset-btn:hover i {
+            transform: rotate(-180deg);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .oso-filter-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .oso-filter-status-badge.is-filtered {
+            background: #fefce8;
+            color: #b45309;
+            border-color: #fef08a;
         }
 
         .org-btn-export-top {
@@ -352,6 +400,19 @@
         }
 
         @media (max-width: 992px) {
+            .oso-filter-bar-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .oso-filter-bar-right {
+                width: 100%;
+                justify-content: space-between;
+                padding-top: 0.5rem;
+                border-top: 1px solid #f6eff0;
+            }
+            .oso-filter-bar-left {
+                width: 100%;
+            }
             .org-health-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -370,61 +431,88 @@
         }
     </style>
 
-    {{-- Top Connected Filter Bar (Matching Mockup) --}}
-    <div class="org-connected-filter-bar">
-        <div class="org-filter-controls-group">
-            <div class="org-filter-calendar-badge">
-                <i class="bi bi-calendar2-date"></i>
-            </div>
-            
-            <div class="org-filter-segment">
-                <span class="org-filter-label">Year:</span>
-                <select id="yearFilter" class="org-filter-dropdown" onchange="updateAnalyticsData()">
-                    <option value="Select Year" selected>Select Year</option>
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                </select>
-                <i class="bi bi-chevron-down org-select-chevron"></i>
+    {{-- Interactive Period & Date Filter Toolbar (Matching OSO Dashboard Filter Style) --}}
+    <section class="oso-filter-bar-card" aria-label="Analytics Intelligence Filters">
+        <div class="oso-filter-bar-left">
+            <div class="oso-filter-bar-title">
+                <i class="bi bi-funnel-fill"></i>
+                <span>Filters:</span>
             </div>
 
-            <span class="org-filter-divider"></span>
-
-            <div class="org-filter-segment">
-                <span class="org-filter-label">Month:</span>
-                <select id="monthFilter" class="org-filter-dropdown" onchange="updateAnalyticsData()">
-                    <option value="all" selected>All Months</option>
-                    <option value="Jan">January</option>
-                    <option value="Feb">February</option>
-                    <option value="Mar">March</option>
-                    <option value="Apr">April</option>
-                    <option value="May">May</option>
-                    <option value="Jun">June</option>
-                    <option value="Jul">July</option>
-                    <option value="Aug">August</option>
-                    <option value="Sep">September</option>
-                    <option value="Oct">October</option>
-                    <option value="Nov">November</option>
-                    <option value="Dec">December</option>
-                </select>
-                <i class="bi bi-chevron-down org-select-chevron"></i>
+            {{-- Academic Year Filter --}}
+            <div class="oso-filter-group">
+                <label for="yearFilter" class="oso-filter-label"><i class="bi bi-calendar2-range"></i> Year</label>
+                <div class="oso-select-wrapper">
+                    <select id="yearFilter" class="oso-filter-select" onchange="updateAnalyticsData()">
+                        <option value="2026" selected>A.Y. 2025–2026 (Current)</option>
+                        <option value="2025">A.Y. 2024–2025</option>
+                        <option value="2024">A.Y. 2023–2024</option>
+                        <option value="all">All Academic Years</option>
+                    </select>
+                    <i class="bi bi-chevron-down oso-select-arrow"></i>
+                </div>
             </div>
 
-            <span class="org-filter-divider"></span>
+            {{-- Semester Filter --}}
+            <div class="oso-filter-group">
+                <label for="semesterFilter" class="oso-filter-label"><i class="bi bi-bookmark"></i> Semester</label>
+                <div class="oso-select-wrapper">
+                    <select id="semesterFilter" class="oso-filter-select" onchange="updateAnalyticsData()">
+                        <option value="all" selected>All Semesters</option>
+                        <option value="sem1">1st Semester</option>
+                        <option value="sem2">2nd Semester</option>
+                        <option value="midyear">Midyear Term</option>
+                    </select>
+                    <i class="bi bi-chevron-down oso-select-arrow"></i>
+                </div>
+            </div>
 
-            <div class="org-filter-segment">
-                <span class="org-filter-label">Scope:</span>
-                <select id="scopeFilter" class="org-filter-dropdown" onchange="updateAnalyticsData()">
-                    <option value="all" selected>All Scopes</option>
-                    <option value="in_campus" >In-Campus</option>
-                    <option value="local_off_campus">Off-Campus</option>
-                </select>
-                <i class="bi bi-chevron-down org-select-chevron"></i>
+            {{-- Month Filter --}}
+            <div class="oso-filter-group">
+                <label for="monthFilter" class="oso-filter-label"><i class="bi bi-calendar3"></i> Month</label>
+                <div class="oso-select-wrapper">
+                    <select id="monthFilter" class="oso-filter-select" onchange="updateAnalyticsData()">
+                        <option value="all" selected>All Months</option>
+                        <option value="Jan">January</option>
+                        <option value="Feb">February</option>
+                        <option value="Mar">March</option>
+                        <option value="Apr">April</option>
+                        <option value="May">May</option>
+                        <option value="Jun">June</option>
+                        <option value="Jul">July</option>
+                        <option value="Aug">August</option>
+                        <option value="Sep">September</option>
+                        <option value="Oct">October</option>
+                        <option value="Nov">November</option>
+                        <option value="Dec">December</option>
+                    </select>
+                    <i class="bi bi-chevron-down oso-select-arrow"></i>
+                </div>
+            </div>
+
+            {{-- Scope Filter --}}
+            <div class="oso-filter-group">
+                <label for="scopeFilter" class="oso-filter-label"><i class="bi bi-geo-alt"></i> Scope</label>
+                <div class="oso-select-wrapper">
+                    <select id="scopeFilter" class="oso-filter-select" onchange="updateAnalyticsData()">
+                        <option value="all" selected>All Scopes</option>
+                        <option value="in_campus">In-Campus Only</option>
+                        <option value="local_off_campus">Off-Campus Only</option>
+                    </select>
+                    <i class="bi bi-chevron-down oso-select-arrow"></i>
+                </div>
             </div>
         </div>
 
-       
-    </div>
+        <div class="oso-filter-bar-right">
+            <button type="button" class="oso-filter-reset-btn" onclick="resetAnalyticsFilters()" title="Reset all filters">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+            </button>
+            <span class="oso-filter-status-badge" id="analyticsActiveFilterBadge">
+                <i class="bi bi-check2-circle"></i> Live Insights
+            </span>
+        </div>
+    </section>
 
     {{-- 1. Overall Budget Health KPIs --}}
     <div class="org-health-grid">
@@ -757,34 +845,80 @@
             });
         }
 
+        function resetAnalyticsFilters() {
+            document.getElementById('yearFilter').value = '2026';
+            document.getElementById('semesterFilter').value = 'all';
+            document.getElementById('monthFilter').value = 'all';
+            document.getElementById('scopeFilter').value = 'all';
+            updateAnalyticsData();
+        }
+
         function updateAnalyticsData() {
             const year = document.getElementById('yearFilter').value;
+            const semester = document.getElementById('semesterFilter').value;
             const month = document.getElementById('monthFilter').value;
             const scope = document.getElementById('scopeFilter').value;
 
-            document.getElementById('chartPeriodBadge').innerText = 'FY ' + year + ' · ' + (month === 'all' ? 'All Months' : month);
+            // Semester to months mapping
+            const semesterMonths = {
+                'sem1': ['Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'sem2': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                'midyear': ['Jun', 'Jul']
+            };
+
+            // Build period badge text
+            let periodText = (year === 'all' ? 'All Years' : 'FY ' + year);
+            if (month !== 'all') {
+                periodText += ' · ' + month;
+            } else if (semester !== 'all') {
+                const semNames = { 'sem1': '1st Sem', 'sem2': '2nd Sem', 'midyear': 'Midyear' };
+                periodText += ' · ' + (semNames[semester] || semester);
+            } else {
+                periodText += ' · All Months';
+            }
+            const chartBadge = document.getElementById('chartPeriodBadge');
+            if (chartBadge) {
+                chartBadge.innerText = periodText;
+            }
 
             // Filter Table rows
             const rows = document.querySelectorAll('#activityFinancialTableBody tr');
+            let visibleCount = 0;
+
             rows.forEach(tr => {
                 const trScope = tr.getAttribute('data-scope');
                 const trMonth = tr.getAttribute('data-month');
                 const trYear = tr.getAttribute('data-year');
 
-                let matchScope = (scope === 'all' || trScope === scope);
+                let matchScope = (scope === 'all' || trScope === scope || (scope === 'in_campus' && trScope === 'in_campus') || (scope === 'local_off_campus' && trScope === 'local_off_campus'));
                 let matchMonth = (month === 'all' || trMonth === month);
-                let matchYear = (trYear === year);
+                let matchSemester = (semester === 'all' || (semesterMonths[semester] && semesterMonths[semester].includes(trMonth)));
+                let matchYear = (year === 'all' || trYear === year);
 
-                if (matchScope && matchMonth && matchYear) {
+                if (matchScope && matchMonth && matchSemester && matchYear) {
                     tr.style.display = '';
-                } else if (scope === 'all' && month === 'all') {
-                    tr.style.display = '';
+                    visibleCount++;
                 } else {
                     tr.style.display = 'none';
                 }
             });
 
-            // Adjust chart data based on filter selection
+            // Update live filter status badge
+            const statusBadge = document.getElementById('analyticsActiveFilterBadge');
+            const isFiltered = (year !== '2026' || semester !== 'all' || month !== 'all' || scope !== 'all');
+            if (statusBadge) {
+                if (isFiltered) {
+                    statusBadge.classList.add('is-filtered');
+                    statusBadge.innerHTML = '<i class="bi bi-funnel-fill"></i> Filtered (' + visibleCount + ' ' + (visibleCount === 1 ? 'result' : 'results') + ')';
+                } else {
+                    statusBadge.classList.remove('is-filtered');
+                    statusBadge.innerHTML = '<i class="bi bi-check2-circle"></i> Live Insights';
+                }
+            }
+
+            // Adjust Chart Data
+            if (!utilVsAllocChartInstance) return;
+
             if (month !== 'all') {
                 const idx = defaultMonthlyData.labels.indexOf(month);
                 if (idx !== -1) {
@@ -792,6 +926,24 @@
                     utilVsAllocChartInstance.data.datasets[0].data = [defaultMonthlyData.allocated[idx]];
                     utilVsAllocChartInstance.data.datasets[1].data = [defaultMonthlyData.utilized[idx]];
                 }
+            } else if (semester !== 'all' && semesterMonths[semester]) {
+                const targetMonths = semesterMonths[semester];
+                const filteredLabels = [];
+                const filteredAlloc = [];
+                const filteredUtil = [];
+
+                targetMonths.forEach(m => {
+                    const idx = defaultMonthlyData.labels.indexOf(m);
+                    if (idx !== -1) {
+                        filteredLabels.push(m);
+                        filteredAlloc.push(defaultMonthlyData.allocated[idx]);
+                        filteredUtil.push(defaultMonthlyData.utilized[idx]);
+                    }
+                });
+
+                utilVsAllocChartInstance.data.labels = filteredLabels;
+                utilVsAllocChartInstance.data.datasets[0].data = filteredAlloc;
+                utilVsAllocChartInstance.data.datasets[1].data = filteredUtil;
             } else {
                 utilVsAllocChartInstance.data.labels = defaultMonthlyData.labels;
                 utilVsAllocChartInstance.data.datasets[0].data = defaultMonthlyData.allocated;
