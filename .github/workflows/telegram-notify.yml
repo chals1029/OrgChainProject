@@ -1,0 +1,38 @@
+name: Telegram GitHub Notifications
+
+on:
+  push:
+
+jobs:
+  notify-telegram:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send push notification to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUSHER: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+
+        run: |
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          MESSAGE="🚀 GitHub Push Detected!
+
+          👤 Pushed by: $PUSHER
+          📦 Repository: $REPOSITORY
+          🌿 Branch: $BRANCH
+          💬 Commit: $COMMIT_MESSAGE
+          🔖 Commit ID: $SHORT_SHA
+
+          🔗 https://github.com/$REPOSITORY/commit/$COMMIT_SHA"
+
+          curl --fail --silent --show-error \
+            -X POST \
+            "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}"
