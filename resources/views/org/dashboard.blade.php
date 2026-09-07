@@ -63,20 +63,44 @@
         }
 
         .org-kpi-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 22px;
+            border: 1.5px solid rgba(240, 230, 232, 0.95);
             padding: 1.25rem 1.4rem;
-            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
+            box-shadow: 0 4px 20px rgba(90, 15, 30, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .org-kpi-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3.5px;
+            background: linear-gradient(90deg, transparent, #8b1828, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .org-kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(90, 15, 30, 0.06);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 38px rgba(74, 10, 21, 0.11), 0 3px 10px rgba(74, 10, 21, 0.04);
+            border-color: rgba(139, 24, 40, 0.25);
+        }
+
+        .org-kpi-card:hover::after {
+            opacity: 1;
+        }
+
+        .org-kpi-card:active {
+            transform: translateY(-1px) scale(0.995);
         }
 
         .org-kpi-head {
@@ -87,38 +111,56 @@
         }
 
         .org-kpi-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.15rem;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.18);
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
         }
 
-        .org-kpi-icon.is-pink { background: #fee2e2; color: #dc2626; }
-        .org-kpi-icon.is-green { background: #dcfce7; color: #16a34a; }
-        .org-kpi-icon.is-blue { background: #e0f2fe; color: #0284c7; }
-        .org-kpi-icon.is-amber { background: #fef3c7; color: #d97706; }
+        .org-kpi-card:hover .org-kpi-icon {
+            transform: scale(1.08) rotate(3deg);
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.18), rgba(139, 24, 40, 0.06));
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.28);
+        }
+
+        .org-kpi-icon.is-pink,
+        .org-kpi-icon.is-green,
+        .org-kpi-icon.is-blue,
+        .org-kpi-icon.is-amber {
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.18);
+        }
 
         .org-kpi-num {
-            font-size: 1.85rem;
+            font-size: 1.95rem;
             font-weight: 800;
             color: #1a1618;
             line-height: 1;
+            letter-spacing: -0.02em;
         }
 
         .org-kpi-title {
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             font-weight: 700;
             color: #1a1618;
             margin: 0;
+            letter-spacing: -0.01em;
         }
 
         .org-kpi-sub {
             font-size: 0.76rem;
             color: #7a7074;
             margin: 0;
+            line-height: 1.35;
         }
 
         /* =========================================================================
@@ -2094,13 +2136,13 @@
                 </div>
             </section>
 
-            {{-- 1. TOP EXECUTIVE KPI CARDS (Matching Student Portal Card Style with Number on Right Side of Icon) --}}
+            {{-- 1. TOP EXECUTIVE KPI CARDS (Matching System Theme & Liquid-Glass System) --}}
             <div class="org-kpi-row">
                 
                 {{-- Card 1: Total Organizations --}}
                 <article class="org-kpi-card">
                     <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-pink">
+                        <div class="org-kpi-icon">
                             <i class="bi bi-building"></i>
                         </div>
                         <div class="org-kpi-num" id="kpiTotalOrgsNum">12</div>
@@ -2112,7 +2154,7 @@
                 {{-- Card 2: Pending Transactions --}}
                 <article class="org-kpi-card">
                     <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-amber">
+                        <div class="org-kpi-icon">
                             <i class="bi bi-hourglass-split"></i>
                         </div>
                         <div class="org-kpi-num" id="kpiPendingTrxNum">7</div>
@@ -2124,7 +2166,7 @@
                 {{-- Card 3: Total Submissions --}}
                 <article class="org-kpi-card">
                     <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-green">
+                        <div class="org-kpi-icon">
                             <i class="bi bi-journal-check"></i>
                         </div>
                         <div class="org-kpi-num" id="kpiTotalSubmissionsNum">48</div>
@@ -2136,7 +2178,7 @@
                 {{-- Card 4: Revision Rate --}}
                 <article class="org-kpi-card">
                     <div class="org-kpi-head">
-                        <div class="org-kpi-icon is-blue">
+                        <div class="org-kpi-icon">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </div>
                         <div class="org-kpi-num" id="kpiRevisionRateNum">14.2%</div>
