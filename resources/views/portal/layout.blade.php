@@ -420,7 +420,7 @@
             };
 
             window.updateTosaProgress = function () {
-                const totalReqs = 7;
+                const totalReqs = 5;
                 const uploadedElements = document.querySelectorAll('#spTosaSubmissionsTbody .sp-status-wrap.is-uploaded');
                 const uploadedCount = uploadedElements ? uploadedElements.length : 0;
 
@@ -467,7 +467,7 @@
                     if (stepTime2) stepTime2.innerHTML = '';
                     if (stepLine2) stepLine2.className = 'sp-tosa-timeline-line is-dashed';
                 } else {
-                    // All 7 uploaded & submitted!
+                    // All 5 uploaded & submitted!
                     if (stepNode1) stepNode1.className = 'sp-tosa-timeline-step is-completed';
                     if (stepPill1) {
                         stepPill1.className = 'sp-tosa-node-pill pill-completed';
@@ -491,7 +491,7 @@
                         stepPill2.textContent = 'In Progress';
                     }
                     if (stepTime2) {
-                        stepTime2.innerHTML = '<span>Reviewing CTC...</span>';
+                        stepTime2.innerHTML = '<span>Under Evaluators Review...</span>';
                     }
                     if (stepLine2) stepLine2.className = 'sp-tosa-timeline-line is-blue';
                 }

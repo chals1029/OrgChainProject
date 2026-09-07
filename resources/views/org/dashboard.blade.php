@@ -121,6 +121,446 @@
             margin: 0;
         }
 
+        /* =========================================================================
+           OVCAA Executive Stat Cards — Student Portal Liquid-Glass System & Effects
+           ========================================================================= */
+        .ovcaa-stat-card {
+            border-radius: 22px;
+            padding: 1.15rem 1.25rem 1.2rem;
+            display: grid;
+            gap: 0.35rem;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(240, 230, 232, 0.95);
+            box-shadow: 0 4px 20px rgba(90, 15, 30, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
+            cursor: pointer;
+            text-decoration: none !important;
+            color: inherit;
+        }
+
+        .ovcaa-stat-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3.5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: linear-gradient(90deg, transparent, #8b1828, transparent);
+        }
+
+        .ovcaa-stat-card.is-blue::after,
+        .ovcaa-stat-card.is-green::after,
+        .ovcaa-stat-card.is-amber::after,
+        .ovcaa-stat-card.is-maroon::after {
+            background: linear-gradient(90deg, transparent, #8b1828, transparent);
+        }
+
+        .ovcaa-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 44px rgba(74, 10, 21, 0.12), 0 4px 12px rgba(74, 10, 21, 0.04);
+            border-color: rgba(139, 24, 40, 0.25);
+        }
+
+        .ovcaa-stat-card:hover::after {
+            opacity: 1;
+        }
+
+        .ovcaa-stat-card:active {
+            transform: translateY(-2px) scale(0.99);
+        }
+
+        .ovcaa-stat-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+
+        .ovcaa-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
+        }
+
+        .ovcaa-stat-card:hover .ovcaa-stat-icon {
+            transform: scale(1.08) rotate(3deg);
+        }
+
+        .ovcaa-stat-icon.is-blue,
+        .ovcaa-stat-icon.is-green,
+        .ovcaa-stat-icon.is-amber,
+        .ovcaa-stat-icon.is-maroon {
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
+        }
+
+        .ovcaa-stat-top strong {
+            font-size: clamp(1.65rem, 2.3vw, 2.1rem);
+            color: #1a1618;
+            letter-spacing: -0.035em;
+            font-variant-numeric: tabular-nums;
+            font-weight: 850;
+            line-height: 1;
+            margin-left: auto;
+        }
+
+        .ovcaa-stat-card span.ovcaa-stat-title {
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 0.92rem;
+            letter-spacing: -0.01em;
+            display: block;
+        }
+
+        /* OVCAA Executive Overview Chart & Metrics */
+        .ovcaa-overview-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1.15rem;
+        }
+
+        .ovcaa-metrics-split {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1.25rem;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(253, 240, 242, 0.85) 0%, rgba(255, 255, 255, 0.98) 100%);
+            border: 1.5px solid rgba(240, 230, 232, 0.95);
+            border-radius: 18px;
+            padding: 1.15rem 1.35rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .ovcaa-metrics-split::after {
+            content: "";
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 130px;
+            height: 130px;
+            background: radial-gradient(circle, rgba(139, 24, 40, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .ovcaa-kpi-block span.ovcaa-kpi-subhead {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #8b1828;
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        .ovcaa-kpi-block h2 {
+            font-size: 2.15rem;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin: 0 0 0.35rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .ovcaa-kpi-block p {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        /* Circular Progress / Donut Ring Component */
+        .ovcaa-donut-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            width: 98px;
+            height: 98px;
+            flex-shrink: 0;
+        }
+
+        .ovcaa-donut-svg {
+            transform: rotate(-90deg);
+            width: 98px;
+            height: 98px;
+        }
+
+        .ovcaa-donut-track {
+            fill: none;
+            stroke: #f0e6e8;
+            stroke-width: 8;
+        }
+
+        .ovcaa-donut-fill {
+            fill: none;
+            stroke: url(#ovcaaDonutGrad);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 251.3;
+            stroke-dashoffset: 150.8; /* 40% filled: 251.3 * (1 - 0.40) */
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .ovcaa-donut-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .ovcaa-donut-val {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #8b1828;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .ovcaa-donut-lbl {
+            font-size: 0.58rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #7a7074;
+            margin-top: 3px;
+        }
+
+        /* Segmented Progress Bar */
+        .ovcaa-distribution-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            background: #faf7f8;
+            border: 1px solid #f2e6e8;
+            border-radius: 16px;
+            padding: 0.95rem 1.1rem;
+        }
+
+        .ovcaa-dist-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .ovcaa-dist-head span {
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .ovcaa-dist-head strong {
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .ovcaa-segmented-bar {
+            display: flex;
+            height: 10px;
+            border-radius: 9999px;
+            overflow: hidden;
+            gap: 3px;
+            background: #f0e6e8;
+            padding: 2px;
+        }
+
+        .ovcaa-seg {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.4s ease, filter 0.2s ease;
+        }
+
+        .ovcaa-seg:hover {
+            filter: brightness(1.15);
+        }
+
+        .ovcaa-seg.is-approved {
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+        }
+
+        .ovcaa-seg.is-queue {
+            background: linear-gradient(90deg, #8b1828, #c43b52);
+        }
+
+        .ovcaa-seg.is-revision {
+            background: linear-gradient(90deg, #d97706, #f59e0b);
+        }
+
+        .ovcaa-dist-chips {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin-top: 0.2rem;
+        }
+
+        .ovcaa-dist-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            transition: transform 0.15s ease;
+        }
+
+        .ovcaa-dist-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        .ovcaa-dist-chip.is-approved {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .ovcaa-dist-chip.is-queue {
+            background: #fdf0f2;
+            color: #8b1828;
+            border: 1px solid #f0e6e8;
+        }
+
+        .ovcaa-dist-chip.is-revision {
+            background: #fefce8;
+            color: #b45309;
+            border: 1px solid #fef08a;
+        }
+
+        .ovcaa-dist-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .ovcaa-dist-chip.is-approved .ovcaa-dist-dot { background: #16a34a; }
+        .ovcaa-dist-chip.is-queue .ovcaa-dist-dot { background: #8b1828; }
+        .ovcaa-dist-chip.is-revision .ovcaa-dist-dot { background: #d97706; }
+
+        /* Action Queue & Endorsed Badge */
+        .ovcaa-endorsed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: linear-gradient(135deg, #7a1222, #8b1828);
+            color: #ffffff;
+            padding: 0.28rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            box-shadow: 0 2px 8px rgba(122, 18, 34, 0.25);
+        }
+
+        .ovcaa-action-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.95rem 1.1rem;
+            border-radius: 16px;
+            background: #faf7f8;
+            border: 1.5px solid #f2e6e8;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+            gap: 1rem;
+        }
+
+        .ovcaa-action-item:hover {
+            background: #ffffff;
+            border-color: rgba(139, 24, 40, 0.35);
+            box-shadow: 0 8px 24px rgba(139, 24, 40, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .ovcaa-action-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            min-width: 0;
+        }
+
+        .ovcaa-action-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            background: #fdf0f2;
+            color: #8b1828;
+            border: 1px solid #f0e6e8;
+        }
+
+        .ovcaa-action-meta strong {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ovcaa-action-meta small {
+            display: block;
+            font-size: 0.77rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ovcaa-action-right {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex-shrink: 0;
+        }
+
+        .ovcaa-btn-decide {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.42rem 0.9rem;
+            background: #7a1222;
+            color: #ffffff !important;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(122, 18, 34, 0.25);
+        }
+
+        .ovcaa-btn-decide:hover {
+            background: #62101c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(122, 18, 34, 0.35);
+        }
+
         /* 2-Column Middle Section */
         .org-dash-2col {
             display: grid;
@@ -1361,50 +1801,54 @@
             background: #ffffff;
             border-radius: 20px;
             border: 1.5px solid #f0e6e8;
-            padding: 0.95rem 1.35rem;
+            padding: 0.75rem 1.15rem;
             box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1.25rem;
-            flex-wrap: wrap;
-            margin-bottom: 0.25rem;
+            gap: 0.85rem;
+            flex-wrap: nowrap;
+            margin-bottom: 1.25rem;
         }
 
         .oso-filter-bar-left {
             display: flex;
             align-items: center;
-            gap: 1.15rem;
-            flex-wrap: wrap;
+            gap: 0.75rem;
+            flex-wrap: nowrap;
             flex: 1;
+            min-width: 0;
         }
 
         .oso-filter-bar-title {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
-            font-size: 0.84rem;
+            gap: 0.35rem;
+            font-size: 0.82rem;
             font-weight: 800;
             color: #8b1828;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            margin-right: 0.25rem;
+            margin-right: 0.15rem;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .oso-filter-group {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.35rem;
+            flex-shrink: 0;
         }
 
         .oso-filter-label {
-            font-size: 0.76rem;
+            font-size: 0.74rem;
             font-weight: 700;
             color: #706569;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.2rem;
         }
 
         .oso-select-wrapper {
@@ -1419,15 +1863,16 @@
             background: #fdfafb;
             border: 1.5px solid #f0e0e3;
             border-radius: 9999px;
-            padding: 0.42rem 2.1rem 0.42rem 0.95rem;
-            font-size: 0.8rem;
+            padding: 0.36rem 1.85rem 0.36rem 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #2b2427;
             cursor: pointer;
             outline: none;
             font-family: inherit;
-            transition: all 0.18s ease;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            white-space: nowrap;
         }
 
         .oso-filter-select:hover {
@@ -1443,7 +1888,7 @@
 
         .oso-select-arrow {
             position: absolute;
-            right: 0.75rem;
+            right: 0.7rem;
             pointer-events: none;
             font-size: 0.65rem;
             color: #8b1828;
@@ -1453,28 +1898,33 @@
         .oso-filter-bar-right {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.55rem;
+            flex-shrink: 0;
         }
 
         .oso-filter-reset-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            padding: 0.42rem 0.85rem;
-            border-radius: 9999px;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 50%;
             background: #faf4f5;
-            border: 1px solid #ebd5d8;
+            border: 1.5px solid #ebd5d8;
             color: #7a2030;
-            font-size: 0.76rem;
-            font-weight: 700;
+            font-size: 0.92rem;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.18s ease;
+            flex-shrink: 0;
         }
 
         .oso-filter-reset-btn:hover {
             background: #8b1828;
             color: #ffffff;
             border-color: #8b1828;
+            box-shadow: 0 2px 8px rgba(139, 24, 40, 0.2);
+            transform: rotate(-45deg);
         }
 
         .oso-filter-status-badge {
@@ -1635,8 +2085,8 @@
                 </div>
 
                 <div class="oso-filter-bar-right">
-                    <button type="button" class="oso-filter-reset-btn" onclick="resetOsoFilters()" title="Reset all filters">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    <button type="button" class="oso-filter-reset-btn" onclick="resetOsoFilters()" title="Reset all filters" aria-label="Reset all filters">
+                        <i class="bi bi-arrow-counterclockwise"></i>
                     </button>
                     <span class="oso-filter-status-badge" id="osoActiveFilterBadge">
                         <i class="bi bi-check2-circle"></i> Live Insights
@@ -2222,168 +2672,223 @@
             {{-- 1. Top 4 KPI Cards --}}
             <div class="org-kpi-row">
                 @if ($isSdo)
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-pink">
-                            <i class="bi bi-leaf-fill"></i>
+                    {{-- 1. Total Monitored --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="Total Monitored SDG Proposals">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-maroon">
+                                <i class="bi bi-clipboard-data-fill"></i>
+                            </div>
+                            <strong>5</strong>
                         </div>
-                        <div class="org-kpi-num">5</div>
-                        <h3 class="org-kpi-title">Total Monitored</h3>
-                        <p class="org-kpi-sub">All semester proposals</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Total Monitored</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-green">
-                            <i class="bi bi-check2-circle"></i>
+                    {{-- 2. SDG Verified --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="SDG Verified & Endorsed">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-green">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">SDG Verified</h3>
-                        <p class="org-kpi-sub">Endorsed to OVCAA</p>
-                    </article>
+                        <span class="ovcaa-stat-title">SDG Verified</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-blue">
-                            <i class="bi bi-hourglass-split"></i>
+                    {{-- 3. Under SDG Review --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Under SDG & WPCF Review">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-blue">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">Under SDG Review</h3>
-                        <p class="org-kpi-sub">Checking WPCF &amp; goals</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Under SDG Review</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-amber">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
+                    {{-- 4. Needs SDG Revision --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Needs SDG Revision">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-amber">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            <strong>1</strong>
                         </div>
-                        <div class="org-kpi-num">1</div>
-                        <h3 class="org-kpi-title">Needs SDG Revision</h3>
-                        <p class="org-kpi-sub">Missing sustainability doc</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Needs SDG Revision</span>
+                    </a>
                 @elseif ($isOvcaa)
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-blue">
-                            <i class="bi bi-patch-check-fill"></i>
+                    {{-- 1. Pending Final Approval --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Open Pending Final Approval Queue">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-blue">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">Pending Final Approval</h3>
-                        <p class="org-kpi-sub">Awaiting executive action</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Pending Final Approval</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-green">
-                            <i class="bi bi-check2"></i>
+                    {{-- 2. OVCAA Approved --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="View OVCAA Approved Activities">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-green">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">OVCAA Approved</h3>
-                        <p class="org-kpi-sub">Authorized &amp; on chain</p>
-                    </article>
+                        <span class="ovcaa-stat-title">OVCAA Approved</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-amber">
-                            <i class="bi bi-arrow-counterclockwise"></i>
+                    {{-- 3. Return for Revision --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="View Activities Returned for Revision">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-amber">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </div>
+                            <strong>1</strong>
                         </div>
-                        <div class="org-kpi-num">1</div>
-                        <h3 class="org-kpi-title">Returned for Revision</h3>
-                        <p class="org-kpi-sub">Executive remarks sent</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Return for Revision</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-pink">
-                            <i class="bi bi-lightning-charge-fill"></i>
+                    {{-- 4. Total Submissions --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="View All Semester Submissions">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-maroon">
+                                <i class="bi bi-collection-fill"></i>
+                            </div>
+                            <strong>5</strong>
                         </div>
-                        <div class="org-kpi-num">5</div>
-                        <h3 class="org-kpi-title">Total Submissions</h3>
-                        <p class="org-kpi-sub">1st Semester AY 2025-26</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Total Submissions</span>
+                    </a>
                 @else
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-pink">
-                            <i class="bi bi-lightning-charge-fill"></i>
+                    {{-- Student Org Top KPI Cards --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="Total Activities">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-maroon">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                            </div>
+                            <strong>5</strong>
                         </div>
-                        <div class="org-kpi-num">5</div>
-                        <h3 class="org-kpi-title">Total Activities</h3>
-                        <p class="org-kpi-sub">2 completed · 2 in progress</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Total Activities</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-green">
-                            <i class="bi bi-check2"></i>
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Approved Activities">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-green">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">Approved</h3>
-                        <p class="org-kpi-sub">Budget &amp; AR submitted</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Approved</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-blue">
-                            <i class="bi bi-hourglass-split"></i>
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Pending Activities">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-blue">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                            <strong>2</strong>
                         </div>
-                        <div class="org-kpi-num">2</div>
-                        <h3 class="org-kpi-title">Pending</h3>
-                        <p class="org-kpi-sub">Awaiting OSO / OVCAA action</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Pending</span>
+                    </a>
 
-                    <article class="org-kpi-card">
-                        <div class="org-kpi-icon is-amber">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Activities Needing Action">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-amber">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            <strong>1</strong>
                         </div>
-                        <div class="org-kpi-num">1</div>
-                        <h3 class="org-kpi-title">Needs Action</h3>
-                        <p class="org-kpi-sub">Returned for revision</p>
-                    </article>
+                        <span class="ovcaa-stat-title">Needs Action</span>
+                    </a>
                 @endif
             </div>
 
             {{-- 2. Middle Section --}}
             <div class="org-dash-2col">
                 @if ($isSdo)
+                    {{-- Hidden SVG Defs for SDO Donut Gradient --}}
+                    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+                        <defs>
+                            <linearGradient id="sdoDonutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#15803d" />
+                                <stop offset="100%" stop-color="#22c55e" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+
                     {{-- SDO: SDG Alignment & Monitoring Overview --}}
                     <section class="org-dash-card">
                         <div class="org-dash-card-header">
                             <h3 class="org-dash-card-title">
-                                <i class="bi bi-leaf-fill" style="color: #15803d;"></i> SDG Alignment Monitoring
+                                <i class="bi bi-leaf-fill" style="color: #8b1828;"></i> SDG Alignment Monitoring
                             </h3>
                             <a href="{{ route('office.activities') }}" class="org-dash-link">
-                                Review Queue →
+                                Review Queue <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
+                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
+                            Campus SDG compliance and sustainability indicator monitoring.
+                        </p>
 
-                        <div class="org-budget-hero-box" style="background: linear-gradient(135deg, #14532d 0%, #15803d 100%);">
-                            <span style="color: #dcfce7;">Campus SDG Compliance</span>
-                            <h2>80% Verified</h2>
-                            <small style="color: #dcfce7; opacity: 0.95;">4 of 5 proposed activities aligned with UN SDGs</small>
-                        </div>
+                        <div class="ovcaa-overview-body">
+                            {{-- Split Hero: Campus SDG Compliance & Donut Ring (80%) --}}
+                            <div class="ovcaa-metrics-split">
+                                <div class="ovcaa-kpi-block">
+                                    <span class="ovcaa-kpi-subhead" style="color: #15803d;">Campus SDG Compliance</span>
+                                    <h2>80% Verified</h2>
+                                    <p>4 of 5 proposed activities aligned with UN SDGs</p>
+                                </div>
 
-                        <div class="org-budget-stat-row">
-                            <span>SDG Indicators Met</span>
-                            <strong style="color: #15803d;">4 / 5 Activities (80%)</strong>
-                        </div>
-                        <div class="org-mini-progress">
-                            <div class="org-mini-fill-green" style="width: 80%; background: #15803d;"></div>
-                        </div>
-
-                        <div class="org-budget-stat-row">
-                            <span>WPCF Protocol Compliance</span>
-                            <strong style="color: #ca8a04;">3 Cleared · 1 Pending</strong>
-                        </div>
-                        <div class="org-mini-progress">
-                            <div class="org-mini-fill-maroon" style="width: 75%; background: #ca8a04;"></div>
-                        </div>
-
-                        <div class="org-budget-sub-stats">
-                            <div class="org-budget-sub-box is-green" style="background: #f0fdf4; border: 1px solid #dcfce7;">
-                                <span style="color: #166534;">Top Priority Goal</span>
-                                <strong style="color: #15803d; font-size: 0.88rem;">SDG 4 Education</strong>
+                                {{-- Circular Progress / Donut Ring: 80% --}}
+                                <div class="ovcaa-donut-wrap" title="SDG Compliance: 80% Verified">
+                                    <svg class="ovcaa-donut-svg" viewBox="0 0 98 98">
+                                        <circle class="ovcaa-donut-track" cx="49" cy="49" r="40"></circle>
+                                        <circle class="ovcaa-donut-fill" cx="49" cy="49" r="40" style="stroke: url(#sdoDonutGrad); stroke-dashoffset: 50.3;"></circle>
+                                    </svg>
+                                    <div class="ovcaa-donut-content">
+                                        <span class="ovcaa-donut-val" style="color: #15803d;">80%</span>
+                                        <span class="ovcaa-donut-lbl">Verified</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="org-budget-sub-box is-pink" style="background: #fdf0f2; border: 1px solid #fae1e5;">
-                                <span style="color: #8b1828;">Awaiting SDG Review</span>
-                                <strong style="color: #8b1828; font-size: 0.88rem;">2 Proposals</strong>
-                            </div>
-                        </div>
 
-                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 1rem;">
-                            <span class="org-chip" style="background: #f0fdf4; color: #166534; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 3 · Good Health</span>
-                            <span class="org-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 4 · Quality Education</span>
-                            <span class="org-chip" style="background: #fefce8; color: #a16207; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 11 · Sustainable Cities</span>
-                            <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG 12 · Consumption</span>
+                            {{-- Progress Indicators --}}
+                            <div class="ovcaa-distribution-box">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
+                                    <span>SDG Indicators Met</span>
+                                    <strong style="color: #15803d;">4 / 5 Activities (80%)</strong>
+                                </div>
+                                <div class="org-mini-progress" style="margin-bottom: 0.75rem; height: 7px;">
+                                    <div class="org-mini-fill-green" style="width: 80%; background: linear-gradient(90deg, #15803d, #22c55e);"></div>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
+                                    <span>WPCF Protocol Compliance</span>
+                                    <strong style="color: #ca8a04;">3 Cleared · 1 Pending (75%)</strong>
+                                </div>
+                                <div class="org-mini-progress" style="margin-bottom: 0.25rem; height: 7px;">
+                                    <div class="org-mini-fill-maroon" style="width: 75%; background: linear-gradient(90deg, #ca8a04, #eab308);"></div>
+                                </div>
+                            </div>
+
+                            {{-- Sub-Stats & SDG Chips --}}
+                            <div class="org-budget-sub-stats" style="margin-top: -0.25rem;">
+                                <div class="org-budget-sub-box is-green" style="background: #f0fdf4; border: 1px solid #dcfce7; padding: 0.65rem 0.85rem;">
+                                    <span style="color: #166534; font-size: 0.7rem;">Top Priority Goal</span>
+                                    <strong style="color: #15803d; font-size: 0.88rem;">SDG 4 Education</strong>
+                                </div>
+                                <div class="org-budget-sub-box is-pink" style="background: #fdf0f2; border: 1px solid #fae1e5; padding: 0.65rem 0.85rem;">
+                                    <span style="color: #8b1828; font-size: 0.7rem;">Awaiting SDG Review</span>
+                                    <strong style="color: #8b1828; font-size: 0.88rem;">2 Proposals</strong>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                <span class="org-chip" style="background: #f0fdf4; color: #166534; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #dcfce7;">SDG 3 · Health</span>
+                                <span class="org-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bfdbfe;">SDG 4 · Education</span>
+                                <span class="org-chip" style="background: #fefce8; color: #a16207; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fef08a;">SDG 11 · Cities</span>
+                                <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #f0e6e8;">SDG 12 · Consumption</span>
+                            </div>
                         </div>
                     </section>
 
@@ -2391,127 +2896,199 @@
                     <section class="org-dash-card">
                         <div class="org-dash-card-header">
                             <h3 class="org-dash-card-title">
-                                <i class="bi bi-clipboard-check-fill" style="color: #15803d;"></i> SDG Review Action Items
+                                <i class="bi bi-clipboard-check-fill" style="color: #8b1828;"></i> SDG Review Action Items
                             </h3>
-                            <span class="org-badge-count" style="background: #15803d; color: #ffffff; width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 800;">3</span>
+                            <span class="ovcaa-endorsed-badge">
+                                <i class="bi bi-clipboard-check-fill"></i> 3 Pending
+                            </span>
                         </div>
+                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
+                            Proposals requiring SDG indicator verification and waste protocol clearance.
+                        </p>
 
-                        <div class="org-action-card-list">
-                            {{-- Action 1 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #f0fdf4; color: #15803d;">
+                        <div class="org-action-items-list">
+                            {{-- Action 1: Campus Wellness Week --}}
+                            <div class="ovcaa-action-item">
+                                <div class="ovcaa-action-left">
+                                    <div class="ovcaa-action-icon" style="background: #f0fdf4; color: #15803d; border-color: #dcfce7;">
                                         <i class="bi bi-heart-pulse-fill"></i>
                                     </div>
-                                    <div class="org-action-card-text">
+                                    <div class="ovcaa-action-meta">
                                         <strong>Review Waste Protocol &amp; Health Plan</strong>
                                         <small>Campus Wellness Week · SDG 3 Health alignment</small>
                                     </div>
                                 </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">SDG 3</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
+                                <div class="ovcaa-action-right">
+                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #dcfce7;">SDG 3</span>
+                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="ovcaa-btn-decide">
+                                        Review <i class="bi bi-arrow-right-short"></i>
+                                    </a>
                                 </div>
-                            </a>
+                            </div>
 
-                            {{-- Action 2 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #eff6ff; color: #2563eb;">
+                            {{-- Action 2: Leadership Summit 2026 --}}
+                            <div class="ovcaa-action-item">
+                                <div class="ovcaa-action-left">
+                                    <div class="ovcaa-action-icon" style="background: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
                                         <i class="bi bi-award-fill"></i>
                                     </div>
-                                    <div class="org-action-card-text">
+                                    <div class="ovcaa-action-meta">
                                         <strong>Verify Zero Single-Use Plastics Dossier</strong>
                                         <small>Leadership Summit 2026 · SDG 12 Consumption</small>
                                     </div>
                                 </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #eff6ff; color: #2563eb; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">SDG 12</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
+                                <div class="ovcaa-action-right">
+                                    <span class="org-chip" style="background: #eff6ff; color: #2563eb; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bfdbfe;">SDG 12</span>
+                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="ovcaa-btn-decide">
+                                        Review <i class="bi bi-arrow-right-short"></i>
+                                    </a>
                                 </div>
-                            </a>
+                            </div>
 
-                            {{-- Action 3 --}}
-                            <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="org-action-card-item">
-                                <div class="org-action-card-left">
-                                    <div class="org-action-card-bullet" style="background: #fef2f2; color: #dc2626;">
+                            {{-- Action 3: BatStateU Sportsfest 2026 --}}
+                            <div class="ovcaa-action-item">
+                                <div class="ovcaa-action-left">
+                                    <div class="ovcaa-action-icon" style="background: #fefce8; color: #b45309; border-color: #fef08a;">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </div>
-                                    <div class="org-action-card-text">
+                                    <div class="ovcaa-action-meta">
                                         <strong>Monitor Sustainability Revisions</strong>
                                         <small>BatStateU Sportsfest 2026 · Returned for revision</small>
                                     </div>
                                 </div>
-                                <div class="org-action-card-right">
-                                    <span class="org-chip" style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px;">Needs Fix</span>
-                                    <i class="bi bi-chevron-right org-action-chevron"></i>
+                                <div class="ovcaa-action-right">
+                                    <span class="org-chip" style="background: #fefce8; color: #b45309; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fef08a;">Needs Fix</span>
+                                    <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="ovcaa-btn-decide">
+                                        Review <i class="bi bi-arrow-right-short"></i>
+                                    </a>
                                 </div>
-                            </a>
+                            </div>
                         </div>
                     </section>
                 @elseif ($isOvcaa)
-                    {{-- OVCAA: Executive Approvals Overview --}}
+                    {{-- Hidden SVG Defs for Donut Gradient --}}
+                    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+                        <defs>
+                            <linearGradient id="ovcaaDonutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#7a1222" />
+                                <stop offset="100%" stop-color="#c43b52" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+
+                    {{-- 1. Executive Approvals Overview (KPI + Donut + Segmented Bar) --}}
                     <section class="org-dash-card">
                         <div class="org-dash-card-header">
                             <h3 class="org-dash-card-title">
-                                <i class="bi bi-patch-check-fill" style="color: #1d4ed8;"></i> Executive Approvals Overview
+                                <i class="bi bi-patch-check-fill" style="color: #8b1828;"></i> Executive Approvals Overview
                             </h3>
                             <a href="{{ route('office.activities') }}" class="org-dash-link">
                                 Approval Queue <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
-                        <p class="org-dash-card-sub">Final university authorization checkpoint for student events.</p>
+                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
+                            Final university authorization checkpoint for student organization activities.
+                        </p>
 
-                        <div class="org-budget-stats" style="margin-top: 0.5rem;">
-                            <div>
-                                <small>TOTAL SUBMITTED</small>
-                                <strong>5 Activities</strong>
+                        <div class="ovcaa-overview-body">
+                            {{-- Split Hero: KPI Large Metric & Donut Ring Approval Rate --}}
+                            <div class="ovcaa-metrics-split">
+                                <div class="ovcaa-kpi-block">
+                                    <span class="ovcaa-kpi-subhead">Total Submitted Activities</span>
+                                    <h2>5 Activities</h2>
+                                    <p>AY 2025–2026 · Across All Recognized Portfolios</p>
+                                </div>
+
+                                {{-- Circular Progress / Donut Ring: Approval Rate (40%) --}}
+                                <div class="ovcaa-donut-wrap" title="Approval Rate: 40% executed/approved">
+                                    <svg class="ovcaa-donut-svg" viewBox="0 0 98 98">
+                                        <circle class="ovcaa-donut-track" cx="49" cy="49" r="40"></circle>
+                                        <circle class="ovcaa-donut-fill" cx="49" cy="49" r="40"></circle>
+                                    </svg>
+                                    <div class="ovcaa-donut-content">
+                                        <span class="ovcaa-donut-val">40%</span>
+                                        <span class="ovcaa-donut-lbl">Approved</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div style="text-align: right;">
-                                <small>APPROVAL RATE</small>
-                                <strong style="color: #1d4ed8;">40% Executed</strong>
+
+                            {{-- Approval Distribution: Segmented Progress Bar --}}
+                            <div class="ovcaa-distribution-box">
+                                <div class="ovcaa-dist-head">
+                                    <span>Approval Distribution</span>
+                                    <strong>5 Total Submissions</strong>
+                                </div>
+                                <div class="ovcaa-segmented-bar" title="40% Approved · 40% Governance Queue · 20% Revision">
+                                    <div class="ovcaa-seg is-approved" style="width: 40%;" title="2 Approved (40%)"></div>
+                                    <div class="ovcaa-seg is-queue" style="width: 40%;" title="2 In Governance Queue (40%)"></div>
+                                    <div class="ovcaa-seg is-revision" style="width: 20%;" title="1 Return for Revision (20%)"></div>
+                                </div>
+                                <div class="ovcaa-dist-chips">
+                                    <span class="ovcaa-dist-chip is-approved">
+                                        <span class="ovcaa-dist-dot"></span> 2 Approved
+                                    </span>
+                                    <span class="ovcaa-dist-chip is-queue">
+                                        <span class="ovcaa-dist-dot"></span> 2 Governance Queue
+                                    </span>
+                                    <span class="ovcaa-dist-chip is-revision">
+                                        <span class="ovcaa-dist-dot"></span> 1 Revision
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="org-progress-bar-wrap" style="margin: 0.85rem 0 1rem;">
-                            <div class="org-progress-bar-fill" style="width: 40%; background: #1d4ed8;"></div>
-                        </div>
-
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <span class="org-chip" style="background: #eff6ff; color: #1e40af; font-weight: 700; font-size: 0.74rem;">2 Approved on Chain</span>
-                            <span class="org-chip" style="background: #fefce8; color: #854d0e; font-weight: 700; font-size: 0.74rem;">2 In Governance Queue</span>
-                            <span class="org-chip" style="background: #fef2f2; color: #991b1b; font-weight: 700; font-size: 0.74rem;">1 Revision Remark</span>
                         </div>
                     </section>
 
-                    {{-- OVCAA Executive Action Queue --}}
+                    {{-- 2. Executive Action Queue --}}
                     <section class="org-dash-card">
                         <div class="org-dash-card-header">
                             <h3 class="org-dash-card-title">
-                                <i class="bi bi-shield-lock-fill" style="color: #1d4ed8;"></i> Executive Action Queue
+                                <i class="bi bi-shield-lock-fill" style="color: #8b1828;"></i> Executive Action Queue
                             </h3>
-                            <span class="org-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.75rem;">
-                                2 Endorsed
+                            <span class="ovcaa-endorsed-badge">
+                                <i class="bi bi-patch-check-fill"></i> 2 Endorsed
                             </span>
                         </div>
+                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
+                            Activities requiring executive decision and final university sign-off.
+                        </p>
 
                         <div class="org-action-items-list">
-                            <div class="org-action-item">
-                                <i class="bi bi-patch-check-fill org-action-icon is-blue"></i>
-                                <div class="org-action-info">
-                                    <strong>Campus Wellness Week</strong>
-                                    <small>SDO SDG clearance certified. Ready for final OVCAA signing.</small>
+                            {{-- Action 1: Campus Wellness Week --}}
+                            <div class="ovcaa-action-item">
+                                <div class="ovcaa-action-left">
+                                    <div class="ovcaa-action-icon">
+                                        <i class="bi bi-heart-pulse-fill"></i>
+                                    </div>
+                                    <div class="ovcaa-action-meta">
+                                        <strong>Campus Wellness Week</strong>
+                                        <small>SDO SDG clearance certified · Ready for final OVCAA signing</small>
+                                    </div>
                                 </div>
-                                <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="org-btn-sm-action">Decide</a>
+                                <div class="ovcaa-action-right">
+                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px;">SDG Cleared</span>
+                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="ovcaa-btn-decide">
+                                        Decide <i class="bi bi-arrow-right-short"></i>
+                                    </a>
+                                </div>
                             </div>
 
-                            <div class="org-action-item">
-                                <i class="bi bi-patch-check-fill org-action-icon is-blue"></i>
-                                <div class="org-action-info">
-                                    <strong>Leadership Summit 2026</strong>
-                                    <small>OSO clearance approved. Awaiting final executive authorization.</small>
+                            {{-- Action 2: Leadership Summit 2026 --}}
+                            <div class="ovcaa-action-item">
+                                <div class="ovcaa-action-left">
+                                    <div class="ovcaa-action-icon">
+                                        <i class="bi bi-trophy-fill"></i>
+                                    </div>
+                                    <div class="ovcaa-action-meta">
+                                        <strong>Leadership Summit 2026</strong>
+                                        <small>OSO clearance approved · Awaiting executive authorization</small>
+                                    </div>
                                 </div>
-                                <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="org-btn-sm-action">Decide</a>
+                                <div class="ovcaa-action-right">
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #f0e6e8;">OSO Cleared</span>
+                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="ovcaa-btn-decide">
+                                        Decide <i class="bi bi-arrow-right-short"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -2650,11 +3227,12 @@
                     <span class="org-pipeline-title">Innovation Fair Booth Series</span>
                     <div class="org-pipeline-stepper">
                         <div class="org-stepper-track-bg"></div>
+                        <div class="org-stepper-track-fill" style="width: 75%; background: #16a34a;"></div>
                         <div class="org-stepper-nodes">
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
                             <span class="org-stepper-node"></span>
                         </div>
                     </div>
@@ -2670,11 +3248,12 @@
                     <span class="org-pipeline-title">Volunteer Appreciation Day</span>
                     <div class="org-pipeline-stepper">
                         <div class="org-stepper-track-bg"></div>
+                        <div class="org-stepper-track-fill" style="width: 75%; background: #16a34a;"></div>
                         <div class="org-stepper-nodes">
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
-                            <span class="org-stepper-node"></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-done" style="background: #16a34a; border-color: #16a34a;"><i class="bi bi-check"></i></span>
                             <span class="org-stepper-node"></span>
                         </div>
                     </div>
@@ -2685,44 +3264,44 @@
                     </div>
                 </div>
 
-                {{-- Row 3: Leadership Summit 2026 (Stage: For OSO Review) --}}
+                {{-- Row 3: Leadership Summit 2026 (Stage: OVCAA Review / In Review) --}}
                 <div class="org-pipeline-row">
                     <span class="org-pipeline-title">Leadership Summit 2026</span>
                     <div class="org-pipeline-stepper">
                         <div class="org-stepper-track-bg"></div>
-                        <div class="org-stepper-track-fill" style="width: 20%;"></div>
+                        <div class="org-stepper-track-fill" style="width: 50%;"></div>
                         <div class="org-stepper-nodes">
                             <span class="org-stepper-node is-done"><i class="bi bi-check"></i></span>
-                            <span class="org-stepper-node is-active-gold"></span>
-                            <span class="org-stepper-node"></span>
+                            <span class="org-stepper-node is-done"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-active-gold" title="In OVCAA Review"></span>
                             <span class="org-stepper-node"></span>
                             <span class="org-stepper-node"></span>
                         </div>
                     </div>
                     <div style="text-align: right;">
                         <span class="org-status-pill org-status-yellow">
-                            <span class="org-status-dot"></span> For OSO Review
+                            <span class="org-status-dot"></span> OVCAA Review
                         </span>
                     </div>
                 </div>
 
-                {{-- Row 4: Campus Wellness Week (Stage: In Review) --}}
+                {{-- Row 4: Campus Wellness Week (Stage: OVCAA Executive Action) --}}
                 <div class="org-pipeline-row">
                     <span class="org-pipeline-title">Campus Wellness Week</span>
                     <div class="org-pipeline-stepper">
                         <div class="org-stepper-track-bg"></div>
-                        <div class="org-stepper-track-fill" style="width: 40%;"></div>
+                        <div class="org-stepper-track-fill" style="width: 50%;"></div>
                         <div class="org-stepper-nodes">
                             <span class="org-stepper-node is-done"><i class="bi bi-check"></i></span>
                             <span class="org-stepper-node is-done"><i class="bi bi-check"></i></span>
-                            <span class="org-stepper-node is-active-gold"></span>
+                            <span class="org-stepper-node is-active-gold" title="Awaiting OVCAA Final Signature"></span>
                             <span class="org-stepper-node"></span>
                             <span class="org-stepper-node"></span>
                         </div>
                     </div>
                     <div style="text-align: right;">
                         <span class="org-status-pill org-status-blue">
-                            <span class="org-status-dot"></span> In Review
+                            <span class="org-status-dot"></span> Executive Action
                         </span>
                     </div>
                 </div>
@@ -2733,10 +3312,10 @@
                     <div class="org-pipeline-stepper">
                         <div class="org-stepper-track-bg"></div>
                         <div class="org-stepper-nodes">
-                            <span class="org-stepper-node is-returned" style="border-color: #dc2626; color: #dc2626; background: #ffffff;">
-                                <i class="bi bi-record-circle" style="font-size: 0.65rem;"></i>
+                            <span class="org-stepper-node is-done"><i class="bi bi-check"></i></span>
+                            <span class="org-stepper-node is-returned" style="border-color: #dc2626; color: #dc2626; background: #ffffff;" title="Returned by OSO">
+                                <i class="bi bi-x" style="font-size: 0.9rem; line-height: 1;"></i>
                             </span>
-                            <span class="org-stepper-node"></span>
                             <span class="org-stepper-node"></span>
                             <span class="org-stepper-node"></span>
                             <span class="org-stepper-node"></span>
@@ -2776,7 +3355,7 @@
                                 </div>
                             </div>
                             <span class="org-status-pill org-status-yellow">
-                                <span class="org-status-dot"></span> For OSO Review
+                                <span class="org-status-dot"></span> OVCAA Review
                             </span>
                         </a>
 
@@ -2792,7 +3371,23 @@
                                 </div>
                             </div>
                             <span class="org-status-pill org-status-blue">
-                                <span class="org-status-dot"></span> In Review
+                                <span class="org-status-dot"></span> Executive Action
+                            </span>
+                        </a>
+
+                        <a href="{{ route('office.activities', ['activity' => 'volunteer-appreciation-day']) }}" class="org-upcoming-card-item">
+                            <div class="org-upcoming-left">
+                                <div class="org-date-badge" style="background: #15803d;">
+                                    <strong>24</strong>
+                                    <small>SEP</small>
+                                </div>
+                                <div class="org-upcoming-meta">
+                                    <strong>Volunteer Appreciation Day</strong>
+                                    <small><i class="bi bi-geo-alt-fill" style="color: #15803d;"></i> Main Amphitheater · In-Campus</small>
+                                </div>
+                            </div>
+                            <span class="org-status-pill org-status-green">
+                                <span class="org-status-dot"></span> OVCAA Approved
                             </span>
                         </a>
                     </div>

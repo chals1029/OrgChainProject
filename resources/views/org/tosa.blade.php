@@ -2370,7 +2370,7 @@
                 <i class="bi bi-grid-1x2-fill"></i> Overview
             </button>
             <button type="button" class="tosa-tab-btn" id="tabBtnRequirements" onclick="switchTosaTab('requirements')">
-                <i class="bi bi-card-checklist"></i> Requirements <span class="tosa-tab-count" id="badgeReqCount">8</span>
+                <i class="bi bi-card-checklist"></i> Requirements <span class="tosa-tab-count" id="badgeReqCount">5</span>
             </button>
             <button type="button" class="tosa-tab-btn" id="tabBtnApplicants" onclick="switchTosaTab('applicants')">
                 <i class="bi bi-people-fill"></i> Applicant Submissions <span class="tosa-tab-count" id="badgeAppCount">74</span>
@@ -2403,7 +2403,7 @@
                         <i class="bi bi-card-checklist"></i>
                     </div>
                     <div>
-                        <div class="tosa-kpi-num" id="ovKpiRequirements">8</div>
+                        <div class="tosa-kpi-num" id="ovKpiRequirements">5</div>
                         <div class="tosa-kpi-label">Active Requirements</div>
                     </div>
                 </div>
@@ -2565,23 +2565,23 @@
                                 <span>Requirements Governance</span>
                             </h3>
                             <button type="button" class="tosa-ov-link-btn" onclick="switchTosaTab('requirements')">
-                                <span>Manage All (8)</span> <i class="bi bi-arrow-right"></i>
+                                <span>Manage All (5)</span> <i class="bi bi-arrow-right"></i>
                             </button>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem;">
                             <div style="background: #fdfafb; border: 1px solid #ede8ea; border-radius: 10px; padding: 0.65rem 0.85rem;">
                                 <div style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Required Items</div>
-                                <strong style="font-size: 1.15rem; color: #8b1828;" id="ovReqMandatory">7 Required</strong>
+                                <strong style="font-size: 1.15rem; color: #8b1828;" id="ovReqMandatory">5 Required</strong>
                             </div>
                             <div style="background: #fdfafb; border: 1px solid #ede8ea; border-radius: 10px; padding: 0.65rem 0.85rem;">
                                 <div style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Templates Uploaded</div>
-                                <strong style="font-size: 1.15rem; color: #16a34a;" id="ovReqTemplates">8 Attached</strong>
+                                <strong style="font-size: 1.15rem; color: #16a34a;" id="ovReqTemplates">5 Attached</strong>
                             </div>
                         </div>
 
                         <div style="font-size: 0.82rem; color: #475569; line-height: 1.45; margin-bottom: 0.85rem;">
-                            All 8 document criteria are actively enforced across candidate submissions. Submissions with missing required items are automatically routed to the Review Queue.
+                            All 5 document criteria are actively enforced across candidate submissions. Submissions with missing required items are automatically routed to the Review Queue.
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -2688,7 +2688,7 @@
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div>
-                        <div class="tosa-req-kpi-num" id="reqTotalCounter">8</div>
+                        <div class="tosa-req-kpi-num" id="reqTotalCounter">5</div>
                         <div class="tosa-req-kpi-text">Total Requirements</div>
                     </div>
                 </div>
@@ -2698,7 +2698,7 @@
                         <i class="bi bi-check2-circle"></i>
                     </div>
                     <div>
-                        <div class="tosa-req-kpi-num" id="reqRequiredCounter">7</div>
+                        <div class="tosa-req-kpi-num" id="reqRequiredCounter">5</div>
                         <div class="tosa-req-kpi-text">Required</div>
                     </div>
                 </div>
@@ -2708,7 +2708,7 @@
                         <i class="bi bi-dash-circle"></i>
                     </div>
                     <div>
-                        <div class="tosa-req-kpi-num" id="reqOptionalCounter">1</div>
+                        <div class="tosa-req-kpi-num" id="reqOptionalCounter">0</div>
                         <div class="tosa-req-kpi-text">Optional</div>
                     </div>
                 </div>
@@ -2718,7 +2718,7 @@
                         <i class="bi bi-cloud-arrow-up"></i>
                     </div>
                     <div>
-                        <div class="tosa-req-kpi-num" id="reqTemplatesCounter">8</div>
+                        <div class="tosa-req-kpi-num" id="reqTemplatesCounter">5</div>
                         <div class="tosa-req-kpi-text">Templates Uploaded</div>
                     </div>
                 </div>
@@ -2776,7 +2776,7 @@
 
                     {{-- Footer Info --}}
                     <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f1ecee; font-size: 0.82rem; color: #64748b; font-weight: 600;" id="reqEntriesInfo">
-                        Showing 1 to 8 of 8 entries
+                        Showing 1 to 5 of 5 entries
                     </div>
                 </div>
 
@@ -3563,16 +3563,13 @@
         let tosaApplicants = [];
         let tosaQualifiedApplicants = [];
 
-        // Requirements List (Exact 8 items matching user specification)
+        // Requirements List (Exact 5 items matching official TOSA requirements)
         let tosaRequirements = [
-            { id: 1, title: 'Application Form', desc: 'TOSA application form properly filled out.', type: 'Form', status: 'Active', required: true, format: 'PDF', iconColor: 'is-blue', iconName: 'bi-file-earmark-text', templateUploaded: true },
-            { id: 2, title: 'Certificate of Grades', desc: 'Certified True Copy of the latest grades.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-amber', iconName: 'bi-file-earmark-ruled', templateUploaded: true },
-            { id: 3, title: 'Certificate of Good Moral', desc: 'Issued by the Office of Student Affairs.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-green', iconName: 'bi-file-earmark-check', templateUploaded: true },
-            { id: 4, title: 'Organization Certificate', desc: 'Proof of active membership in a recognized organization.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-purple', iconName: 'bi-award', templateUploaded: true },
-            { id: 5, title: 'Leadership Portfolio', desc: 'Portfolio of leadership experiences, roles, projects and accomplishments.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-blue', iconName: 'bi-person-badge', templateUploaded: true },
-            { id: 6, title: 'Community Service Certificate', desc: 'Certificate of participation in community service activities.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-orange', iconName: 'bi-heart', templateUploaded: true },
-            { id: 7, title: 'Recommendation Letter', desc: 'Recommendation letter from a faculty member or organization head.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-rose', iconName: 'bi-envelope-paper', templateUploaded: true },
-            { id: 8, title: 'Personal Essay', desc: 'Essay explaining why you deserve the TOSA Award.', type: 'Document', status: 'Active', required: false, format: 'PDF', iconColor: 'is-teal', iconName: 'bi-pencil-square', templateUploaded: true }
+            { id: 1, title: 'Curriculum Vitae', desc: 'Comprehensive Curriculum Vitae (CV) detailing academic qualifications, leadership experience, and background.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-blue', iconName: 'bi-person-lines-fill', templateUploaded: true },
+            { id: 2, title: 'Good Moral Certificate', desc: 'Certificate of Good Moral Character officially issued by the Office of Student Affairs / Guidance Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-green', iconName: 'bi-shield-check', templateUploaded: true },
+            { id: 3, title: 'Scholastic Record or a copy of all grades issued by Registration Services', desc: 'Official Scholastic Record / Certified True Copy of all grades issued by Registration Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-amber', iconName: 'bi-file-earmark-ruled', templateUploaded: true },
+            { id: 4, title: 'Copies of certificates, together with proof of legitimacy duly certified by the Records Office', desc: 'Copies of awards, seminar, and leadership certificates, together with proof of legitimacy duly certified by the Records Office.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-purple', iconName: 'bi-award', templateUploaded: true },
+            { id: 5, title: 'Electronic or scanned copies of the complete application documents', desc: 'High-resolution electronic or scanned copies of the complete application documents and supporting attachments.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-teal', iconName: 'bi-folder-check', templateUploaded: true }
         ];
 
         // Activity Log Store (Tamper-Evident Immutable Audit Trail)
@@ -3585,7 +3582,7 @@
             { id: 6, time: 'May 18, 2025', date: 'May 18, 2025', actor: 'Student Affairs Directorate', role: 'Executive Desk', category: 'Requirement', action: 'Requirement Criteria Modified', target: 'Recommendation Letter (Faculty/Org)', hash: '3456789012abcdefabcdef901234567812345678' },
             { id: 7, time: 'May 17, 2025', date: 'May 17, 2025', actor: 'System Integrity', role: 'Ledger Daemon', category: 'System', action: 'Integrity Check Completed', target: 'Zero Tampering Detected (100% OK)', hash: 'abcdef90123456781234567890abcdef12345678' },
             { id: 8, time: 'May 15, 2025', date: 'May 15, 2025', actor: 'Student Affairs Directorate', role: 'Executive Desk', category: 'Requirement', action: 'Attached Official Template', target: 'Application Form Template v2.pdf', hash: '8901234567abcdefabcdef567890123412345678' },
-            { id: 9, time: 'May 13, 2025', date: 'May 13, 2025', actor: 'Student Affairs Directorate', role: 'Executive Desk', category: 'Requirement', action: 'Initialized TOSA AY 26-27 Matrix', target: '8 Required Criteria Established', hash: '9012345678abcdefabcdef123456789034567890' },
+            { id: 9, time: 'May 13, 2025', date: 'May 13, 2025', actor: 'Student Affairs Directorate', role: 'Executive Desk', category: 'Requirement', action: 'Initialized TOSA AY 26-27 Matrix', target: '5 Required Criteria Established', hash: '9012345678abcdefabcdef123456789034567890' },
             { id: 10, time: 'May 12, 2025', date: 'May 12, 2025', actor: 'System Integrity', role: 'Ledger Daemon', category: 'Security', action: 'Genesis Block Created', target: 'TOSA AY 2026–2027 Ledger Initialized', hash: '0000000000abcdef1234567890abcdefabcdef01' }
         ];
 
@@ -4625,13 +4622,13 @@
             document.getElementById('revAvatar').textContent = applicant.name.split(' ').map(n => n[0]).join('').substring(0, 2);
             document.getElementById('revRemarksInput').value = applicant.remarks || '';
 
-            // Render Documents List
+            // Render Documents List (Matching 5 Official Requirements)
             const docList = [
-                { name: 'Activity Proposal & Advocacy Dossier.pdf', type: 'PDF', size: '2.4 MB' },
-                { name: 'Comprehensive Budget & Financial Plan.xlsx', type: 'XLSX', size: '890 KB' },
-                { name: 'Certificate of Registration (Authenticated).pdf', type: 'PDF', size: '1.2 MB' },
-                { name: 'Participant & Beneficiary Masterlist.pdf', type: 'PDF', size: '950 KB' },
-                { name: 'Community Impact & Outreach Evidence.pdf', type: 'PDF', size: '3.1 MB' }
+                { name: 'Curriculum_Vitae_Official.pdf', type: 'PDF', size: '1.8 MB' },
+                { name: 'Good_Moral_Certificate_Signed.pdf', type: 'PDF', size: '1.1 MB' },
+                { name: 'Scholastic_Record_RegistrationServices.pdf', type: 'PDF', size: '2.4 MB' },
+                { name: 'Certified_Certificates_RecordsOffice.pdf', type: 'PDF', size: '3.5 MB' },
+                { name: 'Complete_Application_Dossier_Scanned.pdf', type: 'PDF', size: '4.2 MB' }
             ];
 
             const docContainer = document.getElementById('revDocListContainer');

@@ -1159,12 +1159,12 @@
                     {{-- Connector Line 1 to 2 --}}
                     <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_1"></div>
 
-                    {{-- Step 2: Under CTC Recording --}}
+                    {{-- Step 2: OSO, OGC & OSD Evaluation --}}
                     <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_2">
                         <div class="sp-tosa-node-circle" id="tosaStepCircle_2">
-                            <i class="bi bi-folder2"></i>
+                            <i class="bi bi-people-fill"></i>
                         </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_2">2. Under CTC Recording</h5>
+                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_2">2. OSO, OGC &amp; OSD<br>Evaluation</h5>
                         <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_2">Pending</span>
                         <div class="sp-tosa-node-time" id="tosaStepTime_2"></div>
                     </div>
@@ -1172,12 +1172,12 @@
                     {{-- Connector Line 2 to 3 --}}
                     <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_2"></div>
 
-                    {{-- Step 3: Under OSO Verification --}}
+                    {{-- Step 3: Evaluation Results Forwarded --}}
                     <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_3">
                         <div class="sp-tosa-node-circle" id="tosaStepCircle_3">
-                            <i class="bi bi-shield-check"></i>
+                            <i class="bi bi-send-check-fill"></i>
                         </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_3">3. Under OSO Verification</h5>
+                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_3">3. Evaluation<br>Results Forwarded</h5>
                         <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_3">Pending</span>
                         <div class="sp-tosa-node-time" id="tosaStepTime_3"></div>
                     </div>
@@ -1185,12 +1185,12 @@
                     {{-- Connector Line 3 to 4 --}}
                     <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_3"></div>
 
-                    {{-- Step 4: Under Committee Evaluation --}}
+                    {{-- Step 4: OVCAA Review --}}
                     <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_4">
                         <div class="sp-tosa-node-circle" id="tosaStepCircle_4">
-                            <i class="bi bi-people"></i>
+                            <i class="bi bi-building-check"></i>
                         </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_4">4. Under Committee<br>Evaluation</h5>
+                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_4">4. OVCAA<br>Review</h5>
                         <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_4">Pending</span>
                         <div class="sp-tosa-node-time" id="tosaStepTime_4"></div>
                     </div>
@@ -1198,12 +1198,12 @@
                     {{-- Connector Line 4 to 5 --}}
                     <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_4"></div>
 
-                    {{-- Step 5: Qualified --}}
+                    {{-- Step 5: Chancellor Final Approval --}}
                     <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_5">
                         <div class="sp-tosa-node-circle" id="tosaStepCircle_5">
-                            <i class="bi bi-award"></i>
+                            <i class="bi bi-award-fill"></i>
                         </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_5">5. Qualified</h5>
+                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_5">5. Chancellor<br>Final Approval</h5>
                         <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_5">Pending</span>
                         <div class="sp-tosa-node-time" id="tosaStepTime_5"></div>
                     </div>
@@ -1234,17 +1234,17 @@
                             </tr>
                         </thead>
                         <tbody id="spTosaSubmissionsTbody">
-                            {{-- Row 1: Application Form --}}
+                            {{-- Row 1: Curriculum Vitae --}}
                             <tr id="tosaRow_1" data-tosa-id="1">
                                 <td class="sp-col-num">1</td>
                                 <td class="sp-col-req">
                                     <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-red">
-                                            <i class="bi bi-file-earmark-text"></i>
+                                        <div class="sp-req-icon is-blue">
+                                            <i class="bi bi-person-lines-fill"></i>
                                         </div>
                                         <div class="sp-req-info">
-                                            <strong>Application Form</strong>
-                                            <p>Upload the accomplished TOSA Application Form.</p>
+                                            <strong>Curriculum Vitae</strong>
+                                            <p>Upload your comprehensive Curriculum Vitae (CV) with academic and leadership records.</p>
                                         </div>
                                     </div>
                                 </td>
@@ -1268,17 +1268,17 @@
                                 </td>
                             </tr>
 
-                            {{-- Row 2: Certificate of Grades --}}
+                            {{-- Row 2: Good Moral Certificate --}}
                             <tr id="tosaRow_2" data-tosa-id="2">
                                 <td class="sp-col-num">2</td>
                                 <td class="sp-col-req">
                                     <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-orange">
-                                            <i class="bi bi-file-earmark-bar-graph"></i>
+                                        <div class="sp-req-icon is-green">
+                                            <i class="bi bi-shield-check"></i>
                                         </div>
                                         <div class="sp-req-info">
-                                            <strong>Certificate of Grades</strong>
-                                            <p>Upload your Certified True Copy (CTC) of Grades.</p>
+                                            <strong>Good Moral Certificate</strong>
+                                            <p>Upload your Certificate of Good Moral Character from Student Affairs / Guidance.</p>
                                         </div>
                                     </div>
                                 </td>
@@ -1302,17 +1302,17 @@
                                 </td>
                             </tr>
 
-                            {{-- Row 3: Good Moral Certificate --}}
+                            {{-- Row 3: Scholastic Record or a copy of all grades issued by Registration Services --}}
                             <tr id="tosaRow_3" data-tosa-id="3">
                                 <td class="sp-col-num">3</td>
                                 <td class="sp-col-req">
                                     <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-green">
-                                            <i class="bi bi-shield-check"></i>
+                                        <div class="sp-req-icon is-orange">
+                                            <i class="bi bi-file-earmark-ruled"></i>
                                         </div>
                                         <div class="sp-req-info">
-                                            <strong>Good Moral Certificate</strong>
-                                            <p>Upload your Certificate of Good Moral Character.</p>
+                                            <strong>Scholastic Record or a copy of all grades issued by Registration Services</strong>
+                                            <p>Upload official copy of grades or Scholastic Record certified by Registration Services.</p>
                                         </div>
                                     </div>
                                 </td>
@@ -1336,17 +1336,17 @@
                                 </td>
                             </tr>
 
-                            {{-- Row 4: Organization Certificate --}}
+                            {{-- Row 4: Copies of certificates, together with proof of legitimacy duly certified by the Records Office --}}
                             <tr id="tosaRow_4" data-tosa-id="4">
                                 <td class="sp-col-num">4</td>
                                 <td class="sp-col-req">
                                     <div class="sp-req-flex">
                                         <div class="sp-req-icon is-purple">
-                                            <i class="bi bi-people"></i>
+                                            <i class="bi bi-award"></i>
                                         </div>
                                         <div class="sp-req-info">
-                                            <strong>Organization Certificate</strong>
-                                            <p>Upload your Organization Membership Certificate.</p>
+                                            <strong>Copies of certificates, together with proof of legitimacy duly certified by the Records Office</strong>
+                                            <p>Upload certified copies of certificates, honors, and proof of legitimacy certified by the Records Office.</p>
                                         </div>
                                     </div>
                                 </td>
@@ -1370,101 +1370,33 @@
                                 </td>
                             </tr>
 
-                            {{-- Row 5: Leadership Portfolio --}}
+                            {{-- Row 5: Electronic or scanned copies of the complete application documents --}}
                             <tr id="tosaRow_5" data-tosa-id="5">
                                 <td class="sp-col-num">5</td>
                                 <td class="sp-col-req">
                                     <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-blue">
-                                            <i class="bi bi-briefcase"></i>
+                                        <div class="sp-req-icon is-teal">
+                                            <i class="bi bi-folder-check"></i>
                                         </div>
                                         <div class="sp-req-info">
-                                            <strong>Leadership Portfolio</strong>
-                                            <p>Upload your Leadership Portfolio.</p>
+                                            <strong>Electronic or scanned copies of the complete application documents</strong>
+                                            <p>Upload electronic or scanned complete application dossier and supporting documents.</p>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_5">
+                                    <div class="sp-status-wrap is-missing" id="tosaStatus_5">
                                         <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
+                                            <i class="bi bi-x-circle"></i>
+                                            <strong>Missing</strong>
                                         </div>
-                                        <small id="tosaTime_5">Not uploaded yet</small>
+                                        <small id="tosaTime_5">Required</small>
                                     </div>
                                 </td>
                                 <td class="sp-col-actions">
                                     <input type="file" accept=".pdf" id="tosaInput_5" style="display:none;" onchange="window.handleTosaDocUpload?.(5, this)">
                                     <div class="sp-actions-wrap" id="tosaActions_5">
                                         <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_5')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 6: Recommendation Letter --}}
-                            <tr id="tosaRow_6" data-tosa-id="6">
-                                <td class="sp-col-num">6</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-teal">
-                                            <i class="bi bi-envelope"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Recommendation Letter</strong>
-                                            <p>Upload two (2) Recommendation Letters.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_6">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
-                                        </div>
-                                        <small id="tosaTime_6">Not uploaded yet</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_6" style="display:none;" onchange="window.handleTosaDocUpload?.(6, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_6">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_6')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 7: Essay --}}
-                            <tr id="tosaRow_7" data-tosa-id="7">
-                                <td class="sp-col-num">7</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-pink">
-                                            <i class="bi bi-pen"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Essay</strong>
-                                            <p>Upload your TOSA Essay.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-missing" id="tosaStatus_7">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-x-circle"></i>
-                                            <strong>Missing</strong>
-                                        </div>
-                                        <small id="tosaTime_7">Required</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_7" style="display:none;" onchange="window.handleTosaDocUpload?.(7, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_7">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_7')?.click()">
                                             <i class="bi bi-upload"></i>
                                             <span>Upload</span>
                                         </button>

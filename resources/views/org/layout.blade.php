@@ -124,7 +124,6 @@
                 <button type="button" class="org-nav-link org-sidebar-settings-btn" onclick="openSettingsModal()" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.75rem; font-family: inherit;">
                     <i class="bi bi-gear-fill"></i>
                     <span>Settings</span>
-                    <em class="org-badge-count" style="margin-left: auto; background: rgba(139, 24, 40, 0.08); color: var(--org-red); border: 1px solid rgba(139, 24, 40, 0.15); font-size: 0.65rem;">Config</em>
                 </button>
             </div>
         </aside>

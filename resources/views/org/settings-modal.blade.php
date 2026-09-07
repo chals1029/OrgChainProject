@@ -1048,7 +1048,7 @@
                                     <i class="bi bi-award text-primary" style="font-size: 1.75rem;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">TOSA Matrix &amp; Criteria Manifest</strong>
-                                        <span style="font-size: 0.74rem; color: #64748b;">Official 8 requirements &amp; applicant evaluation logs (.CSV)</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Official 5 requirements &amp; applicant evaluation logs (.CSV)</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('TOSA Manifest')">Export</button>
                                 </div>

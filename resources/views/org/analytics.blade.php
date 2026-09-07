@@ -22,50 +22,54 @@
             background: #ffffff;
             border-radius: 20px;
             border: 1.5px solid #f0e6e8;
-            padding: 0.95rem 1.35rem;
+            padding: 0.75rem 1.15rem;
             box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1.25rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
+            gap: 0.85rem;
+            flex-wrap: nowrap;
+            margin-bottom: 1.25rem;
         }
 
         .oso-filter-bar-left {
             display: flex;
             align-items: center;
-            gap: 1.15rem;
-            flex-wrap: wrap;
+            gap: 0.75rem;
+            flex-wrap: nowrap;
             flex: 1;
+            min-width: 0;
         }
 
         .oso-filter-bar-title {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
-            font-size: 0.84rem;
+            gap: 0.35rem;
+            font-size: 0.82rem;
             font-weight: 800;
             color: #8b1828;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            margin-right: 0.25rem;
+            margin-right: 0.15rem;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .oso-filter-group {
             display: flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.35rem;
+            flex-shrink: 0;
         }
 
         .oso-filter-label {
-            font-size: 0.76rem;
+            font-size: 0.74rem;
             font-weight: 700;
             color: #706569;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.2rem;
         }
 
         .oso-select-wrapper {
@@ -80,8 +84,8 @@
             background: #fdfafb;
             border: 1.5px solid #f0e0e3;
             border-radius: 9999px;
-            padding: 0.42rem 2.1rem 0.42rem 0.95rem;
-            font-size: 0.8rem;
+            padding: 0.36rem 1.85rem 0.36rem 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #2b2427;
             cursor: pointer;
@@ -89,6 +93,7 @@
             font-family: inherit;
             transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            white-space: nowrap;
         }
 
         .oso-filter-select:hover {
@@ -104,7 +109,7 @@
 
         .oso-select-arrow {
             position: absolute;
-            right: 0.75rem;
+            right: 0.7rem;
             pointer-events: none;
             font-size: 0.65rem;
             color: #8b1828;
@@ -114,22 +119,25 @@
         .oso-filter-bar-right {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.55rem;
+            flex-shrink: 0;
         }
 
         .oso-filter-reset-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            padding: 0.42rem 0.85rem;
-            border-radius: 9999px;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 50%;
             background: #faf4f5;
-            border: 1px solid #ebd5d8;
+            border: 1.5px solid #ebd5d8;
             color: #7a2030;
-            font-size: 0.76rem;
-            font-weight: 700;
+            font-size: 0.92rem;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.18s ease;
+            flex-shrink: 0;
         }
 
         .oso-filter-reset-btn:hover {
@@ -137,6 +145,7 @@
             color: #ffffff;
             border-color: #8b1828;
             box-shadow: 0 2px 8px rgba(139, 24, 40, 0.2);
+            transform: rotate(-45deg);
         }
 
         .oso-filter-reset-btn:hover i {
@@ -214,59 +223,108 @@
             color: #8b1828;
         }
 
-        /* Health Scorecard */
+        /* Health Scorecard — Matching Dashboard Liquid-Glass System & Effects */
         .org-health-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.25rem;
             margin-bottom: 1.75rem;
         }
 
-        .org-health-item {
-            background: #ffffff;
-            border: 1.5px solid #f0e6e8;
-            border-radius: 18px;
-            padding: 1.35rem 1.4rem;
-            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.02);
+        .ovcaa-stat-card {
+            border-radius: 22px;
+            padding: 1.15rem 1.25rem 1.2rem;
+            display: grid;
+            gap: 0.35rem;
             position: relative;
             overflow: hidden;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(240, 230, 232, 0.95);
+            box-shadow: 0 4px 20px rgba(90, 15, 30, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
+            cursor: pointer;
+            text-decoration: none !important;
+            color: inherit;
         }
 
-        .org-health-item::before {
-            content: '';
+        .ovcaa-stat-card::after {
+            content: "";
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: #8b1828;
+            inset: 0 0 auto 0;
+            height: 3.5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: linear-gradient(90deg, transparent, #8b1828, transparent);
         }
 
-        .org-health-item.is-green::before { background: #16a34a; }
-        .org-health-item.is-blue::before { background: #2563eb; }
-        .org-health-item.is-amber::before { background: #d97706; }
-
-        .org-health-item span.lbl {
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: #635b5e;
-            display: block;
-            margin-bottom: 0.35rem;
+        .ovcaa-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 44px rgba(74, 10, 21, 0.12), 0 4px 12px rgba(74, 10, 21, 0.04);
+            border-color: rgba(139, 24, 40, 0.25);
         }
 
-        .org-health-item strong.val {
-            font-size: 1.55rem;
-            font-weight: 800;
+        .ovcaa-stat-card:hover::after {
+            opacity: 1;
+        }
+
+        .ovcaa-stat-card:active {
+            transform: translateY(-2px) scale(0.99);
+        }
+
+        .ovcaa-stat-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+            gap: 0.5rem;
+        }
+
+        .ovcaa-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
+        }
+
+        .ovcaa-stat-card:hover .ovcaa-stat-icon {
+            transform: scale(1.08) rotate(3deg);
+        }
+
+        .ovcaa-stat-icon.is-blue,
+        .ovcaa-stat-icon.is-green,
+        .ovcaa-stat-icon.is-amber,
+        .ovcaa-stat-icon.is-maroon {
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
+        }
+
+        .ovcaa-stat-top strong.val {
+            font-size: clamp(1.4rem, 1.8vw, 1.85rem);
             color: #1a1618;
-            display: block;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.035em;
+            font-variant-numeric: tabular-nums;
+            font-weight: 850;
+            line-height: 1;
+            margin-left: auto;
+            text-align: right;
         }
 
-        .org-health-item small.sub {
-            font-size: 0.78rem;
-            color: #7a7074;
+        .ovcaa-stat-card span.ovcaa-stat-title {
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 0.92rem;
+            letter-spacing: -0.01em;
             display: block;
-            margin-top: 0.3rem;
         }
 
         /* In-Campus vs Off-Campus Split Cards */
@@ -505,8 +563,8 @@
         </div>
 
         <div class="oso-filter-bar-right">
-            <button type="button" class="oso-filter-reset-btn" onclick="resetAnalyticsFilters()" title="Reset all filters">
-                <i class="bi bi-arrow-counterclockwise"></i> Reset
+            <button type="button" class="oso-filter-reset-btn" onclick="resetAnalyticsFilters()" title="Reset all filters" aria-label="Reset all filters">
+                <i class="bi bi-arrow-counterclockwise"></i>
             </button>
             <span class="oso-filter-status-badge" id="analyticsActiveFilterBadge">
                 <i class="bi bi-check2-circle"></i> Live Insights
@@ -514,28 +572,51 @@
         </div>
     </section>
 
-    {{-- 1. Overall Budget Health KPIs --}}
+    {{-- 1. Overall Budget Health KPIs (Dashboard Liquid-Glass Cards & Effects) --}}
     <div class="org-health-grid">
-        <div class="org-health-item is-green">
-            <span class="lbl"><i class="bi bi-check-circle-fill" style="color:#16a34a; margin-right: 0.2rem;"></i> Overall Budget Health</span>
-            <strong class="val" id="kpiHealthScore">{{ $overview['healthScore'] }}% · Optimal</strong>
-            <small class="sub">Low financial risk & compliant</small>
-        </div>
-        <div class="org-health-item">
-            <span class="lbl"><i class="bi bi-wallet2" style="color:#8b1828; margin-right: 0.2rem;"></i> Total Budget Allocated</span>
-            <strong class="val" id="kpiAllocated">₱{{ number_format($overview['totalAllocated']) }}</strong>
-            <small class="sub">Approved institutional allocation</small>
-        </div>
-        <div class="org-health-item is-blue">
-            <span class="lbl"><i class="bi bi-pie-chart-fill" style="color:#2563eb; margin-right: 0.2rem;"></i> Total Budget Utilized</span>
-            <strong class="val" id="kpiUtilized">₱{{ number_format($overview['totalUtilized']) }}</strong>
-            <small class="sub" id="kpiBurnRate">{{ $overview['burnRate'] }}% burn rate to date</small>
-        </div>
-        <div class="org-health-item is-amber">
-            <span class="lbl"><i class="bi bi-cash-coin" style="color:#d97706; margin-right: 0.2rem;"></i> Remaining Reserve</span>
-            <strong class="val" id="kpiRemaining" style="color: #dc2626;">₱{{ number_format($overview['remainingBalance']) }}</strong>
-            <small class="sub">37.8% buffer for remaining terms</small>
-        </div>
+        {{-- Card 1: Overall Budget Health --}}
+        <article class="ovcaa-stat-card liquid-glass is-green" title="Overall Budget Health: Optimal">
+            <div class="ovcaa-stat-top">
+                <div class="ovcaa-stat-icon is-green">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <strong class="val" id="kpiHealthScore">{{ $overview['healthScore'] }}% · Optimal</strong>
+            </div>
+            <span class="ovcaa-stat-title">Overall Budget Health</span>
+        </article>
+
+        {{-- Card 2: Total Budget Allocated --}}
+        <article class="ovcaa-stat-card liquid-glass is-maroon" title="Total Budget Allocated">
+            <div class="ovcaa-stat-top">
+                <div class="ovcaa-stat-icon is-maroon">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <strong class="val" id="kpiAllocated">₱{{ number_format($overview['totalAllocated']) }}</strong>
+            </div>
+            <span class="ovcaa-stat-title">Total Budget Allocated</span>
+        </article>
+
+        {{-- Card 3: Total Budget Utilized --}}
+        <article class="ovcaa-stat-card liquid-glass is-blue" title="Total Budget Utilized">
+            <div class="ovcaa-stat-top">
+                <div class="ovcaa-stat-icon is-blue">
+                    <i class="bi bi-pie-chart-fill"></i>
+                </div>
+                <strong class="val" id="kpiUtilized">₱{{ number_format($overview['totalUtilized']) }}</strong>
+            </div>
+            <span class="ovcaa-stat-title">Total Budget Utilized</span>
+        </article>
+
+        {{-- Card 4: Remaining Reserve --}}
+        <article class="ovcaa-stat-card liquid-glass is-amber" title="Remaining Reserve">
+            <div class="ovcaa-stat-top">
+                <div class="ovcaa-stat-icon is-amber">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <strong class="val" id="kpiRemaining">₱{{ number_format($overview['remainingBalance']) }}</strong>
+            </div>
+            <span class="ovcaa-stat-title">Remaining Reserve</span>
+        </article>
     </div>
 
     {{-- 2. Budget Utilization vs Budget Allocation Graph & Trend Analysis --}}
