@@ -1,0 +1,37 @@
+name: Discord Push Notification
+
+on:
+  push:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          USER: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+
+        run: |
+          curl -X POST \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n \
+            --arg user "$USER" \
+            --arg branch "$BRANCH" \
+            --arg commit "$COMMIT_MSG" \
+            '{
+              content: "<@&1530090116926804028>",
+              allowed_mentions: {
+                roles: ["1530090116926804028"]
+              },
+              username: "GitHub Updates",
+              embeds: [{
+                title: "Push Detected",
+                description: ("**" + $user + "** pushed an update.\n\n**Branch:** `" + $branch + "`\n**Commit:** " + $commit),
+                color: 5763719
+              }]
+            }')" \
+          "$DISCORD_WEBHOOK"
