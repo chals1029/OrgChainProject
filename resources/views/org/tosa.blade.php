@@ -2780,54 +2780,10 @@
                     </div>
                 </div>
 
-                {{-- Right: Sidebar Settings, Instructions, & Legend --}}
+                {{-- Right: Sidebar Instructions & Legend --}}
                 <div class="tosa-req-sidebar">
-                    
-                    {{-- 1. File Format Settings Panel --}}
-                    <div class="tosa-side-panel">
-                        <h4 class="tosa-side-panel-title has-gear">
-                            <i class="bi bi-gear-fill"></i> File Format Settings
-                        </h4>
 
-                        <div class="tosa-side-field">
-                            <label class="tosa-side-label">Allowed File Format</label>
-                            <select class="tosa-side-select" onchange="showTosaToast('Allowed file format preference updated to ' + this.value, 'info')">
-                                <option value="PDF">PDF</option>
-                                <option value="PDF, DOCX">PDF, DOCX</option>
-                                <option value="All Formats">All Formats</option>
-                            </select>
-                        </div>
-
-                        <div class="tosa-side-field">
-                            <label class="tosa-side-label">Max File Size</label>
-                            <select class="tosa-side-select" onchange="showTosaToast('Maximum upload size set to ' + this.value, 'info')">
-                                <option value="10 MB">10 MB</option>
-                                <option value="15 MB">15 MB</option>
-                                <option value="25 MB">25 MB</option>
-                                <option value="50 MB">50 MB</option>
-                            </select>
-                        </div>
-
-                        <div class="tosa-side-field">
-                            <label class="tosa-side-label">Scan Quality</label>
-                            <select class="tosa-side-select" onchange="showTosaToast('Scan quality threshold updated: ' + this.value, 'info')">
-                                <option value="Clear and Readable">Clear and Readable</option>
-                                <option value="High Resolution (300 DPI)">High Resolution (300 DPI)</option>
-                                <option value="Standard (150 DPI)">Standard (150 DPI)</option>
-                            </select>
-                        </div>
-
-                        <div class="tosa-side-field">
-                            <label class="tosa-side-label">Color Mode</label>
-                            <select class="tosa-side-select" onchange="showTosaToast('Color mode updated to ' + this.value, 'info')">
-                                <option value="Color (Recommended)">Color (Recommended)</option>
-                                <option value="Grayscale">Grayscale</option>
-                                <option value="Black & White">Black &amp; White</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {{-- 2. Instructions Panel --}}
+                    {{-- 1. Instructions Panel --}}
                     <div class="tosa-side-panel">
                         <h4 class="tosa-side-panel-title" style="color: #0284c7;">
                             <i class="bi bi-info-circle-fill"></i> Instructions
@@ -4188,9 +4144,6 @@
                                     <button type="button" class="tosa-action-btn" title="Upload Template / Sample" onclick="openUploadTemplateModal(${req.id})">
                                         <i class="bi bi-upload"></i>
                                     </button>
-                                    <button type="button" class="tosa-action-btn" title="Settings" onclick="openReqSettingsModal(${req.id})">
-                                        <i class="bi bi-gear"></i>
-                                    </button>
                                     <button type="button" class="tosa-action-btn is-delete" title="Delete Requirement" onclick="deleteRequirement(${req.id})">
                                         <i class="bi bi-trash3"></i>
                                     </button>
@@ -4389,12 +4342,6 @@
                 showTosaToast(`Official template uploaded for "${req.title}"!`, 'success');
             }
             closeUploadTemplateModal();
-        }
-
-        function openReqSettingsModal(id) {
-            const req = tosaRequirements.find(r => r.id === id);
-            if (!req) return;
-            showTosaToast(`Configuring governance rules for "${req.title}"...`, 'info');
         }
 
         // -------------------------------------------------------------------------

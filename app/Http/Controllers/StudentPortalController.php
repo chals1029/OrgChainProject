@@ -6,6 +6,7 @@ use App\Models\BudgetItem;
 use App\Models\CommunityPost;
 use App\Models\OrgActivity;
 use App\Models\UserAccount;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -20,6 +21,27 @@ class StudentPortalController extends Controller
     public function community(Request $request): View
     {
         return $this->portal($request, 'community');
+    }
+
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $student = Auth::guard('student')->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'program' => ['nullable', 'string', 'max:255'],
+            'college' => ['nullable', 'string', 'max:255'],
+            'year_level' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $student->fill([
+            'full_name' => $validated['name'],
+            'program' => $validated['program'] ?? null,
+            'college' => $validated['college'] ?? null,
+            'year_level' => $validated['year_level'] ?? null,
+        ])->save();
+
+        return back()->with('status', 'Profile updated.');
     }
 
     private function portal(Request $request, string $tab): View

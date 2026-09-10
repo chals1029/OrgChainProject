@@ -1710,16 +1710,16 @@
                                     <i class="bi bi-hand-thumbs-up-fill sp-react-like"></i>
                                     <i class="bi bi-heart-fill sp-react-love"></i>
                                 </span>
-                                <span class="sp-reaction-text">
+                                <button type="button" class="sp-reaction-text sp-likers-btn" data-likers-url="{{ route('portal.community.posts.likers', $post) }}" title="View likes">
                                     @if ($post->likes_count > 0)
-                                        {{ $post->liked_by_me ? 'You and ' . max(1, $post->likes_count - 1) . ' others' : $post->likes_count . ' likes' }}
+                                        {{ $post->liked_by_me ? 'You and ' . max(0, $post->likes_count - 1) . ($post->likes_count - 1 === 1 ? ' other' : ' others') : $post->likes_count . ($post->likes_count === 1 ? ' like' : ' likes') }}
                                     @else
-                                        You and 12 others
+                                        No likes yet
                                     @endif
-                                </span>
+                                </button>
                             </div>
                             <div class="sp-post-comments-count-right" data-comments-count>
-                                <span>{{ max(3, $post->comments_count ?? $post->comments->count()) }} comments</span>
+                                <button type="button" class="sp-comments-count-btn" data-scroll-comments="{{ $post->id }}">{{ $post->comments_count ?? $post->comments->count() }} {{ ($post->comments_count ?? $post->comments->count()) === 1 ? 'comment' : 'comments' }}</button>
                             </div>
                         </div>
 
@@ -1781,8 +1781,8 @@
                         {{-- Comments Thread with Modern Bubble Cards --}}
                         <div class="sp-comments" data-comments>
                             @if ($post->comments->isNotEmpty())
-                                @foreach ($post->comments->take(5) as $comment)
-                                    <div class="sp-comment-thread">
+                                @foreach ($post->comments as $comment)
+                                    <div class="sp-comment-thread {{ $loop->index >= 5 ? 'sp-comment-extra' : '' }}" @if ($loop->index >= 5) hidden @endif>
                                         <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
                                             <span>{{ strtoupper(substr($comment->student->name ?? 'J', 0, 2)) }}</span>
                                         </div>
@@ -1801,6 +1801,9 @@
                                         </div>
                                     </div>
                                 @endforeach
+                                @if ($post->comments->count() > 5)
+                                    <button type="button" class="sp-view-all-comments" data-view-comments>View all {{ $post->comments->count() }} comments</button>
+                                @endif
                             @else
                                 {{-- Picture 1 Mockup Comment Item --}}
                                 <div class="sp-comment-thread">

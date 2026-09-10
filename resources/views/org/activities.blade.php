@@ -1181,6 +1181,31 @@
                 align-items: flex-start;
             }
         }
+
+        /* Responsive helpers for detail grids (SDO checklist, OVCAA trail) */
+        .org-sdo-checklist-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem;
+            font-size: 0.82rem;
+            color: #44403c;
+        }
+
+        .org-ovcaa-trail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .org-sdo-checklist-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .org-ovcaa-trail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 
     @if ($selectedActivity)
@@ -1349,7 +1374,7 @@
                         <h4 style="font-size: 0.88rem; font-weight: 700; color: #1c1917; margin: 0 0 0.65rem; display: flex; align-items: center; gap: 0.45rem;">
                             <i class="bi bi-check2-square" style="color: #15803d;"></i> SDO Document Compliance Checklist
                         </h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; font-size: 0.82rem; color: #44403c;">
+                        <div class="org-sdo-checklist-grid">
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <i class="bi bi-check-circle-fill" style="color: #16a34a;"></i>
                                 <span>Waste Policy Compliance Form (WPCF)</span>
@@ -1398,7 +1423,7 @@
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div class="org-ovcaa-trail-grid">
                         <div style="background: #ffffff; border: 1.5px solid #f0e6e8; border-radius: 14px; padding: 0.85rem 1rem;">
                             <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #7a7074; text-transform: uppercase;">Step 1: Student Org</span>
                             <strong style="display: block; font-size: 0.88rem; color: #1a1618; margin: 0.2rem 0;">Proposal Submitted</strong>

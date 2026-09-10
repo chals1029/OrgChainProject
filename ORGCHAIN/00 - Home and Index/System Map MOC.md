@@ -91,6 +91,7 @@ This Map of Content indexes every architectural document, module specification, 
 - [[Maintenance Resync and Ledger Purge Runbook]]: Blockchain recovery, ledger resynchronization, cache clearing.
 - [[Security Incident and Rate Limit Response Runbook]]: Incident analysis, SQL injection mitigation, IP unbanning.
 - [[Testing and Quality Assurance Guide]]: Running PHPUnit test suites and assertions.
+- [[Session Log 2026-09-10 Portal Responsiveness and Mobile Fixes]]: No-reload navigation, student-portal mobile overhaul, dropdowns, OCR upload, overlay stacking fix.
 
 ---
 

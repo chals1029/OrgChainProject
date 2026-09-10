@@ -34,9 +34,11 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::get('/community', [StudentPortalController::class, 'community'])->name('community');
 
     Route::post('/community/posts', [CommunityFeedController::class, 'store'])->name('community.posts.store');
+    Route::get('/community/posts/{post}/likers', [CommunityFeedController::class, 'likers'])->name('community.posts.likers');
     Route::post('/community/posts/{post}/like', [CommunityFeedController::class, 'like'])->name('community.posts.like');
     Route::post('/community/posts/{post}/comments', [CommunityFeedController::class, 'comment'])->name('community.posts.comment');
     Route::delete('/community/posts/{post}', [CommunityFeedController::class, 'destroy'])->name('community.posts.destroy');
+    Route::put('/profile', [StudentPortalController::class, 'updateProfile'])->name('profile.update');
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {

@@ -27,7 +27,7 @@
     </div>
 
     <div class="org-shell">
-        <aside class="org-sidebar liquid-glass">
+        <aside class="org-sidebar liquid-glass" id="orgSidebar">
             <div class="org-sidebar-brand">
                 <div class="org-brand-mark" aria-hidden="true">
                     <i class="bi bi-people-fill"></i>
@@ -41,37 +41,37 @@
             <p class="org-nav-section">Menu</p>
             <nav class="org-nav" aria-label="Student Org">
                 <a href="{{ route('office.home') }}" class="org-nav-link {{ ($activeNav ?? '') === 'dashboard' ? 'is-active' : '' }}">
-                    <i class="bi bi-grid-1x2-fill"></i>
+                    <i class="bi bi-grid-1x2-fill is-ico-red"></i>
                     <span>Dashboard</span>
                     @if (($activeNav ?? '') === 'dashboard')
                         <em class="org-badge-new">New</em>
                     @endif
                 </a>
                 <a href="{{ route('office.analytics') }}" class="org-nav-link {{ ($activeNav ?? '') === 'analytics' ? 'is-active' : '' }}">
-                    <i class="bi bi-bar-chart-fill"></i>
+                    <i class="bi bi-bar-chart-fill is-ico-violet"></i>
                     <span>Analytics</span>
                 </a>
 
                 {{-- Activities / Proposals / SDG Review / OVCAA Review --}}
                 <a href="{{ route('office.activities') }}" class="org-nav-link {{ ($activeNav ?? '') === 'activities' ? 'is-active' : '' }}">
                     @if (($office->office_role ?? '') === 'oso')
-                        <i class="bi bi-file-earmark-check-fill"></i>
+                        <i class="bi bi-file-earmark-check-fill is-ico-blue"></i>
                         <span>Proposals</span>
                     @elseif (($office->office_role ?? '') === 'sdo')
-                        <i class="bi bi-leaf-fill"></i>
+                        <i class="bi bi-leaf-fill is-ico-green"></i>
                         <span>SDG Document Review</span>
                     @elseif (($office->office_role ?? '') === 'ovcaa')
-                        <i class="bi bi-patch-check-fill"></i>
+                        <i class="bi bi-patch-check-fill is-ico-green"></i>
                         <span>Final Approval</span>
                     @else
-                        <i class="bi bi-lightning-charge-fill"></i>
+                        <i class="bi bi-lightning-charge-fill is-ico-gold"></i>
                         <span>Activities</span>
                     @endif
                     <em class="org-badge-count">12</em>
                 </a>
 
                 <a href="{{ route('office.calendar') }}" class="org-nav-link {{ ($activeNav ?? '') === 'calendar' ? 'is-active' : '' }}">
-                    <i class="bi bi-calendar3"></i>
+                    <i class="bi bi-calendar3 is-ico-blue"></i>
                     <span>Calendar</span>
                     <em class="org-badge-count">3</em>
                 </a>
@@ -79,7 +79,7 @@
                 {{-- Budget Utilization: removed on OVCAA DESK ONLY --}}
                 @if (($office->office_role ?? '') !== 'ovcaa')
                 <a href="{{ route('office.budget') }}" class="org-nav-link {{ ($activeNav ?? '') === 'budget' ? 'is-active' : '' }}">
-                    <i class="bi bi-wallet2"></i>
+                    <i class="bi bi-wallet2 is-ico-green"></i>
                     <span>Budget Utilization</span>
                 </a>
                 @endif
@@ -87,7 +87,7 @@
                 {{-- Financial Report: removed on OVCAA and SDO --}}
                 @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'sdo']))
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
-                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
                     <span>Financial Report</span>
                     <em class="org-badge-count">{{ $navBadges['fr_attachments'] ?? 4 }}</em>
                 </a>
@@ -96,40 +96,45 @@
                 {{-- Accomplishment Report: removed on OVCAA and SDO --}}
                 @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'sdo']))
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
-                    <i class="bi bi-trophy"></i>
+                    <i class="bi bi-trophy is-ico-gold"></i>
                     <span>Accomplishment Report</span>
                     <em class="org-badge-count">{{ $navBadges['ar_attachments'] ?? 3 }}</em>
                 </a>
                 @endif
 
                 <a href="{{ route('office.updates') }}" class="org-nav-link {{ ($activeNav ?? '') === 'updates' ? 'is-active' : '' }}">
-                    <i class="bi bi-megaphone-fill"></i>
+                    <i class="bi bi-megaphone-fill is-ico-red"></i>
                     <span>Updates</span>
                     <em class="org-badge-count">3</em>
                 </a>
                 @if (($office->office_role ?? '') === 'oso')
                     <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
-                        <i class="bi bi-archive-fill"></i>
+                        <i class="bi bi-archive-fill is-ico-slate"></i>
                         <span>Archive</span>
                     </a>
                     <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
-                        <i class="bi bi-award-fill"></i>
+                        <i class="bi bi-award-fill is-ico-maroon"></i>
                         <span>TOSA Module</span>
                         <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
                     </a>
                 @endif
             </nav>
 
+            @if (in_array(($office->office_role ?? ''), ['oso', 'ovcaa']))
             <div style="margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--org-line); display: flex; flex-direction: column; gap: 0.35rem;">
                 <button type="button" class="org-nav-link org-sidebar-settings-btn" onclick="openSettingsModal()" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.75rem; font-family: inherit;">
-                    <i class="bi bi-gear-fill"></i>
+                    <i class="bi bi-gear-fill is-ico-slate"></i>
                     <span>Settings</span>
                 </button>
             </div>
+            @endif
         </aside>
 
         <div class="org-main">
             <header class="org-topbar">
+                <button type="button" class="org-menu-toggle" data-org-menu aria-label="Open menu" aria-expanded="false" aria-controls="orgSidebar">
+                    <i class="bi bi-list"></i>
+                </button>
                 <div>
                     <p class="org-module-kicker">
                         @if (($office->office_role ?? '') === 'oso')
@@ -198,6 +203,9 @@
             </div>
         </div>
     </div>
+
+    <div class="org-page-loader" id="orgPageLoader" aria-hidden="true"><span></span></div>
+    <div class="org-sidebar-overlay" id="orgSidebarOverlay" hidden></div>
 
     {{-- Executive Settings Hub Component (Front-End Only) --}}
     @include('org.settings-modal')
@@ -279,6 +287,125 @@
                 modal.style.display = 'none';
             }
         }
+
+        /* No-reload sidebar navigation: swap topbar + content via fetch. */
+        (function () {
+            const executedScripts = new Set();
+            document.querySelectorAll('script:not([src])').forEach((s) => {
+                if (s.textContent.trim()) executedScripts.add(s.textContent);
+            });
+
+            const loader = () => document.getElementById('orgPageLoader');
+            const sidebar = () => document.getElementById('orgSidebar');
+            const overlay = () => document.getElementById('orgSidebarOverlay');
+
+            window.closeOrgSidebar = function () {
+                sidebar()?.classList.remove('is-open');
+                overlay()?.setAttribute('hidden', '');
+                document.querySelector('[data-org-menu]')?.setAttribute('aria-expanded', 'false');
+                document.body.classList.remove('org-no-scroll');
+            };
+
+            const openOrgSidebar = () => {
+                sidebar()?.classList.add('is-open');
+                overlay()?.removeAttribute('hidden');
+                document.querySelector('[data-org-menu]')?.setAttribute('aria-expanded', 'true');
+                document.body.classList.add('org-no-scroll');
+            };
+
+            const runScript = (el) => {
+                if (el.src) {
+                    if (!document.querySelector('script[src="' + el.src + '"]')) {
+                        const ns = document.createElement('script');
+                        ns.src = el.src;
+                        if (el.defer) ns.defer = true;
+                        document.body.appendChild(ns);
+                    }
+                    return;
+                }
+                const code = el.textContent || '';
+                if (!code.trim() || executedScripts.has(code)) return;
+                executedScripts.add(code);
+                const ns = document.createElement('script');
+                ns.textContent = code;
+                document.body.appendChild(ns);
+            };
+
+            const markActive = (url) => {
+                let path = '';
+                try { path = new URL(url, location.origin).pathname; } catch (_) { return; }
+                document.querySelectorAll('.org-nav a.org-nav-link[href]').forEach((a) => {
+                    let ap = '';
+                    try { ap = new URL(a.getAttribute('href'), location.origin).pathname; } catch (_) { return; }
+                    a.classList.toggle('is-active', ap === path);
+                });
+            };
+
+            window.orgNavigate = async function (url, push = true) {
+                const bar = loader();
+                if (bar) bar.classList.add('is-loading');
+                try {
+                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                    const html = await res.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const newTopbar = doc.querySelector('.org-topbar');
+                    const newContent = doc.querySelector('.org-content');
+                    if (!newTopbar || !newContent) { location.href = url; return; }
+                    document.querySelector('.org-topbar')?.replaceWith(newTopbar);
+                    document.querySelector('.org-content')?.replaceWith(newContent);
+                    if (doc.title) document.title = doc.title;
+                    doc.querySelectorAll('body script').forEach(runScript);
+                    markActive(url);
+                    if (push) history.pushState({ orgNav: true }, '', url);
+                    window.closeOrgSidebar();
+                    document.querySelector('.org-main')?.scrollTo({ top: 0 });
+                    window.scrollTo({ top: 0 });
+                } catch (_) {
+                    location.href = url;
+                } finally {
+                    if (bar) bar.classList.remove('is-loading');
+                }
+            };
+
+            document.addEventListener('click', (e) => {
+                const menuBtn = e.target.closest('[data-org-menu]');
+                if (menuBtn) {
+                    if (sidebar()?.classList.contains('is-open')) window.closeOrgSidebar();
+                    else openOrgSidebar();
+                    return;
+                }
+                if (e.target.closest('#orgSidebarOverlay')) {
+                    window.closeOrgSidebar();
+                    return;
+                }
+                const link = e.target.closest('.org-nav a.org-nav-link[href]');
+                if (link && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+                    e.preventDefault();
+                    window.orgNavigate(link.getAttribute('href'), true);
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sidebar()?.classList.contains('is-open')) window.closeOrgSidebar();
+            });
+
+            /* If the drawer is open and the viewport grows back to desktop
+               (e.g. window drag/resize), close it so no scroll-lock or
+               overlay state leaks into the desktop layout. */
+            const orgDesktopQuery = window.matchMedia('(min-width: 901px)');
+            const syncOrgSidebarToViewport = (e) => {
+                if (e.matches) window.closeOrgSidebar();
+            };
+            if (typeof orgDesktopQuery.addEventListener === 'function') {
+                orgDesktopQuery.addEventListener('change', syncOrgSidebarToViewport);
+            } else if (typeof orgDesktopQuery.addListener === 'function') {
+                orgDesktopQuery.addListener(syncOrgSidebarToViewport);
+            }
+
+            window.addEventListener('popstate', () => {
+                window.orgNavigate(location.href, false);
+            });
+        })();
     </script>
     @stack('scripts')
 </body>

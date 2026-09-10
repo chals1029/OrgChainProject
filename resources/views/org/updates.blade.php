@@ -1168,11 +1168,6 @@
             <form id="announcementComposerForm" onsubmit="handlePublishAnnouncement(event)">
                 <div class="aso-form-row">
                     <div class="aso-input-group">
-                        <label for="postTitle">Announcement Title / Subject *</label>
-                        <input type="text" id="postTitle" class="aso-input" placeholder="e.g., Extended Activity Proposal Deadline for 2nd Semester" required>
-                    </div>
-
-                    <div class="aso-input-group">
                         <label for="postTypeSelect">Announcement Type *</label>
                         <select id="postTypeSelect" class="aso-select" onchange="updateComposerTypePreview(this.value)">
                             <option value="General Announcement">General Announcement</option>
@@ -1747,10 +1742,10 @@
 
         function focusAnnouncementComposer() {
             const section = document.getElementById('composerSection');
-            const titleInput = document.getElementById('postTitle');
+            const bodyInput = document.getElementById('postBody');
             if (section) {
                 section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                if (titleInput) titleInput.focus();
+                if (bodyInput) bodyInput.focus();
             }
         }
 
@@ -1862,13 +1857,15 @@
         // =========================================================================
         function handlePublishAnnouncement(e) {
             e.preventDefault();
-            const title = document.getElementById('postTitle').value.trim();
             const type = document.getElementById('postTypeSelect').value;
             const priority = document.getElementById('postPrioritySelect').value;
             const body = document.getElementById('postBody').value.trim();
             const author = '{{ $office->name ?? "Office of Student Organizations (OSO)" }}';
 
-            if (!title || !body) return;
+            if (!body) return;
+
+            const headline = body.split(/\s+/).slice(0, 9).join(' ') + (body.split(/\s+/).length > 9 ? '…' : '');
+            const title = `${type}: ${headline}`;
 
             const isHigh = priority === 'high';
             const typeBadgeClass = getTypeBadgeClass(type);

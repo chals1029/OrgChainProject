@@ -28,4 +28,6 @@ Homestead.yaml
 Thumbs.db
 __pycache__/
 *.pyc
+database/sql_dumps/
+
 

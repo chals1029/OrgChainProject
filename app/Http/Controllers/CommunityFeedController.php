@@ -115,6 +115,26 @@ class CommunityFeedController extends Controller
         return back()->with('status', 'Comment added.');
     }
 
+    public function likers(CommunityPost $post): JsonResponse
+    {
+        $likers = CommunityLike::query()
+            ->where('post_id', $post->id)
+            ->with('student')
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (CommunityLike $like): array => [
+                'name' => $like->student->name ?? 'Student',
+                'initials' => $like->student ? $like->student->initials() : 'S',
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'likes_count' => (int) $post->likes_count,
+            'likers' => $likers,
+        ]);
+    }
+
     public function destroy(CommunityPost $post): RedirectResponse
     {
         $student = Auth::guard('student')->user();

@@ -922,6 +922,248 @@
             </div>
         </section>
 
+        @if ($canRecordExpense)
+        {{-- SO only: Record Expense with Budget / Receipt Upload + OCR pre-fill --}}
+        <section class="so-expense-card" aria-label="Record Expense">
+            <div class="so-expense-head">
+                <div>
+                    <h3><i class="bi bi-journal-plus"></i> Record Expense</h3>
+                    <span>Upload the budget receipt — details are scanned automatically, then you review and submit.</span>
+                </div>
+                <span class="org-info-pill-badge">SO Encoding</span>
+            </div>
+
+            @if (session('success'))
+                <div class="so-alert is-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="so-alert is-error"><i class="bi bi-exclamation-triangle-fill"></i> {{ $errors->first() }}</div>
+            @endif
+
+            <form method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data" id="soExpenseForm" class="so-expense-form">
+                @csrf
+                <input type="hidden" name="receipt_detected" id="soReceiptDetected" value="1">
+                <input type="hidden" name="ocr_confidence" id="soOcrConfidence" value="">
+
+                <div class="so-form-grid">
+                    <label>
+                        <span>Activity / Project *</span>
+                        <input type="text" name="activity" list="soActivityOptions" value="{{ old('activity', 'Innovation Fair Booth Series') }}" required maxlength="255" placeholder="Select or type activity">
+                        <datalist id="soActivityOptions">
+                            <option value="Innovation Fair Booth Series"></option>
+                            <option value="Leadership Summit 2026"></option>
+                            <option value="Campus Wellness Week"></option>
+                            <option value="Volunteer Appreciation Day"></option>
+                            <option value="BatStateU Sportsfest 2026"></option>
+                        </datalist>
+                    </label>
+                    <label>
+                        <span>Item / Merchant Name *</span>
+                        <input type="text" name="item_name" id="soItemName" value="{{ old('item_name') }}" required maxlength="255" placeholder="e.g. Sound system rental">
+                    </label>
+                    <label>
+                        <span>Category</span>
+                        <select name="category">
+                            <option value="">Select category</option>
+                            @foreach (['Equipment Rental', 'Supplies', 'Food & Refreshments', 'Transportation', 'Printing', 'Honoraria', 'Other'] as $cat)
+                                <option value="{{ $cat }}" @selected(old('category') === $cat)>{{ $cat }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label>
+                        <span>Quantity *</span>
+                        <input type="number" name="quantity" value="{{ old('quantity', 1) }}" min="1" max="100000" required>
+                    </label>
+                    <label>
+                        <span>Unit Cost (₱) *</span>
+                        <input type="number" name="unit_cost" id="soUnitCost" value="{{ old('unit_cost') }}" min="0.01" step="0.01" required placeholder="0.00">
+                    </label>
+                    <label>
+                        <span>Expense Date *</span>
+                        <input type="date" name="expense_date" id="soExpenseDate" value="{{ old('expense_date', now()->toDateString()) }}" required>
+                    </label>
+                    <label class="so-span-2">
+                        <span>Budget Receipt / Proof of Purchase * <em class="so-hint-pill">PDF, PNG, JPG, WEBP · Max 10MB</em></span>
+                        <input type="file" name="receipt" id="soReceiptInput" accept=".pdf,.png,.jpg,.jpeg,.webp" required>
+                    </label>
+                </div>
+
+                <div class="so-ocr-status" id="soOcrStatus" aria-live="polite">
+                    <i class="bi bi-receipt"></i>
+                    <div>
+                        <strong id="soOcrTitle">Receipt verification</strong>
+                        <p id="soOcrText">Upload a clear receipt to auto-fill the item, amount, and date.</p>
+                    </div>
+                </div>
+
+                <label class="so-review-check" id="soReviewCheck" hidden>
+                    <input type="checkbox" name="receipt_reviewed" value="1">
+                    <span>I reviewed the scanned details and confirm they match the uploaded receipt.</span>
+                </label>
+
+                <div class="so-form-actions">
+                    <button type="reset" class="org-btn org-btn-ghost">Clear</button>
+                    <button type="submit" class="org-btn org-btn-primary"><i class="bi bi-send-fill"></i> Submit for Review</button>
+                </div>
+            </form>
+
+            @if (($receiptReviews ?? collect())->isNotEmpty())
+                <div class="so-queue">
+                    <h4><i class="bi bi-hourglass-split"></i> Submitted Receipts — For Review ({{ $receiptReviews->count() }})</h4>
+                    <ul>
+                        @foreach ($receiptReviews as $review)
+                            <li>
+                                <div>
+                                    <strong>{{ $review->item_name }}</strong>
+                                    <small>{{ $review->activity_title }} · {{ \Carbon\Carbon::parse($review->expense_date)->format('M j, Y') }} · Qty {{ $review->quantity }}</small>
+                                </div>
+                                <div class="so-queue-right">
+                                    <strong>₱{{ number_format((float) $review->unit_cost * (int) $review->quantity, 2) }}</strong>
+                                    <a href="{{ asset('storage/'.$review->receipt_path) }}" target="_blank" rel="noopener" title="View receipt"><i class="bi bi-eye"></i> {{ $review->receipt_name }}</a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </section>
+        @endif
+
+        <style>
+            .so-expense-card { background: #fff; border: 1.5px solid #f0e6e8; border-radius: 20px; padding: 1.25rem 1.4rem; box-shadow: 0 4px 16px rgba(90,15,30,.03); display: grid; gap: 1rem; }
+            .so-expense-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+            .so-expense-head h3 { margin: 0; font-size: 1.02rem; font-weight: 800; color: #1a1618; display: flex; align-items: center; gap: .45rem; }
+            .so-expense-head h3 i { color: #8b1828; }
+            .so-expense-head span { font-size: .78rem; color: #786f73; }
+            .so-alert { display: flex; align-items: center; gap: .5rem; padding: .7rem .9rem; border-radius: 12px; font-size: .84rem; font-weight: 700; }
+            .so-alert.is-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+            .so-alert.is-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+            .so-expense-form { display: grid; gap: 1rem; }
+            .so-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+            .so-form-grid label { display: grid; gap: .35rem; font-size: .78rem; font-weight: 800; color: #2b2427; }
+            .so-form-grid input, .so-form-grid select { width: 100%; box-sizing: border-box; padding: .65rem .8rem; font: inherit; font-weight: 500; border: 1.5px solid #f0e0e3; border-radius: 12px; background: #fdfafb; color: #2b2427; }
+            .so-span-2 { grid-column: span 2; }
+            .so-hint-pill { font-style: normal; font-weight: 700; font-size: .68rem; color: #8b1828; background: #fdf0f2; border-radius: 999px; padding: .1rem .5rem; margin-left: .3rem; }
+            .so-ocr-status { display: flex; gap: .7rem; align-items: flex-start; padding: .8rem .9rem; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: .8rem; }
+            .so-ocr-status > i { color: #8b1828; font-size: 1.1rem; }
+            .so-ocr-status strong { display: block; color: #1a1618; }
+            .so-ocr-status p { margin: .15rem 0 0; color: #64748b; }
+            .so-ocr-status[data-state="scanning"] { background: #eff6ff; border-color: #bfdbfe; }
+            .so-ocr-status[data-state="complete"] { background: #f0fdf4; border-color: #bbf7d0; }
+            .so-ocr-status[data-state="needs-review"] { background: #fffbeb; border-color: #fde68a; }
+            .so-review-check { display: flex; gap: .6rem; align-items: flex-start; font-size: .82rem; font-weight: 700; color: #14532d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: .7rem .9rem; cursor: pointer; }
+            .so-form-actions { display: flex; justify-content: flex-end; gap: .6rem; }
+            .so-queue h4 { margin: 0 0 .5rem; font-size: .88rem; color: #1a1618; display: flex; gap: .4rem; align-items: center; }
+            .so-queue h4 i { color: #8b1828; }
+            .so-queue ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+            .so-queue li { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .6rem .8rem; border: 1px solid #f0e6e8; border-radius: 12px; background: #fdfafb; }
+            .so-queue small { display: block; color: #786f73; font-size: .74rem; }
+            .so-queue-right { text-align: right; display: grid; gap: .15rem; }
+            .so-queue-right a { font-size: .74rem; color: #8b1828; text-decoration: none; font-weight: 700; }
+            @media (max-width: 900px) { .so-form-grid { grid-template-columns: 1fr 1fr; } .so-span-2 { grid-column: 1 / -1; } }
+            @media (max-width: 560px) { .so-form-grid { grid-template-columns: 1fr; } .so-queue li { flex-direction: column; align-items: flex-start; } .so-queue-right { text-align: left; } }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+        <script>
+            (function () {
+                const form = document.getElementById('soExpenseForm');
+                if (!form) return;
+                const fileInput = document.getElementById('soReceiptInput');
+                const status = document.getElementById('soOcrStatus');
+                const title = document.getElementById('soOcrTitle');
+                const text = document.getElementById('soOcrText');
+                const review = document.getElementById('soReviewCheck');
+                const detected = document.getElementById('soReceiptDetected');
+                const conf = document.getElementById('soOcrConfidence');
+                const itemName = document.getElementById('soItemName');
+                const unitCost = document.getElementById('soUnitCost');
+                const expDate = document.getElementById('soExpenseDate');
+
+                const setState = (state, t, d) => {
+                    status.dataset.state = state;
+                    title.textContent = t;
+                    text.textContent = d;
+                };
+
+                const parseAmount = (str) => {
+                    const m = [...str.matchAll(/(?:₱|PHP|P|TOTAL|AMOUNT|₱)?\s*:?\s*([0-9]{1,3}(?:,[0-9]{3})*\.\d{2}|[0-9]+\.\d{2})/gi)];
+                    if (!m.length) return null;
+                    return parseFloat(m[m.length - 1][1].replace(/,/g, ''));
+                };
+
+                fileInput?.addEventListener('change', async () => {
+                    const file = fileInput.files?.[0];
+                    review.hidden = true;
+                    if (conf) conf.value = '';
+                    if (!file) return;
+                    if (file.type === 'application/pdf') {
+                        detected.value = '1';
+                        setState('needs-review', 'PDF attached — manual review', 'Local OCR scans images only. Fill in the amount and date from this PDF manually.');
+                        review.hidden = false;
+                        return;
+                    }
+                    if (!window.Tesseract) {
+                        setState('needs-review', 'Scanner unavailable', 'Enter the receipt details manually and tick the confirmation box.');
+                        review.hidden = false;
+                        return;
+                    }
+                    setState('scanning', 'Scanning receipt…', 'Reading merchant, total amount, and date. Keep this page open.');
+                    try {
+                        const { data } = await window.Tesseract.recognize(file, 'eng');
+                        const lines = (data.text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+                        const merchant = lines.find((l) => /[a-z]/i.test(l) && !/(receipt|invoice|date|time|cashier|total|change|thank|vat|tel|tin|or no|amount)/i.test(l) && l.length > 2);
+                        const amount = parseAmount(data.text || '');
+                        const dateM = (data.text || '').match(/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})\b/);
+                        if (merchant && !itemName.value.trim()) itemName.value = merchant.slice(0, 255);
+                        if (amount && !unitCost.value) unitCost.value = amount.toFixed(2);
+                        if (dateM && !expDate.value) {
+                            const d = new Date(dateM[1]);
+                            if (!Number.isNaN(d.getTime())) expDate.value = d.toISOString().slice(0, 10);
+                        }
+                        if (conf && data.confidence != null) conf.value = Math.round(data.confidence);
+                        if ((data.text || '').trim().length < 12) {
+                            detected.value = '0';
+                            setState('needs-review', 'No readable receipt detected', 'The image has almost no readable text. Please upload a clearer photo of the receipt.');
+                            return;
+                        }
+                        detected.value = '1';
+                        const missing = [];
+                        if (!itemName.value.trim()) missing.push('item name');
+                        if (!unitCost.value) missing.push('amount');
+                        if (!expDate.value) missing.push('date');
+                        if (missing.length) {
+                            setState('needs-review', 'Needs review', 'Please complete: ' + missing.join(', ') + '.');
+                        } else {
+                            setState('complete', 'Complete — ready for your review', 'All details detected. Compare with the original receipt, then confirm below.');
+                        }
+                        review.hidden = false;
+                    } catch (_) {
+                        detected.value = '1';
+                        setState('needs-review', 'Scan could not finish', 'Enter the details manually and tick the confirmation box.');
+                        review.hidden = false;
+                    }
+                });
+
+                form.addEventListener('submit', (e) => {
+                    const box = review.querySelector('input[type="checkbox"]');
+                    if (!box?.checked) {
+                        e.preventDefault();
+                        setState('needs-review', 'Review required', 'Tick the confirmation box after checking the scanned details against the receipt.');
+                        review.hidden = false;
+                        review.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+
+                form.addEventListener('reset', () => {
+                    setTimeout(() => {
+                        detected.value = '1';
+                        review.hidden = true;
+                        setState('', 'Receipt verification', 'Upload a clear receipt to auto-fill the item, amount, and date.');
+                    }, 0);
+                });
+            })();
+        </script>
+
         {{-- 1 & 2. Organization Information & Activity / Project Information Panels --}}
         <div class="org-info-panels-grid">
             {{-- Organization Information Panel --}}
