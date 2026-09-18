@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $appUrl = (string) config('app.url');
+
+        // Keep asset/login redirects on the public tunnel host (ngrok / Cloudflare).
+        if ($appUrl !== '' && str_starts_with($appUrl, 'http')) {
+            URL::forceRootUrl($appUrl);
+        }
+
+        if (str_starts_with($appUrl, 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 }

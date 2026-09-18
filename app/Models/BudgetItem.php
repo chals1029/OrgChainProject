@@ -11,11 +11,23 @@ class BudgetItem extends Model
     protected $fillable = [
         'title',
         'category',
+        'college',
+        'organization_name',
         'allocated',
         'utilized',
         'fiscal_year',
         'notes',
+        'supplier',
+        'is_approved',
+        'scope',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_approved' => 'boolean',
+        ];
+    }
 
     public function utilizationPercent(): int
     {

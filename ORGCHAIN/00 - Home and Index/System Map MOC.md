@@ -36,6 +36,7 @@ This Map of Content indexes every architectural document, module specification, 
 - [[Multi-Tier Office Roles SO OSO SDO OVCAA]]: Governance tier hierarchy, role permissions, and navigation badges.
 - [[Activity Proposal Approval Pipeline]]: 4-stage document verification workflow and proposal lifecycle.
 - [[Budget Utilization and OCR Receipts]]: Financial accounting, expense itemization, OCR receipt verification.
+- [[Organization Renewal Filing Window]]: OSO-controlled open/close; SO locked tab until filing opens; 10-doc packet.
 - [[Interactive Activity Calendar]]: Campus activity scheduling, month aggregation, and status color codes.
 - [[Document Archive and Compliance Repository]]: Organization folder structure, multi-file uploads, semester archiving.
 
@@ -90,7 +91,9 @@ This Map of Content indexes every architectural document, module specification, 
 - [[Environment Variables dot-env Specification]]: `.env` parameter reference and default values.
 - [[Maintenance Resync and Ledger Purge Runbook]]: Blockchain recovery, ledger resynchronization, cache clearing.
 - [[Security Incident and Rate Limit Response Runbook]]: Incident analysis, SQL injection mitigation, IP unbanning.
-- [[Testing and Quality Assurance Guide]]: Running PHPUnit test suites and assertions.
+- [[Testing and Quality Assurance Guide]]: PHPUnit + Playwright console smoke.
+- [[Playwright Console Smoke Testing]]: Full-system browser crawl (all roles + portal).
+- [[Session Log 2026-09-18 Renewal Budget Chain and Playwright Smoke]]: Renewal desk, budget chain, smoke harness.
 - [[Session Log 2026-09-10 Portal Responsiveness and Mobile Fixes]]: No-reload navigation, student-portal mobile overhaul, dropdowns, OCR upload, overlay stacking fix.
 
 ---

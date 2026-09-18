@@ -62,12 +62,73 @@
             </article>
         </section>
 
+        {{-- SDG highlights + department filter + student voice --}}
+        <section class="sp-section" style="margin-top:1.25rem;">
+            <div class="sp-section-head">
+                <div>
+                    <h2><i class="bi bi-globe2"></i> SDG Highlights</h2>
+                    <p>Which Sustainable Development Goals campus activities incorporate.</p>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-bottom:1rem;">
+                @forelse (($sdgHighlights ?? collect()) as $sdg)
+                    <article class="liquid-glass" style="padding:0.9rem 1rem;border-radius:16px;">
+                        <strong style="color:#7a1222;">{{ $sdg['sdg'] }}</strong>
+                        <div style="font-size:0.82rem;color:#786f73;">{{ $sdg['count'] }} activities</div>
+                        <small>{{ collect($sdg['samples'])->implode(' · ') }}</small>
+                    </article>
+                @empty
+                    <p style="color:#786f73;">SDG-tagged activities will appear here after seeding.</p>
+                @endforelse
+            </div>
+
+            <form method="get" action="{{ route('portal.home') }}" style="display:flex;flex-wrap:wrap;gap:0.65rem;align-items:end;margin-bottom:1rem;">
+                <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:700;">
+                    Filter by department
+                    <select name="college" style="padding:0.45rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;max-width:min(100%,28rem);">
+                        <option value="" @selected(($collegeFilterExplicit ?? false) && ($selectedCollege ?? '') === '')>All departments</option>
+                        @foreach (($colleges ?? []) as $college)
+                            <option value="{{ $college }}" @selected(($selectedCollege ?? '') === $college)>{{ $college }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:700;">
+                    Status
+                    <select name="status" style="padding:0.45rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
+                        <option value="">All</option>
+                        <option value="upcoming" @selected(($selectedStatus ?? '') === 'upcoming')>Upcoming</option>
+                        <option value="ongoing" @selected(($selectedStatus ?? '') === 'ongoing')>Ongoing</option>
+                    </select>
+                </label>
+                <button type="submit" class="sp-chip" style="border:none;cursor:pointer;background:#7a1222;color:#fff;padding:0.45rem 0.9rem;">Apply</button>
+            </form>
+
+            <div class="liquid-glass" style="padding:1rem 1.15rem;border-radius:18px;">
+                <h3 style="margin:0 0 0.5rem;font-size:1rem;"><i class="bi bi-chat-heart"></i> Student voice</h3>
+                <p style="margin:0 0 0.75rem;font-size:0.85rem;color:#786f73;">Say what you want or feel about admin / campus life. OSO can review submissions.</p>
+                @if (session('status'))
+                    <p style="color:#15803d;font-weight:700;">{{ session('status') }}</p>
+                @endif
+                <form method="post" action="{{ route('portal.feedback.store') }}" style="display:grid;gap:0.65rem;">
+                    @csrf
+                    <select name="category" style="padding:0.5rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
+                        <option value="campus">Campus life</option>
+                        <option value="admin">Admin / offices</option>
+                        <option value="activities">Activities</option>
+                        <option value="general">General</option>
+                    </select>
+                    <textarea name="message" required maxlength="2000" rows="3" placeholder="Your feedback..." style="padding:0.65rem 0.8rem;border-radius:12px;border:1px solid #e8dedf;"></textarea>
+                    <button type="submit" style="justify-self:start;background:#7a1222;color:#fff;border:none;border-radius:999px;padding:0.5rem 1.1rem;font-weight:700;cursor:pointer;">Send feedback</button>
+                </form>
+            </div>
+        </section>
+
         {{-- Budget Utilization --}}
         <section class="sp-section">
             <div class="sp-section-head">
                 <div>
                     <h2><i class="bi bi-wallet2"></i> Budget Utilization</h2>
-                    <p>Transparent org funds for FY {{ $budgetItems->first()->fiscal_year ?? '2026' }}.</p>
+                    <p>Transparent org funds for FY {{ $budgetItems->first()->fiscal_year ?? '2026' }} — sealed on OrgChain’s 3-node budget ledger.</p>
                 </div>
             </div>
 
@@ -173,6 +234,62 @@
                     </div>
                 </div>
             </div>
+
+            @php
+                $publicExpenses = $publicExpenses ?? collect();
+                $budgetChainBlocks = $budgetChainBlocks ?? [];
+            @endphp
+
+            @if ($publicExpenses->isNotEmpty() || count($budgetChainBlocks) > 0)
+                <div class="sp-budget-chain liquid-glass" style="margin-top:1rem;padding:1.1rem 1.25rem;">
+                    <div class="sp-chart-card-head" style="margin-bottom:0.75rem;">
+                        <h3><i class="bi bi-link-45deg"></i> On-Chain Budget Seals</h3>
+                        <span class="sp-chart-count">3-node ledger</span>
+                    </div>
+                    <p style="margin:0 0 0.85rem;font-size:0.82rem;color:#6b6468;">Verified expenses are sealed to OrgChain’s permissioned budget blockchain so students can audit utilization publicly.</p>
+
+                    @if ($publicExpenses->isNotEmpty())
+                        <div style="overflow-x:auto;margin-bottom:0.9rem;">
+                            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                                <thead>
+                                    <tr style="text-align:left;border-bottom:1.5px solid #f0e6e8;color:#7a7074;">
+                                        <th style="padding:0.45rem;">Expense</th>
+                                        <th style="padding:0.45rem;">OR / Ref</th>
+                                        <th style="padding:0.45rem;">Amount</th>
+                                        <th style="padding:0.45rem;">Nodes</th>
+                                        <th style="padding:0.45rem;">Hash</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($publicExpenses as $expense)
+                                        <tr style="border-bottom:1px solid #f6eff0;">
+                                            <td style="padding:0.5rem;">
+                                                <strong>{{ $expense->item_name }}</strong>
+                                                <small style="display:block;color:#786f73;">{{ $expense->activity_title }}</small>
+                                            </td>
+                                            <td style="padding:0.5rem;">{{ $expense->receipt_reference ?: '—' }}</td>
+                                            <td style="padding:0.5rem;">₱{{ number_format((float) $expense->unit_cost * (int) $expense->quantity, 2) }}</td>
+                                            <td style="padding:0.5rem;">{{ (int) $expense->nodes_confirmed }}/3</td>
+                                            <td style="padding:0.5rem;font-family:ui-monospace,monospace;font-size:0.72rem;">{{ \Illuminate\Support\Str::limit($expense->chain_hash, 16, '…') }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+
+                    @if (count($budgetChainBlocks) > 0)
+                        <div style="display:grid;gap:0.45rem;">
+                            @foreach ($budgetChainBlocks as $block)
+                                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.5rem;padding:0.55rem 0.7rem;border:1px solid #f0e6e8;border-radius:12px;background:#fdfafb;font-size:0.78rem;">
+                                    <span><strong>#{{ $block['index'] ?? '—' }}</strong> {{ $block['item_name'] ?? 'Expense' }} · ₱{{ number_format((float) ($block['total'] ?? 0), 2) }}</span>
+                                    <span style="font-family:ui-monospace,monospace;color:#15803d;">{{ \Illuminate\Support\Str::limit($block['block_hash'] ?? '', 18, '…') }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
         </section>
 
         {{-- Activities & Announcements (Upcoming, Recent, Announcements Side-by-Side Table Cards) --}}
@@ -213,6 +330,11 @@
                                         </td>
                                         <td class="sp-col-info">
                                             <span class="sp-tbl-act-title">{{ $activity->title }}</span>
+                                            @if (!empty($activity->sdg_goals))
+                                                <span class="sp-tbl-act-loc" style="display:block;margin-top:0.2rem;">
+                                                    <i class="bi bi-globe2"></i> {{ collect($activity->sdg_goals)->implode(', ') }}
+                                                </span>
+                                            @endif
                                             @if (!empty($activity->location))
                                                 <span class="sp-tbl-act-loc"><i class="bi bi-geo-alt"></i> {{ $activity->location }}</span>
                                             @endif

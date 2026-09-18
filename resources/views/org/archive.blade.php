@@ -954,7 +954,13 @@
         <div class="arc-section-header">
             <div>
                 <h2 class="arc-section-title"><i class="bi bi-folder2-open" style="color: var(--arc-maroon);"></i> Organization Folders</h2>
-                <p class="arc-section-sub">Archived folders grouped by student organization. Click any folder to filter documents below.</p>
+                <p class="arc-section-sub">
+                    @isset($activityFolders)
+                        Folders are organized per activity (plus saved and demo folders). Click any folder to filter documents below.
+                    @else
+                        Archived folders grouped by student organization. Click any folder to filter documents below.
+                    @endisset
+                </p>
             </div>
             <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="resetFolderSelectionBtn" style="display: none;" onclick="clearFolderSelection()">
                 <i class="bi bi-x-circle"></i> Clear Folder Filter

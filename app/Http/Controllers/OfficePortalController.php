@@ -4,16 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\ArchiveDocument;
 use App\Models\ArchiveFolder;
+use App\Models\ActivityComplianceDoc;
 use App\Models\BudgetItem;
 use App\Models\ExpenseReceiptReview;
 use App\Models\InCampusActivitySubmission;
 use App\Models\OrgActivity;
+use App\Models\OrgFundAccount;
+use App\Models\OrgRenewalDocument;
+use App\Models\OrgRenewalSubmission;
+use App\Models\OrgRenewalWindow;
+use App\Models\OrgReportStatus;
+use App\Models\StudentFeedback;
+use App\Models\TosaApplicant;
+use App\Services\BudgetChainService;
+use App\Services\OrgWorkflowService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class OfficePortalController extends Controller
 {
@@ -44,6 +56,7 @@ class OfficePortalController extends Controller
     public function dashboard(): View
     {
         $pipeline = $this->pipelineActivities();
+        $workflow = app(OrgWorkflowService::class);
         $upcoming = collect($pipeline)
             ->filter(function (array $item): bool {
                 if (($item['upcoming_at'] ?? null) === null) {
@@ -57,130 +70,169 @@ class OfficePortalController extends Controller
             ->first();
 
         if (! $upcoming) {
-            $upcoming = collect($pipeline)->firstWhere('title', 'Volunteer Appreciation Day')
-                ?? collect($pipeline)->first();
+            $upcoming = collect($pipeline)->first();
         }
 
-        $approved = collect($pipeline)->whereIn('status_key', ['ovcaa_approved', 'completed'])->count();
-        $pending = collect($pipeline)->whereIn('status_key', ['created', 'verification', 'pending', 'returned'])->count();
+        $dbActivities = OrgActivity::query()->get();
+        $approved = $dbActivities->whereIn('workflow_status', ['oc_approved'])->count()
+            ?: collect($pipeline)->whereIn('status_key', ['ovcaa_approved', 'completed', 'oc_approved'])->count();
+        $pending = $dbActivities->whereNotIn('workflow_status', ['oc_approved'])->count()
+            ?: collect($pipeline)->whereIn('status_key', ['created', 'verification', 'pending', 'returned', 'oso_review', 'sdo_review'])->count();
+
+        $fundAccount = OrgFundAccount::query()->orderByDesc('total_funds')->first();
+        $totalFunds = (int) ($fundAccount?->total_funds ?: BudgetItem::query()->sum('allocated') ?: 185000);
+        $utilized = (int) (BudgetItem::query()->sum('utilized') ?: 115150);
+        $remaining = max(0, $totalFunds - $utilized);
+
+        $urgency = OrgActivity::query()
+            ->whereIn('workflow_status', ['oso_review', 'returned', 'college_review'])
+            ->orderBy('starts_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (OrgActivity $a) => [
+                'id' => $a->id,
+                'title' => $a->title,
+                'organization' => $a->organization_name,
+                'status' => $workflow->label($a->workflow_status ?: 'created'),
+                'due' => optional($a->starts_at)->format('M j, Y g:i A') ?? 'TBA',
+                'sla_hours' => max(1, now()->diffInHours($a->starts_at ?? now()->addDays(3), false)),
+            ]);
+
+        $chartPayload = $this->dashboardChartPayload($dbActivities);
 
         return view('org.dashboard', array_merge($this->deskContext(), [
             'activeNav' => 'dashboard',
             'stats' => [
-                'total' => 5,
-                'approved' => 2,
-                'pending' => 3,
-                'expenses' => 115150,
+                'total' => max(5, $dbActivities->count()),
+                'approved' => $approved,
+                'pending' => $pending,
+                'expenses' => $utilized,
             ],
             'transparency' => [
-                'allocated' => 185000,
-                'utilized' => 115150,
-                'remaining' => 69850,
-                'percent' => 62,
-                'remaining_percent' => 38,
+                'allocated' => $totalFunds,
+                'total_funds' => $totalFunds,
+                'beginning_balance' => (int) ($fundAccount?->beginning_balance ?: 25000),
+                'utilized' => $utilized,
+                'remaining' => $remaining,
+                'percent' => $totalFunds > 0 ? (int) round(($utilized / $totalFunds) * 100) : 0,
+                'remaining_percent' => $totalFunds > 0 ? (int) round(($remaining / $totalFunds) * 100) : 0,
             ],
+            'fundAccount' => $fundAccount,
+            'urgencyQueue' => $urgency,
+            'chartPayload' => $chartPayload,
+            'workflowStages' => OrgWorkflowService::FLOW,
             'upcoming' => $upcoming,
-            'tracker' => array_slice($pipeline, 0, 3),
+            'tracker' => array_slice($pipeline, 0, 5),
             'updates' => $pipeline,
+            'studentFeedback' => StudentFeedback::query()->latest()->limit(8)->get(),
         ]));
     }
 
     public function analytics(): View
     {
         $pipeline = $this->pipelineActivities();
+        $workflow = app(OrgWorkflowService::class);
 
         $byStatus = collect($pipeline)
             ->groupBy('status_key')
             ->map(fn ($rows) => $rows->count())
             ->all();
 
-        $activityFinancials = [
-            [
-                'name' => 'Innovation Fair Booth Series',
-                'scope' => 'in_campus',
-                'scope_label' => 'In-Campus',
-                'allocated' => 15000,
-                'utilized' => 15000,
-                'remaining' => 0,
-                'burn_rate' => 100,
-                'status' => 'Completed',
-                'status_style' => 'green',
-                'month' => 'Jul',
-                'year' => 2026,
-            ],
-            [
-                'name' => 'Leadership Summit 2026',
-                'scope' => 'local_off_campus',
-                'scope_label' => 'Off-Campus',
-                'allocated' => 75000,
-                'utilized' => 42750,
-                'remaining' => 32250,
-                'burn_rate' => 57,
-                'status' => 'In Review',
-                'status_style' => 'blue',
-                'month' => 'Aug',
-                'year' => 2026,
-            ],
-            [
-                'name' => 'Volunteer Appreciation Day',
-                'scope' => 'in_campus',
-                'scope_label' => 'In-Campus',
-                'allocated' => 12500,
-                'utilized' => 12500,
-                'remaining' => 0,
-                'burn_rate' => 100,
-                'status' => 'Completed',
-                'status_style' => 'green',
-                'month' => 'Mar',
-                'year' => 2026,
-            ],
-            [
-                'name' => 'Campus Wellness Week',
-                'scope' => 'in_campus',
-                'scope_label' => 'In-Campus',
-                'allocated' => 42500,
-                'utilized' => 24900,
-                'remaining' => 17600,
-                'burn_rate' => 58.5,
-                'status' => 'In Review',
-                'status_style' => 'blue',
-                'month' => 'May',
-                'year' => 2026,
-            ],
-            [
-                'name' => 'BatStateU Sportsfest 2026',
-                'scope' => 'in_campus',
-                'scope_label' => 'In-Campus',
-                'allocated' => 40000,
-                'utilized' => 20000,
-                'remaining' => 20000,
-                'burn_rate' => 50,
-                'status' => 'Pending Approval',
-                'status_style' => 'yellow',
-                'month' => 'Sep',
-                'year' => 2026,
-            ],
-        ];
+        $dbActivities = OrgActivity::query()->get();
+        $budgetItems = BudgetItem::query()->orderByDesc('utilized')->get();
+
+        $collegeStats = $dbActivities
+            ->groupBy(fn (OrgActivity $a) => $a->college ?: 'Unassigned')
+            ->map(function ($rows, $college) use ($budgetItems) {
+                $approved = (int) $budgetItems->where('college', $college)->where('is_approved', true)->sum('allocated');
+                $implemented = (int) $budgetItems->where('college', $college)->sum('utilized');
+                $allocated = (int) $budgetItems->where('college', $college)->sum('allocated');
+
+                return [
+                    'college' => $college,
+                    'activities' => $rows->count(),
+                    'completed' => $rows->where('workflow_status', 'oc_approved')->count(),
+                    'completion_percent' => $rows->count() > 0
+                        ? (int) round(($rows->where('workflow_status', 'oc_approved')->count() / $rows->count()) * 100)
+                        : 0,
+                    'allocated' => $allocated,
+                    'approved_budget' => $approved,
+                    'implemented_budget' => $implemented,
+                    'utilization_percent' => $allocated > 0 ? (int) round(($implemented / $allocated) * 100) : 0,
+                ];
+            })
+            ->sortByDesc('utilization_percent')
+            ->values();
+
+        if ($collegeStats->isEmpty()) {
+            $collegeStats = collect([
+                ['college' => 'CICS', 'activities' => 3, 'completed' => 1, 'completion_percent' => 33, 'allocated' => 50000, 'approved_budget' => 45000, 'implemented_budget' => 32000, 'utilization_percent' => 64],
+                ['college' => 'CHS', 'activities' => 2, 'completed' => 1, 'completion_percent' => 50, 'allocated' => 42500, 'approved_budget' => 42500, 'implemented_budget' => 24900, 'utilization_percent' => 59],
+                ['college' => 'CAS', 'activities' => 2, 'completed' => 1, 'completion_percent' => 50, 'allocated' => 115000, 'approved_budget' => 115000, 'implemented_budget' => 62750, 'utilization_percent' => 55],
+            ]);
+        }
+
+        $activityFinancials = $dbActivities->map(function (OrgActivity $a) use ($workflow) {
+            $allocated = (int) ($a->approved_budget ?: 0);
+            $utilized = (int) ($a->implemented_budget ?: 0);
+
+            return [
+                'name' => $a->title,
+                'scope' => $a->activity_scope ?: 'in_campus',
+                'scope_label' => ($a->activity_scope === 'local_off_campus') ? 'Off-Campus' : 'In-Campus',
+                'college' => $a->college,
+                'allocated' => $allocated,
+                'utilized' => $utilized,
+                'remaining' => max(0, $allocated - $utilized),
+                'burn_rate' => $allocated > 0 ? round(($utilized / $allocated) * 100, 1) : 0,
+                'status' => $workflow->label($a->workflow_status ?: 'created'),
+                'status_style' => $a->workflow_status === 'oc_approved' ? 'green' : 'blue',
+                'month' => optional($a->starts_at)->format('M') ?? 'N/A',
+                'year' => (int) (optional($a->starts_at)->format('Y') ?? now()->year),
+            ];
+        })->values()->all();
+
+        if ($activityFinancials === []) {
+            $activityFinancials = [
+                ['name' => 'Innovation Fair Booth Series', 'scope' => 'in_campus', 'scope_label' => 'In-Campus', 'college' => 'CICS', 'allocated' => 15000, 'utilized' => 15000, 'remaining' => 0, 'burn_rate' => 100, 'status' => 'OC Approved', 'status_style' => 'green', 'month' => 'Jul', 'year' => 2026],
+                ['name' => 'Leadership Summit 2026', 'scope' => 'local_off_campus', 'scope_label' => 'Off-Campus', 'college' => 'CAS', 'allocated' => 75000, 'utilized' => 42750, 'remaining' => 32250, 'burn_rate' => 57, 'status' => 'OSO Review', 'status_style' => 'blue', 'month' => 'Sep', 'year' => 2026],
+            ];
+        }
+
+        $inCampus = collect($activityFinancials)->where('scope', 'in_campus');
+        $offCampus = collect($activityFinancials)->where('scope', 'local_off_campus');
+        $totalAllocated = (int) collect($activityFinancials)->sum('allocated');
+        $totalUtilized = (int) collect($activityFinancials)->sum('utilized');
 
         return view('org.analytics', array_merge($this->deskContext(), [
             'activeNav' => 'analytics',
             'byStatus' => $byStatus,
             'pipeline' => $pipeline,
-            'budgetItems' => BudgetItem::query()->orderByDesc('utilized')->limit(6)->get(),
+            'budgetItems' => $budgetItems->take(6),
             'activityFinancials' => $activityFinancials,
+            'collegeStats' => $collegeStats,
+            'topUtilization' => $collegeStats->sortByDesc('utilization_percent')->take(3)->values(),
+            'topActivities' => $collegeStats->sortByDesc('activities')->take(3)->values(),
+            'chartSeries' => [
+                'labels' => $collegeStats->pluck('college')->map(fn ($c) => \Illuminate\Support\Str::limit($c, 18))->values(),
+                'allocated' => $collegeStats->pluck('allocated')->values(),
+                'implemented' => $collegeStats->pluck('implemented_budget')->values(),
+                'approved' => $collegeStats->pluck('approved_budget')->values(),
+                'activityCounts' => $collegeStats->pluck('activities')->values(),
+            ],
             'overview' => [
                 'healthScore' => 84,
-                'totalAllocated' => 185000,
-                'totalUtilized' => 115150,
-                'remainingBalance' => 69850,
-                'burnRate' => 62.2,
+                'totalAllocated' => $totalAllocated ?: 185000,
+                'totalUtilized' => $totalUtilized ?: 115150,
+                'remainingBalance' => max(0, ($totalAllocated ?: 185000) - ($totalUtilized ?: 115150)),
+                'burnRate' => ($totalAllocated ?: 185000) > 0 ? round((($totalUtilized ?: 115150) / ($totalAllocated ?: 185000)) * 100, 1) : 0,
                 'complianceRate' => 96.4,
-                'inCampusAllocated' => 110000,
-                'inCampusUtilized' => 72400,
-                'inCampusRemaining' => 37600,
-                'offCampusAllocated' => 75000,
-                'offCampusUtilized' => 42750,
-                'offCampusRemaining' => 32250,
+                'inCampusAllocated' => (int) $inCampus->sum('allocated'),
+                'inCampusUtilized' => (int) $inCampus->sum('utilized'),
+                'inCampusRemaining' => (int) max(0, $inCampus->sum('allocated') - $inCampus->sum('utilized')),
+                'offCampusAllocated' => (int) $offCampus->sum('allocated'),
+                'offCampusUtilized' => (int) $offCampus->sum('utilized'),
+                'offCampusRemaining' => (int) max(0, $offCampus->sum('allocated') - $offCampus->sum('utilized')),
             ],
         ]));
     }
@@ -193,6 +245,7 @@ class OfficePortalController extends Controller
 
         if ($selectedSlug) {
             $selectedActivity = collect($allActivities)->firstWhere('slug', $selectedSlug)
+                ?? collect($allActivities)->firstWhere('id', (int) $selectedSlug)
                 ?? collect($allActivities)->first();
         }
 
@@ -214,7 +267,8 @@ class OfficePortalController extends Controller
         $editActivity = null;
 
         if ($editSlug) {
-            $editActivity = collect($allActivities)->firstWhere('slug', $editSlug);
+            $editActivity = collect($allActivities)->firstWhere('slug', $editSlug)
+                ?? collect($allActivities)->firstWhere('id', (int) $editSlug);
         }
 
         return view('org.activity-create', array_merge($this->deskContext(), [
@@ -227,6 +281,87 @@ class OfficePortalController extends Controller
             'inCampusRequirements' => $this->inCampusRequirements(),
             'offCampusRequirements' => $this->localOffCampusRequirements(),
         ]));
+    }
+
+    public function downloadActivityTemplates(Request $request): BinaryFileResponse|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
+    {
+        $type = $request->query('type', 'in_campus');
+        $type = in_array($type, ['in_campus', 'local_off_campus'], true) ? $type : 'in_campus';
+
+        $sourceDir = $type === 'local_off_campus'
+            ? base_path('Local Off Campus')
+            : base_path('In Campus');
+
+        abort_unless(is_dir($sourceDir), 404, 'Template folder not found.');
+
+        $files = collect(scandir($sourceDir) ?: [])
+            ->reject(fn ($name) => in_array($name, ['.', '..'], true))
+            ->filter(fn ($name) => is_file($sourceDir.DIRECTORY_SEPARATOR.$name))
+            ->values();
+
+        abort_if($files->isEmpty(), 404, 'No template documents available.');
+
+        // Single-file shortcut when only listing is requested
+        if ($request->filled('file')) {
+            $safe = basename((string) $request->query('file'));
+            $path = $sourceDir.DIRECTORY_SEPARATOR.$safe;
+            abort_unless(is_file($path), 404);
+
+            return response()->download($path, $safe);
+        }
+
+        $zipName = $type === 'local_off_campus'
+            ? 'OrgChain-Local-Off-Campus-Documents.zip'
+            : 'OrgChain-In-Campus-Documents.zip';
+        $tempDir = storage_path('app/temp');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        $zipPath = $tempDir.DIRECTORY_SEPARATOR.$zipName;
+        if (is_file($zipPath)) {
+            @unlink($zipPath);
+        }
+
+        $built = false;
+        if (class_exists(ZipArchive::class)) {
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+                foreach ($files as $file) {
+                    $zip->addFile($sourceDir.DIRECTORY_SEPARATOR.$file, $file);
+                }
+                $zip->close();
+                $built = is_file($zipPath);
+            }
+        }
+
+        if (! $built && strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $psSource = str_replace("'", "''", $sourceDir.'\\*');
+            $psDest = str_replace("'", "''", $zipPath);
+            $cmd = 'powershell -NoProfile -Command "Compress-Archive -Path \''.$psSource.'\' -DestinationPath \''.$psDest.'\' -Force"';
+            @exec($cmd);
+            $built = is_file($zipPath);
+        }
+
+        if ($built) {
+            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+        }
+
+        // Fallback: HTML pack with individual downloads (no zip extension)
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Download Documents</title>'
+            .'<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#1a1618}'
+            .'a{display:block;padding:10px 12px;margin:6px 0;border:1px solid #f0e6e8;border-radius:10px;text-decoration:none;color:#7a1222;font-weight:700}'
+            .'a:hover{background:#fdf0f2}</style></head><body>'
+            .'<h1>Download Documents</h1>'
+            .'<p>'.($type === 'local_off_campus' ? 'Local Off-Campus' : 'In-Campus').' templates</p><ul style="list-style:none;padding:0">';
+
+        foreach ($files as $file) {
+            $url = route('office.activities.templates.download', ['type' => $type, 'file' => $file]);
+            $html .= '<li><a href="'.e($url).'"><i></i> '.e($file).'</a></li>';
+        }
+
+        $html .= '</ul><p><a href="'.e(route('office.activities.create')).'">← Back to Create Activity</a></p></body></html>';
+
+        return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     public function editActivity(InCampusActivitySubmission $submission): View
@@ -332,19 +467,37 @@ class OfficePortalController extends Controller
 
     public function budget(): View
     {
+        $orgFilter = trim((string) request('organization', ''));
+        $budget = $this->budgetUtilizationData();
+        $items = BudgetItem::query()
+            ->when($orgFilter !== '', fn ($q) => $q->where('organization_name', $orgFilter))
+            ->orderByDesc('utilized')
+            ->get();
+
+        $reportStatus = OrgReportStatus::query()
+            ->where('report_type', 'budget')
+            ->latest()
+            ->first();
+
         return view('org.budget', array_merge($this->deskContext(), [
             'activeNav' => 'budget',
-            'budget' => $this->budgetUtilizationData(),
+            'budget' => $budget,
+            'budgetItems' => $items,
+            'organizations' => BudgetItem::query()->whereNotNull('organization_name')->distinct()->pluck('organization_name'),
+            'selectedOrganization' => $orgFilter,
+            'reportStatus' => $reportStatus,
             'receiptReviews' => ExpenseReceiptReview::query()->latest()->limit(8)->get(),
+            'budgetChainBlocks' => app(BudgetChainService::class)->recentBlocks(6),
         ]));
     }
 
     public function storeReceiptReview(Request $request): RedirectResponse
     {
-        if ($request->input('receipt_detected') === '0') {
+        if ($request->input('receipt_detected') === '0'
+            || in_array($request->input('ocr_quality'), ['blurry', 'unreadable'], true)) {
             return back()
                 ->withInput()
-                ->withErrors(['receipt' => 'Expense submission rejected: No valid receipt was detected in the uploaded file.']);
+                ->withErrors(['receipt' => 'Receipt is incomplete, blurry, or missing OR/reference number. Please retake a clearer photo.']);
         }
 
         $validated = $request->validate([
@@ -354,9 +507,14 @@ class OfficePortalController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'unit_cost' => ['required', 'numeric', 'min:0.01'],
             'expense_date' => ['required', 'date'],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'organization_name' => ['nullable', 'string', 'max:255'],
+            'receipt_reference' => ['nullable', 'string', 'max:120'],
+            'ocr_quality' => ['nullable', 'in:complete,partial,blurry,unreadable'],
             'receipt' => ['required', 'file', 'mimes:pdf,png,jpg,jpeg,webp', 'max:10240'],
             'receipt_reviewed' => ['accepted'],
             'ocr_confidence' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'receipt_detected' => ['nullable', 'in:0,1'],
         ], [
             'receipt_reviewed.accepted' => 'Review the detected receipt details and confirm that they match the original receipt.',
         ]);
@@ -364,29 +522,51 @@ class OfficePortalController extends Controller
         $file = $request->file('receipt');
         $path = $file->store('expense-receipts', 'public');
 
+        $total = (float) $validated['unit_cost'] * (int) $validated['quantity'];
+        $seal = app(BudgetChainService::class)->sealExpense([
+            'activity_title' => $validated['activity'],
+            'item_name' => $validated['item_name'],
+            'supplier' => $validated['supplier'] ?? null,
+            'organization_name' => $validated['organization_name'] ?? null,
+            'receipt_reference' => $validated['receipt_reference'] ?? null,
+            'quantity' => $validated['quantity'],
+            'unit_cost' => $validated['unit_cost'],
+            'total' => $total,
+            'expense_date' => $validated['expense_date'],
+        ]);
+
         ExpenseReceiptReview::query()->create([
             'activity_title' => $validated['activity'],
             'item_name' => $validated['item_name'],
+            'supplier' => $validated['supplier'] ?? null,
+            'organization_name' => $validated['organization_name'] ?? null,
             'category' => $validated['category'] ?? null,
             'quantity' => $validated['quantity'],
             'unit_cost' => $validated['unit_cost'],
             'expense_date' => $validated['expense_date'],
             'receipt_path' => $path,
             'receipt_name' => $file->getClientOriginalName(),
+            'receipt_reference' => $validated['receipt_reference'] ?? null,
             'ocr_confidence' => $validated['ocr_confidence'] ?? null,
+            'ocr_quality' => $validated['ocr_quality'] ?? 'complete',
+            'chain_hash' => $seal['block_hash'],
+            'previous_hash' => $seal['previous_hash'],
+            'nodes_confirmed' => $seal['nodes_confirmed'],
             'student_confirmed' => true,
-            'verification_status' => 'ready_for_review',
+            'verification_status' => empty($validated['receipt_reference']) ? 'needs_reference' : 'ready_for_review',
         ]);
 
         return redirect()
             ->route('office.budget')
-            ->with('success', 'Expense receipt saved and sent for review.');
+            ->with('success', 'Expense sealed to budget blockchain ('.$seal['nodes_confirmed'].'/3 nodes). Hash: '.substr($seal['block_hash'], 0, 12).'…');
     }
 
     public function financial(): View
     {
         $budget = $this->budgetUtilizationData();
         $account = $this->accountBalanceData($budget);
+        $fundAccount = OrgFundAccount::query()->with('sources')->orderByDesc('total_funds')->first();
+        $fundSourceFilter = trim((string) request('fund_source', ''));
 
         $lines = [];
         foreach ($budget['activities'] as $activity) {
@@ -398,17 +578,55 @@ class OfficePortalController extends Controller
                     'qty' => $expense['qty'],
                     'total' => $expense['total'],
                     'receipt' => $expense['receipt'],
+                    'supplier' => $expense['supplier'] ?? ($expense['name'] ?? 'Store'),
                 ];
             }
         }
 
+        $sources = $fundAccount?->sources ?? collect();
+        if ($fundSourceFilter !== '') {
+            $sources = $sources->where('category', $fundSourceFilter)->values();
+        }
+
+        $inflow = (int) ($fundAccount?->total_funds_received ?: ($sources->sum('amount') ?: 60000));
+        $outflow = (int) BudgetItem::query()->sum('utilized') ?: (int) $account['total_card_disbursement'];
+
         $selectedSemester = request('semester', '1st Semester');
         $selectedYear = request('academic_year', '2025-2026');
+        $reportStatus = OrgReportStatus::query()->where('report_type', 'fr')->latest()->first();
 
         return view('org.financial', array_merge($this->deskContext(), [
             'activeNav' => 'financial',
             'budget' => $budget,
             'account' => $account,
+            'fundAccount' => $fundAccount,
+            'fundSources' => $sources,
+            'fundSourceFilter' => $fundSourceFilter,
+            'fundSourceOptions' => [
+                'ssc_fee' => 'SSC Fee',
+                'fundraising' => 'Fundraising',
+                'sponsorship' => 'Sponsorship',
+            ],
+            'inflowOutflow' => [
+                'labels' => ['Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'inflows' => [
+                    (int) round($inflow * 0.35),
+                    (int) round($inflow * 0.25),
+                    (int) round($inflow * 0.20),
+                    (int) round($inflow * 0.12),
+                    (int) round($inflow * 0.08),
+                ],
+                'outflows' => [
+                    (int) round($outflow * 0.22),
+                    (int) round($outflow * 0.28),
+                    (int) round($outflow * 0.24),
+                    (int) round($outflow * 0.16),
+                    (int) round($outflow * 0.10),
+                ],
+                'summary_labels' => ['Inflow (Funds Received)', 'Outflow (Disbursements)'],
+                'summary_values' => [$inflow, $outflow],
+            ],
+            'reportStatus' => $reportStatus,
             'lines' => $lines,
             'semesters' => ['1st Semester', '2nd Semester', 'Midyear'],
             'academicYears' => ['2024-2025', '2025-2026', '2026-2027'],
@@ -419,8 +637,45 @@ class OfficePortalController extends Controller
         ]));
     }
 
+    public function printFinancial(): View
+    {
+        $data = $this->financial()->getData();
+
+        return view('org.financial-print', $data);
+    }
+
     public function accomplishment(): View
     {
+        $gender = request('gender'); // male | female | all
+        $sdg = trim((string) request('sdg', ''));
+        $coreValue = trim((string) request('core_value', ''));
+
+        $rows = OrgActivity::query()
+            ->when($sdg !== '', fn ($q) => $q->whereJsonContains('sdg_goals', $sdg))
+            ->when($coreValue !== '', fn ($q) => $q->whereJsonContains('core_values', $coreValue))
+            ->orderByDesc('starts_at')
+            ->get()
+            ->map(function (OrgActivity $a) use ($gender) {
+                $male = (int) $a->male_participants;
+                $female = (int) $a->female_participants;
+                $participants = match ($gender) {
+                    'male' => $male,
+                    'female' => $female,
+                    default => $male + $female,
+                };
+
+                return [
+                    'title' => $a->title,
+                    'college' => $a->college,
+                    'sdg_goals' => $a->sdg_goals ?: [],
+                    'core_values' => $a->core_values ?: [],
+                    'male' => $male,
+                    'female' => $female,
+                    'participants' => $participants,
+                    'status' => $a->workflow_status,
+                ];
+            });
+
         return view('org.accomplishment', array_merge($this->deskContext(), [
             'activeNav' => 'accomplishment',
             'arAttachments' => $this->arAttachmentList(),
@@ -428,6 +683,13 @@ class OfficePortalController extends Controller
             'academicYears' => ['2024-2025', '2025-2026', '2026-2027'],
             'selectedSemester' => request('semester', '1st Semester'),
             'selectedYear' => request('academic_year', '2025-2026'),
+            'selectedGender' => $gender ?: 'all',
+            'selectedSdg' => $sdg,
+            'selectedCoreValue' => $coreValue,
+            'sdgOptions' => ['SDG 3', 'SDG 4', 'SDG 5', 'SDG 8', 'SDG 9', 'SDG 11', 'SDG 16'],
+            'coreValueOptions' => ['Excellence', 'Integrity', 'Service', 'Innovation', 'Leadership', 'Compassion', 'Teamwork', 'Justice'],
+            'accomplishmentRows' => $rows,
+            'reportStatus' => OrgReportStatus::query()->where('report_type', 'ar')->latest()->first(),
             'highlights' => [
                 'Activities completed this period',
                 'Community engagement reach',
@@ -563,6 +825,204 @@ class OfficePortalController extends Controller
         ]));
     }
 
+    public function renewal(): View
+    {
+        $office = Auth::guard('office')->user();
+        $role = $office?->office_role ?? '';
+        abort_unless(in_array($role, ['so', 'oso'], true), 403);
+
+        $window = OrgRenewalWindow::query()->latest('id')->first();
+        $requiredDocs = $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs();
+        $isOpen = $window?->isAcceptingSubmissions() ?? false;
+
+        $submissions = collect();
+        $mySubmission = null;
+
+        if ($role === 'oso') {
+            $submissions = OrgRenewalSubmission::query()
+                ->with('documents')
+                ->when($window, fn ($q) => $q->where('renewal_window_id', $window->id))
+                ->latest()
+                ->get();
+        } else {
+            $orgName = request('organization_name')
+                ?: BudgetItem::query()->whereNotNull('organization_name')->value('organization_name')
+                ?: 'Student Organization';
+
+            if ($window) {
+                $mySubmission = OrgRenewalSubmission::query()
+                    ->with('documents')
+                    ->where('renewal_window_id', $window->id)
+                    ->where(function ($q) use ($office, $orgName) {
+                        $q->where('submitted_by', $office?->id)
+                            ->orWhere('organization_name', $orgName);
+                    })
+                    ->latest('id')
+                    ->first();
+            }
+        }
+
+        return view('org.renewal', array_merge($this->deskContext(), [
+            'activeNav' => 'renewal',
+            'renewalWindow' => $window,
+            'requiredDocs' => $requiredDocs,
+            'renewalIsOpen' => $isOpen,
+            'renewalSubmissions' => $submissions,
+            'myRenewalSubmission' => $mySubmission,
+            'orgChoices' => BudgetItem::query()->whereNotNull('organization_name')->distinct()->orderBy('organization_name')->pluck('organization_name'),
+        ]));
+    }
+
+    public function updateRenewalWindow(Request $request): RedirectResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless(($office?->office_role ?? '') === 'oso', 403);
+
+        $validated = $request->validate([
+            'academic_year' => ['required', 'string', 'max:32'],
+            'semester' => ['required', 'string', 'max:40'],
+            'is_open' => ['nullable', 'boolean'],
+            'opens_at' => ['nullable', 'date'],
+            'closes_at' => ['nullable', 'date', 'after_or_equal:opens_at'],
+            'instructions' => ['nullable', 'string', 'max:5000'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $isOpen = $request->boolean('is_open');
+        $window = OrgRenewalWindow::query()->latest('id')->first();
+
+        $payload = [
+            'academic_year' => $validated['academic_year'],
+            'semester' => $validated['semester'],
+            'is_open' => $isOpen,
+            'opens_at' => $validated['opens_at'] ?? ($isOpen ? now() : null),
+            'closes_at' => $validated['closes_at'] ?? null,
+            'instructions' => $validated['instructions'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'required_docs' => $window?->required_docs ?: OrgRenewalWindow::defaultRequiredDocs(),
+        ];
+
+        if ($isOpen) {
+            $payload['opened_by'] = $office->id;
+            $payload['closed_by'] = null;
+        } else {
+            $payload['closed_by'] = $office->id;
+        }
+
+        if ($window) {
+            $window->update($payload);
+        } else {
+            OrgRenewalWindow::query()->create($payload);
+        }
+
+        return redirect()
+            ->route('office.renewal')
+            ->with('success', $isOpen
+                ? 'Renewal window is now OPEN for student organizations.'
+                : 'Renewal window is LOCKED. SO desks cannot submit.');
+    }
+
+    public function storeRenewalSubmission(Request $request): RedirectResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless(($office?->office_role ?? '') === 'so', 403);
+
+        $window = OrgRenewalWindow::query()->latest('id')->first();
+        if (! $window || ! $window->isAcceptingSubmissions()) {
+            return back()->withErrors(['renewal' => 'Renewal is locked. Wait for OSO to open the filing window.']);
+        }
+
+        $validated = $request->validate([
+            'organization_name' => ['required', 'string', 'max:255'],
+            'college' => ['nullable', 'string', 'max:255'],
+            'adviser_name' => ['required', 'string', 'max:255'],
+            'dean_name' => ['required', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'action' => ['nullable', 'in:draft,submit'],
+        ]);
+
+        $action = $validated['action'] ?? 'draft';
+        $submission = OrgRenewalSubmission::query()->updateOrCreate(
+            [
+                'renewal_window_id' => $window->id,
+                'organization_name' => $validated['organization_name'],
+            ],
+            [
+                'college' => $validated['college'] ?? null,
+                'submitted_by' => $office->id,
+                'adviser_name' => $validated['adviser_name'],
+                'dean_name' => $validated['dean_name'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => $action === 'submit' ? 'submitted' : 'draft',
+                'submitted_at' => $action === 'submit' ? now() : null,
+            ]
+        );
+
+        if ($action === 'submit') {
+            $required = collect($window->requiredDocList())->pluck('key');
+            $uploaded = $submission->documents()->pluck('doc_key');
+            $missing = $required->diff($uploaded);
+            if ($missing->isNotEmpty()) {
+                $submission->update(['status' => 'draft', 'submitted_at' => null]);
+
+                return back()
+                    ->withInput()
+                    ->withErrors(['renewal' => 'Upload all '.$missing->count().' remaining required document(s) before submitting.']);
+            }
+        }
+
+        return redirect()
+            ->route('office.renewal')
+            ->with('success', $action === 'submit'
+                ? 'Renewal packet submitted for Adviser → Dean → OSO review.'
+                : 'Renewal draft saved.');
+    }
+
+    public function storeRenewalDocument(Request $request): RedirectResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless(($office?->office_role ?? '') === 'so', 403);
+
+        $window = OrgRenewalWindow::query()->latest('id')->first();
+        if (! $window || ! $window->isAcceptingSubmissions()) {
+            return back()->withErrors(['renewal' => 'Renewal is locked by OSO.']);
+        }
+
+        $validated = $request->validate([
+            'submission_id' => ['required', 'integer', 'exists:org_renewal_submissions,id'],
+            'doc_key' => ['required', 'string', 'max:80'],
+            'document' => ['required', 'file', 'mimes:pdf,doc,docx,png,jpg,jpeg', 'max:10240'],
+        ]);
+
+        $submission = OrgRenewalSubmission::query()
+            ->where('id', $validated['submission_id'])
+            ->where('renewal_window_id', $window->id)
+            ->where('submitted_by', $office->id)
+            ->firstOrFail();
+
+        $docMeta = collect($window->requiredDocList())->firstWhere('key', $validated['doc_key']);
+        if (! $docMeta) {
+            return back()->withErrors(['document' => 'Unknown document type.']);
+        }
+
+        $file = $request->file('document');
+        $path = $file->store('renewal-documents', 'public');
+
+        OrgRenewalDocument::query()->updateOrCreate(
+            [
+                'submission_id' => $submission->id,
+                'doc_key' => $validated['doc_key'],
+            ],
+            [
+                'title' => $docMeta['title'],
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+            ]
+        );
+
+        return redirect()->route('office.renewal')->with('success', $docMeta['title'].' uploaded.');
+    }
+
     public function archive(): View
     {
         $savedFolders = ArchiveFolder::query()
@@ -619,22 +1079,71 @@ class OfficePortalController extends Controller
             ['name' => 'Peer Counseling Session Log.xlsx', 'size' => '430 KB', 'date' => 'Mar 1, 2026', 'author' => 'Grace Tan', 'type' => 'XLSX', 'folder_name' => 'Peer Counselors'],
         ]);
 
+        $activityFolders = OrgActivity::query()
+            ->orderBy('title')
+            ->get()
+            ->map(function (OrgActivity $activity) {
+                $docs = max(2, (int) ActivityComplianceDoc::query()->where('org_activity_id', $activity->id)->count() + 2);
+
+                return [
+                    'id' => 'activity-'.$activity->id,
+                    'name' => $activity->title,
+                    'org' => $activity->organization_name ?: ($activity->college ?: 'Student Organization'),
+                    'semester' => 'AY 2025-2026',
+                    'documents' => $docs,
+                    'icon' => 'folder-fill',
+                    'color' => match ($activity->workflow_status) {
+                        'oc_approved' => 'green',
+                        'returned' => 'gold',
+                        default => 'red',
+                    },
+                    'is_saved' => false,
+                    'is_activity' => true,
+                ];
+            });
+
+        $folders = $activityFolders->concat($savedFolders)->concat($demoFolders);
+        if ($folders->isEmpty()) {
+            $folders = $demoFolders;
+        }
+
         return view('org.archive', array_merge($this->deskContext(), [
             'activeNav' => 'archive',
-            'totalDocuments' => 28 + $savedDocuments->count(),
-            'totalFolders' => 8 + $savedFolders->count(),
+            'totalDocuments' => 28 + $savedDocuments->count() + $activityFolders->sum('documents'),
+            'totalFolders' => $folders->count(),
             'currentSemester' => '2nd Semester',
-            'folders' => $savedFolders->concat($demoFolders),
+            'folders' => $folders,
+            'activityFolders' => $activityFolders,
             'documents' => $savedDocuments->concat($demoDocuments),
             'savedFolders' => $savedFolders,
-            'selectedFolder' => 'BSIT Society',
+            'selectedFolder' => $activityFolders->first()['name'] ?? 'BSIT Society',
         ]));
     }
 
     public function tosa(): View
     {
+        $subsection = request('subsection', 'all');
+        $applicants = TosaApplicant::query()
+            ->when($subsection !== 'all', fn ($q) => $q->where('subsection', $subsection))
+            ->orderBy('full_name')
+            ->get();
+
         return view('org.tosa', array_merge($this->deskContext(), [
             'activeNav' => 'tosa',
+            'tosaApplicants' => $applicants,
+            'tosaSubsections' => [
+                'all' => 'All',
+                'pending' => 'Pending',
+                'screening' => 'Screening',
+                'interview' => 'Interview',
+                'accepted' => 'Accepted',
+                'rejected' => 'Rejected',
+            ],
+            'selectedSubsection' => $subsection,
+            'subsectionCounts' => TosaApplicant::query()
+                ->selectRaw('subsection, COUNT(*) as total')
+                ->groupBy('subsection')
+                ->pluck('total', 'subsection'),
         ]));
     }
 
@@ -1048,62 +1557,71 @@ class OfficePortalController extends Controller
      */
     private function pipelineActivities(): array
     {
-        $db = OrgActivity::query()->orderByDesc('starts_at')->limit(3)->get();
+        $workflow = app(OrgWorkflowService::class);
+        $db = OrgActivity::query()->orderByDesc('starts_at')->limit(12)->get();
+
+        if ($db->isNotEmpty()) {
+            return $db->map(function (OrgActivity $activity) use ($workflow): array {
+                $statusKey = $activity->workflow_status ?: 'created';
+
+                return [
+                    'id' => $activity->id,
+                    'title' => $activity->title,
+                    'status' => $workflow->label($statusKey),
+                    'status_key' => $statusKey,
+                    'stage' => max(1, array_search($statusKey === 'returned' ? 'created' : $statusKey, OrgWorkflowService::FLOW, true) + 1 ?: 1),
+                    'stages' => count(OrgWorkflowService::FLOW),
+                    'date' => optional($activity->starts_at)->format('M j, Y') ?? 'TBA',
+                    'budget' => (int) ($activity->approved_budget ?: 0),
+                    'location' => $activity->location ?: 'TBA',
+                    'college' => $activity->college,
+                    'organization' => $activity->organization_name,
+                    'upcoming_at' => optional($activity->starts_at)?->format('Y-m-d H:i:s'),
+                    'docs' => ActivityComplianceDoc::query()->where('org_activity_id', $activity->id)->pluck('title')->all(),
+                    'note' => $activity->returned_to ? 'Returned to '.$activity->returned_to : $activity->description,
+                    'returned_to' => $activity->returned_to,
+                ];
+            })->values()->all();
+        }
 
         $demo = [
             [
                 'title' => 'Innovation Fair Booth Series',
-                'status' => 'OVCAA Approved',
-                'status_key' => 'ovcaa_approved',
-                'stage' => 4,
-                'stages' => 4,
+                'status' => 'OC Approved',
+                'status_key' => 'oc_approved',
+                'stage' => 6,
+                'stages' => 6,
                 'date' => 'Jul 4, 2026',
                 'budget' => 15000,
                 'location' => 'Gymnasium',
                 'upcoming_at' => '2026-07-04 09:00:00',
-                'docs' => ['Activity Proposal.pdf', 'Budget Breakdown.xlsx', 'Risk Assessment.pdf'],
-                'note' => 'Booth setup and project exhibits open for student orientation.',
+                'docs' => ['Activity Proposal.pdf', 'Budget Breakdown.xlsx'],
+                'note' => 'Booth setup open for student orientation.',
             ],
             [
                 'title' => 'Leadership Summit 2026',
-                'status' => 'Created',
-                'status_key' => 'created',
-                'stage' => 1,
-                'stages' => 4,
-                'date' => 'Aug 12, 2026',
-                'budget' => 85000,
+                'status' => 'OSO Review',
+                'status_key' => 'oso_review',
+                'stage' => 3,
+                'stages' => 6,
+                'date' => 'Sep 20, 2026',
+                'budget' => 75000,
                 'location' => 'Taal Building',
-                'upcoming_at' => '2026-08-12 09:00:00',
-                'docs' => ['Concept Note.pdf', 'Speaker Lineup.pdf'],
+                'upcoming_at' => '2026-09-20 06:00:00',
+                'docs' => ['Concept Note.pdf'],
                 'note' => null,
-            ],
-            [
-                'title' => 'Volunteer Appreciation Day',
-                'status' => 'Completed',
-                'status_key' => 'completed',
-                'stage' => 4,
-                'stages' => 4,
-                'date' => 'Mar 2, 2026',
-                'budget' => 12500,
-                'location' => 'Mini Forest',
-                'upcoming_at' => '2026-03-02 14:00:00',
-                'force_upcoming' => true,
-                'docs' => ['Program Flow.pdf', 'Attendance Sheet.pdf', 'Expense Report.pdf'],
-                'note' => null,
-                'pending_label' => 'Pending',
-                'archive_ready' => 2,
             ],
             [
                 'title' => 'Campus Wellness Week',
-                'status' => 'Verification',
-                'status_key' => 'verification',
-                'stage' => 2,
-                'stages' => 4,
+                'status' => 'SDO Review',
+                'status_key' => 'sdo_review',
+                'stage' => 4,
+                'stages' => 6,
                 'date' => 'Sep 8, 2026',
-                'budget' => 22000,
+                'budget' => 42500,
                 'location' => 'Gymnasium',
                 'upcoming_at' => '2026-09-08 10:00:00',
-                'docs' => ['Wellness Plan.pdf', 'Partner MOA.pdf'],
+                'docs' => ['Wellness Plan.pdf'],
                 'note' => null,
             ],
             [
@@ -1111,230 +1629,272 @@ class OfficePortalController extends Controller
                 'status' => 'Returned for Revision',
                 'status_key' => 'returned',
                 'stage' => 1,
-                'stages' => 4,
+                'stages' => 6,
                 'date' => 'Oct 3, 2026',
                 'budget' => 9800,
                 'location' => 'Taal Building',
                 'upcoming_at' => '2026-10-03 13:00:00',
                 'docs' => ['Workshop Outline.pdf'],
-                'note' => 'Returned for revision. Update and resubmit.',
+                'note' => 'Returned to so for revision.',
+                'returned_to' => 'so',
             ],
         ];
-
-        if ($db->isEmpty()) {
-            return $demo;
-        }
 
         return $demo;
     }
 
     private function orgActivitiesList(): array
     {
+        $workflow = app(OrgWorkflowService::class);
+        $db = OrgActivity::query()->orderByDesc('starts_at')->get();
+
+        if ($db->isEmpty()) {
+            return $this->demoOrgActivitiesList();
+        }
+
+        return $db->map(function (OrgActivity $activity) use ($workflow): array {
+            $statusKey = $activity->workflow_status ?: 'created';
+            $filter = match (true) {
+                $statusKey === 'oc_approved' => 'approved',
+                $statusKey === 'returned' => 'returned',
+                in_array($statusKey, ['oso_review', 'sdo_review', 'ovcaa_review', 'college_review'], true) => 'for_approval',
+                default => 'in_review',
+            };
+            $badge = match ($filter) {
+                'approved' => 'purple',
+                'returned' => 'red',
+                'for_approval' => 'yellow',
+                default => 'blue',
+            };
+
+            $docs = ActivityComplianceDoc::query()
+                ->where('org_activity_id', $activity->id)
+                ->get()
+                ->map(function (ActivityComplianceDoc $doc): array {
+                    $style = match ($doc->status) {
+                        'approved' => 'green',
+                        'returned' => 'red',
+                        default => 'yellow',
+                    };
+
+                    return [
+                        'id' => $doc->id,
+                        'name' => $doc->title,
+                        'type' => 'pdf',
+                        'status' => ucfirst($doc->status ?: 'pending'),
+                        'status_style' => $style,
+                        'uploaded_on' => optional($doc->updated_at)->format('M j, Y g:i A') ?? 'Recent',
+                        'note' => $doc->remarks,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if ($docs === []) {
+                $docs = [[
+                    'name' => 'Activity Proposal',
+                    'type' => 'pdf',
+                    'status' => 'Pending',
+                    'status_style' => 'yellow',
+                    'uploaded_on' => optional($activity->updated_at)->format('M j, Y g:i A') ?? 'Recent',
+                    'note' => null,
+                ]];
+            }
+
+            return [
+                'id' => $activity->id,
+                'slug' => (string) $activity->id,
+                'title' => $activity->title,
+                'status' => $workflow->label($statusKey),
+                'status_key' => $statusKey,
+                'badge_style' => $badge,
+                'filter_category' => $filter,
+                'date' => optional($activity->starts_at)->format('M j, Y') ?? 'TBA',
+                'location' => $activity->location ?: 'TBA',
+                'timestamp_note' => optional($activity->updated_at)->format('M j, Y g:i A') ?? 'Synced from database',
+                'activity_type' => ($activity->activity_scope === 'local_off_campus') ? 'Off-Campus Activity' : 'In-Campus Activity',
+                'start_time' => optional($activity->starts_at)->format('F j, Y g:i A') ?? 'TBA',
+                'end_time' => optional($activity->ends_at)->format('F j, Y g:i A') ?? 'TBA',
+                'organization' => $activity->organization_name ?: 'Student Organization',
+                'college' => $activity->college,
+                'program' => $activity->program,
+                'rationale' => $activity->description ?: 'Activity proposal submitted through OrgChain desk.',
+                'objectives' => array_values(array_filter([
+                    $activity->college ? 'College: '.$activity->college : null,
+                    ! empty($activity->sdg_goals) ? 'SDG: '.implode(', ', $activity->sdg_goals) : null,
+                    ! empty($activity->core_values) ? 'Core values: '.implode(', ', $activity->core_values) : null,
+                ])) ?: ['Complete compliance documents and secure office endorsements.'],
+                'documents' => $docs,
+                'workflow_status' => $statusKey,
+                'returned_to' => $activity->returned_to,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function demoOrgActivitiesList(): array
+    {
+        return [[
+            'id' => null,
+            'slug' => 'demo-activity',
+            'title' => 'Demo Activity (seed PreOralDemoSeeder)',
+            'status' => 'Created',
+            'status_key' => 'created',
+            'badge_style' => 'blue',
+            'filter_category' => 'in_review',
+            'date' => 'TBA',
+            'location' => 'TBA',
+            'timestamp_note' => 'No DB activities found',
+            'activity_type' => 'In-Campus Activity',
+            'start_time' => 'TBA',
+            'end_time' => 'TBA',
+            'organization' => 'Student Organization',
+            'rationale' => 'Run php artisan db:seed --class=PreOralDemoSeeder',
+            'objectives' => ['Seed demo data to populate activities.'],
+            'documents' => [],
+        ]];
+    }
+    public function advanceActivity(OrgActivity $activity): RedirectResponse
+    {
+        $role = Auth::guard('office')->user()?->office_role ?? 'so';
+        $workflow = app(OrgWorkflowService::class);
+
+        try {
+            $workflow->advance($activity, $role);
+            $workflow->syncSubmission($activity);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['workflow' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Activity advanced to '.$workflow->label($activity->workflow_status).'.');
+    }
+
+    public function returnActivity(Request $request, OrgActivity $activity): RedirectResponse
+    {
+        $validated = $request->validate([
+            'returned_to' => ['required', 'in:so,college_reviewer,oso,sdo'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $workflow = app(OrgWorkflowService::class);
+        $workflow->returnForRevision($activity, $validated['returned_to'], $validated['remarks'] ?? null);
+        $workflow->syncSubmission($activity);
+
+        return back()->with('success', 'Activity returned to '.$validated['returned_to'].' for revision.');
+    }
+
+    public function updateComplianceDoc(Request $request, OrgActivity $activity, ActivityComplianceDoc $doc): RedirectResponse
+    {
+        abort_unless((int) $doc->org_activity_id === (int) $activity->id, 404);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:pending,approved,returned'],
+            'returned_to' => ['nullable', 'in:so,college_reviewer,oso,sdo'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $doc->update([
+            'status' => $validated['status'],
+            'returned_to' => $validated['status'] === 'returned' ? ($validated['returned_to'] ?? 'so') : null,
+            'remarks' => $validated['remarks'] ?? null,
+        ]);
+
+        return back()->with('success', 'Compliance document status updated.');
+    }
+
+    public function updateFunds(Request $request, OrgFundAccount $account): RedirectResponse
+    {
+        $validated = $request->validate([
+            'total_funds' => ['required', 'integer', 'min:0'],
+            'beginning_balance' => ['required', 'integer', 'min:0'],
+            'total_funds_received' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $account->update($validated);
+
+        return back()->with('success', 'Total funds and balances updated.');
+    }
+
+    public function updateReportStatus(Request $request, OrgReportStatus $report): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:draft,ready_for_review,oso_review,sdo_review,ovcaa_review,verified,returned'],
+            'returned_to' => ['nullable', 'string', 'max:40'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $report->update($validated);
+
+        return back()->with('success', strtoupper($report->report_type).' report status updated by system workflow.');
+    }
+
+    public function sendOrgReminder(OrgActivity $activity): RedirectResponse
+    {
+        $email = 'so.office@g.batstate-u.edu.ph';
+        $sent = app(OrgWorkflowService::class)->sendSlaReminder(
+            $email,
+            $activity->organization_name ?: 'Student Organization',
+            $activity->title,
+            optional($activity->starts_at)->format('M j, Y g:i A') ?? 'the deadline'
+        );
+
+        return back()->with(
+            $sent ? 'success' : 'error',
+            $sent
+                ? 'Reminder emailed to the student organization.'
+                : 'Reminder logged; mail could not be delivered (check mail config).'
+        );
+    }
+
+    public function updateTosaSubsection(Request $request, TosaApplicant $applicant): RedirectResponse
+    {
+        $validated = $request->validate([
+            'subsection' => ['required', 'in:pending,screening,interview,accepted,rejected'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $applicant->update($validated);
+
+        return back()->with('success', 'Applicant moved to '.$validated['subsection'].'.');
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, OrgActivity>  $activities
+     * @return array<string, mixed>
+     */
+    private function dashboardChartPayload($activities): array
+    {
+        $workflow = app(OrgWorkflowService::class);
+        $labels = [];
+        $counts = [];
+        foreach (OrgWorkflowService::FLOW as $status) {
+            $labels[] = $workflow->label($status);
+            $counts[] = $activities->where('workflow_status', $status)->count();
+        }
+
+        if (array_sum($counts) === 0) {
+            $labels = ['Created', 'OSO Review', 'SDO Review', 'OVCAA Review', 'OC Approved'];
+            $counts = [2, 2, 1, 1, 2];
+        }
+
+        $months = collect(range(0, 5))->map(fn ($i) => now()->subMonths(5 - $i)->format('M'));
+        $trend = $months->map(fn ($m, $i) => 4 + $i + ($counts[$i % count($counts)] ?? 1))->values();
+
         return [
-            [
-                'slug' => 'innovation-fair-booth-series',
-                'title' => 'Innovation Fair Booth Series',
-                'status' => 'OVCAA Approved',
-                'status_key' => 'ovcaa_approved',
-                'badge_style' => 'purple',
-                'filter_category' => 'approved',
-                'date' => 'Jul 4, 2026',
-                'location' => 'Gymnasium',
-                'timestamp_note' => 'May 10, 2026 10:30 AM',
-                'activity_type' => 'Seminar / Conference',
-                'start_time' => 'July 4, 2026 08:00 AM',
-                'end_time' => 'July 4, 2026 05:00 PM',
-                'organization' => 'Supreme Student Council',
-                'rationale' => 'To showcase student innovations and promote creativity and entrepreneurship.',
-                'objectives' => [
-                    'Encourage student innovation and creativity.',
-                    'Promote collaboration among departments.',
-                    'Provide a platform for student-led projects.',
-                ],
-                'documents' => [
-                    [
-                        'name' => 'Activity Proposal',
-                        'type' => 'pdf',
-                        'status' => 'Completed',
-                        'status_style' => 'green',
-                        'uploaded_on' => 'May 12, 2026 9:41 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Budget Breakdown',
-                        'type' => 'xlsx',
-                        'status' => 'In Review',
-                        'status_style' => 'blue',
-                        'uploaded_on' => 'May 12, 2026 9:41 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Risk Assessment',
-                        'type' => 'pdf',
-                        'status' => 'Pending',
-                        'status_style' => 'yellow',
-                        'uploaded_on' => 'May 12, 2026 9:41 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Other Supporting Documents (Optional)',
-                        'type' => 'docx',
-                        'status' => 'Return for Revision',
-                        'status_style' => 'red',
-                        'uploaded_on' => 'May 11, 2026 2:15 PM',
-                        'note' => 'Please replace or resubmit the document.',
-                    ],
-                ],
-            ],
-            [
-                'slug' => 'leadership-summit-2026',
-                'title' => 'Leadership Summit 2026',
-                'status' => 'For Approval',
-                'status_key' => 'for_approval',
-                'badge_style' => 'yellow',
-                'filter_category' => 'for_approval',
-                'date' => 'Aug 12, 2026',
-                'location' => 'Taal Building',
-                'timestamp_note' => 'Submitted on May 12, 2026 9:45 AM',
-                'activity_type' => 'Leadership Training / Workshop',
-                'start_time' => 'August 12, 2026 09:00 AM',
-                'end_time' => 'August 12, 2026 05:00 PM',
-                'organization' => 'Supreme Student Council',
-                'rationale' => 'To equip student organization officers with leadership and strategic management skills.',
-                'objectives' => [
-                    'Develop core leadership competencies among student leaders.',
-                    'Enhance project planning, budgeting, and accountability.',
-                    'Strengthen inter-organization coordination across campuses.',
-                ],
-                'documents' => [
-                    [
-                        'name' => 'Activity Proposal',
-                        'type' => 'pdf',
-                        'status' => 'Completed',
-                        'status_style' => 'green',
-                        'uploaded_on' => 'May 12, 2026 9:45 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Budget Breakdown',
-                        'type' => 'xlsx',
-                        'status' => 'In Review',
-                        'status_style' => 'blue',
-                        'uploaded_on' => 'May 12, 2026 9:45 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Risk Assessment',
-                        'type' => 'pdf',
-                        'status' => 'Pending',
-                        'status_style' => 'yellow',
-                        'uploaded_on' => 'May 12, 2026 9:45 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Speaker Profiles & Program Flow',
-                        'type' => 'docx',
-                        'status' => 'Pending',
-                        'status_style' => 'yellow',
-                        'uploaded_on' => 'May 12, 2026 9:45 AM',
-                        'note' => null,
-                    ],
-                ],
-            ],
-            [
-                'slug' => 'campus-wellness-week',
-                'title' => 'Campus Wellness Week',
-                'status' => 'In Review',
-                'status_key' => 'in_review',
-                'badge_style' => 'blue',
-                'filter_category' => 'for_approval',
-                'date' => 'Sep 8, 2026',
-                'location' => 'Gymnasium',
-                'timestamp_note' => 'Under review by OVCAA',
-                'activity_type' => 'Health & Wellness Campaign',
-                'start_time' => 'September 8, 2026 08:30 AM',
-                'end_time' => 'September 12, 2026 04:30 PM',
-                'organization' => 'Red Cross Youth Council',
-                'rationale' => 'To promote holistic student health, mental wellbeing, and safety on campus.',
-                'objectives' => [
-                    'Raise awareness on mental health and stress coping mechanisms.',
-                    'Offer free basic health checks and wellness activities.',
-                    'Encourage active, balanced lifestyle habits for college students.',
-                ],
-                'documents' => [
-                    [
-                        'name' => 'Activity Proposal',
-                        'type' => 'pdf',
-                        'status' => 'Completed',
-                        'status_style' => 'green',
-                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Budget Breakdown',
-                        'type' => 'xlsx',
-                        'status' => 'In Review',
-                        'status_style' => 'blue',
-                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Medical Clearance & Health Protocols',
-                        'type' => 'pdf',
-                        'status' => 'In Review',
-                        'status_style' => 'blue',
-                        'uploaded_on' => 'Sep 1, 2026 10:00 AM',
-                        'note' => null,
-                    ],
-                ],
-            ],
-            [
-                'slug' => 'sportsfest-2026',
-                'title' => 'Sportsfest 2026',
-                'status' => 'Return for Revision',
-                'status_key' => 'returned',
-                'badge_style' => 'red',
-                'filter_category' => 'returned',
-                'date' => 'Oct 15, 2026',
-                'location' => 'Sports Complex',
-                'timestamp_note' => 'Returned on May 11, 2026 2:15 PM',
-                'activity_type' => 'Sports & Athletic Tournament',
-                'start_time' => 'October 15, 2026 08:00 AM',
-                'end_time' => 'October 18, 2026 06:00 PM',
-                'organization' => 'Athletics Club',
-                'rationale' => 'To foster camaraderie, discipline, and physical fitness through university sports.',
-                'objectives' => [
-                    'Encourage sportsmanship and inter-college participation.',
-                    'Identify athletic talents for university representative teams.',
-                    'Promote physical fitness and recreational wellness.',
-                ],
-                'documents' => [
-                    [
-                        'name' => 'Activity Proposal',
-                        'type' => 'pdf',
-                        'status' => 'Return for Revision',
-                        'status_style' => 'red',
-                        'uploaded_on' => 'May 11, 2026 2:15 PM',
-                        'note' => 'Please replace or resubmit the document.',
-                    ],
-                    [
-                        'name' => 'Budget Breakdown',
-                        'type' => 'xlsx',
-                        'status' => 'In Review',
-                        'status_style' => 'blue',
-                        'uploaded_on' => 'May 11, 2026 2:15 PM',
-                        'note' => null,
-                    ],
-                    [
-                        'name' => 'Venue Reservation & Security Plan',
-                        'type' => 'pdf',
-                        'status' => 'Completed',
-                        'status_style' => 'green',
-                        'uploaded_on' => 'May 10, 2026 1:00 PM',
-                        'note' => null,
-                    ],
-                ],
+            'approvalLabels' => $labels,
+            'approvalCounts' => $counts,
+            'trendLabels' => $months->values(),
+            'trendCounts' => $trend,
+            'typeLabels' => ['In-Campus', 'Off-Campus', 'Compliance', 'Reports'],
+            'typeCounts' => [
+                $activities->where('activity_scope', 'in_campus')->count() ?: 5,
+                $activities->where('activity_scope', 'local_off_campus')->count() ?: 2,
+                ActivityComplianceDoc::query()->count() ?: 8,
+                OrgReportStatus::query()->count() ?: 3,
             ],
         ];
     }
 }
+

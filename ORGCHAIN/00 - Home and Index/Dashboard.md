@@ -37,6 +37,7 @@ mindmap
       [[Multi-Tier Office Roles SO OSO SDO OVCAA]]
       [[Activity Proposal Approval Pipeline]]
       [[Budget Utilization and OCR Receipts]]
+      [[Organization Renewal Filing Window]]
       [[Interactive Activity Calendar]]
       [[Document Archive and Compliance Repository]]
     Student Portal and Engagement
@@ -63,6 +64,7 @@ mindmap
       [[Maintenance Resync and Ledger Purge Runbook]]
       [[Security Incident and Rate Limit Response Runbook]]
       [[Testing and Quality Assurance Guide]]
+      [[Playwright Console Smoke Testing]]
 ```
 
 ---

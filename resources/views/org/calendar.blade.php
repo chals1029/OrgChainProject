@@ -405,30 +405,21 @@
 
         <div class="org-scope-filter-group">
             <span>Scope:</span>
-            <label class="org-scope-check-label">
-                <input type="checkbox" id="checkAllCampus"> All
-            </label>
-            <label class="org-scope-check-label">
-                <input type="checkbox" id="checkInCampus"> In-Campus
-            </label>
-            <label class="org-scope-check-label">
-                <input type="checkbox" id="checkOffCampus"> Off-Campus
-            </label>
+            <button type="button" class="org-scope-pill-btn is-active" data-scope="all">All</button>
+            <button type="button" class="org-scope-pill-btn" data-scope="in">In-Campus</button>
+            <button type="button" class="org-scope-pill-btn" data-scope="off">Off-Campus</button>
         </div>
     </div>
 
-    {{-- Main 2-Column Split --}}
     <div class="org-cal-main-grid">
-        {{-- Calendar Grid Card --}}
         <section class="org-cal-card">
             <div class="org-cal-header-nav">
-                <button type="button" class="org-cal-nav-btn" aria-label="Previous month"><i class="bi bi-chevron-left"></i></button>
-                <h2 class="org-cal-month-title">September 2026</h2>
-                <button type="button" class="org-cal-nav-btn" aria-label="Next month"><i class="bi bi-chevron-right"></i></button>
+                <a href="{{ route('office.calendar', ['month' => $previousMonth]) }}" class="org-cal-nav-btn" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+                <h2 class="org-cal-month-title">{{ $monthLabel }}</h2>
+                <a href="{{ route('office.calendar', ['month' => $nextMonth]) }}" class="org-cal-nav-btn" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
             </div>
 
-            <div class="org-cal-grid-table">
-                {{-- Days of week header --}}
+            <div class="org-cal-grid-table" id="orgCalGrid">
                 <div class="org-cal-dow-header">MON</div>
                 <div class="org-cal-dow-header">TUE</div>
                 <div class="org-cal-dow-header">WED</div>
@@ -437,196 +428,157 @@
                 <div class="org-cal-dow-header">SAT</div>
                 <div class="org-cal-dow-header">SUN</div>
 
-                {{-- Week 1: 1 - 6 --}}
-                <div class="org-cal-day-cell"><span class="org-cal-day-num"></span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">1</span></div>
-                <div class="org-cal-day-cell">
-                    <span class="org-cal-day-num">2</span>
-                    <span class="org-cal-event-pill is-red"><span class="dot"></span> General Assembly...</span>
-                </div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">3</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">4</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">5</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">6</span></div>
+                @php
+                    $todayKey = now()->toDateString();
+                    $firstWithEvents = collect($days)->first(fn ($d) => $d['inMonth'] && count($d['events']) > 0);
+                    $defaultKey = $firstWithEvents['date']->toDateString() ?? $todayKey;
+                @endphp
 
-                {{-- Week 2: 7 - 13 (Day 8 Selected) --}}
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">7</span></div>
-                <div class="org-cal-day-cell is-selected">
-                    <span class="org-cal-day-num">8</span>
-                    <span class="org-cal-event-pill is-red"><span class="dot"></span> Campus Wellness...</span>
-                </div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">9</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">10</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">11</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">12</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">13</span></div>
-
-                {{-- Week 3: 14 - 20 --}}
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">14</span></div>
-                <div class="org-cal-day-cell">
-                    <span class="org-cal-day-num">15</span>
-                    <span class="org-cal-event-pill is-red"><span class="dot"></span> Accomplishment...</span>
-                </div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">16</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">17</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">18</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">19</span></div>
-                <div class="org-cal-day-cell">
-                    <span class="org-cal-day-num">20</span>
-                    <span class="org-cal-event-pill is-red"><span class="dot"></span> OSO Doc Review</span>
-                    <span class="org-cal-event-pill is-blue"><span class="dot"></span> Leadership Summit</span>
-                </div>
-
-                {{-- Week 4: 21 - 27 --}}
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">21</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">22</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">23</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">24</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">25</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">26</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">27</span></div>
-
-                {{-- Week 5: 28 - 30 --}}
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">28</span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num">29</span></div>
-                <div class="org-cal-day-cell">
-                    <span class="org-cal-day-num">30</span>
-                    <span class="org-cal-event-pill is-red"><span class="dot"></span> Financial Report...</span>
-                </div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num"></span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num"></span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num"></span></div>
-                <div class="org-cal-day-cell"><span class="org-cal-day-num"></span></div>
+                @foreach ($days as $day)
+                    @php
+                        $dateKey = $day['date']->toDateString();
+                        $isSelected = $dateKey === $defaultKey;
+                        $scopeList = collect($day['events'])->map(function ($ev) {
+                            $status = strtolower((string) ($ev['status_key'] ?? ''));
+                            return str_contains($status, 'off') || str_contains(strtolower((string) ($ev['note'] ?? '')), 'off') ? 'off' : 'in';
+                        })->unique()->values()->implode(',');
+                    @endphp
+                    <div
+                        class="org-cal-day-cell {{ $day['inMonth'] ? '' : 'is-muted' }} {{ $isSelected ? 'is-selected' : '' }}"
+                        data-date-key="{{ $dateKey }}"
+                        data-date-label="{{ $day['date']->format('F j, Y') }}"
+                        data-scopes="{{ $scopeList }}"
+                        role="button"
+                        tabindex="0"
+                    >
+                        <span class="org-cal-day-num">{{ $day['inMonth'] ? $day['date']->day : '' }}</span>
+                        @foreach (array_slice($day['events'], 0, 2) as $event)
+                            @php
+                                $pillClass = str_contains(strtolower((string) ($event['status_key'] ?? '')), 'off') ? 'is-blue' : 'is-red';
+                            @endphp
+                            <span class="org-cal-event-pill {{ $pillClass }}" title="{{ $event['title'] }}">
+                                <span class="dot"></span> {{ \Illuminate\Support\Str::limit($event['title'], 16) }}
+                            </span>
+                        @endforeach
+                        @if (count($day['events']) > 2)
+                            <span class="org-cal-event-pill is-red">+{{ count($day['events']) - 2 }} more</span>
+                        @endif
+                    </div>
+                @endforeach
             </div>
         </section>
 
-        {{-- Upcoming on Calendar Sidebar Card --}}
         <section class="org-cal-card">
             <h3 class="org-upcoming-sidebar-head">
                 <i class="bi bi-calendar-check" style="color: #8b1828;"></i> Upcoming on Calendar
             </h3>
-
-            <div class="org-upcoming-side-list">
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>2</strong>
+            <div class="org-upcoming-side-list" id="orgUpcomingList">
+                @forelse ($events->take(8) as $event)
+                    <button type="button" class="org-side-event-item" data-date-key="{{ $event['date_key'] }}" style="width:100%;background:transparent;border:0;text-align:left;cursor:pointer;">
+                        <div class="org-side-event-left">
+                            <div class="org-side-date-badge">
+                                <small>{{ \Carbon\Carbon::parse($event['starts_at'])->format('M') }}</small>
+                                <strong>{{ \Carbon\Carbon::parse($event['starts_at'])->format('j') }}</strong>
+                            </div>
+                            <div class="org-side-event-info">
+                                <strong>{{ $event['title'] }}</strong>
+                                <small>{{ $event['time_label'] }} · {{ $event['location'] }}</small>
+                            </div>
                         </div>
-                        <div class="org-side-event-info">
-                            <strong>General Assembly 2026</strong>
-                            <small>1:00 PM · Gymnasium</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>8</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>Campus Wellness Week – Start</strong>
-                            <small>10:00 AM · Gymnasium</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>15</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>Accomplishment Report Deadline</strong>
-                            <small>5:00 PM · OrgChain Portal</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>20</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>OSO Document Review</strong>
-                            <small>2:00 PM · OSO Office</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>20</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>Leadership Summit – Travel Day</strong>
-                            <small>6:00 AM · Taal Building</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-blue"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>SEP</small>
-                            <strong>30</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>Financial Report Submission Deadline</strong>
-                            <small>5:00 PM · OrgChain Portal</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
-
-                <div class="org-side-event-item">
-                    <div class="org-side-event-left">
-                        <div class="org-side-date-badge">
-                            <small>OCT</small>
-                            <strong>15</strong>
-                        </div>
-                        <div class="org-side-event-info">
-                            <strong>BatStateU Sportsfest 2026</strong>
-                            <small>7:00 AM · Sports Complex</small>
-                        </div>
-                    </div>
-                    <span class="org-side-event-dot is-red"></span>
-                </div>
+                        <span class="org-side-event-dot is-red"></span>
+                    </button>
+                @empty
+                    <p style="color:#7a7074;font-size:0.9rem;">No upcoming events. Add an activity to populate the calendar.</p>
+                @endforelse
             </div>
         </section>
     </div>
 
-    {{-- Bottom Selected Day Event Details Card --}}
-    <section class="org-selected-day-card">
+    <section class="org-selected-day-card" id="orgSelectedDayCard">
         <div class="org-selected-day-head">
-            <h3><i class="bi bi-calendar-event" style="color: #8b1828;"></i> September 8, 2026</h3>
-            <small>1 item scheduled</small>
+            <h3 id="orgSelectedDayTitle"><i class="bi bi-calendar-event" style="color: #8b1828;"></i> Select a day</h3>
+            <small id="orgSelectedDayCount">0 items scheduled</small>
         </div>
-
-        <div class="org-selected-event-card">
-            <div class="org-selected-event-title-row">
-                <strong><span class="org-dot-indicator is-red"></span> Campus Wellness Week – Start</strong>
-                <span class="org-status-pill org-status-in-review" style="font-size: 0.72rem; padding: 0.15rem 0.65rem;">
-                    <span class="org-status-dot"></span> Upcoming
-                </span>
-            </div>
-            <div class="org-selected-event-meta">
-                <span><i class="bi bi-clock"></i> 10:00 AM</span>
-                <span><i class="bi bi-geo-alt-fill" style="color: #8b1828;"></i> Gymnasium</span>
-                <span><i class="bi bi-tag-fill" style="color: #64748b;"></i> Activity</span>
-            </div>
-        </div>
+        <div id="orgSelectedDayEvents"></div>
     </section>
+
+    <script type="application/json" id="orgCalEventsJson">{!! json_encode($events->groupBy('date_key')) !!}</script>
+    <script>
+        (function () {
+            const eventsByDate = JSON.parse(document.getElementById('orgCalEventsJson').textContent || '{}');
+            const detailRoot = document.getElementById('orgSelectedDayEvents');
+            const titleEl = document.getElementById('orgSelectedDayTitle');
+            const countEl = document.getElementById('orgSelectedDayCount');
+            let activeScope = 'all';
+
+            function renderDay(dateKey, dateLabel) {
+                document.querySelectorAll('.org-cal-day-cell').forEach((cell) => {
+                    cell.classList.toggle('is-selected', cell.dataset.dateKey === dateKey);
+                });
+
+                const items = eventsByDate[dateKey] || [];
+                titleEl.innerHTML = '<i class="bi bi-calendar-event" style="color:#8b1828;"></i> ' + (dateLabel || dateKey);
+                countEl.textContent = items.length + (items.length === 1 ? ' item scheduled' : ' items scheduled');
+
+                if (!items.length) {
+                    detailRoot.innerHTML = '<p style="color:#7a7074;margin:0;">No activities on this day.</p>';
+                    return;
+                }
+
+                detailRoot.innerHTML = items.map((event) => {
+                    const href = @json(route('office.activities')) + '?q=' + encodeURIComponent(event.title || '');
+                    return `
+                        <a class="org-selected-event-card" href="${href}" style="display:block;text-decoration:none;color:inherit;margin-bottom:0.75rem;">
+                            <div class="org-selected-event-title-row">
+                                <strong><span class="org-dot-indicator is-red"></span> ${event.title}</strong>
+                                <span class="org-status-pill" style="font-size:0.72rem;padding:0.15rem 0.65rem;">${event.status || 'Scheduled'}</span>
+                            </div>
+                            <div class="org-selected-event-meta">
+                                <span><i class="bi bi-clock"></i> ${event.time_label || ''}</span>
+                                <span><i class="bi bi-geo-alt-fill" style="color:#8b1828;"></i> ${event.location || ''}</span>
+                            </div>
+                        </a>`;
+                }).join('');
+            }
+
+            document.querySelectorAll('.org-cal-day-cell').forEach((cell) => {
+                cell.addEventListener('click', () => {
+                    if (!cell.dataset.dateKey || !cell.querySelector('.org-cal-day-num')?.textContent) return;
+                    renderDay(cell.dataset.dateKey, cell.dataset.dateLabel);
+                });
+                cell.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        cell.click();
+                    }
+                });
+            });
+
+            document.querySelectorAll('#orgUpcomingList [data-date-key]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const key = btn.dataset.dateKey;
+                    const cell = document.querySelector(`.org-cal-day-cell[data-date-key="${key}"]`);
+                    renderDay(key, cell?.dataset.dateLabel || key);
+                    cell?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+
+            document.querySelectorAll('.org-scope-pill-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    activeScope = btn.dataset.scope;
+                    document.querySelectorAll('.org-scope-pill-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+                    document.querySelectorAll('.org-cal-day-cell').forEach((cell) => {
+                        const scopes = (cell.dataset.scopes || '').split(',').filter(Boolean);
+                        const show = activeScope === 'all' || scopes.length === 0 || scopes.includes(activeScope);
+                        cell.style.opacity = show ? '1' : '0.35';
+                    });
+                });
+            });
+
+            const initial = document.querySelector('.org-cal-day-cell.is-selected') || document.querySelector('.org-cal-day-cell[data-date-key]');
+            if (initial) {
+                renderDay(initial.dataset.dateKey, initial.dataset.dateLabel);
+            }
+        })();
+    </script>
 @endsection

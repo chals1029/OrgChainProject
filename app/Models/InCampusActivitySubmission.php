@@ -14,6 +14,12 @@ class InCampusActivitySubmission extends Model
         'status',
         'activity_type',
         'organization_name',
+        'college',
+        'workflow_status',
+        'returned_to',
+        'document_statuses',
+        'sla_due_at',
+        'reminder_sent_at',
         'rationale',
         'objectives',
         'participants',
@@ -44,7 +50,10 @@ class InCampusActivitySubmission extends Model
     {
         return [
             'attachments' => 'array',
+            'document_statuses' => 'array',
             'submitted_at' => 'datetime',
+            'sla_due_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 

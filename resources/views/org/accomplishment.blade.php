@@ -593,6 +593,102 @@
 
     <div class="org-acc-container">
 
+        <form method="get" action="{{ route('office.accomplishment') }}" class="org-acc-filter-bar" aria-label="Accomplishment Filters">
+            <div class="org-acc-filter-left">
+                <div class="org-acc-filter-title">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span>Filters:</span>
+                </div>
+                <select name="gender" class="org-acc-select" onchange="this.form.submit()">
+                    <option value="all" @selected(($selectedGender ?? 'all') === 'all')>All Genders</option>
+                    <option value="male" @selected(($selectedGender ?? '') === 'male')>Male</option>
+                    <option value="female" @selected(($selectedGender ?? '') === 'female')>Female</option>
+                </select>
+                <select name="sdg" class="org-acc-select" onchange="this.form.submit()">
+                    <option value="">All SDGs</option>
+                    @foreach (($sdgOptions ?? []) as $sdgOpt)
+                        <option value="{{ $sdgOpt }}" @selected(($selectedSdg ?? '') === $sdgOpt)>{{ $sdgOpt }}</option>
+                    @endforeach
+                </select>
+                <select name="core_value" class="org-acc-select" onchange="this.form.submit()">
+                    <option value="">All Core Values</option>
+                    @foreach (($coreValueOptions ?? []) as $cvOpt)
+                        <option value="{{ $cvOpt }}" @selected(($selectedCoreValue ?? '') === $cvOpt)>{{ $cvOpt }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @if (!empty($selectedSdg) || !empty($selectedCoreValue) || (($selectedGender ?? 'all') !== 'all'))
+                <a href="{{ route('office.accomplishment') }}" class="org-acc-badge-pill">Clear filters</a>
+            @endif
+        </form>
+
+        @isset($reportStatus)
+            <section class="org-acc-card" aria-label="Accomplishment Report Status">
+                <div class="org-acc-card-head">
+                    <h3><i class="bi bi-flag-fill" style="color:#8b1828;"></i> AR Workflow Status</h3>
+                    <span class="org-acc-badge-pill">{{ strtoupper(str_replace('_', ' ', $reportStatus->status ?? 'draft')) }}</span>
+                </div>
+                <form method="post" action="{{ route('office.reports.status', $reportStatus) }}" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end;">
+                    @csrf
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800;">
+                        Advance Status
+                        <select name="status" class="org-acc-select" required>
+                            @foreach (['draft','ready_for_review','oso_review','sdo_review','ovcaa_review','verified','returned'] as $st)
+                                <option value="{{ $st }}" @selected(($reportStatus->status ?? '') === $st)>{{ strtoupper(str_replace('_', ' ', $st)) }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800; flex:1; min-width:180px;">
+                        Notes
+                        <input type="text" name="notes" value="{{ old('notes', $reportStatus->notes) }}" maxlength="1000" class="org-acc-select" style="min-width:180px;" placeholder="Optional notes">
+                    </label>
+                    <button type="submit" class="org-btn org-btn-primary">Update Status</button>
+                </form>
+            </section>
+        @endisset
+
+        @isset($accomplishmentRows)
+            <section class="org-acc-card" aria-label="Accomplishment Rows">
+                <div class="org-acc-card-head">
+                    <h3><i class="bi bi-table" style="color:#8b1828;"></i> Activity Accomplishments</h3>
+                </div>
+                @empty($accomplishmentRows)
+                    <p style="margin:0; color:#7a7074; font-size:0.88rem;">No accomplishment rows match the current filters.</p>
+                @else
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+                            <thead>
+                                <tr style="text-align:left; border-bottom:1.5px solid #f0e6e8; color:#7a7074;">
+                                    <th style="padding:0.55rem 0.4rem;">Title</th>
+                                    <th style="padding:0.55rem 0.4rem;">College</th>
+                                    <th style="padding:0.55rem 0.4rem;">Male</th>
+                                    <th style="padding:0.55rem 0.4rem;">Female</th>
+                                    <th style="padding:0.55rem 0.4rem;">Participants</th>
+                                    <th style="padding:0.55rem 0.4rem;">SDG Goals</th>
+                                    <th style="padding:0.55rem 0.4rem;">Core Values</th>
+                                    <th style="padding:0.55rem 0.4rem;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($accomplishmentRows as $row)
+                                    <tr style="border-bottom:1px solid #f6eff0;">
+                                        <td style="padding:0.6rem 0.4rem; font-weight:700;">{{ $row['title'] ?? '—' }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ $row['college'] ?? '—' }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ $row['male'] ?? 0 }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ $row['female'] ?? 0 }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ $row['participants'] ?? 0 }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ is_array($row['sdg_goals'] ?? null) ? implode(', ', $row['sdg_goals']) : ($row['sdg_goals'] ?? '—') }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ is_array($row['core_values'] ?? null) ? implode(', ', $row['core_values']) : ($row['core_values'] ?? '—') }}</td>
+                                        <td style="padding:0.6rem 0.4rem;">{{ strtoupper(str_replace('_', ' ', $row['status'] ?? '—')) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endempty
+            </section>
+        @endisset
+
         {{-- 0. Report Period (Dropdown / Filter Toolbar) --}}
         <section class="org-acc-filter-bar" aria-label="Accomplishment Report Period">
             <div class="org-acc-filter-left">

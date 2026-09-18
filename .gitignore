@@ -3,6 +3,7 @@
 .env
 .env.backup
 .env.production
+.env.*.local
 .phpactor.json
 .phpunit.result.cache
 /.codex
@@ -29,5 +30,16 @@ Thumbs.db
 __pycache__/
 *.pyc
 database/sql_dumps/
+database/testing.sqlite
+database/*.sqlite
+
+# Local DB dumps / exports (may contain student PII)
+*.sql
+votingsystem*.sql
+
+# Local tunnel / smoke artifacts
+storage/app/*-report.json
+storage/app/test-reports/
+storage/app/_*.php
 
 

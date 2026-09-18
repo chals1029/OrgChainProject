@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // ngrok / Cloudflare Tunnel terminate HTTPS in front of php artisan serve
+        $middleware->trustProxies(at: '*');
+
         // Voting module uses its own CSRF tokens in legacy forms.
         $middleware->validateCsrfTokens(except: [
             'voting-system/*',

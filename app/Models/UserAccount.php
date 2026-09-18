@@ -63,6 +63,35 @@ class UserAccount extends Authenticatable
         return mb_strtoupper($first . ($last !== $first ? $last : ''));
     }
 
+    /**
+     * College / department label for UI (matches voting-system roster wording).
+     * Expands short codes like CICS → full college name.
+     */
+    public function displayCollege(): string
+    {
+        $college = trim((string) ($this->college ?? ''));
+        if ($college === '') {
+            return '';
+        }
+
+        $map = [
+            'CICS' => 'College of Informatics and Computing Sciences',
+            'CAS' => 'College of Arts and Sciences',
+            'CABEIHM' => 'College of Accountancy, Business, Economics, and International Hospitality Management',
+            'CCJE' => 'College of Criminal Justice Education',
+            'CHS' => 'College of Health Sciences',
+            'CTE' => 'College of Teacher Education',
+            'CEAFSA' => 'College of Engineering, Architecture, Fine Arts and Sciences - Alangilan',
+        ];
+
+        $key = strtoupper($college);
+        if (isset($map[$key])) {
+            return $map[$key];
+        }
+
+        return $college;
+    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(CommunityPost::class, 'student_id', 'user_id');

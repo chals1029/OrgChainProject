@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -45,6 +46,14 @@ class StudentAuthController extends Controller
             'attempts' => 0,
         ]);
 
+        // Testing / local E2E only — never used in production responses unless EXPOSE_TEST_OTP=true
+        if (app()->environment('testing')) {
+            $request->session()->put('_testing_otp_plain', $code);
+        }
+        if (config('orgchain.expose_test_otp')) {
+            \Illuminate\Support\Facades\Cache::put('auth_e2e_otp:'.$student->sr_code, $code, 600);
+        }
+
         // Mask the email so the user knows where to look without exposing it fully.
         $maskedEmail = $this->maskEmail($student->email);
 
@@ -61,10 +70,15 @@ class StudentAuthController extends Controller
         }
 
         if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
+            $payload = [
                 'ok' => true,
                 'email' => $maskedEmail,
-            ]);
+            ];
+            if (config('orgchain.expose_test_otp')) {
+                $payload['debug_code'] = $code;
+            }
+
+            return response()->json($payload);
         }
 
         return $this->codeStepBack($request, [], [
@@ -136,6 +150,7 @@ class StudentAuthController extends Controller
         }
 
         $request->session()->forget('student_login_code');
+        $this->syncCollegeFromVotingRoster($student);
         Auth::guard('student')->login($student, true);
         $request->session()->regenerate();
 
@@ -247,6 +262,7 @@ class StudentAuthController extends Controller
         }
 
         Auth::guard('student')->login($student, true);
+        $this->syncCollegeFromVotingRoster($student);
         $request->session()->regenerate();
 
         return redirect()->intended(route('portal.home'));
@@ -259,6 +275,37 @@ class StudentAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    /**
+     * Pull college/department from voting roster (voters / students tables)
+     * so the portal shows the same full college names as the election list.
+     */
+    private function syncCollegeFromVotingRoster(UserAccount $student): void
+    {
+        $sr = trim((string) $student->sr_code);
+        if ($sr === '') {
+            return;
+        }
+
+        try {
+            $roster = DB::connection('mysql')->table('voters')->where('sr_code', $sr)->first()
+                ?? DB::connection('mysql')->table('students')->where('sr_code', $sr)->first();
+        } catch (Throwable) {
+            return;
+        }
+
+        if (! $roster) {
+            return;
+        }
+
+        $college = trim((string) ($roster->college ?? ''));
+        if ($college === '') {
+            return;
+        }
+
+        $student->forceFill(['college' => $college])->save();
+        $student->refresh();
     }
 
     private function studentGoogleClient(): GoogleOAuthClient

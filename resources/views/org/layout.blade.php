@@ -107,6 +107,17 @@
                     <span>Updates</span>
                     <em class="org-badge-count">3</em>
                 </a>
+                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
+                    <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
+                        <i class="bi bi-arrow-repeat is-ico-gold"></i>
+                        <span>Renewal</span>
+                        @if (($office->office_role ?? '') === 'oso')
+                            <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-sliders" style="font-size: 0.65rem;"></i></em>
+                        @else
+                            <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
+                        @endif
+                    </a>
+                @endif
                 @if (($office->office_role ?? '') === 'oso')
                     <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
                         <i class="bi bi-archive-fill is-ico-slate"></i>

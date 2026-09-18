@@ -29,7 +29,12 @@ pie title Total Budget Utilization (PHP)
 
 ---
 
-## 🔍 Publicly Accessible Metrics:
+## 🔍 Publicly Accessible Metrics
 1. **Total Allocated vs. Total Utilized Fund Gauges**.
 2. **Itemized Program Expenses** with description notes and fiscal year markers.
 3. **Upcoming vs. Completed Activity Tracking**.
+4. **On-chain budget seals** (hash + nodes confirmed) from SO expense submissions — same 3-node budget ledger as the office desk.
+
+> [!tip] Desk path
+> Office seals: `/office-desk/budget-utilization` · Student view: `/portal` Budget Utilization section.
+> Details: [[Budget Utilization and OCR Receipts]]

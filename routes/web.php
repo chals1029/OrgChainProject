@@ -39,6 +39,7 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::post('/community/posts/{post}/comments', [CommunityFeedController::class, 'comment'])->name('community.posts.comment');
     Route::delete('/community/posts/{post}', [CommunityFeedController::class, 'destroy'])->name('community.posts.destroy');
     Route::put('/profile', [StudentPortalController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/feedback', [StudentPortalController::class, 'storeFeedback'])->name('feedback.store');
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {
@@ -46,16 +47,29 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/analytics', [OfficePortalController::class, 'analytics'])->name('analytics');
     Route::get('/activities', [OfficePortalController::class, 'activities'])->name('activities');
     Route::get('/activities/create', [OfficePortalController::class, 'createActivity'])->name('activities.create');
+    Route::get('/activities/templates/download', [OfficePortalController::class, 'downloadActivityTemplates'])->name('activities.templates.download');
     Route::post('/activities', [OfficePortalController::class, 'storeActivity'])->name('activities.store');
     Route::get('/activities/{submission}/edit', [OfficePortalController::class, 'editActivity'])->name('activities.edit');
     Route::put('/activities/{submission}', [OfficePortalController::class, 'updateActivity'])->name('activities.update');
+    Route::post('/activities/{activity}/advance', [OfficePortalController::class, 'advanceActivity'])->name('activities.advance');
+    Route::post('/activities/{activity}/return', [OfficePortalController::class, 'returnActivity'])->name('activities.return');
+    Route::post('/activities/{activity}/docs/{doc}', [OfficePortalController::class, 'updateComplianceDoc'])->name('activities.docs.update');
+    Route::post('/funds/{account}', [OfficePortalController::class, 'updateFunds'])->name('funds.update');
+    Route::post('/reports/{report}/status', [OfficePortalController::class, 'updateReportStatus'])->name('reports.status');
+    Route::get('/financial-report/print', [OfficePortalController::class, 'printFinancial'])->name('financial.print');
+    Route::post('/oso/remind/{activity}', [OfficePortalController::class, 'sendOrgReminder'])->name('oso.remind');
     Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
     Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
     Route::post('/budget-utilization/receipt-reviews', [OfficePortalController::class, 'storeReceiptReview'])->name('budget.receipts.store');
     Route::get('/financial-report', [OfficePortalController::class, 'financial'])->name('financial');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
+    Route::get('/renewal', [OfficePortalController::class, 'renewal'])->name('renewal');
+    Route::post('/renewal/window', [OfficePortalController::class, 'updateRenewalWindow'])->name('renewal.window');
+    Route::post('/renewal/submit', [OfficePortalController::class, 'storeRenewalSubmission'])->name('renewal.submit');
+    Route::post('/renewal/documents', [OfficePortalController::class, 'storeRenewalDocument'])->name('renewal.documents');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
+    Route::post('/tosa/{applicant}/subsection', [OfficePortalController::class, 'updateTosaSubsection'])->name('tosa.subsection');
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
     Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');

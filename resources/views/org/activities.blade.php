@@ -71,53 +71,42 @@
 
 @section('actions')
     @if ($selectedActivity)
-        @if ($isOso)
-            <button type="button" class="org-btn org-btn-primary" onclick="approveProposal('{{ $selectedActivity['title'] }}')">
-                <i class="bi bi-check2-circle"></i> Endorse to SDO
-            </button>
+        @php $activityId = $selectedActivity['id'] ?? null; @endphp
+        @if ($activityId && ($isOso || $isSdo || $isOvcaa))
+            <form method="post" action="{{ route('office.activities.advance', $activityId) }}" style="display:inline;">
+                @csrf
+                <button type="submit" class="org-btn org-btn-primary" @if($isSdo) style="background:#15803d;box-shadow:0 4px 14px rgba(21,128,61,0.25);" @elseif($isOvcaa) style="background:#1d4ed8;box-shadow:0 4px 14px rgba(29,78,216,0.25);" @endif>
+                    @if ($isOso)
+                        <i class="bi bi-check2-circle"></i> Endorse / Advance
+                    @elseif ($isSdo)
+                        <i class="bi bi-leaf-fill"></i> Endorse to OVCAA
+                    @else
+                        <i class="bi bi-patch-check-fill"></i> Final Approve
+                    @endif
+                </button>
+            </form>
             <button type="button" class="org-btn org-btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="openReturnModal()">
                 <i class="bi bi-arrow-counterclockwise"></i> Return for Revision
             </button>
-            <button type="button" class="org-btn org-btn-outline" onclick="markInReview('{{ $selectedActivity['title'] }}')">
-                <i class="bi bi-hourglass-split"></i> In Review
-            </button>
-        @elseif ($isSdo)
-            <button type="button" class="org-btn org-btn-primary" style="background: #15803d; box-shadow: 0 4px 14px rgba(21,128,61,0.25);" onclick="sdoEndorse('{{ $selectedActivity['title'] }}')">
-                <i class="bi bi-leaf-fill"></i> Endorse to OVCAA
-            </button>
-            <button type="button" class="org-btn org-btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="openReturnModal()">
-                <i class="bi bi-arrow-counterclockwise"></i> Return for Revision
-            </button>
-            <button type="button" class="org-btn org-btn-outline" onclick="markInReview('{{ $selectedActivity['title'] }}')">
-                <i class="bi bi-hourglass-split"></i> Mark Under Review
-            </button>
-        @elseif ($isOvcaa)
-            <button type="button" class="org-btn org-btn-primary" style="background: #1d4ed8; box-shadow: 0 4px 14px rgba(29,78,216,0.25);" onclick="ovcaaApprove('{{ $selectedActivity['title'] }}')">
-                <i class="bi bi-patch-check-fill"></i> Final Approve
-            </button>
-            <button type="button" class="org-btn org-btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="openReturnModal()">
-                <i class="bi bi-arrow-counterclockwise"></i> Return for Revision
-            </button>
-        @else
+        @elseif ($activityId)
             <a href="{{ route('office.activities.create', ['edit' => $selectedActivity['slug']]) }}" class="org-btn org-btn-outline">
                 Edit Activity
             </a>
-            <button type="button" class="org-btn-more-options" aria-label="More options">
-                <i class="bi bi-three-dots-vertical"></i>
-            </button>
+            <form method="post" action="{{ route('office.activities.advance', $activityId) }}" style="display:inline;">
+                @csrf
+                <button type="submit" class="org-btn org-btn-primary">
+                    <i class="bi bi-send-fill"></i> Submit / Advance
+                </button>
+            </form>
+        @else
+            <a href="{{ route('office.activities.create', ['edit' => $selectedActivity['slug'] ?? null]) }}" class="org-btn org-btn-outline">
+                Edit Activity
+            </a>
         @endif
     @else
-        @if ($isOso)
+        @if ($isOso || $isSdo || $isOvcaa)
             <button type="button" class="org-btn org-btn-outline" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print Summary
-            </button>
-        @elseif ($isSdo)
-            <button type="button" class="org-btn org-btn-outline" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print SDG Summary
-            </button>
-        @elseif ($isOvcaa)
-            <button type="button" class="org-btn org-btn-outline" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print Approval Summary
             </button>
         @else
             <a href="{{ route('office.activities.create') }}" class="org-btn org-btn-primary">
@@ -1208,6 +1197,17 @@
         }
     </style>
 
+    @if (session('success'))
+        <div style="margin-bottom:1rem;padding:0.85rem 1rem;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-weight:700;">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if ($errors->any())
+        <div style="margin-bottom:1rem;padding:0.85rem 1rem;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-weight:700;">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     @if ($selectedActivity)
         {{-- ============================ ACTIVITY DETAILS VIEW ============================ --}}
         <div class="org-activity-details-view">
@@ -1466,62 +1466,39 @@
                         <span style="font-size: 0.78rem; color: #7a7074;">Specify feedback for the student organization</span>
                     </div>
                 </div>
-                <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1a1618; margin-bottom: 0.4rem;">Revision Remarks *</label>
-                    <textarea id="returnRemarksInput" rows="4" style="width: 100%; border-radius: 12px; border: 1.5px solid #e8dedf; padding: 0.75rem; font-size: 0.88rem; font-family: inherit; resize: vertical;" placeholder="Explain what documents need updating (e.g. Please update budget breakdown or clarify SDG 12 waste plan)..."></textarea>
-                </div>
-                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                    <button type="button" onclick="closeReturnModal()" style="padding: 0.65rem 1.25rem; border-radius: 9999px; border: 1.5px solid #e8dedf; background: #ffffff; font-weight: 700; font-size: 0.86rem; color: #554d50; cursor: pointer;">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="confirmReturn()" style="padding: 0.65rem 1.5rem; border-radius: 9999px; border: none; background: #dc2626; font-weight: 700; font-size: 0.86rem; color: #ffffff; cursor: pointer; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);">
-                        Return Proposal
-                    </button>
-                </div>
+                @if (!empty($selectedActivity['id']))
+                    <form method="post" action="{{ route('office.activities.return', $selectedActivity['id']) }}" id="returnRevisionForm">
+                        @csrf
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1a1618; margin-bottom: 0.4rem;">Return to *</label>
+                            <select name="returned_to" required style="width: 100%; border-radius: 12px; border: 1.5px solid #e8dedf; padding: 0.65rem 0.75rem; font-size: 0.88rem;">
+                                <option value="so">Student Organization (SO)</option>
+                                <option value="college_reviewer">College Reviewer</option>
+                                <option value="oso">OSO</option>
+                                <option value="sdo">SDO</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom: 1.25rem;">
+                            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1a1618; margin-bottom: 0.4rem;">Revision Remarks *</label>
+                            <textarea id="returnRemarksInput" name="remarks" required rows="4" style="width: 100%; border-radius: 12px; border: 1.5px solid #e8dedf; padding: 0.75rem; font-size: 0.88rem; font-family: inherit; resize: vertical;" placeholder="Explain what documents need updating..."></textarea>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                            <button type="button" onclick="closeReturnModal()" style="padding: 0.65rem 1.25rem; border-radius: 9999px; border: 1.5px solid #e8dedf; background: #ffffff; font-weight: 700; font-size: 0.86rem; color: #554d50; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button type="submit" style="padding: 0.65rem 1.5rem; border-radius: 9999px; border: none; background: #dc2626; font-weight: 700; font-size: 0.86rem; color: #ffffff; cursor: pointer; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);">
+                                Return Proposal
+                            </button>
+                        </div>
+                    </form>
+                @else
+                    <p style="color:#7a7074;">This demo row has no database id. Seed activities first.</p>
+                    <button type="button" onclick="closeReturnModal()">Close</button>
+                @endif
             </div>
         </div>
 
         <script>
-            function approveProposal(title) {
-                alert(`OSO Desk: Activity proposal "${title}" has been reviewed and endorsed to SDO for SDG monitoring.`);
-                const badge = document.getElementById('detailStatusBadge');
-                const text = document.getElementById('detailStatusText');
-                if (badge && text) {
-                    badge.className = 'org-status-pill org-status-yellow';
-                    text.textContent = 'For SDO Review';
-                }
-            }
-
-            function sdoEndorse(title) {
-                alert(`SDO Desk: SDG Alignment and documents for "${title}" have been verified! Endorsed to OVCAA for final approval.`);
-                const badge = document.getElementById('detailStatusBadge');
-                const text = document.getElementById('detailStatusText');
-                if (badge && text) {
-                    badge.className = 'org-status-pill org-status-blue';
-                    text.textContent = 'For OVCAA Approval';
-                }
-            }
-
-            function ovcaaApprove(title) {
-                alert(`OVCAA Final Authority: Activity proposal "${title}" has been GRANTED FINAL APPROVAL and recorded on OrgChain!`);
-                const badge = document.getElementById('detailStatusBadge');
-                const text = document.getElementById('detailStatusText');
-                if (badge && text) {
-                    badge.className = 'org-status-pill org-status-green';
-                    text.textContent = 'OVCAA Approved';
-                }
-            }
-
-            function markInReview(title) {
-                alert(`Activity proposal "${title}" has been marked as In Review.`);
-                const badge = document.getElementById('detailStatusBadge');
-                const text = document.getElementById('detailStatusText');
-                if (badge && text) {
-                    badge.className = 'org-status-pill org-status-blue';
-                    text.textContent = 'In Review';
-                }
-            }
-
             function openReturnModal() {
                 const modal = document.getElementById('returnRevisionModal');
                 if (modal) modal.style.display = 'flex';
@@ -1530,22 +1507,6 @@
             function closeReturnModal() {
                 const modal = document.getElementById('returnRevisionModal');
                 if (modal) modal.style.display = 'none';
-            }
-
-            function confirmReturn() {
-                const remarks = document.getElementById('returnRemarksInput').value.trim();
-                if (!remarks) {
-                    alert('Please enter revision remarks before returning.');
-                    return;
-                }
-                alert('Proposal has been returned for revision with remarks: ' + remarks);
-                closeReturnModal();
-                const badge = document.getElementById('detailStatusBadge');
-                const text = document.getElementById('detailStatusText');
-                if (badge && text) {
-                    badge.className = 'org-status-pill org-status-red';
-                    text.textContent = 'Return for Revision';
-                }
             }
         </script>
 

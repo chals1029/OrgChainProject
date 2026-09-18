@@ -568,10 +568,22 @@
                     <span class="org-card-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                     Documents
                 </h2>
-                <button type="button" class="org-btn-outline-red-sm" onclick="alert('Upload / Import Document dialog')">
-                    <i class="bi bi-plus-lg"></i> Upload / Import
-                </button>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                    <a id="downloadTemplatesBtn"
+                       href="{{ route('office.activities.templates.download', ['type' => $currentType]) }}"
+                       class="org-btn-outline-red-sm"
+                       style="text-decoration:none;">
+                        <i class="bi bi-download"></i> Download Documents
+                    </a>
+                    <button type="button" class="org-btn-outline-red-sm" onclick="document.getElementById('bulkDocUpload')?.click()">
+                        <i class="bi bi-plus-lg"></i> Upload / Import
+                    </button>
+                    <input type="file" id="bulkDocUpload" name="supporting_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" style="display:none;">
+                </div>
             </div>
+            <p style="margin:0 0 1rem; font-size:0.82rem; color:#7a7074;">
+                Download the official BatStateU document pack for the selected activity type, fill them out, then upload / import your completed files.
+            </p>
 
             <div class="org-docs-table-wrap">
                 <table class="org-docs-table">
@@ -639,4 +651,22 @@
             </button>
         </div>
     </form>
+
+    <script>
+        (function () {
+            const typeSelect = document.getElementById('activityType');
+            const downloadBtn = document.getElementById('downloadTemplatesBtn');
+            if (!typeSelect || !downloadBtn) return;
+
+            const baseUrl = @json(route('office.activities.templates.download'));
+
+            const syncDownloadLink = () => {
+                const type = typeSelect.value || 'in_campus';
+                downloadBtn.href = baseUrl + '?type=' + encodeURIComponent(type);
+            };
+
+            typeSelect.addEventListener('change', syncDownloadLink);
+            syncDownloadLink();
+        })();
+    </script>
 @endsection

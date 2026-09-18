@@ -2052,6 +2052,7 @@
              DEDICATED OSO OFFICER ANALYTICS & OPERATIONS DASHBOARD
              ====================================================================== --}}
         <div class="org-dash-grid">
+            @include('org.partials.workflow-panel')
 
             {{-- 0. INTERACTIVE PERIOD & DATE FILTER TOOLBAR --}}
             <section class="oso-filter-bar-card" aria-label="Dashboard Filters">
@@ -2711,6 +2712,7 @@
     @else
         {{-- SDO, OVCAA, AND STUDENT ORG DASHBOARDS --}}
         <div class="org-dash-grid">
+            @include('org.partials.workflow-panel')
             {{-- 1. Top 4 KPI Cards --}}
             <div class="org-kpi-row">
                 @if ($isSdo)
@@ -3146,26 +3148,33 @@
                             </a>
                         </div>
 
+                        @php
+                            $snapAllocated = (int) ($transparency['total_funds'] ?? $transparency['allocated'] ?? 185000);
+                            $snapUtilized = (int) ($transparency['utilized'] ?? 115150);
+                            $snapRemaining = (int) ($transparency['remaining'] ?? max(0, $snapAllocated - $snapUtilized));
+                            $snapPercent = (int) ($transparency['percent'] ?? ($snapAllocated > 0 ? round(($snapUtilized / $snapAllocated) * 100) : 0));
+                            $snapRemainPct = (int) ($transparency['remaining_percent'] ?? ($snapAllocated > 0 ? round(($snapRemaining / $snapAllocated) * 100) : 0));
+                        @endphp
                         <div class="org-budget-hero-box">
-                            <span>Total Allocated</span>
-                            <h2>₱185,000</h2>
+                            <span>{{ ($isSo ?? false) ? 'Total Funds' : 'Total Allocated' }}</span>
+                            <h2>₱{{ number_format($snapAllocated) }}</h2>
                             <small>AY 2025-2026 · 1st Semester</small>
                         </div>
 
                         <div class="org-budget-stat-row">
                             <span>Utilized</span>
-                            <strong>₱115,150 (62%)</strong>
+                            <strong>₱{{ number_format($snapUtilized) }} ({{ $snapPercent }}%)</strong>
                         </div>
                         <div class="org-mini-progress">
-                            <div class="org-mini-fill-maroon" style="width: 62%;"></div>
+                            <div class="org-mini-fill-maroon" style="width: {{ min(100, $snapPercent) }}%;"></div>
                         </div>
 
                         <div class="org-budget-stat-row">
                             <span>Remaining</span>
-                            <strong class="is-green">₱69,850 (38%)</strong>
+                            <strong class="is-green">₱{{ number_format($snapRemaining) }} ({{ $snapRemainPct }}%)</strong>
                         </div>
                         <div class="org-mini-progress">
-                            <div class="org-mini-fill-green" style="width: 38%;"></div>
+                            <div class="org-mini-fill-green" style="width: {{ min(100, $snapRemainPct) }}%;"></div>
                         </div>
 
                         <div class="org-budget-sub-stats">
@@ -3480,6 +3489,7 @@
         {{-- Chart.js CDN & OSO Dashboard Interactive Script --}}
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
+            window.orgDeskChartPayload = @json($chartPayload ?? null);
             // Global Chart Instances
             window.osoCharts = {
                 donut: null,
@@ -3824,16 +3834,25 @@
                 Chart.defaults.font.family = "'Instrument Sans', system-ui, -apple-system, sans-serif";
                 Chart.defaults.color = '#786f73';
 
+                const deskCharts = window.orgDeskChartPayload || {};
+
                 // 1. Approval Status Donut Chart
                 const donutCanvas = document.getElementById('osoApprovalDonutChart');
                 if (donutCanvas) {
+                    const donutLabels = (deskCharts.approvalLabels && deskCharts.approvalLabels.length)
+                        ? deskCharts.approvalLabels
+                        : ['Approved', 'Pending Review', 'For Revision', 'Rejected'];
+                    const donutData = (deskCharts.approvalCounts && deskCharts.approvalCounts.length)
+                        ? deskCharts.approvalCounts
+                        : [27, 11, 7, 3];
+                    const donutColors = ['#10b981', '#f59e0b', '#e11d48', '#64748b', '#8b1828', '#0284c7', '#9333ea'];
                     window.osoCharts.donut = new Chart(donutCanvas.getContext('2d'), {
                         type: 'doughnut',
                         data: {
-                            labels: ['Approved', 'Pending Review', 'For Revision', 'Rejected'],
+                            labels: donutLabels,
                             datasets: [{
-                                data: [27, 11, 7, 3],
-                                backgroundColor: ['#10b981', '#f59e0b', '#e11d48', '#64748b'],
+                                data: donutData,
+                                backgroundColor: donutLabels.map((_, i) => donutColors[i % donutColors.length]),
                                 borderWidth: 3,
                                 borderColor: '#ffffff',
                                 hoverOffset: 4
@@ -3855,7 +3874,7 @@
                                     callbacks: {
                                         label: function (ctx) {
                                             const val = ctx.raw || 0;
-                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 48;
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1;
                                             const pct = ((val / total) * 100).toFixed(1);
                                             return ` ${ctx.label}: ${val} (${pct}%)`;
                                         }
@@ -3873,14 +3892,20 @@
                     const grad = ctx.createLinearGradient(0, 0, 0, 220);
                     grad.addColorStop(0, 'rgba(139, 24, 40, 0.22)');
                     grad.addColorStop(1, 'rgba(139, 24, 40, 0.00)');
+                    const trendLabels = (deskCharts.trendLabels && deskCharts.trendLabels.length)
+                        ? deskCharts.trendLabels
+                        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
+                    const trendData = (deskCharts.trendCounts && deskCharts.trendCounts.length)
+                        ? deskCharts.trendCounts
+                        : [4, 8, 12, 9, 15, 7, 14, 18, 22, 19];
 
                     window.osoCharts.trend = new Chart(ctx, {
                         type: 'line',
                         data: {
-                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                            labels: trendLabels,
                             datasets: [{
                                 label: 'Monthly Submissions',
-                                data: [4, 8, 12, 9, 15, 7, 14, 18, 22, 19],
+                                data: trendData,
                                 borderColor: '#8b1828',
                                 borderWidth: 2.5,
                                 backgroundColor: grad,

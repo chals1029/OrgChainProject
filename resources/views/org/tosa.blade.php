@@ -2883,6 +2883,36 @@
                 {{-- Toolbar: Search + Filter Dropdowns + Export Button --}}
                 <div class="tosa-sub-toolbar">
                     <div class="tosa-sub-toolbar-left">
+                        @isset($tosaSubsections)
+                            <div style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; margin-right:0.35rem;">
+                                @foreach ($tosaSubsections as $subKey => $subLabel)
+                                    <a href="{{ route('office.tosa', ['subsection' => $subKey]) }}"
+                                       class="tosa-sub-select"
+                                       style="text-decoration:none; display:inline-flex; align-items:center; {{ ($selectedSubsection ?? 'all') === $subKey ? 'background:#8b1828; color:#fff; border-color:#8b1828;' : '' }}">
+                                        {{ $subLabel }}
+                                        @if ($subKey !== 'all' && !empty($subsectionCounts[$subKey]))
+                                            ({{ $subsectionCounts[$subKey] }})
+                                        @endif
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endisset
+                        @if (($tosaApplicants ?? collect())->isNotEmpty())
+                            <div style="width:100%; margin:0.5rem 0 0.25rem; display:grid; gap:0.4rem;">
+                                @foreach ($tosaApplicants as $applicant)
+                                    <form method="post" action="{{ route('office.tosa.subsection', $applicant) }}" style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; font-size:0.78rem;">
+                                        @csrf
+                                        <strong style="min-width:140px;">{{ $applicant->full_name }}</strong>
+                                        <span style="color:#7a7074;">{{ $applicant->program }} · Y{{ $applicant->year_level }}</span>
+                                        <select name="subsection" class="tosa-sub-select" onchange="this.form.submit()">
+                                            @foreach (['pending','screening','interview','accepted','rejected'] as $sub)
+                                                <option value="{{ $sub }}" @selected(($applicant->subsection ?? '') === $sub)>{{ ucfirst($sub) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </form>
+                                @endforeach
+                            </div>
+                        @endif
                         <div class="tosa-sub-search-box">
                             <input type="text" id="tosaApplicantSearch" placeholder="Search applicant name or ID..." oninput="handleApplicantSearch(this.value)">
                             <i class="bi bi-search search-icon"></i>
@@ -3515,8 +3545,43 @@
         let autoLockInterval = null;
         let secondsRemaining = 900; // 15 minutes
 
-        // TOSA Applicants Data Store (Empty State — No Data Yet)
-        let tosaApplicants = [];
+        // TOSA Applicants Data Store (from controller)
+        @php
+            $yearMap = ['1' => '1st Year', '2' => '2nd Year', '3' => '3rd Year', '4' => '4th Year'];
+            $statusMap = [
+                'pending' => 'Pending',
+                'screening' => 'Under Review',
+                'interview' => 'Under Review',
+                'accepted' => 'Approved',
+                'rejected' => 'Rejected',
+            ];
+            $tosaApplicantsJs = collect($tosaApplicants ?? [])->map(function ($a) use ($yearMap, $statusMap) {
+                $reqs = is_array($a->requirements ?? null) ? $a->requirements : [];
+                $total = max(count($reqs), 1);
+                $submitted = collect($reqs)->filter(fn ($v) => (bool) $v)->count();
+                $yearRaw = (string) ($a->year_level ?? '');
+                $yearLevel = $yearMap[$yearRaw] ?? (str_contains(strtolower($yearRaw), 'year') ? $yearRaw : ($yearRaw !== '' ? $yearRaw.' Year' : ''));
+                $subsection = (string) ($a->subsection ?? 'pending');
+
+                return [
+                    'id' => $a->id,
+                    'name' => $a->full_name,
+                    'studentId' => $a->sr_code,
+                    'program' => $a->program,
+                    'yearLevel' => $yearLevel,
+                    'org' => $a->organization_name ?: ($a->college ?: 'Student Organization'),
+                    'category' => $a->college ?: 'Leadership & Technology',
+                    'status' => $statusMap[$subsection] ?? ($a->status ?: 'Pending'),
+                    'subsection' => $subsection,
+                    'submitted' => $submitted,
+                    'total' => $total,
+                    'missing' => max(0, $total - $submitted),
+                    'date' => optional($a->created_at)->format('M j, Y') ?? now()->format('M j, Y'),
+                    'remarks' => $a->remarks,
+                ];
+            })->values();
+        @endphp
+        let tosaApplicants = @json($tosaApplicantsJs);
         let tosaQualifiedApplicants = [];
 
         // Requirements List (Exact 5 items matching official TOSA requirements)

@@ -9,12 +9,12 @@
 
 @section('actions')
     <div style="display: flex; gap: 0.6rem; align-items: center;">
-        <button type="button" class="org-btn org-btn-outline" onclick="window.print()">
+        <a href="{{ route('office.financial.print') }}" target="_blank" rel="noopener" class="org-btn org-btn-outline">
             <i class="bi bi-printer"></i> Print Report
-        </button>
-        <button type="button" class="org-btn org-btn-primary" onclick="alert('Exporting Official Financial Report PDF with OSO Verification Seal...')">
+        </a>
+        <a href="{{ route('office.financial.print') }}" target="_blank" rel="noopener" class="org-btn org-btn-primary">
             <i class="bi bi-file-earmark-pdf-fill"></i> Export PDF
-        </button>
+        </a>
     </div>
 @endsection
 
@@ -596,6 +596,51 @@
 
     <div class="org-fin-container">
 
+        @isset($fundSourceOptions)
+            <form method="get" action="{{ route('office.financial') }}" class="org-fin-filter-bar" style="margin-bottom:0;" aria-label="Fund Source Filter">
+                <div class="org-fin-filter-left">
+                    <div class="org-fin-filter-title">
+                        <i class="bi bi-wallet2"></i>
+                        <span>Fund Source:</span>
+                    </div>
+                    <select name="fund_source" class="org-fin-select" onchange="this.form.submit()">
+                        <option value="">All Sources</option>
+                        @foreach ($fundSourceOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(($fundSourceFilter ?? '') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @if (!empty($fundSourceFilter))
+                    <a href="{{ route('office.financial') }}" class="org-fin-badge-pill">Clear filter</a>
+                @endif
+            </form>
+        @endisset
+
+        @isset($reportStatus)
+            <section class="org-fin-card" aria-label="Financial Report Status">
+                <div class="org-fin-card-head">
+                    <h3><i class="bi bi-flag-fill" style="color:#8b1828;"></i> FR Workflow Status</h3>
+                    <span class="org-fin-badge-pill">{{ strtoupper(str_replace('_', ' ', $reportStatus->status ?? 'draft')) }}</span>
+                </div>
+                <form method="post" action="{{ route('office.reports.status', $reportStatus) }}" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end;">
+                    @csrf
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800;">
+                        Advance Status
+                        <select name="status" class="org-fin-select" required>
+                            @foreach (['draft','ready_for_review','oso_review','sdo_review','ovcaa_review','verified','returned'] as $st)
+                                <option value="{{ $st }}" @selected(($reportStatus->status ?? '') === $st)>{{ strtoupper(str_replace('_', ' ', $st)) }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800; flex:1; min-width:180px;">
+                        Notes
+                        <input type="text" name="notes" value="{{ old('notes', $reportStatus->notes) }}" maxlength="1000" class="org-fin-select" style="min-width:180px;" placeholder="Optional notes">
+                    </label>
+                    <button type="submit" class="org-btn org-btn-primary">Update Status</button>
+                </form>
+            </section>
+        @endisset
+
         {{-- 0. Top Interactive Filter Toolbar --}}
         <section class="org-fin-filter-bar" aria-label="Financial Report Controls">
             <div class="org-fin-filter-left">
@@ -914,6 +959,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+        window.frInflowOutflow = @json($inflowOutflow ?? null);
         // Financial Dataset Dictionary
         const financialDatasets = {
             consolidated: {
@@ -946,7 +992,13 @@
                     data: [38000, 32150, 22000, 15000, 8000],
                     colors: ['#8b1828', '#d97706', '#0284c7', '#16a34a', '#9333ea']
                 },
-                inflowVsOutflow: {
+                inflowVsOutflow: (window.frInflowOutflow && window.frInflowOutflow.labels)
+                    ? {
+                        labels: window.frInflowOutflow.labels,
+                        inflows: window.frInflowOutflow.inflows || [],
+                        outflows: window.frInflowOutflow.outflows || []
+                    }
+                    : {
                     labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                     inflows: [60000, 45000, 35000, 25000, 20000],
                     outflows: [25000, 32000, 28150, 18000, 12000]

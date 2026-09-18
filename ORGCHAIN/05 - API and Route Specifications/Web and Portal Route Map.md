@@ -35,7 +35,14 @@ created: 2026-08-20
 | `GET` | `/office-desk/financial-report` | `office.auth` | `OfficePortalController@financial` | `office.financial` |
 | `GET` | `/office-desk/accomplishment-report` | `office.auth` | `OfficePortalController@accomplishment` | `office.accomplishment` |
 | `GET` | `/office-desk/updates` | `office.auth` | `OfficePortalController@updates` | `office.updates` |
+| `GET` | `/office-desk/renewal` | `office.auth` | `OfficePortalController@renewal` | `office.renewal` |
+| `POST` | `/office-desk/renewal/window` | `office.auth` | `OfficePortalController@updateRenewalWindow` | `office.renewal.window` |
+| `POST` | `/office-desk/renewal/submit` | `office.auth` | `OfficePortalController@storeRenewalSubmission` | `office.renewal.submit` |
+| `POST` | `/office-desk/renewal/documents` | `office.auth` | `OfficePortalController@storeRenewalDocument` | `office.renewal.documents` |
+| `GET` | `/office-desk/tosa` | `office.auth` | `OfficePortalController@tosa` | `office.tosa` |
 | `GET` | `/office-desk/archive` | `office.auth` | `OfficePortalController@archive` | `office.archive` |
 | `POST` | `/office-desk/archive/folders` | `office.auth` | `OfficePortalController@storeArchiveFolder` | `office.archive.folders.store` |
 | `POST` | `/office-desk/archive/documents` | `office.auth` | `OfficePortalController@storeArchiveDocument` | `office.archive.documents.store` |
 | `ANY` | `/voting-system/{any}` | `web` | `VotingKernel@handle` | `voting.any` |
+
+> Renewal: SO + OSO only. Window open/close is **OSO-only**. See [[Organization Renewal Filing Window]].

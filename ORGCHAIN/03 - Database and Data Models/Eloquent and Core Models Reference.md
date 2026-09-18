@@ -26,6 +26,7 @@ status: active
 | **Blockchain Ballots** | `Vote`, `VoteReceipt`, `Voter` | Native PDO | [[Model - Vote and VoteReceipt]] |
 | **Activity Governance** | `InCampusActivitySubmission`, `OrgActivity` | Eloquent | [[Model - InCampusActivitySubmission and OrgActivity]] |
 | **Finance & OCR** | `BudgetItem`, `ExpenseReceiptReview` | Eloquent | [[Model - BudgetItem and ExpenseReceiptReview]] |
+| **Org Renewal** | `OrgRenewalWindow`, `OrgRenewalSubmission`, `OrgRenewalDocument` | Eloquent | [[Model - OrgRenewalWindow Submission Document]] |
 | **Community Feed** | `CommunityPost`, `CommunityComment`, `CommunityLike` | Eloquent | [[Model - CommunityPost Comment Like]] |
 | **Document Vault** | `ArchiveFolder`, `ArchiveDocument` | Eloquent | [[Model - ArchiveFolder and ArchiveDocument]] |
 | **Security & Forensics** | `AuditLog`, `SecurityEvent` | Native PDO | [[Model - AuditLog and SecurityEvent]] |

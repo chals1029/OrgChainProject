@@ -28,8 +28,8 @@
     <button type="button" class="org-btn org-btn-outline" onclick="window.print()" title="Print this budget report">
         <i class="bi bi-printer"></i> Print Statement
     </button>
-    <button type="button" class="org-btn org-btn-primary" onclick="alert('Exporting Official Budget Utilization & Expense Liquidation Report (PDF/Excel)...')">
-        <i class="bi bi-file-earmark-arrow-down"></i> Export Report
+    <button type="button" class="org-btn org-btn-primary" onclick="window.print()">
+        <i class="bi bi-file-earmark-arrow-down"></i> Print / Export Report
     </button>
 @endsection
 
@@ -887,6 +887,20 @@
                     </div>
                 </div>
 
+                {{-- Organization Filter --}}
+                <form method="get" action="{{ route('office.budget') }}" class="org-filter-group-pill" style="margin:0;">
+                    <label for="budgetOrgSelector" class="org-filter-label-text"><i class="bi bi-building"></i> Organization</label>
+                    <div class="org-select-pill-wrap">
+                        <select id="budgetOrgSelector" name="organization" class="org-select-pill" onchange="this.form.submit()">
+                            <option value="">All Organizations</option>
+                            @foreach (($organizations ?? collect()) as $orgName)
+                                <option value="{{ $orgName }}" @selected(($selectedOrganization ?? '') === $orgName)>{{ $orgName }}</option>
+                            @endforeach
+                        </select>
+                        <i class="bi bi-chevron-down org-select-pill-arrow"></i>
+                    </div>
+                </form>
+
                 {{-- Academic Year Filter --}}
                 <div class="org-filter-group-pill">
                     <label for="budgetYearSelector" class="org-filter-label-text"><i class="bi bi-calendar2-range"></i> Year</label>
@@ -922,6 +936,31 @@
             </div>
         </section>
 
+        @isset($reportStatus)
+            <section class="org-info-card" aria-label="Budget Report Status" style="margin-bottom:0;">
+                <div class="org-info-card-head">
+                    <h3 class="org-info-card-title"><i class="bi bi-flag-fill" style="color:#8b1828;"></i> Budget Report Status</h3>
+                    <span class="org-live-badge">{{ strtoupper(str_replace('_', ' ', $reportStatus->status ?? 'draft')) }}</span>
+                </div>
+                <form method="post" action="{{ route('office.reports.status', $reportStatus) }}" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end;">
+                    @csrf
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800;">
+                        Advance Status
+                        <select name="status" class="org-select-pill" required>
+                            @foreach (['draft','ready_for_review','oso_review','sdo_review','ovcaa_review','verified','returned'] as $st)
+                                <option value="{{ $st }}" @selected(($reportStatus->status ?? '') === $st)>{{ strtoupper(str_replace('_', ' ', $st)) }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800; flex:1; min-width:180px;">
+                        Notes
+                        <input type="text" name="notes" value="{{ old('notes', $reportStatus->notes) }}" maxlength="1000" class="org-select-pill" style="border-radius:10px; min-width:180px;" placeholder="Optional notes">
+                    </label>
+                    <button type="submit" class="org-btn org-btn-primary">Update Status</button>
+                </form>
+            </section>
+        @endisset
+
         @if ($canRecordExpense)
         {{-- SO only: Record Expense with Budget / Receipt Upload + OCR pre-fill --}}
         <section class="so-expense-card" aria-label="Record Expense">
@@ -945,6 +984,36 @@
                 <input type="hidden" name="receipt_detected" id="soReceiptDetected" value="1">
                 <input type="hidden" name="ocr_confidence" id="soOcrConfidence" value="">
 
+                {{-- Step 1: Capture / upload receipt → OCR auto-fill --}}
+                <div class="so-receipt-capture" id="soReceiptCapture">
+                    <div class="so-receipt-capture-copy">
+                        <strong><i class="bi bi-camera-fill"></i> Scan receipt first</strong>
+                        <p>Upload a photo or open the camera. The system will read the receipt and auto-fill merchant, amount, and date.</p>
+                    </div>
+                    <div class="so-receipt-actions">
+                        <button type="button" class="org-btn org-btn-outline" id="soUploadGalleryBtn">
+                            <i class="bi bi-image"></i> Upload from Gallery
+                        </button>
+                        <button type="button" class="org-btn org-btn-primary" id="soOpenCameraBtn">
+                            <i class="bi bi-camera"></i> Open Camera
+                        </button>
+                    </div>
+                    <input type="file" name="receipt" id="soReceiptInput" accept="image/*,.pdf,.png,.jpg,.jpeg,.webp" capture="environment" required style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+                    <input type="file" id="soCameraInput" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+                    <div class="so-receipt-preview" id="soReceiptPreview" hidden>
+                        <img id="soReceiptPreviewImg" alt="Receipt preview">
+                        <span id="soReceiptPreviewName"></span>
+                    </div>
+                </div>
+
+                <div class="so-ocr-status" id="soOcrStatus" aria-live="polite">
+                    <i class="bi bi-receipt"></i>
+                    <div>
+                        <strong id="soOcrTitle">Waiting for receipt</strong>
+                        <p id="soOcrText">Use Upload or Open Camera — merchant, total, and date will fill in automatically.</p>
+                    </div>
+                </div>
+
                 <div class="so-form-grid">
                     <label>
                         <span>Activity / Project *</span>
@@ -959,7 +1028,7 @@
                     </label>
                     <label>
                         <span>Item / Merchant Name *</span>
-                        <input type="text" name="item_name" id="soItemName" value="{{ old('item_name') }}" required maxlength="255" placeholder="e.g. Sound system rental">
+                        <input type="text" name="item_name" id="soItemName" value="{{ old('item_name') }}" required maxlength="255" placeholder="Auto-filled from receipt">
                     </label>
                     <label>
                         <span>Category</span>
@@ -972,28 +1041,29 @@
                     </label>
                     <label>
                         <span>Quantity *</span>
-                        <input type="number" name="quantity" value="{{ old('quantity', 1) }}" min="1" max="100000" required>
+                        <input type="number" name="quantity" id="soQuantity" value="{{ old('quantity', 1) }}" min="1" max="100000" required>
                     </label>
                     <label>
                         <span>Unit Cost (₱) *</span>
-                        <input type="number" name="unit_cost" id="soUnitCost" value="{{ old('unit_cost') }}" min="0.01" step="0.01" required placeholder="0.00">
+                        <input type="number" name="unit_cost" id="soUnitCost" value="{{ old('unit_cost') }}" min="0.01" step="0.01" required placeholder="Auto-filled total">
                     </label>
                     <label>
                         <span>Expense Date *</span>
                         <input type="date" name="expense_date" id="soExpenseDate" value="{{ old('expense_date', now()->toDateString()) }}" required>
                     </label>
-                    <label class="so-span-2">
-                        <span>Budget Receipt / Proof of Purchase * <em class="so-hint-pill">PDF, PNG, JPG, WEBP · Max 10MB</em></span>
-                        <input type="file" name="receipt" id="soReceiptInput" accept=".pdf,.png,.jpg,.jpeg,.webp" required>
+                    <label>
+                        <span>Supplier</span>
+                        <input type="text" name="supplier" id="soSupplier" value="{{ old('supplier') }}" maxlength="255" placeholder="Auto-filled store / vendor">
                     </label>
-                </div>
-
-                <div class="so-ocr-status" id="soOcrStatus" aria-live="polite">
-                    <i class="bi bi-receipt"></i>
-                    <div>
-                        <strong id="soOcrTitle">Receipt verification</strong>
-                        <p id="soOcrText">Upload a clear receipt to auto-fill the item, amount, and date.</p>
-                    </div>
+                    <label>
+                        <span>OR / Receipt Reference No. *</span>
+                        <input type="text" name="receipt_reference" id="soReceiptReference" value="{{ old('receipt_reference') }}" required maxlength="120" placeholder="Auto-filled OR / Invoice / Ref No.">
+                    </label>
+                    <label>
+                        <span>Organization Name</span>
+                        <input type="text" name="organization_name" value="{{ old('organization_name') }}" maxlength="255" placeholder="Student organization">
+                    </label>
+                    <input type="hidden" name="ocr_quality" id="soOcrQuality" value="{{ old('ocr_quality', '') }}">
                 </div>
 
                 <label class="so-review-check" id="soReviewCheck" hidden>
@@ -1015,11 +1085,24 @@
                             <li>
                                 <div>
                                     <strong>{{ $review->item_name }}</strong>
-                                    <small>{{ $review->activity_title }} · {{ \Carbon\Carbon::parse($review->expense_date)->format('M j, Y') }} · Qty {{ $review->quantity }}</small>
+                                    <small>
+                                        {{ $review->activity_title }}
+                                        @if ($review->receipt_reference)
+                                            · Ref: {{ $review->receipt_reference }}
+                                        @endif
+                                        · {{ \Carbon\Carbon::parse($review->expense_date)->format('M j, Y') }}
+                                        · Qty {{ $review->quantity }}
+                                        @if ($review->ocr_quality)
+                                            · {{ strtoupper($review->ocr_quality) }}
+                                        @endif
+                                    </small>
                                 </div>
                                 <div class="so-queue-right">
                                     <strong>₱{{ number_format((float) $review->unit_cost * (int) $review->quantity, 2) }}</strong>
                                     <a href="{{ asset('storage/'.$review->receipt_path) }}" target="_blank" rel="noopener" title="View receipt"><i class="bi bi-eye"></i> {{ $review->receipt_name }}</a>
+                                    @if ($review->chain_hash)
+                                        <small style="display:block;color:#15803d;font-weight:700;">Chain {{ $review->nodes_confirmed }}/3 · {{ \Illuminate\Support\Str::limit($review->chain_hash, 16, '…') }}</small>
+                                    @endif
                                 </div>
                             </li>
                         @endforeach
@@ -1029,7 +1112,48 @@
         </section>
         @endif
 
+        @if (!empty($budgetChainBlocks) && count($budgetChainBlocks))
+            <section class="org-info-card" aria-label="Budget Blockchain Ledger">
+                <div class="org-info-card-head">
+                    <h3 class="org-info-card-title"><i class="bi bi-link-45deg" style="color:#8b1828;"></i> Budget Utilization Blockchain</h3>
+                    <span class="org-live-badge">3-node seal</span>
+                </div>
+                <p style="margin:0 0 0.75rem;font-size:0.82rem;color:#7a7074;">Each verified expense is hashed and appended to the permissioned budget ledger (same integrity model as VoteChain).</p>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                        <thead>
+                            <tr style="text-align:left;border-bottom:1.5px solid #f0e6e8;color:#7a7074;">
+                                <th style="padding:0.45rem;">#</th>
+                                <th style="padding:0.45rem;">Item</th>
+                                <th style="padding:0.45rem;">OR / Ref</th>
+                                <th style="padding:0.45rem;">Total</th>
+                                <th style="padding:0.45rem;">Block Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($budgetChainBlocks as $block)
+                                <tr style="border-bottom:1px solid #f6eff0;">
+                                    <td style="padding:0.5rem;">{{ $block['index'] ?? '—' }}</td>
+                                    <td style="padding:0.5rem;font-weight:700;">{{ $block['item_name'] ?? '—' }}</td>
+                                    <td style="padding:0.5rem;">{{ $block['receipt_reference'] ?? '—' }}</td>
+                                    <td style="padding:0.5rem;">₱{{ number_format((float) ($block['total'] ?? 0), 2) }}</td>
+                                    <td style="padding:0.5rem;font-family:ui-monospace,monospace;font-size:0.72rem;">{{ \Illuminate\Support\Str::limit($block['block_hash'] ?? '', 18, '…') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @endif
+
         <style>
+            .so-receipt-capture { border: 1.5px dashed #e8b4bc; border-radius: 16px; padding: 1rem 1.1rem; background: #fff8f9; display: grid; gap: 0.85rem; }
+            .so-receipt-capture-copy strong { display: flex; align-items: center; gap: 0.4rem; color: #7a1222; font-size: 0.92rem; }
+            .so-receipt-capture-copy p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #786f73; }
+            .so-receipt-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+            .so-receipt-preview { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0.7rem; border-radius: 12px; background: #fff; border: 1px solid #f0e6e8; }
+            .so-receipt-preview img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid #f0e6e8; }
+            .so-receipt-preview span { font-size: 0.78rem; font-weight: 700; color: #2b2427; word-break: break-all; }
             .so-expense-card { background: #fff; border: 1.5px solid #f0e6e8; border-radius: 20px; padding: 1.25rem 1.4rem; box-shadow: 0 4px 16px rgba(90,15,30,.03); display: grid; gap: 1rem; }
             .so-expense-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
             .so-expense-head h3 { margin: 0; font-size: 1.02rem; font-weight: 800; color: #1a1618; display: flex; align-items: center; gap: .45rem; }
@@ -1069,6 +1193,12 @@
                 const form = document.getElementById('soExpenseForm');
                 if (!form) return;
                 const fileInput = document.getElementById('soReceiptInput');
+                const cameraInput = document.getElementById('soCameraInput');
+                const galleryBtn = document.getElementById('soUploadGalleryBtn');
+                const cameraBtn = document.getElementById('soOpenCameraBtn');
+                const preview = document.getElementById('soReceiptPreview');
+                const previewImg = document.getElementById('soReceiptPreviewImg');
+                const previewName = document.getElementById('soReceiptPreviewName');
                 const status = document.getElementById('soOcrStatus');
                 const title = document.getElementById('soOcrTitle');
                 const text = document.getElementById('soOcrText');
@@ -1078,6 +1208,25 @@
                 const itemName = document.getElementById('soItemName');
                 const unitCost = document.getElementById('soUnitCost');
                 const expDate = document.getElementById('soExpenseDate');
+                const supplier = document.getElementById('soSupplier');
+                const receiptRef = document.getElementById('soReceiptReference');
+                const ocrQuality = document.getElementById('soOcrQuality');
+
+                galleryBtn?.addEventListener('click', () => {
+                    fileInput.removeAttribute('capture');
+                    fileInput.accept = 'image/*,.pdf,.png,.jpg,.jpeg,.webp';
+                    fileInput.click();
+                });
+
+                cameraBtn?.addEventListener('click', () => {
+                    if (cameraInput) {
+                        cameraInput.click();
+                        return;
+                    }
+                    fileInput.setAttribute('capture', 'environment');
+                    fileInput.accept = 'image/*';
+                    fileInput.click();
+                });
 
                 const setState = (state, t, d) => {
                     status.dataset.state = state;
@@ -1085,66 +1234,182 @@
                     text.textContent = d;
                 };
 
+                const setQuality = (q) => {
+                    if (ocrQuality) ocrQuality.value = q;
+                };
+
+                const showPreview = (file) => {
+                    if (!preview || !file) return;
+                    preview.hidden = false;
+                    previewName.textContent = file.name || 'Captured receipt';
+                    if (file.type.startsWith('image/') && previewImg) {
+                        const url = URL.createObjectURL(file);
+                        previewImg.src = url;
+                        previewImg.onload = () => URL.revokeObjectURL(url);
+                    } else if (previewImg) {
+                        previewImg.removeAttribute('src');
+                        previewImg.alt = 'PDF / file attached';
+                    }
+                };
+
+                const assignToMainInput = (file) => {
+                    if (!file || !fileInput) return;
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    fileInput.files = dt.files;
+                    showPreview(file);
+                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                };
+
+                cameraInput?.addEventListener('change', () => {
+                    const file = cameraInput.files?.[0];
+                    if (file) assignToMainInput(file);
+                    cameraInput.value = '';
+                });
+
                 const parseAmount = (str) => {
-                    const m = [...str.matchAll(/(?:₱|PHP|P|TOTAL|AMOUNT|₱)?\s*:?\s*([0-9]{1,3}(?:,[0-9]{3})*\.\d{2}|[0-9]+\.\d{2})/gi)];
-                    if (!m.length) return null;
-                    return parseFloat(m[m.length - 1][1].replace(/,/g, ''));
+                    const m = [...str.matchAll(/(?:TOTAL|AMOUNT DUE|GRAND TOTAL|AMOUNT|PHP|₱|P)\s*:?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?|[0-9]+\.\d{2})/gi)];
+                    if (m.length) return parseFloat(m[m.length - 1][1].replace(/,/g, ''));
+                    const loose = [...str.matchAll(/\b([0-9]{1,3}(?:,[0-9]{3})*\.\d{2})\b/g)];
+                    if (!loose.length) return null;
+                    return parseFloat(loose[loose.length - 1][1].replace(/,/g, ''));
+                };
+
+                const parseDate = (str) => {
+                    const m = str.match(/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})\b/);
+                    if (!m) return null;
+                    const raw = m[1].replace(/[.-]/g, '/');
+                    const parts = raw.split('/');
+                    let d;
+                    if (parts[0].length === 4) {
+                        d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                    } else {
+                        const a = Number(parts[0]), b = Number(parts[1]), y = Number(parts[2].length === 2 ? '20' + parts[2] : parts[2]);
+                        d = a > 12 ? new Date(y, b - 1, a) : new Date(y, a - 1, b);
+                    }
+                    if (Number.isNaN(d.getTime())) return null;
+                    return d.toISOString().slice(0, 10);
+                };
+
+                const parseReference = (str) => {
+                    const patterns = [
+                        /(?:OR|O\.?R\.?|SI|S\.?I\.?|INV|INVOICE|REF|REFERENCE|RECEIPT)\s*(?:NO\.?|#|NUMBER)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/]{3,})/i,
+                        /\b(?:OR|INV)[\s#:.-]*([0-9]{4,})\b/i,
+                        /#\s*([0-9]{5,})\b/,
+                    ];
+                    for (const re of patterns) {
+                        const m = str.match(re);
+                        if (m?.[1]) return m[1].trim().toUpperCase();
+                    }
+                    return null;
                 };
 
                 fileInput?.addEventListener('change', async () => {
                     const file = fileInput.files?.[0];
                     review.hidden = true;
                     if (conf) conf.value = '';
+                    setQuality('');
                     if (!file) return;
+                    showPreview(file);
+
                     if (file.type === 'application/pdf') {
                         detected.value = '1';
-                        setState('needs-review', 'PDF attached — manual review', 'Local OCR scans images only. Fill in the amount and date from this PDF manually.');
+                        setQuality('partial');
+                        setState('needs-review', 'PDF attached — incomplete for auto-scan', 'OCR works best on photos. Type the OR/reference number, amount, and date, then confirm.');
                         review.hidden = false;
                         return;
                     }
                     if (!window.Tesseract) {
-                        setState('needs-review', 'Scanner unavailable', 'Enter the receipt details manually and tick the confirmation box.');
+                        setQuality('partial');
+                        setState('needs-review', 'Scanner unavailable', 'Enter OR/reference, amount, and date manually, then confirm.');
                         review.hidden = false;
                         return;
                     }
-                    setState('scanning', 'Scanning receipt…', 'Reading merchant, total amount, and date. Keep this page open.');
+
+                    setState('scanning', 'Scanning receipt…', 'Looking for OR/reference no., merchant, total, and date.');
                     try {
                         const { data } = await window.Tesseract.recognize(file, 'eng');
-                        const lines = (data.text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-                        const merchant = lines.find((l) => /[a-z]/i.test(l) && !/(receipt|invoice|date|time|cashier|total|change|thank|vat|tel|tin|or no|amount)/i.test(l) && l.length > 2);
-                        const amount = parseAmount(data.text || '');
-                        const dateM = (data.text || '').match(/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})\b/);
-                        if (merchant && !itemName.value.trim()) itemName.value = merchant.slice(0, 255);
-                        if (amount && !unitCost.value) unitCost.value = amount.toFixed(2);
-                        if (dateM && !expDate.value) {
-                            const d = new Date(dateM[1]);
-                            if (!Number.isNaN(d.getTime())) expDate.value = d.toISOString().slice(0, 10);
+                        const rawText = data.text || '';
+                        const confidence = Math.round(data.confidence ?? 0);
+                        if (conf) conf.value = String(confidence);
+
+                        const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+                        const merchant = lines.find((l) => /[a-z]/i.test(l) && !/(receipt|invoice|date|time|cashier|total|change|thank|vat|tel|tin|or no|amount|subtotal|reference)/i.test(l) && l.length > 2);
+                        const amount = parseAmount(rawText);
+                        const dateVal = parseDate(rawText);
+                        const refNo = parseReference(rawText);
+
+                        if (merchant) {
+                            itemName.value = merchant.slice(0, 255);
+                            if (supplier) supplier.value = merchant.slice(0, 255);
                         }
-                        if (conf && data.confidence != null) conf.value = Math.round(data.confidence);
-                        if ((data.text || '').trim().length < 12) {
-                            detected.value = '0';
-                            setState('needs-review', 'No readable receipt detected', 'The image has almost no readable text. Please upload a clearer photo of the receipt.');
-                            return;
-                        }
-                        detected.value = '1';
+                        if (amount) unitCost.value = amount.toFixed(2);
+                        if (dateVal) expDate.value = dateVal;
+                        if (refNo && receiptRef) receiptRef.value = refNo;
+
+                        const textLen = rawText.trim().length;
                         const missing = [];
-                        if (!itemName.value.trim()) missing.push('item name');
+                        if (!itemName.value.trim()) missing.push('merchant / item');
                         if (!unitCost.value) missing.push('amount');
                         if (!expDate.value) missing.push('date');
-                        if (missing.length) {
-                            setState('needs-review', 'Needs review', 'Please complete: ' + missing.join(', ') + '.');
-                        } else {
-                            setState('complete', 'Complete — ready for your review', 'All details detected. Compare with the original receipt, then confirm below.');
+                        if (!receiptRef?.value?.trim()) missing.push('OR / receipt reference no.');
+
+                        // Blurry / incomplete heuristics
+                        if (textLen < 12 || confidence < 35) {
+                            detected.value = '0';
+                            setQuality('blurry');
+                            setState('needs-review', 'Receipt is blurry / incomplete', 'Scan quality is too low. Retake a clearer photo (good light, flat paper, no shake). OR number, amount, and date must be readable.');
+                            review.hidden = true;
+                            return;
                         }
-                        review.hidden = false;
-                    } catch (_) {
+
+                        if (missing.includes('OR / receipt reference no.') && missing.length >= 3) {
+                            detected.value = '0';
+                            setQuality('unreadable');
+                            setState('needs-review', 'Receipt is not complete', 'Could not read enough details (especially OR/reference number). Retake the receipt photo showing the full OR/Invoice number.');
+                            review.hidden = true;
+                            return;
+                        }
+
+                        if (missing.length) {
+                            detected.value = '1';
+                            setQuality('partial');
+                            setState('needs-review', 'Receipt incomplete — finish these', 'Still needed: ' + missing.join(', ') + '. If blurry, retake the photo; otherwise type the missing fields.');
+                            review.hidden = false;
+                            return;
+                        }
+
                         detected.value = '1';
-                        setState('needs-review', 'Scan could not finish', 'Enter the details manually and tick the confirmation box.');
+                        setQuality('complete');
+                        setState('complete', 'Scanned complete', 'OR/Ref, merchant, amount, and date were filled. Double-check them against the receipt, then confirm.');
                         review.hidden = false;
+                        review.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } catch (_) {
+                        detected.value = '0';
+                        setQuality('unreadable');
+                        setState('needs-review', 'Receipt could not be scanned', 'The image may be blurry or incomplete. Retake a clearer photo.');
+                        review.hidden = true;
                     }
                 });
 
                 form.addEventListener('submit', (e) => {
+                    const quality = ocrQuality?.value || '';
+                    if (!fileInput.files?.length) {
+                        e.preventDefault();
+                        setState('needs-review', 'Receipt required', 'Upload from gallery or open the camera first.');
+                        return;
+                    }
+                    if (quality === 'blurry' || quality === 'unreadable' || detected.value === '0') {
+                        e.preventDefault();
+                        setState('needs-review', 'Receipt is not complete / blurry', 'Retake a clearer photo before submitting. The system needs a readable OR/reference number.');
+                        return;
+                    }
+                    if (!receiptRef?.value?.trim()) {
+                        e.preventDefault();
+                        setState('needs-review', 'OR / Receipt Reference required', 'Enter the OR, Invoice, or Reference number from the receipt.');
+                        receiptRef?.focus();
+                        return;
+                    }
                     const box = review.querySelector('input[type="checkbox"]');
                     if (!box?.checked) {
                         e.preventDefault();
@@ -1155,6 +1420,18 @@
                 });
 
                 form.addEventListener('reset', () => {
+                    setTimeout(() => {
+                        if (preview) preview.hidden = true;
+                        if (previewImg) previewImg.removeAttribute('src');
+                        setState('', 'Waiting for receipt', 'Use Upload or Open Camera — OR/ref, merchant, total, and date will fill in automatically.');
+                        review.hidden = true;
+                        detected.value = '1';
+                        setQuality('');
+                        if (conf) conf.value = '';
+                    }, 0);
+                });
+            })();
+        </script>
                     setTimeout(() => {
                         detected.value = '1';
                         review.hidden = true;

@@ -53,14 +53,9 @@
                 </div>
             </div>
 
-            @if (!empty($student->program) || !empty($student->college))
+            @if (!empty($student->college))
                 <div class="sp-profile-meta">
-                    @if (!empty($student->program))
-                        <p><i class="bi bi-mortarboard"></i> {{ $student->program }}</p>
-                    @endif
-                    @if (!empty($student->college))
-                        <p><i class="bi bi-building"></i> {{ $student->college }}</p>
-                    @endif
+                    <p><i class="bi bi-building"></i> {{ $student->displayCollege() }}</p>
                 </div>
             @endif
 
@@ -214,12 +209,8 @@
                     <input type="text" name="name" value="{{ $student->name }}" required maxlength="255">
                 </label>
                 <label>
-                    <span>Program</span>
-                    <input type="text" name="program" value="{{ $student->program }}" maxlength="255" placeholder="e.g. BS Information Technology">
-                </label>
-                <label>
-                    <span>College</span>
-                    <input type="text" name="college" value="{{ $student->college }}" maxlength="255" placeholder="e.g. College of Informatics">
+                    <span>College / Department</span>
+                    <input type="text" name="college" value="{{ $student->college }}" maxlength="255" placeholder="e.g. College of Informatics and Computing Sciences">
                 </label>
                 <label>
                     <span>Year level</span>

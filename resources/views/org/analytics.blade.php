@@ -572,6 +572,79 @@
         </div>
     </section>
 
+    {{-- College Performance (controller-driven) --}}
+    @isset($collegeStats)
+        <section class="org-analytics-card" style="margin-bottom: 1.25rem;" aria-label="College Performance">
+            <div class="org-card-header-flex">
+                <h2>
+                    <span class="org-card-icon" style="background:#fdf0f2; color:#8b1828; width:34px; height:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-building"></i>
+                    </span>
+                    College Performance
+                </h2>
+            </div>
+            @empty($collegeStats)
+                <p style="margin:0; color:#7a7074; font-size:0.88rem;">No college performance data available for this period.</p>
+            @else
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.86rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:1.5px solid #f0e6e8; color:#7a7074;">
+                                <th style="padding:0.55rem 0.4rem;">College</th>
+                                <th style="padding:0.55rem 0.4rem;">Activities</th>
+                                <th style="padding:0.55rem 0.4rem;">Completion</th>
+                                <th style="padding:0.55rem 0.4rem;">Utilization</th>
+                                <th style="padding:0.55rem 0.4rem;">Approved Budget</th>
+                                <th style="padding:0.55rem 0.4rem;">Implemented</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($collegeStats as $row)
+                                <tr style="border-bottom:1px solid #f6eff0;">
+                                    <td style="padding:0.6rem 0.4rem; font-weight:700;">{{ $row['college'] ?? '—' }}</td>
+                                    <td style="padding:0.6rem 0.4rem;">{{ $row['activities'] ?? 0 }}</td>
+                                    <td style="padding:0.6rem 0.4rem;">{{ $row['completion_percent'] ?? 0 }}%</td>
+                                    <td style="padding:0.6rem 0.4rem;">{{ $row['utilization_percent'] ?? 0 }}%</td>
+                                    <td style="padding:0.6rem 0.4rem;">₱{{ number_format($row['approved_budget'] ?? 0) }}</td>
+                                    <td style="padding:0.6rem 0.4rem;">₱{{ number_format($row['implemented_budget'] ?? 0) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endempty
+
+            @if (!empty($topUtilization) || !empty($topActivities))
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.1rem;">
+                    @isset($topUtilization)
+                        <div>
+                            <strong style="display:block; margin-bottom:0.45rem; font-size:0.82rem; color:#8b1828;">Top Utilization</strong>
+                            <ul style="margin:0; padding-left:1.1rem; font-size:0.84rem; color:#3f3538;">
+                                @forelse ($topUtilization as $item)
+                                    <li>{{ $item['college'] ?? '—' }} — {{ $item['utilization_percent'] ?? 0 }}%</li>
+                                @empty
+                                    <li>No data</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    @endisset
+                    @isset($topActivities)
+                        <div>
+                            <strong style="display:block; margin-bottom:0.45rem; font-size:0.82rem; color:#8b1828;">Top by Activities</strong>
+                            <ul style="margin:0; padding-left:1.1rem; font-size:0.84rem; color:#3f3538;">
+                                @forelse ($topActivities as $item)
+                                    <li>{{ $item['college'] ?? '—' }} — {{ $item['activities'] ?? 0 }} activities</li>
+                                @empty
+                                    <li>No data</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    @endisset
+                </div>
+            @endif
+        </section>
+    @endisset
+
     {{-- 1. Overall Budget Health KPIs (Dashboard Liquid-Glass Cards & Effects) --}}
     <div class="org-health-grid">
         {{-- Card 1: Overall Budget Health --}}
@@ -787,11 +860,18 @@
     <script>
         let utilVsAllocChartInstance = null;
         let trendChartInstance = null;
+        const serverChartSeries = @json($chartSeries ?? null);
 
         const defaultMonthlyData = {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            allocated: [15000, 10000, 20000, 15000, 45000, 10000, 20000, 80000, 45000, 15000, 10000, 15000],
-            utilized:  [12000, 8500, 18500, 11000, 32000, 7500, 15000, 48000, 24000, 8000, 4000, 9500],
+            labels: (serverChartSeries && serverChartSeries.labels && serverChartSeries.labels.length)
+                ? serverChartSeries.labels
+                : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            allocated: (serverChartSeries && serverChartSeries.allocated && serverChartSeries.allocated.length)
+                ? serverChartSeries.allocated
+                : [15000, 10000, 20000, 15000, 45000, 10000, 20000, 80000, 45000, 15000, 10000, 15000],
+            utilized:  (serverChartSeries && serverChartSeries.implemented && serverChartSeries.implemented.length)
+                ? serverChartSeries.implemented
+                : [12000, 8500, 18500, 11000, 32000, 7500, 15000, 48000, 24000, 8000, 4000, 9500],
             cumulativeAlloc: [15000, 25000, 45000, 60000, 105000, 115000, 135000, 215000, 260000, 275000, 285000, 300000],
             cumulativeUtil:  [12000, 20500, 39000, 50000, 82000, 89500, 104500, 152500, 176500, 184500, 188500, 198000]
         };

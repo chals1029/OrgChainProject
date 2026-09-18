@@ -52,3 +52,16 @@ From [`ExpenseReceiptReview`](file:///c:/laragon/www/OrgChain/OrgChains/app/Mode
 - `ocr_confidence`: Text recognition certainty percentage (0-100%).
 - `student_confirmed`: Boolean flag confirming student officer verified the parsed data.
 - `verification_status`: `ready_for_review`, `approved`, `rejected`.
+
+---
+
+## 🔗 Budget utilization on permissioned chain (2026-09-18)
+
+When an SO expense receipt is submitted, OrgChain also seals a utilization block via `BudgetChainService`:
+
+- Ledgers: `storage/app/orgchain/budget/node-{1,2,3}/budget.jsonl` (3-node append, VoteChain-style)
+- Review row stores `chain_hash`, `previous_hash`, `nodes_confirmed`
+- Office **Budget Utilization** page shows recent sealed blocks
+- Student portal surfaces the same seals for public transparency → [[Transparency and Budget Visibility]]
+
+Related: [[Organization Renewal Filing Window]] (separate org recognition flow)
