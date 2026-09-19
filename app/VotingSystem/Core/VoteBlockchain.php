@@ -363,6 +363,7 @@ class VoteBlockchain
                 'Content-Type: application/json',
                 'X-Node-Token: '.$secret,
                 'User-Agent: OrgChain-VoteBlockchain/1.0',
+                'ngrok-skip-browser-warning: 69420',
             ],
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false,
@@ -476,6 +477,7 @@ class VoteBlockchain
             CURLOPT_CONNECTTIMEOUT => $timeout,
             CURLOPT_HTTPHEADER => [
                 'X-Node-Token: '.$secret,
+                'ngrok-skip-browser-warning: 69420',
             ],
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false,

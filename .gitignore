@@ -41,5 +41,6 @@ votingsystem*.sql
 storage/app/*-report.json
 storage/app/test-reports/
 storage/app/_*.php
+storage/app/chain-node/
 
 
