@@ -52,10 +52,39 @@ Integrated official voting module (admin, voter flows, Google OAuth, canvassing)
 
 ## Tech stack
 
-- [Laravel 13](https://laravel.com), PHP 8.3, Blade
-- [Vite](https://vite.dev) + [Tailwind CSS](https://tailwindcss.com), Bootstrap Icons
-- [TinyMCE 7](https://www.tiny.cloud) (key via `TINYMCE_API_KEY`) for Programme, Project Proposal, Budget Proposal, Faculty-in-Charge, and off-campus letters
-- [Tesseract.js](https://tesseract.projectnaptha.com) (CDN, runs locally in the browser) for receipt OCR pre-fill on the Budget Utilization page
+### Core Application Stack
+- **Framework & Backend:** [Laravel 11 / 12](https://laravel.com), PHP 8.2+, Blade Templating Engine
+- **Frontend & Tooling:** [Vite](https://vite.dev), [Tailwind CSS](https://tailwindcss.com), Vanilla JavaScript, Bootstrap Icons
+- **Relational Databases:** MySQL 8.0 (Dual-schema architecture: `orgchain` for student & community portal; primary database for office desk, activities, and elections)
+
+### Blockchain & Cryptographic Layer
+- **Enterprise Ledger:** [Hyperledger Besu](https://www.hyperledger.org/projects/besu) (Linux Foundation)
+  - **Consensus Protocol:** QBFT (Quorum Byzantine Fault Tolerance) multi-validator consensus
+  - **Gas Economics:** Configured with zero gas fees (`gas_price = 0`) for perpetual, zero-cost state university operations
+  - **Network Topology:** Private enterprise permissioned consortium network (Dockerized validator nodes)
+  - **Smart Contract Layer:** Solidity smart contract (`OrgChainAnchor.sol`) for anchoring voter cryptographic receipts and financial expense liquidations
+  - **RPC Bridge:** JSON-RPC over HTTP (`web3p/ethereum-tx` / custom RPC client) connecting Laravel to the Besu ledger
+- **Voting Ledger Engine:** VoteChain 3-node fault-tolerant SHA-256 JSONL hash-chained audit ledger with receipt verification codes
+
+### AI & Receipt OCR Processing
+- **Server Microservice:** Python 3.11 OCR service ([FastAPI](https://fastapi.tiangolo.com) / Tesseract OCR / OpenCV) running in Docker
+- **Client-Side Scanner:** [Tesseract.js](https://tesseract.projectnaptha.com) in-browser OCR pipeline for real-time receipt total and merchant pre-filling
+
+### Document Processing & Preview Engine
+- **In-Browser Document Preview:** Self-hosted `docx-preview.js`, `jszip`, and browser PDF view engines for reviewing submitted requirements without external software
+- **Template System:** BatStateU official university ISO forms (`BatStateU-FO-SOA-01 Rev. 03`, Attachments A–J) in native OpenXML `.docx`, `.pdf`, and `.xlsx` formats
+- **Compliance & Signing:** Physical wet-ink signature scan-and-upload workflow in compliance with the **Data Privacy Act of 2012 (RA 10173)**
+
+### Authentication & Security
+- **Student Auth:** Institutional Google OAuth 2.0 (restricted to `@g.batstate-u.edu.ph`) + 6-digit email OTP verification codes
+- **Office Desk Auth:** Role-based access control (RBAC) supporting `SO`, `OSO`, `SDO`, `OVCAA`, and `OC` desks on obfuscated administrative paths
+- **Transport Security:** Automated 256-bit TLS/SSL encryption (Let's Encrypt / Certbot)
+
+### Production Infrastructure & Hosting
+- **Target Environment:** Linux KVM Virtual Private Server (Hostinger KVM VPS, Ubuntu 22.04 LTS, 4 vCPU, 8GB RAM, 100GB NVMe SSD)
+- **Containerization:** Docker & Docker Compose for background daemons and node clusters
+- **Web Server:** Nginx reverse proxy with PHP-FPM 8.2+
+
 
 ## Local setup
 
