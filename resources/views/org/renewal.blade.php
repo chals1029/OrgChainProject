@@ -705,6 +705,20 @@
                     </div>
                     <div class="rn-progress"><span style="width:{{ $pct }}%"></span></div>
 
+                    {{-- Physical Signature & Scan Upload Instructions (Data Privacy Compliance) --}}
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1.1rem; margin-bottom: 1.1rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+                        <i class="bi bi-printer-fill" style="color: #0f172a; font-size: 1.35rem; margin-top: 0.1rem; flex-shrink: 0;"></i>
+                        <div>
+                            <strong style="color: #0f172a; font-size: 0.86rem; display: block;">Physical Wet-Ink Signing &amp; Scan Upload Workflow (Data Privacy Compliant)</strong>
+                            <p style="margin: 0.25rem 0 0; color: #475569; font-size: 0.78rem; line-height: 1.45;">
+                                In compliance with <strong>Republic Act 10173 (Data Privacy Act)</strong> and university governance policy, signatures are signed physically:<br>
+                                <strong>1. Download Template (.docx)</strong> &rarr; Fill in your council officers, member rosters, and activity plans in Word.<br>
+                                <strong>2. Print Manually</strong> &rarr; Present the hardcopy to your Faculty Adviser, College Dean, and Council Officers for authentic physical signatures.<br>
+                                <strong>3. Scan &amp; Upload</strong> &rarr; Scan or capture the signed hardcopy (PDF or clean scan) and upload it to the corresponding requirement slot below.
+                            </p>
+                        </div>
+                    </div>
+
                     @foreach ($docs as $doc)
                         @php
                             $uploaded = collect($my->documents)->firstWhere('doc_key', $doc['key']);
