@@ -379,38 +379,92 @@
 
         <section class="rn-card">
             <h3><i class="bi bi-inbox-fill"></i> Incoming Renewal Packets</h3>
-            <p class="rn-muted">Submitted by SO desks for this window. Adviser → Dean → OSO recognition chain comes next.</p>
+            <p class="rn-muted">Submitted by SO desks for this window. OSO coordinators inspect attached files, verify compliance, then approve or return with remarks.</p>
             @forelse ($renewalSubmissions as $row)
-                <div class="rn-doc">
-                    <div style="flex:1;min-width:0;">
-                        <strong>{{ $row->organization_name }}</strong>
-                        <small>
-                            {{ $row->college ?: '—' }} · Adviser: {{ $row->adviser_name ?: '—' }} · Dean: {{ $row->dean_name ?: '—' }}
-                            · Docs {{ $row->documents->count() }}/{{ count($docs) }}
-                        </small>
-                        @if ($row->review_remarks)
-                            <small style="display:block;margin-top:0.25rem;color:#7a7074;">
-                                <i class="bi bi-chat-left-text"></i> OSO review: {{ $row->review_remarks }}
+                <div style="border: 1px solid #f0e6e8; border-radius: 14px; background: #fffcfd; padding: 0.95rem 1.1rem; margin-bottom: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.85rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 240px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <strong style="font-size: 0.98rem; color: #1a1618;">{{ $row->organization_name }}</strong>
+                                <span class="rn-pill {{ $row->status === 'submitted' ? 'wait' : ($row->status === 'approved' ? 'ok' : 'wait') }}" style="text-transform: uppercase;">
+                                    {{ $row->status }}
+                                </span>
+                            </div>
+                            <small style="display: block; margin-top: 0.25rem; color: #786f73; font-size: 0.76rem;">
+                                {{ $row->college ?: 'Campus Wide' }} · <strong>Adviser:</strong> {{ $row->adviser_name ?: '—' }} · <strong>Dean:</strong> {{ $row->dean_name ?: '—' }}
+                                · <strong style="color: #8b1828;">Docs: {{ $row->documents->count() }}/{{ count($docs) }}</strong>
+                                @if ($row->submitted_at)
+                                    · Filed {{ $row->submitted_at->format('M j, Y g:i A') }}
+                                @endif
                             </small>
-                        @endif
+                            @if ($row->notes)
+                                <div style="margin-top: 0.45rem; padding: 0.45rem 0.65rem; background: #faf5f6; border-left: 2.5px solid #8b1828; border-radius: 6px; font-size: 0.76rem; color: #4a3e42;">
+                                    <strong>SO Notes:</strong> {{ $row->notes }}
+                                </div>
+                            @endif
+                            @if ($row->review_remarks)
+                                <div style="margin-top: 0.35rem; color: #c2410c; font-size: 0.76rem;">
+                                    <i class="bi bi-chat-left-text-fill"></i> <strong>OSO Review Remarks:</strong> {{ $row->review_remarks }}
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                            @if ($row->status === 'submitted')
+                                <form method="POST" action="{{ route('office.renewal.review', $row) }}" style="display: inline-flex; margin: 0;">
+                                    @csrf
+                                    <button type="submit" name="decision" value="approved" class="org-btn org-btn-primary org-btn-sm" title="Approve packet and certify recognition">
+                                        <i class="bi bi-check-lg"></i> Approve Renewal
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('office.renewal.review', $row) }}" style="display: inline-flex; margin: 0;" onsubmit="return osoRenewalReturnRemarks(this);">
+                                    @csrf
+                                    <input type="hidden" name="decision" value="returned">
+                                    <input type="hidden" name="remarks" value="">
+                                    <button type="submit" class="org-btn org-btn-sm" style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa;" title="Return to organization for corrections">
+                                        <i class="bi bi-arrow-return-left"></i> Return for Revisions
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
-                    <span class="rn-pill {{ $row->status === 'submitted' ? 'ok' : ($row->status === 'approved' ? 'ok' : 'wait') }}">{{ strtoupper($row->status) }}</span>
-                    @if ($row->status === 'submitted')
-                        <form method="POST" action="{{ route('office.renewal.review', $row) }}" style="display:inline-flex;gap:0.35rem;margin:0;">
-                            @csrf
-                            <button type="submit" name="decision" value="approved" class="org-btn org-btn-primary org-btn-sm" title="Approve packet">
-                                <i class="bi bi-check-lg"></i> Approve
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ route('office.renewal.review', $row) }}" style="display:inline-flex;gap:0.35rem;margin:0;" onsubmit="return osoRenewalReturnRemarks(this);">
-                            @csrf
-                            <input type="hidden" name="decision" value="returned">
-                            <input type="hidden" name="remarks" value="">
-                            <button type="submit" class="org-btn org-btn-sm" style="background:#ffedd5;color:#c2410c;border:1px solid #fed7aa;" title="Return for revision">
-                                <i class="bi bi-arrow-return-left"></i> Return
-                            </button>
-                        </form>
-                    @endif
+
+                    {{-- Attached Documents Inspection Drawer --}}
+                    <details style="margin-top: 0.75rem; border-top: 1px dashed #ebd9dc; padding-top: 0.65rem;">
+                        <summary style="cursor: pointer; font-size: 0.78rem; font-weight: 800; color: #8b1828; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="bi bi-folder2-open"></i> Inspect Submitted Documents ({{ $row->documents->count() }})
+                        </summary>
+                        <div style="display: grid; gap: 0.45rem; margin-top: 0.6rem;">
+                            @forelse ($row->documents as $doc)
+                                @php
+                                    $fileUrl = asset('storage/' . $doc->file_path);
+                                    $isPdf = str_ends_with(strtolower($doc->file_name ?? ''), '.pdf');
+                                    $isImg = in_array(strtolower(pathinfo($doc->file_name ?? '', PATHINFO_EXTENSION)), ['png', 'jpg', 'jpeg']);
+                                @endphp
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.75rem; background: #fff; border: 1px solid #f0e6e8; border-radius: 9px;">
+                                    <div style="min-width: 0; flex: 1;">
+                                        <strong style="display: block; font-size: 0.82rem; color: #1a1618;">{{ $doc->title }}</strong>
+                                        <small style="color: #786f73; font-size: 0.72rem;">
+                                            <i class="bi bi-paperclip"></i> {{ $doc->file_name }} · Uploaded {{ $doc->created_at->format('M j, Y g:i A') }}
+                                        </small>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        @if ($isPdf || $isImg)
+                                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;" onclick="previewRenewalDoc('{{ $fileUrl }}', '{{ addslashes($doc->title) }}')">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                        @endif
+                                        <a href="{{ $fileUrl }}" download="{{ $doc->file_name }}" class="org-btn org-btn-ghost org-btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: #1d4ed8; border-color: #bfdbfe;">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            @empty
+                                <p style="margin: 0; color: #786f73; font-size: 0.75rem;">No documents attached yet.</p>
+                            @endforelse
+                        </div>
+                    </details>
                 </div>
             @empty
                 <p class="rn-muted" style="margin:0;">No renewal submissions yet.</p>
