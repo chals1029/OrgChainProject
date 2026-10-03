@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityComment extends Model
 {
@@ -23,5 +24,10 @@ class CommunityComment extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(UserAccount::class, 'student_id', 'user_id');
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(CommunityCommentLike::class, 'comment_id');
     }
 }

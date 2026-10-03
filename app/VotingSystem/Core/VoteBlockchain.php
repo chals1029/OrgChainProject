@@ -20,6 +20,10 @@ class VoteBlockchain
         $lockHandle = $this->acquireElectionLock($electionId);
 
         try {
+            if ($this->besu()->isEnabled()) {
+                return $this->sealOnBesu($electionId, $referenceCode, $voterId, $validatedChoices, $createdAt);
+            }
+
             $previousHash = $this->latestHash($electionId);
             $ballotRoot = $this->ballotRoot($validatedChoices);
             $voterCommitment = hash('sha256', $electionId.'|'.$voterId.'|'.$referenceCode);
@@ -59,6 +63,7 @@ class VoteBlockchain
                 'voter_commitment' => $voterCommitment,
                 'node_confirmations' => $confirmations,
                 'nodes_confirmed' => count(array_filter($confirmations, static fn (array $c): bool => ($c['status'] ?? '') === 'ok')),
+                'chain_driver' => 'file',
             ];
         } finally {
             $this->releaseElectionLock($lockHandle);
@@ -67,6 +72,10 @@ class VoteBlockchain
 
     public function purgeAllLedgers(): void
     {
+        if ($this->besu()->isEnabled()) {
+            return;
+        }
+
         $root = storage_path('app/voting/chain');
         if (! is_dir($root)) {
             return;
@@ -86,6 +95,10 @@ class VoteBlockchain
 
     public function resyncNodeLedgers(int $electionId = 1): void
     {
+        if ($this->besu()->isEnabled()) {
+            return;
+        }
+
         $pdo = Database::connection();
         $statement = $pdo->prepare(
             'SELECT reference_code, previous_hash, block_hash, ballot_root, voter_commitment, created_at
@@ -137,6 +150,10 @@ class VoteBlockchain
                 'ok' => false,
                 'message' => 'Receipt not found in the voting database.',
             ];
+        }
+
+        if ($this->besu()->isEnabled()) {
+            return $this->besu()->verifyVoteReceipt($receipt);
         }
 
         $electionId = (int) $receipt['election_id'];
@@ -208,6 +225,10 @@ class VoteBlockchain
 
     public function getChainStatus(int $electionId = 1): array
     {
+        if ($this->besu()->isEnabled()) {
+            return $this->besu()->voteChainStatus($electionId);
+        }
+
         $path = $this->nodeLedgerPath(1, $electionId);
         $totalBlocks = 0;
         $latestHash = self::GENESIS_HASH;
@@ -240,8 +261,103 @@ class VoteBlockchain
         ];
     }
 
+    /**
+     * Return the public block hashes for an election in newest-first order.
+     *
+     * Only the integrity hashes are exposed. Ballot roots, voter commitments,
+     * references, and choices remain inside the protected voting workflow.
+     *
+     * @return list<string>
+     */
+    public function publicHashHistory(int $electionId = 1): array
+    {
+        $hashes = [];
+
+        if ($this->besu()->isEnabled()) {
+            $statement = Database::connection()->prepare(
+                'SELECT block_hash
+                 FROM vote_receipts
+                 WHERE election_id = :election_id
+                   AND block_hash IS NOT NULL
+                   AND block_hash != ""
+                 ORDER BY id DESC'
+            );
+            $statement->execute(['election_id' => $electionId]);
+            $hashes = $statement->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } else {
+            $path = $this->nodeLedgerPath(1, $electionId);
+            $lines = is_file($path)
+                ? (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [])
+                : [];
+
+            foreach (array_reverse($lines) as $line) {
+                $row = json_decode($line, true);
+                if (is_array($row) && isset($row['block_hash'])) {
+                    $hashes[] = $row['block_hash'];
+                }
+            }
+        }
+
+        $seen = [];
+        $publicHashes = [];
+
+        foreach ($hashes as $hash) {
+            $hash = trim((string) $hash);
+            if ($hash === '' || $hash === self::GENESIS_HASH || isset($seen[$hash])) {
+                continue;
+            }
+
+            $seen[$hash] = true;
+            $publicHashes[] = $hash;
+        }
+
+        return $publicHashes;
+    }
+
     public function getBlock(int $electionId = 1, ?string $hash = null, ?int $index = null): ?array
     {
+        if ($this->besu()->isEnabled()) {
+            $pdo = Database::connection();
+            $sql = 'SELECT * FROM vote_receipts WHERE election_id = :election_id';
+            $parameters = ['election_id' => $electionId];
+
+            if ($hash !== null) {
+                $sql .= ' AND (block_hash = :hash OR reference_code = :hash)';
+                $parameters['hash'] = $hash;
+            } elseif ($index !== null) {
+                $sql .= ' ORDER BY id ASC LIMIT 1 OFFSET '.max(0, $index - 1);
+            } else {
+                $sql .= ' ORDER BY id DESC LIMIT 1';
+            }
+
+            if ($hash !== null) {
+                $sql .= ' LIMIT 1';
+            }
+
+            $statement = $pdo->prepare($sql);
+            $statement->execute($parameters);
+            $row = $statement->fetch(PDO::FETCH_ASSOC);
+            if (! is_array($row)) {
+                return null;
+            }
+
+            return [
+                'index' => (int) ($row['id'] ?? 0),
+                'election_id' => (int) ($row['election_id'] ?? $electionId),
+                'reference_code' => $row['reference_code'] ?? null,
+                'previous_hash' => $row['previous_hash'] ?? null,
+                'block_hash' => $row['block_hash'] ?? null,
+                'ballot_root' => $row['ballot_root'] ?? null,
+                'voter_commitment' => $row['voter_commitment'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'sealed_at' => $row['created_at'] ?? null,
+                'chain_driver' => $row['chain_driver'] ?? 'besu',
+                'chain_tx_hash' => $row['chain_tx_hash'] ?? null,
+                'chain_block_number' => $row['chain_block_number'] ?? null,
+                'chain_contract_address' => $row['chain_contract_address'] ?? null,
+            ];
+        }
+
         $path = $this->nodeLedgerPath(1, $electionId);
         if (! is_file($path)) {
             return null;
@@ -293,6 +409,55 @@ class VoteBlockchain
         }
 
         return hash('sha256', implode('|', $parts));
+    }
+
+    /**
+     * @param  array<int, array<int>>  $validatedChoices
+     * @return array<string, mixed>
+     */
+    private function sealOnBesu(
+        int $electionId,
+        string $referenceCode,
+        int $voterId,
+        array $validatedChoices,
+        string $createdAt,
+    ): array {
+        $previousHash = $this->latestHash($electionId);
+        $ballotRoot = $this->ballotRoot($validatedChoices);
+        $voterCommitment = hash('sha256', $electionId.'|'.$voterId.'|'.$referenceCode);
+        $payload = [
+            'election_id' => $electionId,
+            'reference_code' => $referenceCode,
+            'voter_commitment' => $voterCommitment,
+            'ballot_root' => $ballotRoot,
+            'created_at' => $createdAt,
+            'previous_hash' => $previousHash,
+        ];
+        $blockHash = hash('sha256', json_encode($payload, JSON_UNESCAPED_SLASHES));
+        $sealedAt = date('c');
+
+        $anchor = $this->besu()->anchor(
+            'vote',
+            $blockHash,
+            hash('sha256', $referenceCode),
+            [
+                'index' => $this->nextIndex($electionId),
+                'sealed_at' => $sealedAt,
+            ],
+            $previousHash,
+        );
+
+        return array_merge([
+            'previous_hash' => $previousHash,
+            'block_hash' => $blockHash,
+            'ballot_root' => $ballotRoot,
+            'voter_commitment' => $voterCommitment,
+        ], $anchor);
+    }
+
+    private function besu(): \App\Services\BesuChainService
+    {
+        return app(\App\Services\BesuChainService::class);
     }
 
     private function appendToNode(int $node, int $electionId, array $block): array

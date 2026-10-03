@@ -7,6 +7,145 @@ document.addEventListener('DOMContentLoaded', () => {
         "'": '&#039;'
     }[char]));
 
+    // Public receipt proof: copy the full block hash without exposing any
+    // private ballot data or requiring a second request to the server.
+    document.querySelectorAll('[data-copy-proof-hash]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const hash = button.getAttribute('data-copy-proof-hash') || '';
+            const label = button.querySelector('[data-copy-proof-label]');
+            const icon = button.querySelector('i');
+            const defaultLabel = button.getAttribute('data-copy-default-label') || 'Copy hash';
+
+            if (!hash || !label) return;
+
+            const copyWithFallback = () => {
+                const textarea = document.createElement('textarea');
+                textarea.value = hash;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const copied = document.execCommand('copy');
+                textarea.remove();
+                return copied;
+            };
+
+            let copied = false;
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(hash);
+                    copied = true;
+                } else {
+                    copied = copyWithFallback();
+                }
+            } catch (error) {
+                copied = false;
+            }
+
+            if (!copied) {
+                label.textContent = 'Select hash manually';
+                return;
+            }
+
+            button.classList.add('is-copied');
+            label.textContent = 'Copied';
+            if (icon) {
+                icon.classList.remove('bi-copy');
+                icon.classList.add('bi-check2');
+            }
+
+            window.setTimeout(() => {
+                button.classList.remove('is-copied');
+                label.textContent = defaultLabel;
+                if (icon) {
+                    icon.classList.remove('bi-check2');
+                    icon.classList.add('bi-copy');
+                }
+            }, 2200);
+        });
+    });
+
+    // Public homepage hash elevator: cycle through every visible integrity
+    // hash without exposing any ballot content or voter information.
+    document.querySelectorAll('[data-hash-elevator]').forEach((elevator) => {
+        const track = elevator.querySelector('[data-hash-elevator-track]');
+        const viewport = elevator.querySelector('.proof-hash-elevator-viewport');
+        const cards = Array.from(elevator.querySelectorAll('[data-hash-elevator-card]'));
+        const copyButton = elevator.querySelector('[data-copy-proof-hash]');
+        const status = elevator.querySelector('[data-hash-elevator-status]');
+
+        if (!track || cards.length === 0) return;
+
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        let position = 0;
+        let timer = null;
+        let resetTimer = null;
+
+        if (cards.length > 1) {
+            const loopCard = cards[0].cloneNode(true);
+            loopCard.setAttribute('aria-hidden', 'true');
+            track.appendChild(loopCard);
+        }
+
+        const getStep = () => {
+            const firstCard = cards[0];
+            const trackStyles = window.getComputedStyle(track);
+            const gap = parseFloat(trackStyles.rowGap || trackStyles.gap || '0') || 0;
+            const cardHeight = firstCard.getBoundingClientRect().height;
+            // The viewport must show exactly one card; otherwise the whole
+            // track is visible and the elevator motion looks static.
+            if (viewport) viewport.style.height = `${cardHeight}px`;
+            return cardHeight + gap;
+        };
+
+        const update = (animate = true) => {
+            const currentCard = cards[position % cards.length];
+            const step = getStep();
+            track.style.transition = animate && !reducedMotion
+                ? 'transform 720ms cubic-bezier(0.22, 1, 0.36, 1)'
+                : 'none';
+            track.style.transform = `translate3d(0, -${position * step}px, 0)`;
+
+            cards.forEach((card, index) => {
+                card.setAttribute('aria-hidden', index === (position % cards.length) ? 'false' : 'true');
+            });
+
+            const currentHash = currentCard.getAttribute('data-hash') || '';
+            if (copyButton && currentHash) {
+                copyButton.setAttribute('data-copy-proof-hash', currentHash);
+            }
+            if (status) {
+                status.textContent = `Rolling hash ${(position % cards.length) + 1} of ${cards.length}`;
+            }
+        };
+
+        const advance = () => {
+            if (reducedMotion || cards.length < 2) return;
+            position += 1;
+            update(true);
+
+            if (position === cards.length) {
+                window.clearTimeout(resetTimer);
+                resetTimer = window.setTimeout(() => {
+                    position = 0;
+                    update(false);
+                }, 520);
+            }
+        };
+
+        const start = () => {
+            if (reducedMotion || cards.length < 2 || timer !== null) return;
+            timer = window.setInterval(advance, 2600);
+        };
+
+        window.addEventListener('resize', () => update(false), {passive: true});
+
+        update(false);
+        start();
+    });
+
     // Special styling for CABEIHM college card
     const applySpecialCardStyles = () => {
         const specialColleges = [

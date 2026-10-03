@@ -16,6 +16,7 @@ This Map of Content indexes every architectural document, module specification, 
 
 ## 🏛️ 01 - System Architecture & Foundation
 - [[System Overview and Vision]]: Problem statement, institutional context at BatStateU, and strategic vision.
+- [[Blockchain Architecture - Complete]]: Current end-to-end Besu QBFT architecture for voting and budget seals; MySQL ownership, contract behavior, verification, fallback mode, and migration status.
 - [[High-Level Technical Architecture]]: Monolith architecture, subsystem modularity, and storage layers.
 - [[End-to-End Data Flow]]: Sequence diagrams for proposal reviews, voting seals, and budget auditing.
 - [[Security Architecture and Guardrails]]: SecurityGuard IDS, adaptive IP throttling, SQL injection detection, and rate windows.
@@ -27,14 +28,15 @@ This Map of Content indexes every architectural document, module specification, 
 
 ### 🗳️ Voting System & VoteChain
 - [[VoteChain Cryptographic Engine]]: Cryptographic specification, SHA-256 blocks, Merkle ballot roots.
-- [[3-Node JSONL Ledger and Consensus]]: Multi-node redundancy, file locking, append-only integrity on storage.
-- [[Ballot Sealing and Hash Chaining]]: Sealing lifecycle from voter submission to 3-node confirmation.
+- [[3-Node JSONL Ledger and Consensus]]: Legacy/fallback multi-node redundancy, file locking, append-only integrity on storage.
+- [[Ballot Sealing and Hash Chaining]]: Historical sealing lifecycle and hash continuity.
 - [[Receipt Verification and Audit]]: Verification interface, cryptographic audit trail, tamper detection.
 - [[Real-Time Canvassing and Tally]]: Real-time election canvassing, vote aggregation, export reports.
 
 ### 🏢 Office Portal & Administrative Desk
 - [[Multi-Tier Office Roles SO OSO SDO OVCAA]]: Governance tier hierarchy, role permissions, and navigation badges.
 - [[Activity Proposal Approval Pipeline]]: 4-stage document verification workflow and proposal lifecycle.
+- Activity filing documents: Official In-Campus / Local Off-Campus templates can be previewed in the browser, downloaded explicitly, completed externally, and uploaded for review.
 - [[Budget Utilization and OCR Receipts]]: Financial accounting, expense itemization, OCR receipt verification.
 - [[Organization Renewal Filing Window]]: OSO-controlled open/close; SO locked tab until filing opens; 10-doc packet.
 - [[Interactive Activity Calendar]]: Campus activity scheduling, month aggregation, and status color codes.
@@ -72,6 +74,7 @@ This Map of Content indexes every architectural document, module specification, 
 ## 📋 04 - Workflows & Institutional Governance
 - [[In-Campus Activity Proposal Checklist]]: 10-point BatStateU compliance checklist for on-campus events.
 - [[Local Off-Campus Compliance and CHED Workflow]]: CHED CMO regulations, travel matrices, passenger lists, and waivers.
+- [[Semester AR and FR Submission Workflow]]: Paired end-of-semester report submission, OSO-only review, return-to-SO loop, and automatic archive.
 - [[Election Lifecycle and Tallying Flow]]: From election setup to canvassing certification.
 - [[Expense Review and Financial Liquidation Flow]]: From receipt scan to budget deduction.
 
@@ -86,6 +89,7 @@ This Map of Content indexes every architectural document, module specification, 
 ---
 
 ## 🚀 06 - Operations & Runbooks
+- [[Session Log 2026-09-21 Activity Budget Lifecycle]]: Approval gates, annual budget reservation, one-time receipt debits, private originals, semester compilation and verified setup limitations.
 - [[Local Development Setup Laragon PHP 8.3]]: Installation, Laragon vhost setup, artisan commands.
 - [[Multi-Laptop 3-Node Blockchain Setup Runbook]]: Complete multi-laptop node topology, Cloudflare tunnels, and RPC setup.
 - [[Environment Variables dot-env Specification]]: `.env` parameter reference and default values.
@@ -95,6 +99,7 @@ This Map of Content indexes every architectural document, module specification, 
 - [[Playwright Console Smoke Testing]]: Full-system browser crawl (all roles + portal).
 - [[Session Log 2026-09-18 Renewal Budget Chain and Playwright Smoke]]: Renewal desk, budget chain, smoke harness.
 - [[Session Log 2026-09-10 Portal Responsiveness and Mobile Fixes]]: No-reload navigation, student-portal mobile overhaul, dropdowns, OCR upload, overlay stacking fix.
+- [[Session Log 2026-09-20 Activity Filing and Document Editor]]: Historical record of the attempted editor, its removal, official document preview, and verification.
 
 ---
 

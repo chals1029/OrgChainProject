@@ -27,6 +27,17 @@ graph LR
     CD_AUTH --> REP["📑 Certified Reports & Export<br/><code>/voting-system/ssc-canvassing-reports-...</code>"]
 ```
 
+### 🔑 Staff Access Credentials
+
+Staff login endpoint: `/voting-system/ssc-access-c7b4f2e91a6d`
+
+| Role | Email | Password | Access Behavior |
+| :--- | :---- | :------- | :-------------- |
+| **Canvassing Officer** | `canvass@ssc.test` | `Canvass@2026!` | Direct access to Canvassing Dashboard (no OTP required) |
+| **Canvassing Officer** | `ssc.canvass@g.batstate-u.edu.ph` | `Canvass@2026!` | Direct access to Canvassing Dashboard (no OTP required) |
+| **Election Admin** | `admin@ssc.test` | `Admin@2026!` | Full admin access (requires typing on-screen 6-digit verification code) |
+| **Election Admin** | `ssc.admin@g.batstate-u.edu.ph` | `Admin@2026!` | Full admin access (requires typing on-screen 6-digit verification code) |
+
 ---
 
 ## 📈 Tally Aggregation Logic

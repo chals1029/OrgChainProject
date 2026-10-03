@@ -386,6 +386,41 @@
     margin: 1rem 0 0;
 }
 
+/* Shared OSO upload feedback. Every server-backed document upload uses the
+   same compact state line and submit-lock treatment, even when the page has
+   its own visual card or modal. */
+.org-upload-status {
+    display: block;
+    min-width: 0;
+    color: var(--org-muted);
+    font-size: .76rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.org-upload-status.is-selected {
+    color: #166534;
+}
+
+.org-upload-status.is-error {
+    color: #b42318;
+}
+
+[data-org-upload-form].is-uploading {
+    cursor: progress;
+}
+
+[data-org-upload-form].is-uploading button[type="submit"] {
+    opacity: .72;
+    cursor: progress;
+}
+
+[data-org-upload][data-upload-invalid="true"] {
+    outline: 2px solid rgba(180, 35, 24, .24);
+    outline-offset: 2px;
+}
+
 .org-checklist {
     display: grid;
     gap: .7rem;
@@ -847,10 +882,34 @@
 
 .org-top-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.55rem;
     align-items: center;
     justify-content: flex-end;
+    min-width: 0;
+}
+
+.org-top-actions > * {
+    flex: 0 0 auto;
+}
+
+.org-top-action-group {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0.6rem;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.org-top-action-group .org-btn {
+    white-space: nowrap;
+}
+
+@media (min-width: 901px) {
+    .org-top-actions {
+        flex: 0 0 auto;
+    }
 }
 
 /* Buttons — same language as the landing .btn ----------------------------- */
@@ -2460,6 +2519,205 @@
     gap: 0.75rem;
 }
 
+/* SO fund setup: keep the amount control visibly editable instead of
+   allowing a browser-default number input to collapse into its spinner. */
+.org-fund-settings {
+    margin: 1rem 0;
+    padding: 1.1rem 1.2rem 1.2rem;
+    border: 1px solid #eadcdf;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fff 0%, #fff9fa 100%);
+    box-shadow: 0 8px 22px rgba(139, 24, 40, 0.06);
+}
+
+.org-fund-settings > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    cursor: pointer;
+    list-style: none;
+    color: var(--org-ink);
+}
+
+.org-fund-settings > summary::-webkit-details-marker {
+    display: none;
+}
+
+.org-fund-settings > summary::before {
+    content: "▸";
+    color: var(--org-red);
+    font-size: 0.92rem;
+    transition: transform 0.15s ease;
+}
+
+.org-fund-settings[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.org-fund-settings-title {
+    font-size: 0.95rem;
+    font-weight: 850;
+}
+
+.org-fund-settings-hint {
+    color: var(--org-muted);
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
+.org-fund-form {
+    display: grid;
+    grid-template-columns: minmax(18rem, 1.45fr) minmax(11rem, 0.75fr) minmax(16rem, 1fr) auto;
+    gap: 0.8rem;
+    align-items: end;
+    margin-top: 1rem;
+}
+
+.org-fund-field {
+    display: grid;
+    min-width: 0;
+    gap: 0.38rem;
+}
+
+.org-fund-field > span:first-child {
+    color: var(--org-ink);
+    font-size: 0.76rem;
+    font-weight: 850;
+}
+
+.org-fund-field > span:first-child small {
+    color: var(--org-muted);
+    font-size: 0.68rem;
+    font-weight: 750;
+}
+
+.org-fund-field select,
+.org-fund-field > input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 46px;
+    border: 1.5px solid #d8c2c6;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--org-ink);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    outline: none;
+    padding: 0.72rem 0.85rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.org-fund-field select:focus,
+.org-fund-field > input:focus {
+    border-color: var(--org-red);
+    box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.12);
+}
+
+.org-fund-amount {
+    display: flex;
+    align-items: stretch;
+    min-height: 46px;
+    overflow: hidden;
+    border: 2px solid #a51e36;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(165, 30, 54, 0.08);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.org-fund-amount:focus-within {
+    border-color: #7f1429;
+    box-shadow: 0 0 0 4px rgba(165, 30, 54, 0.16);
+}
+
+.org-fund-currency {
+    display: inline-grid;
+    width: 2.55rem;
+    flex: 0 0 2.55rem;
+    place-items: center;
+    border-right: 1px solid #eadcdf;
+    background: #fff3f5;
+    color: var(--org-red);
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.org-fund-amount input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--org-ink);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    padding: 0.7rem 0.75rem;
+}
+
+.org-fund-amount input::placeholder {
+    color: #a9949a;
+    opacity: 1;
+}
+
+.org-fund-field > small {
+    color: var(--org-muted);
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.org-fund-save {
+    min-height: 46px;
+    white-space: nowrap;
+}
+
+@media (max-width: 1050px) {
+    .org-fund-form {
+        grid-template-columns: minmax(15rem, 1.3fr) minmax(10rem, 0.7fr);
+    }
+
+    .org-fund-field-total {
+        grid-column: span 1;
+    }
+
+    .org-fund-save {
+        justify-self: start;
+    }
+}
+
+@media (max-width: 640px) {
+    .org-fund-settings {
+        padding: 1rem;
+    }
+
+    .org-fund-settings > summary {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.3rem 0.55rem;
+    }
+
+    .org-fund-settings-hint {
+        flex-basis: 100%;
+        padding-left: 1.35rem;
+    }
+
+    .org-fund-form {
+        grid-template-columns: 1fr;
+    }
+
+    .org-fund-field-total,
+    .org-fund-save {
+        grid-column: auto;
+    }
+
+    .org-fund-save {
+        justify-self: stretch;
+    }
+}
+
 .org-input-peso {
     display: flex;
     align-items: center;
@@ -3835,8 +4093,22 @@ body.org-no-scroll {
     }
 
     .org-top-actions {
-        flex-wrap: wrap;
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
         margin-left: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 0.1rem;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .org-top-actions::-webkit-scrollbar {
+        display: none;
     }
 
     .org-user-pill-info {
@@ -3859,6 +4131,31 @@ body.org-no-scroll {
 
     .org-topbar h1 {
         font-size: 1.25rem;
+    }
+
+    .org-top-action-group {
+        gap: 0.35rem;
+    }
+
+    .org-top-action-group .org-btn {
+        padding: 6px 10px;
+        font-size: 0.76rem;
+        gap: 0.3rem;
+    }
+
+    .org-bell {
+        width: 38px;
+        height: 38px;
+    }
+
+    .org-user-pill {
+        gap: 0.35rem;
+        padding-right: 0.55rem;
+    }
+
+    .org-user-avatar {
+        width: 32px;
+        height: 32px;
     }
 
     .org-stats {

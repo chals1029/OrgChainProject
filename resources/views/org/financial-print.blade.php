@@ -2,114 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Financial Report — {{ $selectedSemester }} AY {{ $selectedYear }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Financial Report — {{ $selectedSemester }} {{ $selectedYear }}</title>
     <style>
-        body { font-family: Georgia, 'Times New Roman', serif; color: #1a1618; margin: 32px; }
-        .letterhead { text-align: center; border-bottom: 3px solid #7a1222; padding-bottom: 12px; margin-bottom: 24px; }
-        .letterhead h1 { margin: 0; color: #7a1222; font-size: 22px; }
-        .letterhead p { margin: 4px 0; font-size: 13px; }
-        h2 { color: #7a1222; font-size: 18px; }
-        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
-        th, td { border: 1px solid #d8c2c7; padding: 8px; text-align: left; }
-        th { background: #faf4f5; }
-        .kpi { display: flex; gap: 16px; margin: 16px 0; }
-        .kpi div { flex: 1; border: 1px solid #d8c2c7; padding: 12px; border-radius: 8px; }
-        .sign { display: flex; justify-content: space-between; margin-top: 48px; }
-        .sign div { width: 30%; text-align: center; border-top: 1px solid #333; padding-top: 8px; font-size: 12px; }
-        @media print { .no-print { display: none; } }
+        @page { size:A4 landscape; margin:14mm; }
+        body { font:12px/1.45 Arial,sans-serif;color:#241d20;margin:24px; }
+        h1,h2 { color:#7a1222; } h1 { font-family:Georgia,serif; }
+        table { width:100%;border-collapse:collapse;table-layout:fixed;margin:16px 0; }
+        th,td { border:1px solid #d8c2c7;padding:7px;text-align:left;overflow-wrap:anywhere;vertical-align:top; }
+        th { background:#faf4f5; } thead { display:table-header-group; }
+        tr { break-inside:avoid; } header { border-bottom:2px solid #7a1222; }
+        .num { text-align:right; } .sign { display:flex;gap:50px;margin-top:50px; }
+        .sign div { flex:1;border-top:1px solid #555;padding-top:8px; }
+        @media print { .no-print { display:none; } body { margin:0; } }
     </style>
 </head>
 <body>
-    <p class="no-print"><button onclick="window.print()">Print / Save as PDF</button>
-        <a href="{{ route('office.financial') }}">Back</a></p>
-
-    <div class="letterhead">
-        <h1>Batangas State University</h1>
-        <p>The National Engineering University · OrgChain Student Organization Desk</p>
-        <p><strong>Official Financial Report</strong></p>
-        <p>{{ $selectedSemester }} · Academic Year {{ $selectedYear }}</p>
-        <p>Generated {{ $generatedAt }}</p>
-    </div>
-
-    <div class="kpi">
-        <div><strong>Current Cash</strong><br>Php {{ number_format($account['current_cash'], 2) }}</div>
-        <div><strong>Total Cash Collection</strong><br>Php {{ number_format($account['total_cash_collection'], 2) }}</div>
-        <div><strong>Total Card Disbursement</strong><br>Php {{ number_format($account['total_card_disbursement'], 2) }}</div>
-    </div>
-
-    @if (!empty($fundAccount))
-        <h2>Fund Account</h2>
-        <p>
-            Organization: <strong>{{ $fundAccount->organization_name }}</strong><br>
-            Beginning balance: Php {{ number_format($fundAccount->beginning_balance, 2) }}<br>
-            Total funds: Php {{ number_format($fundAccount->total_funds, 2) }}<br>
-            Total funds received: Php {{ number_format($fundAccount->total_funds_received, 2) }}
-        </p>
+    <p class="no-print"><button type="button" onclick="window.print()">Print / Save as PDF</button> <a href="{{ route('office.financial', request()->query()) }}">Back</a></p>
+    <header>
+        <strong>BATANGAS STATE UNIVERSITY · The National Engineering University</strong>
+        <h1>Semester Financial Report</h1>
+        <p>{{ $selectedOrganization ?: 'All recognized organizations' }}<br>{{ $selectedSemester }} · Academic Year {{ $selectedYear }} · {{ $fromDate }} to {{ $toDate }}</p>
+        <p>Generated {{ $generatedAt }} by {{ $office->name }}</p>
+    </header>
+    @if (($office->office_role ?? '') === 'so')
+        @include('org.partials.fund-balances')
     @endif
-
-    @if (!empty($inflowOutflow))
-        <h2>Inflow vs Outflow</h2>
-        <table>
-            <thead><tr><th>Type</th><th>Amount</th></tr></thead>
-            <tbody>
-                @php
-                    $summaryLabels = $inflowOutflow['summary_labels'] ?? $inflowOutflow['labels'] ?? [];
-                    $summaryValues = $inflowOutflow['summary_values'] ?? $inflowOutflow['values'] ?? [];
-                @endphp
-                @foreach ($summaryLabels as $i => $label)
-                    <tr>
-                        <td>{{ $label }}</td>
-                        <td>Php {{ number_format($summaryValues[$i] ?? 0, 2) }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @if (!empty($inflowOutflow['inflows']))
-            <table>
-                <thead><tr><th>Month</th><th>Inflow</th><th>Outflow</th></tr></thead>
-                <tbody>
-                    @foreach ($inflowOutflow['labels'] as $i => $label)
-                        <tr>
-                            <td>{{ $label }}</td>
-                            <td>Php {{ number_format($inflowOutflow['inflows'][$i] ?? 0, 2) }}</td>
-                            <td>Php {{ number_format($inflowOutflow['outflows'][$i] ?? 0, 2) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-    @endif
-
-    <h2>Expense Lines</h2>
+    <h2>Receipt-supported expense register</h2>
+    <p>Expenses in the selected semester: <strong>Php {{ number_format($periodExpenseTotal, 2) }}</strong>. The annual balances above include earlier recorded spending and allocations.</p>
     <table>
-        <thead>
-            <tr>
-                <th>Activity</th>
-                <th>Item</th>
-                <th>Date</th>
-                <th>Qty</th>
-                <th>Total</th>
-            </tr>
-        </thead>
+        <thead><tr><th style="width:10%;">Date / Receipt</th><th style="width:20%;">Activity / Organization</th><th style="width:23%;">Item / Supplier</th><th style="width:5%;">Qty</th><th style="width:9%;">Unit cost</th><th style="width:10%;">Amount</th><th style="width:23%;">Original receipt / Seal</th></tr></thead>
         <tbody>
-            @forelse ($lines as $line)
-                <tr>
-                    <td>{{ $line['activity'] }}</td>
-                    <td>{{ $line['item'] }}</td>
-                    <td>{{ $line['date'] }}</td>
-                    <td>{{ $line['qty'] }}</td>
-                    <td>Php {{ number_format($line['total'], 2) }}</td>
-                </tr>
-            @empty
-                <tr><td colspan="5">No expense lines recorded for this period.</td></tr>
-            @endforelse
+        @forelse($receiptRows as $receipt)
+            <tr>
+                <td>{{ $receipt->expense_date->format('M j, Y') }}<br>{{ $receipt->receipt_reference }}</td>
+                <td>{{ $receipt->activity_title }}<br>{{ $receipt->organization_name }}</td>
+                <td>{{ $receipt->item_name }}<br>{{ $receipt->supplier }}</td>
+                <td class="num">{{ $receipt->quantity }}</td>
+                <td class="num">{{ number_format((float) $receipt->unit_cost, 2) }}</td>
+                <td class="num">{{ number_format($receipt->quantity * (float) $receipt->unit_cost, 2) }}</td>
+                <td>{{ $receipt->receipt_name }}<br>{{ $receipt->verification_status }}<br>{{ $receipt->chain_hash ?: 'Pending blockchain confirmation' }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="7">No recorded receipts match this reporting period.</td></tr>
+        @endforelse
         </tbody>
     </table>
-
-    <div class="sign">
-        <div>Prepared by<br>SO Treasurer</div>
-        <div>Reviewed by<br>OSO Officer</div>
-        <div>Noted by<br>OVCAA</div>
-    </div>
+    <p>Package review: {{ $reportBundle['state_label'] ?? 'Draft — not submitted' }}. Receipt confirmation and OSO acceptance of the semester report are separate records.</p>
+    <div class="sign"><div>Prepared by: SO authorized officer</div><div>Reviewed by: Office of Student Organizations</div></div>
 </body>
 </html>

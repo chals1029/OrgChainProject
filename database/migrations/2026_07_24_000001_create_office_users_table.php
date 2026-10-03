@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('username', 64)->unique();
             $table->string('password');
-            $table->string('office_role', 16); // so | oso | sdo | ovcaa
+            $table->string('office_role', 16); // so | oso | sdo | ovcaa | oc
             $table->string('office_title');
             $table->boolean('is_active')->default(true);
             $table->rememberToken();

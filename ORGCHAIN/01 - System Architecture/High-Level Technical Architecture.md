@@ -48,9 +48,7 @@ graph TB
 
     subgraph DataLayer["5. Persistence & Blockchain Layer"]
         MYSQL[("🗄️ MySQL Database<br/>(Users, Portals, Ballots, Audits)")]
-        N1[("📜 VoteChain Node 1<br/>JSONL Ledger")]
-        N2[("📜 VoteChain Node 2<br/>JSONL Ledger")]
-        N3[("📜 VoteChain Node 3<br/>JSONL Ledger")]
+        BESU["⛓️ Hyperledger Besu QBFT<br/>(4 Validator Nodes + OrgChainAnchor)"]
         FS["📁 Storage & Archive Attachments"]
     end
 
@@ -77,8 +75,8 @@ A dedicated, self-contained sub-application embedded under `/voting-system`. It 
 - **Controllers**: `AdminController`, `VoterController`, `ApiController`, `MediaController`
 - **State Bridge**: Bidirectional session synchronization with Laravel session store.
 
-### 3. The 3-Node VoteChain Engine (`App\VotingSystem\Core\VoteBlockchain`)
-A deterministic cryptographic ledger operating 3 redundant append-only JSONL files located in `storage/app/voting/chain/node-{1,2,3}/`.
-- Computes SHA-256 ballot roots from voter choices.
-- Anonymizes voter identity using SHA-256 voter commitments (`hash(electionId|voterId|referenceCode)`).
-- Enforces strict blockchain continuity (`previous_hash -> block_hash`).
+### 3. The Blockchain & Audit Layer (`Hyperledger Besu QBFT` & `BesuChainService`)
+A permissioned, 4-node Hyperledger Besu private network governed by Quorum Byzantine Fault Tolerance (QBFT) consensus and the `OrgChainAnchor.sol` smart contract.
+- **Voting Anchors**: Anchors SHA-256 ballot roots and voter commitments (`hash(electionId|voterId|referenceCode)`) for secret, mathematically verifiable voting.
+- **Budget Anchors**: Anchors OCR-verified expense receipts to ensure tamper-evident financial accountability.
+- **Offline / Fallback Driver**: Retains the historical 3-node JSONL append-only ledgers (`storage/app/voting/chain/node-{1,2,3}/`) when running in `BLOCKCHAIN_DRIVER=file` mode.

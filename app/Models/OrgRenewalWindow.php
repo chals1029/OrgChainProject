@@ -35,21 +35,91 @@ class OrgRenewalWindow extends Model
     /**
      * Default renewal packet checklist (OSO recognition requirements).
      *
-     * @return list<array{key: string, title: string}>
+     * @return list<array{key: string, title: string, template_path?: string, template_name?: string}>
      */
     public static function defaultRequiredDocs(): array
     {
         return [
-            ['key' => 'commitment_letter', 'title' => 'Commitment Letter of the Adviser'],
-            ['key' => 'academic_certification', 'title' => 'Certification of Academic Qualifications'],
-            ['key' => 'org_profile', 'title' => 'Profile of Student Organization'],
-            ['key' => 'list_of_members', 'title' => 'List of Members'],
-            ['key' => 'org_history', 'title' => 'History of Student Organization'],
-            ['key' => 'revolving_fund', 'title' => 'Declaration of the Organization Revolving Fund'],
-            ['key' => 'constitution', 'title' => 'Ratified Constitution and By-Law'],
-            ['key' => 'adviser_officers_profile', 'title' => 'Student Organization Adviser and Officers Profile'],
-            ['key' => 'plan_of_activities', 'title' => 'Plan of Activities'],
-            ['key' => 'specimen_signature', 'title' => 'Specimen Signature'],
+            [
+                'key' => 'commitment_letter',
+                'title' => 'Commitment Letter of the Adviser',
+                'attachment_label' => 'Attachment A',
+                'template_path' => 'renewal-templates/Attachment A_ Commitment Letter of the Adviser.docx',
+                'template_name' => 'Attachment A_ Commitment Letter of the Adviser.docx',
+                'pdf_path' => 'renewal-templates/Attachment A_ Commitment Letter of the Adviser.pdf',
+            ],
+            [
+                'key' => 'academic_certification',
+                'title' => 'Certification of Academic Qualifications',
+                'attachment_label' => 'Attachment B',
+                'template_path' => 'renewal-templates/Attachment B_ Certificate for Academic Qualifications.docx',
+                'template_name' => 'Attachment B_ Certificate for Academic Qualifications.docx',
+                'pdf_path' => 'renewal-templates/Attachment B_ Certificate for Academic Qualifications.pdf',
+            ],
+            [
+                'key' => 'org_profile',
+                'title' => 'Profile of Student Organization',
+                'attachment_label' => 'Attachment C',
+                'template_path' => 'renewal-templates/Attachment C_ Profile of Student Organization _.docx',
+                'template_name' => 'Attachment C_ Profile of Student Organization _.docx',
+                'pdf_path' => 'renewal-templates/Attachment C_ Profile of Student Organization _.pdf',
+            ],
+            [
+                'key' => 'list_of_members',
+                'title' => 'List of Members',
+                'attachment_label' => 'Attachment D',
+                'template_path' => 'renewal-templates/Attachment D_ List of Members.docx',
+                'template_name' => 'Attachment D_ List of Members.docx',
+                'pdf_path' => 'renewal-templates/Attachment D_ List of Members.pdf',
+            ],
+            [
+                'key' => 'org_history',
+                'title' => 'History of Student Organization',
+                'attachment_label' => 'Attachment E',
+                'template_path' => 'renewal-templates/Attachment E_ History of Student Organization.docx',
+                'template_name' => 'Attachment E_ History of Student Organization.docx',
+                'pdf_path' => 'renewal-templates/Attachment E_ History of Student Organization.pdf',
+            ],
+            [
+                'key' => 'revolving_fund',
+                'title' => 'Declaration of the Organization Revolving Fund',
+                'attachment_label' => 'Attachment F',
+                'template_path' => 'renewal-templates/Attachment F. Declaration of Organization_s Revolving Fund.docx',
+                'template_name' => 'Attachment F. Declaration of Organization_s Revolving Fund.docx',
+                'pdf_path' => 'renewal-templates/Attachment F. Declaration of Organization_s Revolving Fund.pdf',
+            ],
+            [
+                'key' => 'constitution',
+                'title' => 'Ratified Constitution and By-Laws',
+                'attachment_label' => 'Attachment G',
+                'template_path' => 'renewal-templates/Attachment G_ Organization_s Constitution and By-Laws.docx',
+                'template_name' => 'Attachment G_ Organization_s Constitution and By-Laws.docx',
+                'pdf_path' => 'renewal-templates/Attachment G_ Organization_s Constitution and By-Laws.pdf',
+            ],
+            [
+                'key' => 'adviser_officers_profile',
+                'title' => 'Student Organization Adviser and Officers Profile',
+                'attachment_label' => 'Attachment H',
+                'template_path' => 'renewal-templates/Attachment H_ Student Organization  Adviser and Officers Profile.docx',
+                'template_name' => 'Attachment H_ Student Organization  Adviser and Officers Profile.docx',
+                'pdf_path' => 'renewal-templates/Attachment H_ Student Organization  Adviser and Officers Profile.pdf',
+            ],
+            [
+                'key' => 'plan_of_activities',
+                'title' => 'Plan of Activities',
+                'attachment_label' => 'Attachment I',
+                'template_path' => 'renewal-templates/Attachment I_ Plan of Activities.docx',
+                'template_name' => 'Attachment I_ Plan of Activities.docx',
+                'pdf_path' => 'renewal-templates/Attachment I_ Plan of Activities.pdf',
+            ],
+            [
+                'key' => 'specimen_signature',
+                'title' => 'Specimen Signatures',
+                'attachment_label' => 'Attachment J',
+                'template_path' => 'renewal-templates/Attachment J_ Specimen Signatures.docx',
+                'template_name' => 'Attachment J_ Specimen Signatures.docx',
+                'pdf_path' => 'renewal-templates/Attachment J_ Specimen Signatures.pdf',
+            ],
         ];
     }
 

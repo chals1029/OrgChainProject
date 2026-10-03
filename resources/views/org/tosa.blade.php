@@ -1,15 +1,15 @@
 @extends('org.layout')
 
-@section('title', 'TOSA Module · Restricted Office Access')
+@section('title', 'TOSA · Restricted Office Access')
 
 @section('header')
     <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-        <h1><strong>TOSA Module</strong></h1>
+        <h1><strong>TOSA</strong></h1>
         <span id="tosaHeaderBadge" class="tosa-badge-locked">
             <i class="bi bi-shield-lock-fill"></i> Restricted Access
         </span>
     </div>
-    <p class="org-welcome">Ten Outstanding Students Awards (TOSA) executive review desk, applicant dossier verification, and requirements governance.</p>
+    <p class="org-welcome" style="margin-top: 0.25rem;">TOSA (Ten Outstanding Students Award) review desk, applicant dossier verification, and requirements governance.</p>
 @endsection
 
 @section('actions')
@@ -17,7 +17,10 @@
         <span class="tosa-session-chip">
             <i class="bi bi-clock-history"></i> <span id="tosaTimerText">Auto-lock in 15:00</span>
         </span>
-        <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="lockTosaSession()" title="Lock TOSA Module">
+        <a href="{{ route('office.updates.templates.document', 'source-tosa-application') }}" class="org-btn org-btn-ghost org-btn-sm">
+            <i class="bi bi-file-earmark-word"></i> TOSA Application Form
+        </a>
+        <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="lockTosaSession()" title="Lock Module">
             <i class="bi bi-lock-fill"></i> Lock Session
         </button>
     </div>
@@ -96,15 +99,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 520px;
-            padding: 2rem 1rem;
+            min-height: 420px;
+            padding: 1.5rem 1rem;
         }
 
         .tosa-pin-card {
             background: #ffffff;
             border: 1.5px solid var(--tosa-border);
-            border-radius: 24px;
-            padding: 2.75rem 2.25rem;
+            border-radius: 20px;
+            padding: 2.25rem 2rem;
             max-width: 440px;
             width: 100%;
             text-align: center;
@@ -120,39 +123,39 @@
         }
 
         .tosa-pin-icon-wrap {
-            width: 64px;
-            height: 64px;
-            border-radius: 20px;
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
             background: linear-gradient(135deg, #c43b52, #6f1020);
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
-            margin: 0 auto 1.25rem;
+            font-size: 1.6rem;
+            margin: 0 auto 1rem;
             box-shadow: 0 8px 24px rgba(139, 24, 40, 0.25);
         }
 
         .tosa-pin-card h2 {
-            font-size: 1.45rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: var(--tosa-ink-dark);
-            margin: 0 0 0.4rem;
+            margin: 0 0 0.35rem;
             letter-spacing: -0.02em;
         }
 
         .tosa-pin-card p {
-            font-size: 0.88rem;
+            font-size: 0.86rem;
             color: var(--tosa-ink-muted);
-            margin: 0 0 1.75rem;
+            margin: 0 0 1.25rem;
             line-height: 1.5;
         }
 
         .tosa-pin-boxes {
             display: flex;
             justify-content: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-pin-input {
@@ -252,17 +255,17 @@
         .tosa-workspace {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.15rem;
         }
 
         .tosa-tabs-nav {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.35rem;
             background: #ffffff;
             border: 1.5px solid var(--tosa-border);
-            border-radius: var(--tosa-radius-lg);
-            padding: 0.5rem;
+            border-radius: 16px;
+            padding: 0.4rem 0.5rem;
             box-shadow: var(--tosa-shadow-sm);
             overflow-x: auto;
             scrollbar-width: none;
@@ -275,9 +278,9 @@
         .tosa-tab-btn {
             background: transparent;
             border: none;
-            padding: 0.65rem 1.15rem;
-            border-radius: 12px;
-            font-size: 0.88rem;
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            font-size: 0.86rem;
             font-weight: 700;
             color: var(--tosa-ink-muted);
             cursor: pointer;
@@ -318,18 +321,18 @@
         .tosa-kpi-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         .tosa-kpi-card {
             background: #ffffff;
             border: 1.5px solid var(--tosa-border);
-            border-radius: var(--tosa-radius-lg);
-            padding: 1.25rem 1.4rem;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
             box-shadow: var(--tosa-shadow-sm);
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.85rem;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
@@ -378,7 +381,7 @@
             align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             flex-wrap: wrap;
         }
 
@@ -431,18 +434,18 @@
         .tosa-req-kpis-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 1.75rem;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-req-kpi-box {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.25rem 1.4rem;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
             display: flex;
             align-items: center;
-            gap: 1.15rem;
+            gap: 1rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
@@ -486,8 +489,8 @@
         /* Requirements Split Layout */
         .tosa-req-main-layout {
             display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 1.5rem;
+            grid-template-columns: 1fr 320px;
+            gap: 1.25rem;
             align-items: start;
         }
 
@@ -495,24 +498,24 @@
         .tosa-req-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.5rem;
+            border-radius: 14px;
+            padding: 1.25rem;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
         }
 
         .tosa-req-table-title {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 800;
             color: #8b1828;
-            margin: 0 0 1.25rem;
+            margin: 0 0 1rem;
             letter-spacing: -0.01em;
         }
 
         .tosa-req-toolbar {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
@@ -601,7 +604,7 @@
         }
 
         .tosa-req-table th {
-            padding: 0.85rem 0.95rem;
+            padding: 0.75rem 0.85rem;
             font-size: 0.76rem;
             font-weight: 800;
             color: #475569;
@@ -611,7 +614,7 @@
         }
 
         .tosa-req-table td {
-            padding: 1.05rem 0.95rem;
+            padding: 0.85rem 0.85rem;
             border-bottom: 1px solid #f1ecee;
             vertical-align: middle;
             color: #334155;
@@ -791,22 +794,22 @@
         .tosa-req-sidebar {
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         .tosa-side-panel {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.35rem;
+            border-radius: 14px;
+            padding: 1.15rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
         }
 
         .tosa-side-panel-title {
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             font-weight: 800;
             color: #1e293b;
-            margin: 0 0 1.15rem;
+            margin: 0 0 0.85rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -895,18 +898,18 @@
         .tosa-sub-stat-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-sub-stat-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.25rem 1.4rem;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
             display: flex;
             align-items: center;
-            gap: 1.15rem;
+            gap: 1rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
@@ -950,18 +953,18 @@
         .tosa-sub-table-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.5rem;
+            border-radius: 14px;
+            padding: 1.25rem;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-sub-toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
@@ -1060,7 +1063,7 @@
         }
 
         .tosa-submissions-table th {
-            padding: 0.95rem 0.85rem;
+            padding: 0.75rem 0.85rem;
             font-size: 0.76rem;
             font-weight: 800;
             color: #1e293b;
@@ -1081,7 +1084,7 @@
         }
 
         .tosa-submissions-table td {
-            padding: 1.1rem 0.85rem;
+            padding: 0.85rem 0.85rem;
             border-bottom: 1px solid #f1ecee;
             vertical-align: middle;
             color: #334155;
@@ -1247,9 +1250,9 @@
         .tosa-sub-bottom-wrap {
             display: grid;
             grid-template-columns: auto 1fr;
-            gap: 1.5rem;
+            gap: 1.25rem;
             align-items: center;
-            margin-top: 1.5rem;
+            margin-top: 1.25rem;
         }
 
         .tosa-sub-legend-row {
@@ -1322,18 +1325,18 @@
         .tosa-queue-stat-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-queue-stat-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.25rem 1.4rem;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
             display: flex;
             align-items: center;
-            gap: 1.15rem;
+            gap: 1rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
@@ -1377,18 +1380,18 @@
         .tosa-queue-table-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.5rem;
+            border-radius: 14px;
+            padding: 1.25rem;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-queue-toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
@@ -1460,8 +1463,8 @@
         .tosa-queue-pills-row {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.25rem;
+            gap: 0.45rem;
+            margin-bottom: 1rem;
             overflow-x: auto;
             padding-bottom: 0.25rem;
         }
@@ -1504,7 +1507,7 @@
         }
 
         .tosa-queue-table th {
-            padding: 0.95rem 0.85rem;
+            padding: 0.75rem 0.85rem;
             font-size: 0.76rem;
             font-weight: 800;
             color: #1e293b;
@@ -1525,7 +1528,7 @@
         }
 
         .tosa-queue-table td {
-            padding: 1.1rem 0.85rem;
+            padding: 0.85rem 0.85rem;
             border-bottom: 1px solid #f1ecee;
             vertical-align: middle;
             color: #334155;
@@ -1610,18 +1613,18 @@
         .tosa-log-stat-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-log-stat-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.25rem 1.4rem;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
             display: flex;
             align-items: center;
-            gap: 1.15rem;
+            gap: 1rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
@@ -1665,18 +1668,18 @@
         .tosa-log-table-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.5rem;
+            border-radius: 14px;
+            padding: 1.25rem;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-log-toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
@@ -1748,8 +1751,8 @@
         .tosa-log-pills-row {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.25rem;
+            gap: 0.45rem;
+            margin-bottom: 1rem;
             overflow-x: auto;
             padding-bottom: 0.25rem;
         }
@@ -1791,7 +1794,7 @@
         }
 
         .tosa-log-table th {
-            padding: 0.95rem 0.85rem;
+            padding: 0.75rem 0.85rem;
             font-size: 0.76rem;
             font-weight: 800;
             color: #1e293b;
@@ -1812,7 +1815,7 @@
         }
 
         .tosa-log-table td {
-            padding: 1.05rem 0.85rem;
+            padding: 0.85rem 0.85rem;
             border-bottom: 1px solid #f1ecee;
             vertical-align: middle;
             color: #334155;
@@ -1931,24 +1934,24 @@
         .tosa-ov-main-grid {
             display: grid;
             grid-template-columns: 1.2fr 1fr;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .tosa-ov-card {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.4rem;
+            border-radius: 14px;
+            padding: 1.25rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .tosa-ov-card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 1.15rem;
-            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.65rem;
             border-bottom: 1px solid #f1ecee;
         }
 
@@ -1984,8 +1987,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.85rem;
-            margin-bottom: 0.75rem;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
         }
 
         .tosa-ov-prog-label {
@@ -2022,13 +2025,13 @@
         .tosa-ov-triage-item {
             background: #fdfafb;
             border: 1.5px solid #ede8ea;
-            border-radius: 12px;
-            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            padding: 0.75rem 0.9rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.65rem;
+            gap: 0.65rem;
+            margin-bottom: 0.55rem;
             transition: border-color 0.15s ease, background 0.15s ease;
         }
 
@@ -2105,9 +2108,9 @@
 
         .tosa-modal-box {
             background: #ffffff;
-            border-radius: 24px;
+            border-radius: 20px;
             border: 1.5px solid #ede8ea;
-            padding: 1.85rem;
+            padding: 1.5rem;
             box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 1px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-height: 90vh;
@@ -2126,9 +2129,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 1rem;
+            padding-bottom: 0.85rem;
             border-bottom: 1.5px solid #ede8ea;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
         }
 
         .tosa-modal-close-btn {
@@ -2154,42 +2157,42 @@
         .tosa-review-grid {
             display: grid;
             grid-template-columns: 1.15fr 1fr;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .tosa-review-col-left {
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         .tosa-review-col-right {
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1rem;
             background: #fdfafb;
             border: 1.5px solid #ede8ea;
-            border-radius: 18px;
-            padding: 1.35rem;
+            border-radius: 14px;
+            padding: 1.15rem;
         }
 
         .tosa-dossier-card {
             background: #fdfafb;
             border: 1.5px solid #ede8ea;
-            border-radius: 16px;
-            padding: 1.2rem;
+            border-radius: 14px;
+            padding: 1.1rem;
         }
 
         .tosa-doc-item {
             background: #ffffff;
             border: 1.5px solid #ede8ea;
-            border-radius: 12px;
-            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            padding: 0.75rem 0.9rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.65rem;
+            gap: 0.65rem;
+            margin-bottom: 0.55rem;
             transition: border-color 0.15s ease;
         }
 
@@ -2319,6 +2322,284 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* --------------------------------------------------------------------------
+           TOSA Top 10 Outstanding Students & GWA Leaderboard Showcase
+           -------------------------------------------------------------------------- */
+        .tosa-leaderboard-section {
+            background: #ffffff;
+            border: 1.5px solid var(--tosa-maroon-border);
+            border-radius: var(--tosa-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--tosa-shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tosa-leaderboard-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #d97706, #f59e0b, #8b1828, #62101c);
+        }
+
+        .tosa-lb-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .tosa-lb-title-wrap h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--tosa-ink-dark);
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .tosa-lb-subtitle {
+            margin: 0.35rem 0 0;
+            font-size: 0.82rem;
+            color: var(--tosa-ink-muted);
+            line-height: 1.45;
+        }
+
+        .tosa-top5-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .tosa-leaderboard-card {
+            background: #ffffff;
+            border: 1.5px solid var(--tosa-border);
+            border-radius: var(--tosa-radius-md);
+            padding: 1.15rem 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+            box-shadow: var(--tosa-shadow-sm);
+        }
+
+        .tosa-leaderboard-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--tosa-shadow-hover);
+        }
+
+        .tosa-leaderboard-card.rank-1 {
+            border-color: #f59e0b;
+            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 40%);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.15);
+        }
+
+        .tosa-leaderboard-card.rank-2 {
+            border-color: #94a3b8;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
+            box-shadow: 0 6px 20px rgba(148, 163, 184, 0.15);
+        }
+
+        .tosa-leaderboard-card.rank-3 {
+            border-color: #d97706;
+            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 40%);
+            box-shadow: 0 6px 20px rgba(217, 119, 6, 0.12);
+        }
+
+        .tosa-card-top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .tosa-rank-medal {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 9999px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .tosa-rank-medal.is-gold {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .tosa-rank-medal.is-silver {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .tosa-rank-medal.is-bronze {
+            background: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        .tosa-rank-medal.is-honor {
+            background: #fdf0f2;
+            color: var(--tosa-maroon);
+            border: 1px solid var(--tosa-maroon-border);
+        }
+
+        .tosa-card-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--tosa-maroon);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.65rem;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 8px rgba(139, 24, 40, 0.2);
+        }
+
+        .tosa-card-name {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: var(--tosa-ink-dark);
+            line-height: 1.25;
+            margin-bottom: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tosa-card-meta {
+            font-size: 0.74rem;
+            color: var(--tosa-ink-muted);
+            line-height: 1.35;
+            margin-bottom: 0.75rem;
+            min-height: 2.7em;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .tosa-card-gwa-box {
+            background: #ffffff;
+            border: 1.5px solid var(--tosa-maroon-border);
+            border-radius: var(--tosa-radius-sm);
+            padding: 0.65rem 0.75rem;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .tosa-card-gwa-val {
+            font-size: 1.55rem;
+            font-weight: 900;
+            color: var(--tosa-maroon);
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .tosa-card-gwa-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--tosa-ink-muted);
+            margin-top: 0.2rem;
+        }
+
+        .tosa-card-standing {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #15803d;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 0.25rem 0.45rem;
+            text-align: center;
+            margin-bottom: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tosa-card-btn-review {
+            width: 100%;
+            padding: 0.45rem 0.65rem;
+            background: var(--tosa-maroon-light);
+            color: var(--tosa-maroon);
+            border: 1.5px solid var(--tosa-maroon-border);
+            border-radius: var(--tosa-radius-sm);
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            transition: all 0.2s ease;
+        }
+
+        .tosa-card-btn-review:hover {
+            background: var(--tosa-maroon);
+            color: #ffffff;
+            border-color: var(--tosa-maroon);
+        }
+
+        .tosa-gwa-table-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 8px;
+            background: #fdf0f2;
+            border: 1px solid #f2dfe2;
+        }
+
+        .tosa-gwa-table-num {
+            font-weight: 900;
+            font-size: 0.96rem;
+            color: var(--tosa-maroon);
+            letter-spacing: -0.02em;
+        }
+
+        .tosa-rank-pill-table {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.15rem 0.45rem;
+            border-radius: 9999px;
+            background: #ffffff;
+            border: 1px solid #f2dfe2;
+            color: var(--tosa-maroon);
+        }
+
+        @media (max-width: 1200px) {
+            .tosa-top5-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tosa-top5-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 
     {{-- =========================================================================
@@ -2330,8 +2611,8 @@
                 <i class="bi bi-shield-lock-fill"></i>
             </div>
 
-            <h2>TOSA Security Gateway</h2>
-            <p>Enter your authorized 4-digit OSO security PIN to unlock applicant dossiers and requirements management.</p>
+            <h2>TOSA GATEWAY</h2>
+            <p>Enter your authorized 4-digit OSO security PIN to unlock applicant dossiers and requirements governance.</p>
 
             <div id="tosaPinAlert" class="tosa-pin-alert">
                 <i class="bi bi-exclamation-circle-fill"></i>
@@ -2347,14 +2628,14 @@
                 </div>
 
                 <button type="submit" class="tosa-pin-btn" id="tosaUnlockBtn">
-                    <i class="bi bi-key-fill"></i> Unlock TOSA Module
+                    <i class="bi bi-key-fill"></i> Unlock TOSA
                 </button>
             </form>
 
             <div class="tosa-pin-footer-links">
                 <button type="button" onclick="openForgotPinModal()">Forgot PIN?</button>
                 <span style="color: #cbd5e1;">•</span>
-                <span style="color: var(--tosa-ink-muted); font-size: 0.78rem;">Demo PIN: <strong>1234</strong></span>
+                <span style="color: var(--tosa-ink-muted); font-size: 0.78rem;">PIN is managed by the OSO Settings desk.</span>
             </div>
         </section>
     </div>
@@ -2365,7 +2646,7 @@
     <div id="tosaWorkspace" class="tosa-workspace" style="display: none;">
         
         {{-- Navigation Tabs --}}
-        <nav class="tosa-tabs-nav" role="tablist" aria-label="TOSA Modules">
+        <nav class="tosa-tabs-nav" role="tablist" aria-label="Top 10 Outstanding Students Modules">
             <button type="button" class="tosa-tab-btn is-active" id="tabBtnOverview" onclick="switchTosaTab('overview')">
                 <i class="bi bi-grid-1x2-fill"></i> Overview
             </button>
@@ -2373,7 +2654,10 @@
                 <i class="bi bi-card-checklist"></i> Requirements <span class="tosa-tab-count" id="badgeReqCount">5</span>
             </button>
             <button type="button" class="tosa-tab-btn" id="tabBtnApplicants" onclick="switchTosaTab('applicants')">
-                <i class="bi bi-people-fill"></i> Applicant Submissions <span class="tosa-tab-count" id="badgeAppCount">74</span>
+                <i class="bi bi-people-fill"></i> Applicant Submissions <span class="tosa-tab-count" id="badgeAppCount">10</span>
+            </button>
+            <button type="button" class="tosa-tab-btn" id="tabBtnTop10" onclick="switchTosaTab('top10')">
+                <i class="bi bi-trophy-fill"></i> Top 10 Outstanding <span class="tosa-tab-count" id="badgeTop10Count">10</span>
             </button>
             <button type="button" class="tosa-tab-btn" id="tabBtnQueue" onclick="switchTosaTab('queue')">
                 <i class="bi bi-hourglass-split"></i> Review Queue <span class="tosa-tab-count" id="badgeQueueCount">32</span>
@@ -2387,7 +2671,7 @@
         <div id="tosaTabSectionOverview" class="tosa-tab-pane">
             
             {{-- Master Top KPI Cards Row --}}
-            <div class="tosa-kpi-row" style="margin-bottom: 1.5rem;">
+            <div class="tosa-kpi-row" style="margin-bottom: 1.25rem;">
                 <div class="tosa-kpi-card" onclick="switchTosaTab('applicants')" style="cursor: pointer;" title="View all candidate submissions">
                     <div class="tosa-kpi-icon is-blue">
                         <i class="bi bi-people-fill"></i>
@@ -2428,7 +2712,6 @@
                     </div>
                 </div>
             </div>
-
             {{-- Main Harmonized Dashboard Grid --}}
             <div class="tosa-ov-main-grid">
                 
@@ -2522,8 +2805,8 @@
                                     <small style="font-size: 0.76rem; color: #64748b;">BS Computer Science (3rd Year) • Missing 2 Requirements</small>
                                 </div>
                             </div>
-                            <button type="button" class="tosa-queue-btn-action" onclick="openReviewModal(2)" style="padding: 0.4rem 0.8rem; font-size: 0.76rem;">
-                                <i class="bi bi-search"></i> Review
+                            <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(2)" style="padding: 0.35rem 0.75rem; font-size: 0.76rem;">
+                                <i class="bi bi-file-earmark-text"></i> View Documents
                             </button>
                         </div>
 
@@ -2535,8 +2818,8 @@
                                     <small style="font-size: 0.76rem; color: #64748b;">BS Information Systems (3rd Year) • Missing 1 Requirement</small>
                                 </div>
                             </div>
-                            <button type="button" class="tosa-queue-btn-action" onclick="openReviewModal(4)" style="padding: 0.4rem 0.8rem; font-size: 0.76rem;">
-                                <i class="bi bi-search"></i> Review
+                            <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(4)" style="padding: 0.35rem 0.75rem; font-size: 0.76rem;">
+                                <i class="bi bi-file-earmark-text"></i> View Documents
                             </button>
                         </div>
 
@@ -2548,8 +2831,8 @@
                                     <small style="font-size: 0.76rem; color: #64748b;">BS Mechanical Engineering (3rd Year) • Returned for Revision</small>
                                 </div>
                             </div>
-                            <button type="button" class="tosa-queue-btn-action" onclick="openReviewModal(6)" style="padding: 0.4rem 0.8rem; font-size: 0.76rem;">
-                                <i class="bi bi-search"></i> Review
+                            <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(6)" style="padding: 0.35rem 0.75rem; font-size: 0.76rem;">
+                                <i class="bi bi-file-earmark-text"></i> View Documents
                             </button>
                         </div>
                     </section>
@@ -2674,7 +2957,7 @@
             <div class="tosa-req-header-wrap">
                 <div>
                     <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--tosa-ink-dark); margin: 0 0 0.25rem; letter-spacing: -0.02em;">Requirements</h2>
-                    <p class="tosa-req-subtitle">Manage and configure all document requirements for TOSA applications.</p>
+                    <p class="tosa-req-subtitle">Manage and configure all document requirements for Top 10 Outstanding Students applications.</p>
                 </div>
                 <button type="button" class="tosa-btn-add-req" onclick="openAddRequirementModal()">
                     <i class="bi bi-plus-lg"></i> Add New Requirement
@@ -2734,7 +3017,7 @@
                     {{-- Toolbar: Search + Status + Bulk Actions --}}
                     <div class="tosa-req-toolbar">
                         <div class="tosa-req-search-box">
-                            <input type="text" class="tosa-req-search-input" id="reqSearchInput" placeholder="Search requirements..." oninput="handleReqSearch(this.value)">
+                            <input type="text" class="tosa-req-search-input" id="reqSearchInput" placeholder="Search requirements..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="handleReqSearch(this.value)">
                             <i class="bi bi-search search-icon"></i>
                         </div>
                         <select class="tosa-req-select" id="reqStatusFilter" onchange="handleReqStatusFilter(this.value)">
@@ -2832,7 +3115,7 @@
             
             {{-- Section Description --}}
             <p style="font-size: 0.92rem; color: #475569; margin: 0 0 1.25rem; font-weight: 500;">
-                Review and manage all applicant submissions for TOSA.
+                Review and manage all applicant submissions for Top 10 Outstanding Students.
             </p>
 
             {{-- 4 Stat Summary Cards --}}
@@ -2897,32 +3180,16 @@
                                 @endforeach
                             </div>
                         @endisset
-                        @if (($tosaApplicants ?? collect())->isNotEmpty())
-                            <div style="width:100%; margin:0.5rem 0 0.25rem; display:grid; gap:0.4rem;">
-                                @foreach ($tosaApplicants as $applicant)
-                                    <form method="post" action="{{ route('office.tosa.subsection', $applicant) }}" style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; font-size:0.78rem;">
-                                        @csrf
-                                        <strong style="min-width:140px;">{{ $applicant->full_name }}</strong>
-                                        <span style="color:#7a7074;">{{ $applicant->program }} · Y{{ $applicant->year_level }}</span>
-                                        <select name="subsection" class="tosa-sub-select" onchange="this.form.submit()">
-                                            @foreach (['pending','screening','interview','accepted','rejected'] as $sub)
-                                                <option value="{{ $sub }}" @selected(($applicant->subsection ?? '') === $sub)>{{ ucfirst($sub) }}</option>
-                                            @endforeach
-                                        </select>
-                                    </form>
-                                @endforeach
-                            </div>
-                        @endif
                         <div class="tosa-sub-search-box">
-                            <input type="text" id="tosaApplicantSearch" placeholder="Search applicant name or ID..." oninput="handleApplicantSearch(this.value)">
+                            <input type="text" id="tosaApplicantSearch" placeholder="Search applicant name or ID..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="handleApplicantSearch(this.value)">
                             <i class="bi bi-search search-icon"></i>
                         </div>
                         <select class="tosa-sub-select" id="tosaStatusFilter" onchange="handleStatusFilterChange(this.value)">
                             <option value="">All Status</option>
-                            <option value="Complete">Complete</option>
-                            <option value="Missing Documents">Missing Documents</option>
+                            <option value="Pending">Pending</option>
                             <option value="Under Review">Under Review</option>
                             <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
                             <option value="Returned">Returned</option>
                         </select>
                         <select class="tosa-sub-select" id="tosaProgramFilter" onchange="handleProgramFilterChange(this.value)">
@@ -3001,6 +3268,47 @@
         </div>
 
         {{-- TAB 4: REVIEW QUEUE (IMPECCABLE & UNSLOP UI) --}}
+                {{-- TAB: TOP 10 OUTSTANDING STUDENTS SECTION (NO CARDS - CLEAN MANUAL VERIFICATION TABLE) --}}
+        <div id="tosaTabSectionTop10" class="tosa-tab-pane" style="display: none;">
+            {{-- Header --}}
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                <div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--tosa-ink-dark); margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.55rem;">
+                        <i class="bi bi-trophy-fill" style="color: #d97706;"></i> Top 10 Outstanding Students
+                    </h2>
+                    <p style="font-size: 0.84rem; color: var(--tosa-ink-muted); margin: 0;">
+                        Official candidates for Top 10 Outstanding Students. OSO reviewers manually inspect submitted documents and verify qualification.
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="tosa-btn-export-report" onclick="exportApplicantReport()">
+                        <i class="bi bi-box-arrow-in-down"></i> Export Roster
+                    </button>
+                </div>
+            </div>
+
+            {{-- Clean Data Table (No cards) --}}
+            <div style="background: #ffffff; border: 1.5px solid var(--tosa-border); border-radius: var(--tosa-radius-md); padding: 1.15rem; box-shadow: var(--tosa-shadow-sm);">
+                <div style="overflow-x: auto;">
+                    <table class="tosa-submissions-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 75px; text-align: center;">Rank</th>
+                                <th>Candidate</th>
+                                <th>Program / College</th>
+                                <th style="text-align: center;">Submitted Documents</th>
+                                <th style="text-align: center;">OSO Manual Qualification</th>
+                                <th style="text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tosaTop10TableTbody">
+                            {{-- Populated dynamically via renderTop10Table() --}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="tosaTabSectionQueue" class="tosa-tab-pane" style="display: none;">
             
             {{-- Section Description --}}
@@ -3057,7 +3365,7 @@
                 <div class="tosa-queue-toolbar">
                     <div class="tosa-queue-toolbar-left">
                         <div class="tosa-queue-search-box">
-                            <input type="text" id="tosaQueueSearch" placeholder="Search candidate name or ID in queue..." oninput="handleQueueSearch(this.value)">
+                            <input type="text" id="tosaQueueSearch" placeholder="Search candidate name or ID in queue..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="handleQueueSearch(this.value)">
                             <i class="bi bi-search search-icon"></i>
                         </div>
                         <select class="tosa-queue-select" id="tosaQueueStatusFilter" onchange="handleQueueStatusFilter(this.value)">
@@ -3191,7 +3499,7 @@
                 <div class="tosa-log-toolbar">
                     <div class="tosa-log-toolbar-left">
                         <div class="tosa-log-search-box">
-                            <input type="text" id="tosaLogSearch" placeholder="Search activity, actor, target dossier, or hash..." oninput="handleLogSearch(this.value)">
+                            <input type="text" id="tosaLogSearch" placeholder="Search activity, actor, target dossier, or hash..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="handleLogSearch(this.value)">
                             <i class="bi bi-search search-icon"></i>
                         </div>
                         <select class="tosa-log-select" id="tosaLogCategoryFilter" onchange="handleLogCategoryFilter(this.value)">
@@ -3277,7 +3585,7 @@
                 </div>
                 <div class="tosa-sub-info-notice">
                     <i class="bi bi-shield-lock-fill"></i>
-                    <span>All log events are cryptographically hashed using SHA-256 and appended to the tamper-evident TOSA institutional ledger. Click any hash to copy.</span>
+                    <span>All log events are cryptographically hashed using SHA-256 and appended to the tamper-evident Top 10 Outstanding Students institutional ledger. Click any hash to copy.</span>
                 </div>
             </div>
 
@@ -3293,7 +3601,7 @@
             <div class="tosa-modal-header">
                 <div>
                     <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--tosa-ink-dark); display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="bi bi-award-fill" style="color: var(--tosa-maroon);"></i> TOSA Candidate Review Dossier
+                        <i class="bi bi-shield-check" style="color: var(--tosa-maroon);"></i> TOSA Candidate Document &amp; Qualification Verification
                     </h3>
                     <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--tosa-ink-muted);">Comprehensive verification of credentials, advocacy metrics, and compliance.</p>
                 </div>
@@ -3315,12 +3623,12 @@
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.82rem; border-top: 1px solid var(--tosa-border); padding-top: 0.85rem;">
                             <div>
-                                <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--tosa-ink-muted); font-weight: 800;">Award Category</span>
-                                <strong style="color: var(--tosa-ink-dark);" id="revCategory">Leadership &amp; Technology</strong>
+                                <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--tosa-ink-muted); font-weight: 800;">Academic Standing</span>
+                                <strong style="color: #15803d; font-size: 0.85rem; display: block; margin-top: 0.2rem;" id="revHonor">President's Lister · Highest Honors</strong>
                             </div>
                             <div>
                                 <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--tosa-ink-muted); font-weight: 800;">Date Submitted</span>
-                                <strong style="color: var(--tosa-ink-dark);" id="revDate">Sept 5, 2026</strong>
+                                <strong style="color: var(--tosa-ink-dark); display: block; margin-top: 0.2rem;" id="revDate">Sept 5, 2026</strong>
                             </div>
                         </div>
                     </div>
@@ -3334,6 +3642,24 @@
                             {{-- Document Items --}}
                         </div>
                     </div>
+
+                    {{-- Official TOSA Templates & Example Documents Section --}}
+                    <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1.5px dashed var(--tosa-maroon-border);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <h4 style="font-size: 0.92rem; font-weight: 800; color: var(--tosa-ink-dark); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                                <i class="bi bi-file-earmark-ruled" style="color: var(--tosa-maroon);"></i> Official TOSA Templates &amp; Guidelines (Reference)
+                            </h4>
+                            <span class="tosa-session-chip" style="font-size: 0.68rem; padding: 0.15rem 0.5rem; background: #fffbeb; color: #b45309; border-color: #fde68a;">
+                                <i class="bi bi-bookmark-check"></i> Benchmark Docs
+                            </span>
+                        </div>
+                        <p style="margin: 0 0 0.75rem; font-size: 0.76rem; color: var(--tosa-ink-muted);">
+                            Official institutional templates to benchmark requirements, criteria, and rubrics during verification.
+                        </p>
+                        <div id="revTemplateListContainer">
+                            {{-- Populated dynamically via JS: Guidelines PDF, App Form DOCX, Computation XLSX, etc. --}}
+                        </div>
+                    </div>
                 </div>
 
                 {{-- RIGHT COLUMN: OSO Review & Checklist Panel --}}
@@ -3344,50 +3670,56 @@
                         </h4>
                         <p style="margin: 0 0 0.85rem; font-size: 0.76rem; color: var(--tosa-ink-muted);">Verify each submitted document against university criteria.</p>
 
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                             <label class="tosa-checklist-label">
                                 <input type="checkbox" id="chkReq1" checked>
-                                <span>Certificate of Registration (Authenticated)</span>
+                                <span>1. Comprehensive Curriculum Vitae (CV)</span>
                             </label>
                             <label class="tosa-checklist-label">
                                 <input type="checkbox" id="chkReq2" checked>
-                                <span>Activity Proposal &amp; Advocacy Portfolio</span>
+                                <span>2. Good Moral Character Certificate (Authenticated)</span>
                             </label>
                             <label class="tosa-checklist-label">
                                 <input type="checkbox" id="chkReq3" checked>
-                                <span>Budget &amp; Financial Breakdown Plan</span>
+                                <span>3. Official Scholastic Record / Certified True Copy of Grades</span>
                             </label>
                             <label class="tosa-checklist-label">
                                 <input type="checkbox" id="chkReq4" checked>
-                                <span>Participant &amp; Beneficiary Masterlist</span>
+                                <span>4. Awards &amp; Leadership Certificates (Records Office Certified)</span>
                             </label>
                             <label class="tosa-checklist-label">
                                 <input type="checkbox" id="chkReq5" checked>
-                                <span>Community Accomplishment Evidence</span>
+                                <span>5. Electronic / Scanned Complete Application Package</span>
                             </label>
                         </div>
                     </div>
 
                     <div>
                         <label for="revRemarksInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--tosa-ink-dark); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.03em;">
-                            Reviewer Remarks &amp; Feedback
+                            OSO Reviewer Remarks &amp; Evaluation Notes
                         </label>
-                        <textarea id="revRemarksInput" class="tosa-remarks-textarea" placeholder="Provide clear institutional evaluation notes, revision instructions, or endorsement reasons..."></textarea>
+                        <textarea id="revRemarksInput" class="tosa-remarks-textarea" placeholder="Provide institutional verification notes, revision instructions, or endorsement reasons..."></textarea>
                     </div>
 
                     <div>
                         <label style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--tosa-ink-muted); margin-bottom: 0.45rem; text-transform: uppercase;">
-                            Final Determination
+                            Manual Qualification Determination (OSO Verification)
                         </label>
-                        <div class="tosa-decision-actions">
-                            <button type="button" class="tosa-btn-decision is-approve" onclick="submitDecision('Approved')">
-                                <i class="bi bi-check-lg"></i> Approve
+                        <div class="tosa-decision-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button type="button" class="tosa-btn-decision is-approve" onclick="submitManualVerification('accepted')">
+                                <i class="bi bi-check2-circle"></i> Qualify &amp; Endorse
                             </button>
-                            <button type="button" class="tosa-btn-decision is-revision" onclick="submitDecision('For Revision')">
-                                <i class="bi bi-arrow-repeat"></i> Request Revision
+                            <button type="button" class="tosa-btn-decision" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;" onclick="submitManualVerification('interview')">
+                                <i class="bi bi-person-check"></i> Interview Phase
                             </button>
-                            <button type="button" class="tosa-btn-decision is-reject" onclick="submitDecision('Rejected')">
-                                <i class="bi bi-x-circle"></i> Reject
+                            <button type="button" class="tosa-btn-decision" style="background:#fefce8;color:#a16207;border:1.5px solid #fef08a;" onclick="submitManualVerification('screening')">
+                                <i class="bi bi-search"></i> Under Screening
+                            </button>
+                            <button type="button" class="tosa-btn-decision is-revision" onclick="submitManualVerification('returned')">
+                                <i class="bi bi-arrow-return-left"></i> Return Revision
+                            </button>
+                            <button type="button" class="tosa-btn-decision is-reject" style="grid-column: span 2;" onclick="submitManualVerification('rejected')">
+                                <i class="bi bi-x-circle"></i> Disqualify Candidate
                             </button>
                         </div>
                     </div>
@@ -3479,8 +3811,10 @@
                 <button type="button" onclick="closeUploadTemplateModal()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">&times;</button>
             </div>
 
-            <form onsubmit="handleTemplateUploadSubmit(event)">
-                <input type="hidden" id="uploadReqId" value="">
+            <form method="post" action="{{ route('office.tosa.requirements.template') }}" enctype="multipart/form-data" data-org-upload-form>
+                @csrf
+                <input type="hidden" id="uploadReqId" name="requirement_id" value="">
+                <input type="hidden" id="uploadReqTitle" name="requirement_title" value="">
                 <p style="font-size: 0.86rem; color: #64748b; margin: 0 0 1rem;" id="uploadReqNameLabel">
                     Select a downloadable sample/template file for <strong>Application Form</strong>.
                 </p>
@@ -3488,12 +3822,13 @@
                 <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; background: #fdfafb; margin-bottom: 1.25rem;">
                     <i class="bi bi-file-earmark-arrow-up" style="font-size: 2.2rem; color: #8b1828; display: block; margin-bottom: 0.5rem;"></i>
                     <strong style="font-size: 0.92rem; color: #1a1618; display: block; margin-bottom: 0.25rem;">Drag &amp; drop template file here</strong>
-                    <span style="font-size: 0.78rem; color: #64748b; display: block; margin-bottom: 1rem;">Supports PDF, DOCX, XLSX up to 10MB</span>
-                    <input type="file" id="templateFileInput" style="display: none;" onchange="handleFileSelected(this)">
+                    <span style="font-size: 0.78rem; color: #64748b; display: block; margin-bottom: 1rem;">Supports PDF, Word, Excel, PowerPoint, ZIP, and images up to 20MB</span>
+                    <input type="file" id="templateFileInput" name="template_file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg" data-org-upload data-max-size="20480" data-upload-status-id="tosaTemplateUploadStatus" style="display: none;" onchange="handleFileSelected(this)">
                     <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="document.getElementById('templateFileInput').click()">
                         Browse Files
                     </button>
                     <div id="selectedFileName" style="font-size: 0.8rem; font-weight: 700; color: #16a34a; margin-top: 0.6rem; display: none;"></div>
+                    <div id="tosaTemplateUploadStatus" class="org-upload-status" aria-live="polite" style="margin-top:0.45rem;">No file selected.</div>
                 </div>
 
                 <div style="display: flex; justify-content: center; gap: 0.75rem;">
@@ -3512,13 +3847,75 @@
             <div style="width: 52px; height: 52px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                 <i class="bi bi-key-fill"></i>
             </div>
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--tosa-ink-dark); margin: 0 0 0.5rem;">TOSA PIN Recovery</h3>
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--tosa-ink-dark); margin: 0 0 0.5rem;">Top 10 Outstanding Students PIN Recovery</h3>
             <p style="font-size: 0.86rem; color: var(--tosa-ink-muted); line-height: 1.5; margin: 0 0 1.25rem;">
-                TOSA security credentials are encrypted on the institutional ledger. If you have misplaced your PIN, please contact the <strong>BSU OSO Directorate</strong> or use the demo PIN <strong>1234</strong>.
+                Top 10 Outstanding Students security credentials are stored as one-way hashes. If you have misplaced your PIN, contact the <strong>BSU OSO Directorate</strong> to set a new one in OSO Settings.
             </p>
             <button type="button" class="org-btn org-btn-primary org-btn-sm" style="width: 100%;" onclick="closeForgotPinModal()">
                 I Understand
             </button>
+        </div>
+    </dialog>
+
+    {{-- =========================================================================
+         MODAL 5: In-Browser TOSA Document & Template Viewer Modal
+         ========================================================================= --}}
+    <dialog class="tosa-modal" id="tosaDocViewerModal" style="max-width: 1080px; width: 96%;">
+        <div class="tosa-modal-box" style="display: flex; flex-direction: column; height: 88vh; max-height: 88vh; padding: 1.25rem;">
+            {{-- Viewer Header --}}
+            <div class="tosa-modal-header" style="flex-shrink: 0; margin-bottom: 0.65rem; padding-bottom: 0.65rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;" id="docViewerIconWrap">
+                        <i class="bi bi-file-earmark-pdf-fill" id="tosaDocViewerIcon"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--tosa-ink-dark);" id="tosaDocViewerTitle">
+                            Document Preview
+                        </h3>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                            <span class="tosa-session-chip" id="tosaDocViewerBadge" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; background: #ecfdf5; color: #047857; border-color: #a7f3d0;">
+                                <i class="bi bi-patch-check-fill"></i> Verified TOSA Document
+                            </span>
+                            <span style="font-size: 0.76rem; color: var(--tosa-ink-muted);" id="tosaDocViewerSubtitle">
+                                Batangas State University · TOSA Review Desk
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <a id="tosaDocViewerDownloadBtn" href="#" download class="org-btn org-btn-ghost org-btn-sm" style="font-size: 0.78rem;">
+                        <i class="bi bi-download"></i> Download File
+                    </a>
+                    <a id="tosaDocViewerNewTabBtn" href="#" target="_blank" rel="noopener" class="org-btn org-btn-ghost org-btn-sm" style="font-size: 0.78rem;">
+                        <i class="bi bi-box-arrow-up-right"></i> Open in New Tab
+                    </a>
+                    <button type="button" class="tosa-modal-close-btn" onclick="closeTosaDocViewer()" title="Close Viewer">
+                        &times;
+                    </button>
+                </div>
+            </div>
+
+            {{-- Quick Document & Template Switcher Tabs --}}
+            <div id="tosaDocViewerTabs" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.6rem; margin-bottom: 0.6rem; border-bottom: 1px solid #f1f5f9; flex-shrink: 0;">
+                {{-- Dynamic Switcher Tabs --}}
+            </div>
+
+            {{-- Main Document Viewer Container --}}
+            <div id="tosaDocViewerFrameWrap" style="flex: 1; min-height: 0; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; position: relative;">
+                <iframe id="tosaDocViewerIframe" src="" style="width: 100%; height: 100%; border: none;" title="TOSA Document Preview"></iframe>
+                <div id="tosaDocViewerFallback" style="display: none; height: 100%; align-items: center; justify-content: center; flex-direction: column; padding: 2rem; text-align: center;">
+                    <div style="width: 68px; height: 68px; border-radius: 18px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 1rem;" id="docViewerFallbackIcon">
+                        <i class="bi bi-file-earmark-word-fill"></i>
+                    </div>
+                    <h4 style="margin: 0 0 0.4rem; font-size: 1.2rem; font-weight: 800; color: #1e293b;" id="docViewerFallbackTitle">Office Document Template</h4>
+                    <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: #64748b; max-width: 480px; line-height: 1.5;" id="docViewerFallbackDesc">
+                        This file is an institutional editable template (.docx / .xlsx). Download the file to view its full formatting, rubrics, and formulas in Microsoft Office.
+                    </p>
+                    <a id="docViewerFallbackDownload" href="#" download class="org-btn org-btn-primary" style="font-weight: 700; padding: 0.6rem 1.4rem;">
+                        <i class="bi bi-download"></i> Download Template File
+                    </a>
+                </div>
+            </div>
         </div>
     </dialog>
 
@@ -3528,9 +3925,16 @@
     {{-- =========================================================================
          TOSA JavaScript Engine
          ========================================================================= --}}
+    @php
+        $tosaPinGateEnabled = (bool) data_get($officeSettings ?? [], 'security.tosa_gate', true);
+        $tosaSessionTimeoutSeconds = max(0, (int) data_get($officeSettings ?? [], 'security.session_timeout', 15)) * 60;
+    @endphp
     <script>
         // Data Store
-        const AUTHORIZED_PINS = ['1234', '2026'];
+        const TOSA_PIN_VERIFY_URL = @json(route('office.tosa.pin.verify'));
+        const TOSA_PIN_GATE_ENABLED = @json($tosaPinGateEnabled);
+        const TOSA_SESSION_TIMEOUT_SECONDS = @json($tosaSessionTimeoutSeconds);
+        let pinVerificationInFlight = false;
         const PAGE_SIZE = 7;
         let isTosaUnlocked = false;
         let currentApplicantPage = 1;
@@ -3554,8 +3958,9 @@
                 'interview' => 'Under Review',
                 'accepted' => 'Approved',
                 'rejected' => 'Rejected',
+                'returned' => 'Returned',
             ];
-            $tosaApplicantsJs = collect($tosaApplicants ?? [])->map(function ($a) use ($yearMap, $statusMap) {
+            $tosaApplicantsJs = collect($tosaApplicants ?? [])->map(function ($a, $idx) use ($yearMap, $statusMap) {
                 $reqs = is_array($a->requirements ?? null) ? $a->requirements : [];
                 $total = max(count($reqs), 1);
                 $submitted = collect($reqs)->filter(fn ($v) => (bool) $v)->count();
@@ -3565,14 +3970,21 @@
 
                 return [
                     'id' => $a->id,
+                    'rank' => $idx + 1,
                     'name' => $a->full_name,
                     'studentId' => $a->sr_code,
                     'program' => $a->program,
                     'yearLevel' => $yearLevel,
+                    'college' => $a->college ?: 'Batangas State University',
                     'org' => $a->organization_name ?: ($a->college ?: 'Student Organization'),
-                    'category' => $a->college ?: 'Leadership & Technology',
+                    'category' => $a->college ?: 'Leadership & Academic Excellence',
                     'status' => $statusMap[$subsection] ?? ($a->status ?: 'Pending'),
                     'subsection' => $subsection,
+                    'gwa' => $a->gwa !== null ? (float) $a->gwa : null,
+                    'gwaDisplay' => method_exists($a, 'displayGwa') ? $a->displayGwa() : ($a->gwa !== null ? number_format((float) $a->gwa, 2) : '—'),
+                    'gwaVerified' => (bool) ($a->gwa_verified ?? false),
+                    'honorStanding' => method_exists($a, 'honorStanding') ? $a->honorStanding() : 'Good Academic Standing',
+                    'academicYear' => $a->academic_year ?: 'AY 2026–2027',
                     'submitted' => $submitted,
                     'total' => $total,
                     'missing' => max(0, $total - $submitted),
@@ -3584,13 +3996,16 @@
         let tosaApplicants = @json($tosaApplicantsJs);
         let tosaQualifiedApplicants = [];
 
+        const TOSA_TEMPLATE_BY_NAME = @json($tosaTemplates ?? []);
+        const tosaTemplateFor = (title) => TOSA_TEMPLATE_BY_NAME[title] || null;
+
         // Requirements List (Exact 5 items matching official TOSA requirements)
         let tosaRequirements = [
-            { id: 1, title: 'Curriculum Vitae', desc: 'Comprehensive Curriculum Vitae (CV) detailing academic qualifications, leadership experience, and background.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-blue', iconName: 'bi-person-lines-fill', templateUploaded: true },
-            { id: 2, title: 'Good Moral Certificate', desc: 'Certificate of Good Moral Character officially issued by the Office of Student Affairs / Guidance Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-green', iconName: 'bi-shield-check', templateUploaded: true },
-            { id: 3, title: 'Scholastic Record or a copy of all grades issued by Registration Services', desc: 'Official Scholastic Record / Certified True Copy of all grades issued by Registration Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-amber', iconName: 'bi-file-earmark-ruled', templateUploaded: true },
-            { id: 4, title: 'Copies of certificates, together with proof of legitimacy duly certified by the Records Office', desc: 'Copies of awards, seminar, and leadership certificates, together with proof of legitimacy duly certified by the Records Office.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-purple', iconName: 'bi-award', templateUploaded: true },
-            { id: 5, title: 'Electronic or scanned copies of the complete application documents', desc: 'High-resolution electronic or scanned copies of the complete application documents and supporting attachments.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-teal', iconName: 'bi-folder-check', templateUploaded: true }
+            { id: 1, title: 'Curriculum Vitae', desc: 'Comprehensive Curriculum Vitae (CV) detailing academic qualifications, leadership experience, and background.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-blue', iconName: 'bi-person-lines-fill', templateUploaded: Boolean(tosaTemplateFor('Curriculum Vitae')), templateUrl: tosaTemplateFor('Curriculum Vitae')?.url || null, templateName: tosaTemplateFor('Curriculum Vitae')?.name || null },
+            { id: 2, title: 'Good Moral Certificate', desc: 'Certificate of Good Moral Character officially issued by the Office of Student Affairs / Guidance Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-green', iconName: 'bi-shield-check', templateUploaded: Boolean(tosaTemplateFor('Good Moral Certificate')), templateUrl: tosaTemplateFor('Good Moral Certificate')?.url || null, templateName: tosaTemplateFor('Good Moral Certificate')?.name || null },
+            { id: 3, title: 'Scholastic Record or a copy of all grades issued by Registration Services', desc: 'Official Scholastic Record / Certified True Copy of all grades issued by Registration Services.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-amber', iconName: 'bi-file-earmark-ruled', templateUploaded: Boolean(tosaTemplateFor('Scholastic Record or a copy of all grades issued by Registration Services')), templateUrl: tosaTemplateFor('Scholastic Record or a copy of all grades issued by Registration Services')?.url || null, templateName: tosaTemplateFor('Scholastic Record or a copy of all grades issued by Registration Services')?.name || null },
+            { id: 4, title: 'Copies of certificates, together with proof of legitimacy duly certified by the Records Office', desc: 'Copies of awards, seminar, and leadership certificates, together with proof of legitimacy duly certified by the Records Office.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-purple', iconName: 'bi-award', templateUploaded: Boolean(tosaTemplateFor('Copies of certificates, together with proof of legitimacy duly certified by the Records Office')), templateUrl: tosaTemplateFor('Copies of certificates, together with proof of legitimacy duly certified by the Records Office')?.url || null, templateName: tosaTemplateFor('Copies of certificates, together with proof of legitimacy duly certified by the Records Office')?.name || null },
+            { id: 5, title: 'Electronic or scanned copies of the complete application documents', desc: 'High-resolution electronic or scanned copies of the complete application documents and supporting attachments.', type: 'Document', status: 'Active', required: true, format: 'PDF', iconColor: 'is-teal', iconName: 'bi-folder-check', templateUploaded: Boolean(tosaTemplateFor('Electronic or scanned copies of the complete application documents')), templateUrl: tosaTemplateFor('Electronic or scanned copies of the complete application documents')?.url || null, templateName: tosaTemplateFor('Electronic or scanned copies of the complete application documents')?.name || null }
         ];
 
         // Activity Log Store (Tamper-Evident Immutable Audit Trail)
@@ -3643,8 +4058,31 @@
             validatePin(pin);
         }
 
-        function validatePin(pin) {
-            if (AUTHORIZED_PINS.includes(pin)) {
+        async function validatePin(pin) {
+            if (pinVerificationInFlight || !/^\d{4}$/.test(pin)) return;
+
+            pinVerificationInFlight = true;
+            const button = document.getElementById('tosaUnlockBtn');
+            if (button) button.disabled = true;
+
+            let valid = false;
+            try {
+                const response = await fetch(TOSA_PIN_VERIFY_URL, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                    body: JSON.stringify({ pin }),
+                });
+                valid = response.ok;
+            } catch (error) {
+                valid = false;
+            }
+
+            if (valid) {
                 unlockTosaSession();
             } else {
                 const alertEl = document.getElementById('tosaPinAlert');
@@ -3652,13 +4090,15 @@
                     alertEl.style.display = 'flex';
                     document.getElementById('tosaPinAlertText').textContent = 'Invalid Security PIN. Please try again.';
                 }
-                // Clear inputs
                 [1, 2, 3, 4].forEach(num => {
-                    const box = document.getElementById(`pinBox${num}`);
+                    const box = document.getElementById('pinBox' + num);
                     if (box) box.value = '';
                 });
                 document.getElementById('pinBox1')?.focus();
             }
+
+            pinVerificationInFlight = false;
+            if (button) button.disabled = false;
         }
 
         function unlockTosaSession() {
@@ -3677,7 +4117,7 @@
 
             renderAllTosaData();
             startAutoLockTimer();
-            showTosaToast('TOSA Module successfully unlocked! Authorized OSO Reviewer session active.', 'success');
+            showTosaToast('Top 10 Outstanding Students Module successfully unlocked! Authorized OSO Reviewer session active.', 'success');
         }
 
         function lockTosaSession() {
@@ -3703,12 +4143,17 @@
             document.getElementById('pinBox1')?.focus();
 
             if (autoLockInterval) clearInterval(autoLockInterval);
-            showTosaToast('TOSA Module locked.', 'info');
+            showTosaToast('Top 10 Outstanding Students Module locked.', 'info');
         }
 
         function startAutoLockTimer() {
             if (autoLockInterval) clearInterval(autoLockInterval);
-            secondsRemaining = 900; // 15 mins
+            secondsRemaining = TOSA_SESSION_TIMEOUT_SECONDS;
+            if (secondsRemaining <= 0) {
+                const timerText = document.getElementById('tosaTimerText');
+                if (timerText) timerText.textContent = 'Auto-lock disabled';
+                return;
+            }
 
             autoLockInterval = setInterval(() => {
                 secondsRemaining--;
@@ -3722,7 +4167,7 @@
                 if (secondsRemaining <= 0) {
                     clearInterval(autoLockInterval);
                     lockTosaSession();
-                    showTosaToast('TOSA session auto-locked due to inactivity.', 'warning');
+                    showTosaToast('Top 10 Outstanding Students session auto-locked due to inactivity.', 'warning');
                 }
             }, 1000);
         }
@@ -3731,7 +4176,7 @@
         // Tabs Switching
         // -------------------------------------------------------------------------
         function switchTosaTab(tabId) {
-            const tabs = ['overview', 'requirements', 'applicants', 'queue', 'log'];
+            const tabs = ['overview', 'requirements', 'applicants', 'top10', 'queue', 'log'];
             tabs.forEach(t => {
                 const pane = document.getElementById(`tosaTabSection${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -3741,6 +4186,8 @@
 
             if (tabId === 'overview') {
                 updateKpiCounters();
+            } else if (tabId === 'top10') {
+                renderTop10Table();
             } else if (tabId === 'applicants') {
                 currentApplicantStatus = '';
                 currentApplicantProgram = '';
@@ -3766,6 +4213,7 @@
         function renderAllTosaData() {
             updateKpiCounters();
             renderApplicantsTable();
+            renderTop10Table();
             renderRequirementsTable();
             renderQueueTable();
             renderActivityLogTable();
@@ -3906,7 +4354,7 @@
                     <tr>
                         <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
                             <i class="bi bi-people" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: #cbd5e1;"></i>
-                            <strong>No TOSA Applicants Found</strong>
+                            <strong>No Applicants Found</strong>
                             <p style="margin: 0.2rem 0 0; font-size: 0.8rem;">Try clearing your search query or dropdown filters.</p>
                         </td>
                     </tr>
@@ -4001,27 +4449,22 @@
                                 <div style="font-size: 0.76rem; color: #64748b;">${escapeHtml(a.time || '')}</div>
                             </td>
                             <td style="text-align: center;">
-                                <div class="tosa-sub-actions-cell">
-                                    <button type="button" class="tosa-sub-btn is-view" onclick="viewApplicantFiles(${a.id})" title="View Submitted Files">
-                                        <i class="bi bi-eye"></i>
-                                        <span>View Files</span>
+                                <div class="tosa-sub-actions-cell" style="justify-content: center; gap: 0.45rem;">
+                                    <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(${a.id})" title="View Submitted Documents">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                        <span>View Documents</span>
                                     </button>
-                                    <button type="button" class="tosa-sub-btn is-download" onclick="downloadApplicantFiles(${a.id})" title="Download All Documents">
-                                        <i class="bi bi-download"></i>
-                                        <span>Download All</span>
-                                    </button>
-                                    <button type="button" class="tosa-sub-btn is-return" onclick="returnApplicantSubmission(${a.id})" title="Return for Revision">
-                                        <i class="bi bi-arrow-return-left"></i>
-                                        <span>Return</span>
-                                    </button>
-                                    <button type="button" class="tosa-sub-btn is-reject" onclick="rejectApplicantSubmission(${a.id})" title="Reject Submission">
-                                        <i class="bi bi-x-circle"></i>
-                                        <span>Reject</span>
-                                    </button>
-                                    <button type="button" class="tosa-sub-btn is-approve" onclick="approveApplicantSubmission(${a.id})" title="Approve Submission">
-                                        <i class="bi bi-check-circle"></i>
-                                        <span>Approve</span>
-                                    </button>
+                                    ${a.status === 'Approved' ? `
+                                        <button type="button" class="tosa-sub-btn is-approve" style="background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; cursor: default;" title="Applicant Already Approved" disabled>
+                                            <i class="bi bi-check2-circle"></i>
+                                            <span>Approved</span>
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="tosa-sub-btn is-approve" onclick="approveApplicantSubmission(${a.id})" title="Approve Submission">
+                                            <i class="bi bi-check-circle"></i>
+                                            <span>Approve</span>
+                                        </button>
+                                    `}
                                 </div>
                             </td>
                         </tr>
@@ -4050,7 +4493,7 @@
                         }
                     }
 
-                    navHtml += `<button type="button" class="tosa-page-btn ${currentApplicantPage === totalPages ? 'disabled' : ''} onclick="goToApplicantPage(${currentApplicantPage + 1})"><i class="bi bi-chevron-right"></i></button>`;
+                    navHtml += `<button type="button" class="tosa-page-btn ${currentApplicantPage === totalPages ? 'disabled' : ''}" ${currentApplicantPage === totalPages ? 'disabled' : ''} onclick="goToApplicantPage(${currentApplicantPage + 1})" aria-label="Next applicant page"><i class="bi bi-chevron-right"></i></button>`;
                     paginationNav.innerHTML = navHtml;
                 } else {
                     paginationBar.style.display = 'none';
@@ -4104,41 +4547,93 @@
             openReviewModal(id);
         }
 
+        const tosaSubsectionUrl = (id) => `{{ url('office-desk/tosa') }}/${id}/subsection`;
+        const tosaCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const tosaStatusLabel = (subsection) => ({
+            pending: 'Pending',
+            screening: 'Under Review',
+            interview: 'Under Review',
+            accepted: 'Approved',
+            rejected: 'Rejected',
+            returned: 'Returned',
+        }[subsection] || 'Pending');
+
+        async function persistApplicantSubsection(id, subsection, remarks, successMsg, successType) {
+            const applicant = tosaApplicants.find(a => a.id === id);
+            if (!applicant) return;
+            try {
+                const res = await fetch(tosaSubsectionUrl(id), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': tosaCsrfToken(),
+                    },
+                    body: JSON.stringify({ subsection, remarks: remarks || '' }),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+            } catch (e) {
+                showTosaToast('Could not save to the server. Please try again.', 'error');
+                return;
+            }
+            applicant.subsection = subsection;
+            applicant.status = tosaStatusLabel(subsection);
+            if (remarks) applicant.remarks = remarks;
+            renderApplicantsTable();
+            renderTop10Table();
+            renderQueueTable();
+            updateKpiCounters();
+            showTosaToast(successMsg, successType || 'success');
+        }
+
         function downloadApplicantFiles(id) {
             const applicant = tosaApplicants.find(a => a.id === id);
             if (!applicant) return;
-            showTosaToast(`Downloading all submitted documents for ${applicant.name}... (ZIP package)`, 'success');
+            const text = `Top 10 Outstanding Students Applicant Dossier\n${applicant.name} (${applicant.studentId || 'no ID'})\n${applicant.program || ''} · ${applicant.yearLevel || ''} · ${applicant.org || ''}\nStatus: ${applicant.status} · Documents: ${applicant.submitted}/${applicant.total}\nDate: ${applicant.date}\nRemarks: ${applicant.remarks || '—'}\n`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `TOSA_${(applicant.studentId || applicant.name || 'applicant').replace(/[^a-z0-9]+/gi, '_')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+            showTosaToast(`Dossier for ${applicant.name} downloaded.`, 'success');
         }
 
         function returnApplicantSubmission(id) {
             const applicant = tosaApplicants.find(a => a.id === id);
             if (!applicant) return;
-            applicant.status = 'Returned';
-            renderApplicantsTable();
-            updateKpiCounters();
-            showTosaToast(`Submission returned to ${applicant.name} for required revisions.`, 'warning');
+            persistApplicantSubsection(id, 'returned', 'Returned for required revisions.', `Submission returned to ${applicant.name} for required revisions.`, 'warning');
         }
 
         function rejectApplicantSubmission(id) {
             const applicant = tosaApplicants.find(a => a.id === id);
             if (!applicant) return;
-            applicant.status = 'Rejected';
-            renderApplicantsTable();
-            updateKpiCounters();
-            showTosaToast(`Submission for ${applicant.name} has been rejected.`, 'error');
+            persistApplicantSubsection(id, 'rejected', '', `Submission for ${applicant.name} has been rejected.`, 'error');
         }
 
         function approveApplicantSubmission(id) {
             const applicant = tosaApplicants.find(a => a.id === id);
             if (!applicant) return;
-            applicant.status = 'Approved';
-            renderApplicantsTable();
-            updateKpiCounters();
-            showTosaToast(`Submission for ${applicant.name} successfully approved!`, 'success');
+            persistApplicantSubsection(id, 'accepted', '', `Submission for ${applicant.name} successfully approved!`, 'success');
         }
 
         function exportApplicantReport() {
-            showTosaToast('Exporting complete TOSA Application Submissions report (PDF & Excel format)...', 'info');
+            const rows = [['Name', 'Student ID', 'Program', 'Year', 'Organization', 'Status', 'Docs', 'Date']];
+            tosaApplicants.forEach((a) => rows.push([
+                a.name || '', a.studentId || '', a.program || '', a.yearLevel || '',
+                a.org || '', a.status || '', `${a.submitted}/${a.total}`, a.date || '',
+            ]));
+            const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'Top_10_Outstanding_Students_Applicant_Submissions.csv';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+            showTosaToast(`Exported ${tosaApplicants.length} applicant record(s) to CSV.`, 'success');
         }
 
         // -------------------------------------------------------------------------
@@ -4380,8 +4875,12 @@
             const req = tosaRequirements.find(r => r.id === id);
             if (!req) return;
             document.getElementById('uploadReqId').value = req.id;
+            document.getElementById('uploadReqTitle').value = req.title;
             document.getElementById('uploadReqNameLabel').innerHTML = `Select a downloadable sample/template file for <strong>${escapeHtml(req.title)}</strong>.`;
             document.getElementById('selectedFileName').style.display = 'none';
+            const templateInput = document.getElementById('templateFileInput');
+            templateInput.value = '';
+            templateInput.dispatchEvent(new Event('change', { bubbles: true }));
             document.getElementById('uploadTemplateModal')?.showModal();
         }
 
@@ -4395,18 +4894,6 @@
                 fn.textContent = `Selected: ${input.files[0].name} (${(input.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
                 fn.style.display = 'block';
             }
-        }
-
-        function handleTemplateUploadSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('uploadReqId').value;
-            const req = tosaRequirements.find(r => r.id == id);
-            if (req) {
-                req.templateUploaded = true;
-                updateKpiCounters();
-                showTosaToast(`Official template uploaded for "${req.title}"!`, 'success');
-            }
-            closeUploadTemplateModal();
         }
 
         // -------------------------------------------------------------------------
@@ -4465,7 +4952,7 @@
             if (pageItems.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 3rem 1.5rem; color: #94a3b8;">
+                        <td colspan="9" style="text-align: center; padding: 3rem 1.5rem; color: #94a3b8;">
                             <div style="width: 56px; height: 56px; border-radius: 50%; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 0.75rem;">
                                 <i class="bi bi-check2-circle"></i>
                             </div>
@@ -4528,15 +5015,10 @@
                                 <div style="font-size: 0.74rem; color: #64748b;">${escapeHtml(a.time || '10:00 AM')}</div>
                             </td>
                             <td style="text-align: center;">
-                                <div style="display: inline-flex; align-items: center; gap: 0.45rem; justify-content: center;">
-                                    <button type="button" class="tosa-queue-btn-action" onclick="openReviewModal(${a.id})" title="Review Applicant Dossier">
-                                        <i class="bi bi-search"></i> Review
-                                    </button>
-                                    <button type="button" class="tosa-sub-btn is-return" onclick="returnApplicantSubmission(${a.id})" style="width: 42px; min-width: 42px; height: 36px; min-height: 36px;" title="Return for Revision">
-                                        <i class="bi bi-arrow-return-left" style="font-size: 0.95rem;"></i>
-                                    </button>
-                                    <button type="button" class="tosa-sub-btn is-approve" onclick="approveApplicantSubmission(${a.id})" style="width: 42px; min-width: 42px; height: 36px; min-height: 36px;" title="Fast Approve">
-                                        <i class="bi bi-check-circle" style="font-size: 0.95rem;"></i>
+                                <div style="display: inline-flex; align-items: center; justify-content: center;">
+                                    <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(${a.id})" title="View Documents">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                        <span>View Documents</span>
                                     </button>
                                 </div>
                             </td>
@@ -4566,7 +5048,7 @@
                         }
                     }
 
-                    navHtml += `<button type="button" class="tosa-page-btn ${currentQueuePage === totalPages ? 'disabled' : ''} onclick="goToQueuePage(${currentQueuePage + 1})"><i class="bi bi-chevron-right"></i></button>`;
+                    navHtml += `<button type="button" class="tosa-page-btn ${currentQueuePage === totalPages ? 'disabled' : ''}" ${currentQueuePage === totalPages ? 'disabled' : ''} onclick="goToQueuePage(${currentQueuePage + 1})" aria-label="Next queue page"><i class="bi bi-chevron-right"></i></button>`;
                     paginationNav.innerHTML = navHtml;
                 } else {
                     paginationBar.style.display = 'none';
@@ -4620,71 +5102,232 @@
             showTosaToast('Exporting prioritized Review Queue triage report (PDF & XLSX)...', 'info');
         }
 
+        let activeReviewApplicant = null;
+        let activeViewerDocList = [];
+
         function openReviewModal(applicantId) {
             const applicant = tosaApplicants.find(a => a.id === applicantId);
             if (!applicant) return;
 
             activeReviewApplicantId = applicantId;
+            activeReviewApplicant = applicant;
 
-            document.getElementById('revName').textContent = applicant.name;
-            document.getElementById('revOrg').textContent = applicant.program || applicant.org;
-            document.getElementById('revMeta').textContent = `ID: ${applicant.studentId || applicant.sr || ''} • ${applicant.program || applicant.org} (${applicant.yearLevel || 'Candidate'})`;
-            document.getElementById('revCategory').textContent = applicant.category || 'Leadership & Technology';
-            document.getElementById('revDate').textContent = applicant.date;
-            document.getElementById('revAvatar').textContent = applicant.name.split(' ').map(n => n[0]).join('').substring(0, 2);
-            document.getElementById('revRemarksInput').value = applicant.remarks || '';
+            const setElText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            const setElVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            };
 
-            // Render Documents List (Matching 5 Official Requirements)
-            const docList = [
-                { name: 'Curriculum_Vitae_Official.pdf', type: 'PDF', size: '1.8 MB' },
-                { name: 'Good_Moral_Certificate_Signed.pdf', type: 'PDF', size: '1.1 MB' },
-                { name: 'Scholastic_Record_RegistrationServices.pdf', type: 'PDF', size: '2.4 MB' },
-                { name: 'Certified_Certificates_RecordsOffice.pdf', type: 'PDF', size: '3.5 MB' },
-                { name: 'Complete_Application_Dossier_Scanned.pdf', type: 'PDF', size: '4.2 MB' }
+            setElText('revName', applicant.name);
+            setElText('revOrg', applicant.program || applicant.org);
+            setElText('revMeta', `SR-Code: ${applicant.studentId || applicant.sr || '23-73068'} • ${applicant.program || applicant.org} (${applicant.yearLevel || 'Candidate'})`);
+            setElText('revDate', applicant.date);
+            setElText('revAvatar', applicant.name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase());
+            setElVal('revRemarksInput', applicant.remarks || '');
+            setElText('revHonor', applicant.honorStanding || 'President\'s Lister · Highest Honors');
+
+            // Real Example Document Storage Paths
+            const baseStudentPath = '/storage/tosa/23-73068';
+            const baseTemplatePath = '/storage/tosa-templates';
+
+            const applicantDocs = [
+                {
+                    key: 'cv',
+                    title: '1. Comprehensive Curriculum Vitae (CV)',
+                    filename: `${applicant.name.replace(/[^a-zA-Z0-9]/g, '_')}_CV.pdf`,
+                    url: `${baseStudentPath}/cv.pdf`,
+                    type: 'PDF',
+                    size: '1.8 MB',
+                    desc: 'Official signed CV detailing scholastic record & leadership roles'
+                },
+                {
+                    key: 'good_moral',
+                    title: '2. Certificate of Good Moral Character',
+                    filename: `${applicant.name.replace(/[^a-zA-Z0-9]/g, '_')}_Good_Moral.pdf`,
+                    url: `${baseStudentPath}/good_moral.pdf`,
+                    type: 'PDF',
+                    size: '1.1 MB',
+                    desc: 'Authenticated institutional Certificate of Good Moral Character'
+                },
+                {
+                    key: 'scholastic',
+                    title: '3. Official Scholastic Record / Grades',
+                    filename: `${applicant.name.replace(/[^a-zA-Z0-9]/g, '_')}_Scholastic_Record.pdf`,
+                    url: `${baseStudentPath}/scholastic.pdf`,
+                    type: 'PDF',
+                    size: '2.4 MB',
+                    desc: 'Certified True Copy of Grades issued by the University Registrar'
+                },
+                {
+                    key: 'certificates',
+                    title: '4. Awards & Leadership Certificates',
+                    filename: `${applicant.name.replace(/[^a-zA-Z0-9]/g, '_')}_Certificates.pdf`,
+                    url: `${baseStudentPath}/certificates.pdf`,
+                    type: 'PDF',
+                    size: '3.5 MB',
+                    desc: 'Institutional citations, competition honors, and leadership certifications'
+                },
+                {
+                    key: 'application_docs',
+                    title: '5. Complete Application Package',
+                    filename: `${applicant.name.replace(/[^a-zA-Z0-9]/g, '_')}_Application_Dossier.pdf`,
+                    url: `${baseStudentPath}/application_docs.pdf`,
+                    type: 'PDF',
+                    size: '4.2 MB',
+                    desc: 'Complete scanned application package and verified dossier submission'
+                }
             ];
 
+            const officialTemplates = [
+                {
+                    key: 'tmpl_guidelines',
+                    title: 'Official Guidelines TOSA 2025',
+                    filename: 'Guidelines TOSA 2025.pdf',
+                    url: `${baseTemplatePath}/Guidelines TOSA 2025.pdf`,
+                    type: 'PDF',
+                    size: '84.9 KB',
+                    desc: 'Official University Guidelines, Criteria & Evaluation Protocol'
+                },
+                {
+                    key: 'tmpl_form',
+                    title: 'Official TOSA Application Form',
+                    filename: 'TOSA Application Form 2025.docx',
+                    url: `${baseTemplatePath}/TOSA Application Form 2025.docx`,
+                    type: 'DOCX',
+                    size: '57.4 KB',
+                    desc: 'Standard Institutional Application Form (Word Template)'
+                },
+                {
+                    key: 'tmpl_computation',
+                    title: 'TOSA Computation & Rubric Sheet',
+                    filename: 'TOSA COMPUTATION.xlsx',
+                    url: `${baseTemplatePath}/TOSA COMPUTATION.xlsx`,
+                    type: 'XLSX',
+                    size: '104.5 KB',
+                    desc: 'Official Evaluators Matrix & Criteria Computation Sheet (Excel)'
+                },
+                {
+                    key: 'tmpl_guide',
+                    title: 'TOSA Submission & Formatting Guide',
+                    filename: 'TOSA Submission Guide.doc',
+                    url: `${baseTemplatePath}/TOSA Submission Guide.doc`,
+                    type: 'DOC',
+                    size: '64.5 KB',
+                    desc: 'Portfolio arrangement guide and submission standards'
+                }
+            ];
+
+            activeViewerDocList = [...applicantDocs, ...officialTemplates];
+
+            // Render Applicant Submitted Documents
             const docContainer = document.getElementById('revDocListContainer');
             if (docContainer) {
-                docContainer.innerHTML = docList.map(doc => `
-                    <div class="tosa-doc-item">
-                        <div style="display: flex; align-items: center; gap: 0.65rem;">
-                            <div style="width: 34px; height: 34px; border-radius: 8px; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                docContainer.innerHTML = applicantDocs.map(doc => `
+                    <div class="tosa-doc-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.75rem; border: 1.5px solid var(--tosa-border); border-radius: 10px; margin-bottom: 0.5rem; background: #ffffff;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                            <div style="width: 36px; height: 36px; border-radius: 8px; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
                                 <i class="bi bi-file-earmark-pdf-fill"></i>
                             </div>
-                            <div>
-                                <strong style="font-size: 0.85rem; color: var(--tosa-ink-dark); display: block;">${doc.name}</strong>
-                                <small style="font-size: 0.72rem; color: var(--tosa-ink-muted);">${doc.size} • Verified on Chain</small>
+                            <div style="min-width: 0;">
+                                <strong style="font-size: 0.84rem; color: var(--tosa-ink-dark); display: block; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHtml(doc.title)}</strong>
+                                <small style="font-size: 0.72rem; color: var(--tosa-ink-muted);">${doc.size} • Chain Verified</small>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 0.4rem;">
-                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.76rem;" onclick="viewTosaDocPreview('${doc.name}')">
+                        <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
+                            <button type="button" class="tosa-sub-btn is-view" style="padding: 0.3rem 0.65rem; font-size: 0.76rem;" onclick="viewTosaDocPreview('${doc.key}')" title="View Document in Browser">
                                 <i class="bi bi-eye"></i> View
                             </button>
+                            <a href="${doc.url}" download="${doc.filename}" class="org-btn org-btn-ghost org-btn-sm" style="padding: 0.3rem 0.55rem; font-size: 0.76rem;" title="Download PDF">
+                                <i class="bi bi-download"></i>
+                            </a>
                         </div>
                     </div>
                 `).join('');
             }
 
-            document.getElementById('applicantReviewModal')?.showModal();
+            // Render Official Templates (Reference / Examples)
+            const templateContainer = document.getElementById('revTemplateListContainer');
+            if (templateContainer) {
+                templateContainer.innerHTML = officialTemplates.map(tmpl => {
+                    let iconClass = 'bi-file-earmark-pdf-fill';
+                    let iconBg = '#fdf0f2';
+                    let iconColor = '#8b1828';
+                    if (tmpl.type === 'DOCX' || tmpl.type === 'DOC') {
+                        iconClass = 'bi-file-earmark-word-fill';
+                        iconBg = '#eff6ff';
+                        iconColor = '#1d4ed8';
+                    } else if (tmpl.type === 'XLSX') {
+                        iconClass = 'bi-file-earmark-excel-fill';
+                        iconBg = '#f0fdf4';
+                        iconColor = '#15803d';
+                    }
+
+                    return `
+                        <div class="tosa-doc-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.75rem; border: 1.5px solid #f1f5f9; border-radius: 10px; margin-bottom: 0.5rem; background: #f8fafc;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                                <div style="width: 36px; height: 36px; border-radius: 8px; background: ${iconBg}; color: ${iconColor}; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                                    <i class="bi ${iconClass}"></i>
+                                </div>
+                                <div style="min-width: 0;">
+                                    <strong style="font-size: 0.84rem; color: var(--tosa-ink-dark); display: block; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHtml(tmpl.title)}</strong>
+                                    <small style="font-size: 0.72rem; color: var(--tosa-ink-muted);">${tmpl.type} • ${tmpl.size} • Official Template</small>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
+                                <button type="button" class="tosa-sub-btn is-view" style="padding: 0.3rem 0.65rem; font-size: 0.76rem;" onclick="viewTosaDocPreview('${tmpl.key}')" title="View / Inspect Template">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                                <a href="${tmpl.url}" download="${tmpl.filename}" class="org-btn org-btn-ghost org-btn-sm" style="padding: 0.3rem 0.55rem; font-size: 0.76rem;" title="Download Template">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const modal = document.getElementById('applicantReviewModal');
+            if (modal) {
+                if (typeof modal.showModal === 'function') {
+                    modal.showModal();
+                } else {
+                    modal.setAttribute('open', '');
+                }
+            }
         }
 
         function closeReviewModal() {
-            document.getElementById('applicantReviewModal')?.close();
+            const modal = document.getElementById('applicantReviewModal');
+            if (modal) {
+                if (typeof modal.close === 'function') {
+                    modal.close();
+                } else {
+                    modal.removeAttribute('open');
+                }
+            }
             activeReviewApplicantId = null;
+            activeReviewApplicant = null;
         }
 
-        function submitDecision(newStatus) {
+        async function submitManualVerification(targetSubsection) {
             if (!activeReviewApplicantId) return;
 
             const applicant = tosaApplicants.find(a => a.id === activeReviewApplicantId);
             if (!applicant) return;
 
-            const remarks = document.getElementById('revRemarksInput').value.trim() || 'Reviewed by OSO Office.';
-            applicant.status = newStatus;
-            applicant.remarks = remarks;
+            const remarks = document.getElementById('revRemarksInput')?.value.trim() || 'Verified and reviewed by OSO Office.';
 
-            const category = newStatus === 'Approved' ? 'Approval' : (newStatus === 'For Revision' ? 'Revision' : 'Security');
-            const actionText = newStatus === 'Approved' ? 'Approved Application Dossier' : (newStatus === 'For Revision' ? 'Requested Document Revision' : 'Rejected Application Submission');
+            const statusLabels = {
+                accepted: 'Qualified & Endorsed',
+                interview: 'Interview Phase',
+                screening: 'Under Screening',
+                returned: 'Returned for Revision',
+                rejected: 'Disqualified'
+            };
+            const statusLabel = statusLabels[targetSubsection] || 'Under Review';
 
             // Prepend to Activity Log
             tosaActivityLogs.unshift({
@@ -4693,19 +5336,237 @@
                 date: 'May 20, 2025',
                 actor: 'OSO Review Officer',
                 role: 'Lead Reviewer',
-                category: category,
-                action: actionText,
+                category: targetSubsection === 'accepted' ? 'Approval' : (targetSubsection === 'returned' ? 'Revision' : 'Manual Verification'),
+                action: `Manual Document Verification: ${statusLabel}`,
                 target: `${applicant.name} (${applicant.program || applicant.org})`,
                 hash: Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10) + 'ab12'
             });
 
-            renderAllTosaData();
             closeReviewModal();
-            showTosaToast(`Application for ${applicant.name} updated to "${newStatus}"!`, newStatus === 'Approved' ? 'success' : (newStatus === 'For Revision' ? 'warning' : 'info'));
+            await persistApplicantSubsection(applicant.id, targetSubsection, remarks, `Manual verification saved: ${applicant.name} set to "${statusLabel}"!`, targetSubsection === 'accepted' ? 'success' : (targetSubsection === 'returned' ? 'warning' : 'info'));
+            renderTop10Table();
         }
 
-        function viewTosaDocPreview(docName) {
-            showTosaToast(`Viewing preview of "${docName}" (Chain Authenticated)`, 'info');
+        async function submitDecision(newStatus) {
+            const subMap = {
+                'Approved': 'accepted',
+                'For Revision': 'returned',
+                'Rejected': 'rejected',
+                'Under Review': 'screening'
+            };
+            return submitManualVerification(subMap[newStatus] || 'screening');
+        }
+
+        // Top 10 Table Rendering Engine (Clean Data Table, No Cards)
+        function renderTop10Table() {
+            const tbody = document.getElementById('tosaTop10TableTbody');
+            if (!tbody) return;
+
+            const ranked = [...tosaApplicants];
+            const top10 = ranked.slice(0, 10);
+            if (top10.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 2rem;">No candidates currently available.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = top10.map((c, i) => {
+                const rankNum = i + 1;
+                let rankBadge = '';
+                if (rankNum === 1) rankBadge = '<span class="tosa-rank-medal is-gold" style="font-size: 0.76rem;"><i class="bi bi-trophy-fill"></i> 🥇 Rank 1</span>';
+                else if (rankNum === 2) rankBadge = '<span class="tosa-rank-medal is-silver" style="font-size: 0.76rem;"><i class="bi bi-award-fill"></i> 🥈 Rank 2</span>';
+                else if (rankNum === 3) rankBadge = '<span class="tosa-rank-medal is-bronze" style="font-size: 0.76rem;"><i class="bi bi-award-fill"></i> 🥉 Rank 3</span>';
+                else rankBadge = `<span class="tosa-rank-pill-table">Rank #${rankNum}</span>`;
+
+                const initials = c.name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+                let statusBadge = '';
+                if (c.subsection === 'accepted') {
+                    statusBadge = '<span class="tosa-status-pill is-complete"><i class="bi bi-check-circle-fill"></i> Qualified &amp; Endorsed</span>';
+                } else if (c.subsection === 'interview') {
+                    statusBadge = '<span class="tosa-status-pill is-review"><i class="bi bi-people-fill"></i> Interview Phase</span>';
+                } else if (c.subsection === 'screening') {
+                    statusBadge = '<span class="tosa-status-pill is-review"><i class="bi bi-search"></i> Under Screening</span>';
+                } else if (c.subsection === 'returned') {
+                    statusBadge = '<span class="tosa-status-pill is-returned"><i class="bi bi-arrow-return-left"></i> Returned</span>';
+                } else if (c.subsection === 'rejected') {
+                    statusBadge = '<span class="tosa-status-pill is-rejected"><i class="bi bi-x-circle-fill"></i> Disqualified</span>';
+                } else {
+                    statusBadge = '<span class="tosa-status-pill is-missing"><i class="bi bi-hourglass-split"></i> Pending Verification</span>';
+                }
+
+                return `
+                    <tr>
+                        <td style="text-align: center; vertical-align: middle;">
+                            ${rankBadge}
+                        </td>
+                        <td>
+                            <div class="tosa-applicant-cell">
+                                <div class="tosa-sub-avatar-circle" style="width: 36px; height: 36px; font-size: 0.85rem; font-weight: 800; background: #fdf0f2; color: #8b1828;">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <div class="tosa-sub-app-name" style="font-size: 0.88rem;">${escapeHtml(c.name)}</div>
+                                    <div class="tosa-sub-app-id" style="font-size: 0.74rem;">${escapeHtml(c.studentId || '')}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tosa-prog-name" style="font-size: 0.84rem;">${escapeHtml(c.program || '')}</div>
+                            <div class="tosa-prog-year" style="font-size: 0.74rem;">${escapeHtml(c.yearLevel || '')} · ${escapeHtml(c.college || '')}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="font-weight: 800; font-size: 0.85rem; color: #1e293b;">
+                                <i class="bi bi-check-circle-fill" style="color: #16a34a;"></i> ${c.submitted} / ${c.total}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Documents</div>
+                        </td>
+                        <td style="text-align: center;">
+                            ${statusBadge}
+                        </td>
+                        <td style="text-align: center;">
+                            <div class="tosa-sub-actions-cell" style="justify-content: center;">
+                                <button type="button" class="tosa-sub-btn is-view" onclick="openReviewModal(${c.id})" title="View Documents">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    <span>View Documents</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function viewTosaDocPreview(docKey) {
+            const doc = activeViewerDocList.find(d => d.key === docKey);
+            if (!doc) {
+                const fallbackDoc = activeViewerDocList[0];
+                if (!fallbackDoc) return;
+                return viewTosaDocPreview(fallbackDoc.key);
+            }
+
+            const modal = document.getElementById('tosaDocViewerModal');
+            if (!modal) return;
+
+            document.getElementById('tosaDocViewerTitle').textContent = doc.title;
+            document.getElementById('tosaDocViewerSubtitle').textContent = activeReviewApplicant 
+                ? `Candidate: ${activeReviewApplicant.name} (${activeReviewApplicant.studentId || ''}) · ${doc.size}`
+                : `Official TOSA Institutional Document · ${doc.size}`;
+
+            const badge = document.getElementById('tosaDocViewerBadge');
+            if (badge) {
+                if (doc.key.startsWith('tmpl_')) {
+                    badge.className = 'tosa-session-chip';
+                    badge.style.background = '#fffbeb';
+                    badge.style.borderColor = '#fde68a';
+                    badge.style.color = '#b45309';
+                    badge.innerHTML = '<i class="bi bi-bookmark-check-fill"></i> Official Reference Template';
+                } else {
+                    badge.className = 'tosa-session-chip';
+                    badge.style.background = '#ecfdf5';
+                    badge.style.borderColor = '#a7f3d0';
+                    badge.style.color = '#047857';
+                    badge.innerHTML = '<i class="bi bi-patch-check-fill"></i> Candidate Submitted Document';
+                }
+            }
+
+            const iconEl = document.getElementById('tosaDocViewerIcon');
+            const iconWrap = document.getElementById('docViewerIconWrap');
+            if (iconEl && iconWrap) {
+                if (doc.type === 'PDF') {
+                    iconEl.className = 'bi bi-file-earmark-pdf-fill';
+                    iconWrap.style.background = '#fdf0f2';
+                    iconWrap.style.color = '#8b1828';
+                } else if (doc.type === 'DOCX' || doc.type === 'DOC') {
+                    iconEl.className = 'bi bi-file-earmark-word-fill';
+                    iconWrap.style.background = '#eff6ff';
+                    iconWrap.style.color = '#1d4ed8';
+                } else if (doc.type === 'XLSX') {
+                    iconEl.className = 'bi bi-file-earmark-excel-fill';
+                    iconWrap.style.background = '#f0fdf4';
+                    iconWrap.style.color = '#15803d';
+                }
+            }
+
+            const dlBtn = document.getElementById('tosaDocViewerDownloadBtn');
+            if (dlBtn) {
+                dlBtn.href = doc.url;
+                dlBtn.setAttribute('download', doc.filename);
+            }
+            const newTabBtn = document.getElementById('tosaDocViewerNewTabBtn');
+            if (newTabBtn) {
+                newTabBtn.href = doc.url;
+            }
+
+            const tabsContainer = document.getElementById('tosaDocViewerTabs');
+            if (tabsContainer) {
+                tabsContainer.innerHTML = activeViewerDocList.map(item => {
+                    const isActive = item.key === doc.key;
+                    const isTmpl = item.key.startsWith('tmpl_');
+                    const label = item.key === 'cv' ? 'CV' :
+                                  (item.key === 'good_moral' ? 'Good Moral' :
+                                  (item.key === 'scholastic' ? 'Scholastic Record' :
+                                  (item.key === 'certificates' ? 'Certificates' :
+                                  (item.key === 'application_docs' ? 'Application' :
+                                  (item.key === 'tmpl_guidelines' ? '📘 Guidelines' :
+                                  (item.key === 'tmpl_form' ? '📝 Application Form' :
+                                  (item.key === 'tmpl_computation' ? '📊 Computation Sheet' : 'Submission Guide')))))));
+
+                    return `
+                        <button type="button" class="tosa-tab-btn ${isActive ? 'is-active' : ''}" style="padding: 0.35rem 0.75rem; font-size: 0.74rem; white-space: nowrap; ${isTmpl && !isActive ? 'background: #fffbeb; color: #92400e; border-color: #fef08a;' : ''}" onclick="viewTosaDocPreview('${item.key}')">
+                            ${label}
+                        </button>
+                    `;
+                }).join('');
+            }
+
+            const iframe = document.getElementById('tosaDocViewerIframe');
+            const fallback = document.getElementById('tosaDocViewerFallback');
+
+            if (doc.type === 'PDF') {
+                if (iframe) {
+                    iframe.style.display = 'block';
+                    iframe.src = doc.url;
+                }
+                if (fallback) fallback.style.display = 'none';
+            } else {
+                if (iframe) {
+                    iframe.style.display = 'none';
+                    iframe.src = '';
+                }
+                if (fallback) {
+                    fallback.style.display = 'flex';
+                    const fbTitle = document.getElementById('docViewerFallbackTitle');
+                    const fbDesc = document.getElementById('docViewerFallbackDesc');
+                    const fbBtn = document.getElementById('docViewerFallbackDownload');
+                    if (fbTitle) fbTitle.textContent = doc.title;
+                    if (fbDesc) fbDesc.textContent = `${doc.desc}. Download the ${doc.type} file to view its full formatting, rubrics, and formulas in Microsoft Office.`;
+                    if (fbBtn) {
+                        fbBtn.href = doc.url;
+                        fbBtn.setAttribute('download', doc.filename);
+                    }
+                }
+            }
+
+            if (modal) {
+                if (typeof modal.showModal === 'function') {
+                    modal.showModal();
+                } else {
+                    modal.setAttribute('open', '');
+                }
+            }
+        }
+
+        function closeTosaDocViewer() {
+            const modal = document.getElementById('tosaDocViewerModal');
+            if (modal) {
+                const iframe = document.getElementById('tosaDocViewerIframe');
+                if (iframe) iframe.src = '';
+                if (typeof modal.close === 'function') {
+                    modal.close();
+                } else {
+                    modal.removeAttribute('open');
+                }
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -4860,7 +5721,7 @@
                         }
                     }
 
-                    navHtml += `<button type="button" class="tosa-page-btn ${currentLogPage === totalPages ? 'disabled' : ''} onclick="goToLogPage(${currentLogPage + 1})"><i class="bi bi-chevron-right"></i></button>`;
+                    navHtml += `<button type="button" class="tosa-page-btn ${currentLogPage === totalPages ? 'disabled' : ''}" ${currentLogPage === totalPages ? 'disabled' : ''} onclick="goToLogPage(${currentLogPage + 1})" aria-label="Next audit log page"><i class="bi bi-chevron-right"></i></button>`;
                     paginationNav.innerHTML = navHtml;
                 } else {
                     paginationBar.style.display = 'none';
@@ -4973,7 +5834,7 @@
         // -------------------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
             const wasUnlocked = sessionStorage.getItem('tosa_unlocked') === 'true';
-            if (wasUnlocked) {
+            if (wasUnlocked || !TOSA_PIN_GATE_ENABLED) {
                 unlockTosaSession();
             } else {
                 document.getElementById('pinBox1')?.focus();

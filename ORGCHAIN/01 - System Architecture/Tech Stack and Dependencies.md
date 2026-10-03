@@ -56,6 +56,7 @@ From [`composer.json`](file:///c:/laragon/www/OrgChain/OrgChains/composer.json):
 | **`php`** | `^8.3` | Modern PHP engine with strict typing and JIT optimizations |
 | **`laravel/framework`** | `^13.8` | Core MVC framework, router, Eloquent ORM, and Blade |
 | **`laravel/tinker`** | `^3.0` | Interactive REPL shell for debugging and database querying |
+| **`web3p/ethereum-tx`** | `0.4.3` | Ethereum-compatible transaction signing used by the Besu chain integration |
 | **`phpunit/phpunit`** | `^12.5` | Unit and integration testing suite |
 | **`mockery/mockery`** | `^1.6` | Mock object framework for test isolation |
 | **`nunomaduro/collision`** | `^8.6` | CLI error rendering and debugging interface |
@@ -74,6 +75,10 @@ From [`package.json`](file:///c:/laragon/www/OrgChain/OrgChains/package.json):
 | **`tailwindcss`** | `^3.4` | Utility-first CSS framework for clean responsive UI |
 | **`postcss`** / **`autoprefixer`** | Latest | CSS post-processing and vendor prefixing |
 | **`concurrently`** | Latest | Runs server, queue worker, and Vite watchers in parallel |
+
+### 📝 Activity document strategy
+
+The activity form uses the official project DOCX files as the source of truth. Students preview supported DOCX files in the browser, download the original template when needed, complete it in Word or another compatible application, and upload the completed file through the checklist. There is no in-app editor or generated editor DOCX route.
 
 ---
 

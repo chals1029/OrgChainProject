@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrgActivity extends Model
@@ -10,6 +11,7 @@ class OrgActivity extends Model
     protected $connection = 'mysql';
 
     protected $fillable = [
+        'org_fund_account_id', 'opening_spent', 'approved_at', 'sdo_review_notes',
         'title',
         'description',
         'status',
@@ -34,6 +36,7 @@ class OrgActivity extends Model
     protected function casts(): array
     {
         return [
+            'approved_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'sdg_goals' => 'array',
@@ -49,5 +52,16 @@ class OrgActivity extends Model
     public function complianceDocs(): HasMany
     {
         return $this->hasMany(ActivityComplianceDoc::class, 'org_activity_id');
+    }
+
+    /**
+     * Activities that have completed the full office approval workflow.
+     *
+     * Student-facing queries should use this scope so a submitted activity
+     * cannot become public merely because its display status is upcoming.
+     */
+    public function scopeVisibleToStudents(Builder $query): Builder
+    {
+        return $query->where('workflow_status', 'oc_approved');
     }
 }

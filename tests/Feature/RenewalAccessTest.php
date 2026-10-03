@@ -67,4 +67,115 @@ class RenewalAccessTest extends TestCase
 
         $this->assertTrue((bool) OrgRenewalWindow::query()->latest('id')->value('is_open'));
     }
+
+    public function test_oso_can_customize_renewal_requirements(): void
+    {
+        $user = $this->ensureOfficeUser('oso');
+
+        OrgRenewalWindow::query()->delete();
+
+        $requirements = [
+            ['key' => 'commitment_letter', 'title' => 'Adviser Commitment Letter'],
+            ['title' => 'Current Financial Plan'],
+        ];
+
+        $this->actingAs($user, 'office')
+            ->post('/office-desk/renewal/window', [
+                'academic_year' => '2026-2027',
+                'semester' => 'Annual',
+                'is_open' => '0',
+                'required_docs' => $requirements,
+            ])
+            ->assertRedirect(route('office.renewal'));
+
+        $saved = OrgRenewalWindow::query()->latest('id')->firstOrFail()->requiredDocList();
+
+        $this->assertCount(2, $saved);
+        $this->assertSame('commitment_letter', $saved[0]['key']);
+        $this->assertSame('Adviser Commitment Letter', $saved[0]['title']);
+        $this->assertSame('current_financial_plan', $saved[1]['key']);
+        $this->assertSame('Current Financial Plan', $saved[1]['title']);
+    }
+
+    public function test_oso_sees_all_organizations_qualification_roster(): void
+    {
+        $user = $this->ensureOfficeUser('oso');
+
+        $response = $this->actingAs($user, 'office')->get('/office-desk/renewal');
+        $response->assertOk();
+        $response->assertSee('Organization Renewal Eligibility &amp; Status Monitor', false);
+        $response->assertSee('Qualified to Renew', false);
+        $response->assertSee('Set Status', false);
+    }
+
+    public function test_oso_can_update_organization_qualification_and_status(): void
+    {
+        $user = $this->ensureOfficeUser('oso');
+        $org = \App\Models\StudentOrganization::firstOrCreate(
+            ['name' => 'Test Council Alpha'],
+            [
+                'slug' => 'test-council-alpha',
+                'college' => 'College of Informatics and Computing Sciences',
+                'is_active' => true,
+                'is_qualified_for_renewal' => true,
+            ]
+        );
+
+        $response = $this->actingAs($user, 'office')
+            ->post("/office-desk/renewal/organizations/{$org->id}/status", [
+                'is_active' => '0',
+                'is_qualified_for_renewal' => '0',
+                'disqualification_reason' => 'Unliquidated financial report and dormant roster.',
+            ]);
+
+        $response->assertRedirect(route('office.renewal'));
+
+        $org->refresh();
+        $this->assertFalse((bool) $org->is_active);
+        $this->assertFalse((bool) $org->is_qualified_for_renewal);
+        $this->assertSame('Unliquidated financial report and dormant roster.', $org->disqualification_reason);
+    }
+
+    public function test_disqualified_organization_is_blocked_from_submitting_renewal_packet(): void
+    {
+        $soUser = $this->ensureOfficeUser('so');
+        $targetOrgName = 'College of Informatics and Computing Sciences Student Council (CICS-SC)';
+
+        $org = \App\Models\StudentOrganization::firstOrCreate(
+            ['name' => $targetOrgName],
+            ['slug' => 'cics-sc', 'is_active' => true, 'is_qualified_for_renewal' => true]
+        );
+
+        // Disqualify the org
+        $org->update([
+            'is_qualified_for_renewal' => false,
+            'disqualification_reason' => 'Unliquidated FR clearance required.',
+        ]);
+
+        OrgRenewalWindow::query()->delete();
+        $window = OrgRenewalWindow::query()->create([
+            'academic_year' => '2026-2027',
+            'semester' => 'Annual',
+            'is_open' => true,
+            'required_docs' => OrgRenewalWindow::defaultRequiredDocs(),
+        ]);
+
+        $response = $this->actingAs($soUser, 'office')
+            ->post('/office-desk/renewal/submit', [
+                'organization_name' => $targetOrgName,
+                'adviser_name' => 'Dr. Test Adviser',
+                'dean_name' => 'Dr. Test Dean',
+                'action' => 'submit',
+            ]);
+
+        $response->assertSessionHasErrors('renewal');
+
+        // Re-qualify the org so future tests stay pristine
+        $org->update([
+            'is_active' => true,
+            'is_qualified_for_renewal' => true,
+            'disqualification_reason' => null,
+        ]);
+    }
 }
+

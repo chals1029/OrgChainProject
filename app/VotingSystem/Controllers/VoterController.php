@@ -313,7 +313,7 @@ class VoterController extends Controller
         try {
             $pdo = \App\VotingSystem\Core\Database::connection();
             $statement = $pdo->prepare(
-                'SELECT reference_code, previous_hash, block_hash, ballot_root, voter_commitment, nodes_confirmed, created_at
+                'SELECT reference_code, previous_hash, block_hash, ballot_root, voter_commitment, nodes_confirmed, chain_driver, created_at
                  FROM vote_receipts
                  WHERE reference_code = :reference_code
                  LIMIT 1'
@@ -392,7 +392,7 @@ class VoterController extends Controller
         try {
             $pdo = \App\VotingSystem\Core\Database::connection();
             $statement = $pdo->prepare(
-                'SELECT block_hash, previous_hash, ballot_root, nodes_confirmed
+                'SELECT block_hash, previous_hash, ballot_root, nodes_confirmed, chain_driver
                  FROM vote_receipts
                  WHERE reference_code = :reference_code
                  LIMIT 1'
@@ -405,6 +405,7 @@ class VoterController extends Controller
                 'previous_hash' => (string) ($row['previous_hash'] ?? ''),
                 'ballot_root' => (string) ($row['ballot_root'] ?? ''),
                 'nodes_confirmed' => (int) ($row['nodes_confirmed'] ?? 0),
+                'chain_driver' => (string) ($row['chain_driver'] ?? 'file'),
             ];
         } catch (\Throwable) {
             return [];

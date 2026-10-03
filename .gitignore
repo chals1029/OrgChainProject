@@ -44,3 +44,15 @@ storage/app/_*.php
 storage/app/chain-node/
 
 
+
+# Temporary scratch & preview captures
+/tmp/
+
+# Framework cache & IDE artifacts
+storage/framework/lsp-*.php
+
+# Root directory junctions & local report exports
+/In Campus
+/Local Off Campus
+/TOSA
+/Reports

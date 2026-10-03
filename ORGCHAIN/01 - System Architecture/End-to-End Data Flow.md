@@ -16,7 +16,7 @@ status: active
 
 ---
 
-## 1. 📋 Activity Proposal Submission & 4-Tier Approval Flow
+## 1. 📋 Activity Proposal Submission & Office Approval Flow
 
 ```mermaid
 sequenceDiagram
@@ -30,18 +30,18 @@ sequenceDiagram
     participant CAL as Public Campus Calendar
 
     SO->>OD: Submit Activity Proposal + Checklist Docs
-    OD->>DB: Save InCampusActivitySubmission (Status: 'draft' / 'created')
+    OD->>DB: Save InCampusActivitySubmission + OrgActivity (Status: oso_review)
     OD-->>SO: Return Tracking Number
 
     OSO->>OD: Review Proposal Checklist & Faculty-in-Charge
-    OD->>DB: Update Status to 'verification' (Endorsed by OSO)
+    OD->>DB: Update workflow_status to 'sdo_review' (Endorsed by OSO)
 
     SDO->>OD: Review Environmental & SDG Compliance
-    OD->>DB: Update Status to 'pending' (Endorsed by SDO)
+    OD->>DB: Update workflow_status to 'ovcaa_review' (Endorsed by SDO)
 
     OVCAA->>OD: Review Final University Endorsement
     alt Approved
-        OD->>DB: Update Status to 'ovcaa_approved' & OrgActivity to 'upcoming'
+        OD->>DB: Update workflow_status to 'oc_approved' & OrgActivity to 'upcoming'
         DB->>CAL: Publish to Campus Calendar & Student Portal
         OD-->>OVCAA: Activity Sanctioned
     else Returned / Revisions Needed
@@ -98,27 +98,19 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Org as Student Org Treasurer
+    actor Org as Student Organization Treasurer
     participant OP as OfficePortalController
     participant OCR as OCR Inspection Engine
     participant DB as MySQL Database
-    actor Auditor as OSO / Budget Officer
+    participant NODES as OSO / SDO / OVCAA Validator Nodes
 
     Org->>OP: Upload Expense Receipt Image + Enter Item Details
     OP->>OP: Store Receipt in storage/app/public/receipts/
     OP->>OCR: Scan Receipt (OCR Confidence Calculation)
     OCR-->>OP: Extract Confidence Score & Matched Items
-    OP->>DB: Insert ExpenseReceiptReview (Status: 'ready_for_review')
-    
-    Auditor->>OP: Inspect Receipt Review Queue
-    Auditor->>DB: Verify Amount Against BudgetItem Allocation
-    
-    alt Approval
-        Auditor->>OP: Approve Expense
-        OP->>DB: Update BudgetItem (utilized += cost)
-        OP->>DB: Mark ExpenseReceiptReview as 'approved'
-    else Rejection
-        Auditor->>OP: Reject Expense + Enter Audit Reason
-        OP->>DB: Mark ExpenseReceiptReview as 'rejected'
-    end
+    OP->>NODES: Seal the receipt hash through validator consensus
+    NODES-->>OP: Return nodes_confirmed + chain hash
+    OP->>DB: Insert ExpenseReceiptReview (Status: 'verified')
+    DB-->>Org: Confirm node-sealed submission
+    DB-->>Student: Publish item summary and public hash after activity approval
 ```

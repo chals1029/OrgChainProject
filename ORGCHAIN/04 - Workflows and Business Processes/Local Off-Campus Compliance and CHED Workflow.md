@@ -22,3 +22,30 @@ created: 2026-08-20
 | **5** | **Course Activities Matrix** | `13. Course Activities.docx` | Educational objectives & syllabus alignment |
 | **6** | **CHED Compliance Report** | `CHED Compliance Report.docx` | Submitted to regional CHED office |
 | **7** | **Certificate of Compliance** | `Certificate of Compliance.docx` | Final university inspection sign-off |
+
+---
+
+## 🧭 OrgChain Requirement Phases
+
+The live `local_off_campus` checklist expands the official packet into three operational phases:
+
+### Before the activity — required on initial submit
+
+In addition to the seven headline documents above, the initial filing covers the course/syllabus relevance proof, destination justification, handbook/manual rule, first-aid-trained personnel certificate, first-aid kit confirmation, approved fees or fund-source breakdown, insurance, orientation attendance, consultation record, advance notices, briefing materials and itinerary, learning-journal format, and emergency preparedness plan.
+
+### Before the activity — conditional requirements
+
+These are required only when the organization selects the applicable condition in the form:
+
+- Medical clearance (`medical`).
+- Mobility documents / vehicle registration (`transport`).
+- DOT tour-operator accreditation and contract (`tour_operator`).
+- LGU / NGO coordination letter (`external_coordination`).
+
+### During and after the activity — later uploads
+
+Attendance and supervision records, transport contracts, completed learning journals or grades, assessment and expense reports, expenditure reports, and debriefing reports remain available after the initial filing. They do not block the first submission.
+
+## 📄 Official document preview and upload
+
+The filing form exposes the official Local Off-Campus and CHED templates as file-backed documents. Supported DOCX files can be previewed in the browser, downloaded explicitly, completed externally, and uploaded through the matching checklist row. The uploaded signed/completed file remains the compliance record.

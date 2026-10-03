@@ -4,21 +4,34 @@
 
 @section('header')
     <h1><strong>Financial Report &amp; Liquidation</strong></h1>
-    <p class="org-welcome">Comprehensive financial statements, cash flow analytics, supporting receipts, and official OSO audit verification.</p>
+    <p class="org-welcome">Auditable financial statements, itemized ledger entries, supporting receipts, and official OSO verification.</p>
 @endsection
 
 @section('actions')
-    <div style="display: flex; gap: 0.6rem; align-items: center;">
-        <a href="{{ route('office.financial.print') }}" target="_blank" rel="noopener" class="org-btn org-btn-outline">
-            <i class="bi bi-printer"></i> Print Report
+    <div style="display: flex; flex-wrap:wrap; gap: 0.6rem; align-items: center;">
+        <a href="{{ route('office.updates.templates.document', 'source-accomplishment-financial') }}" class="org-btn org-btn-outline">
+            <i class="bi bi-file-earmark-word"></i> Official Report Format
         </a>
-        <a href="{{ route('office.financial.print') }}" target="_blank" rel="noopener" class="org-btn org-btn-primary">
-            <i class="bi bi-file-earmark-pdf-fill"></i> Export PDF
+        <a href="{{ route('office.budget', request()->query()) }}" class="org-btn org-btn-outline">
+            <i class="bi bi-bar-chart-line"></i> Budget Utilization
         </a>
+        <a href="{{ route('office.financial.print', request()->query()) }}" target="_blank" rel="noopener" class="org-btn org-btn-primary">
+            <i class="bi bi-file-earmark-pdf-fill"></i> Print / Save PDF
+        </a>
+        <a href="{{ route('office.budget.receipts.package', ['organization' => $selectedOrganization, 'academic_year' => $selectedYear, 'semester' => $selectedSemester]) }}" class="org-btn org-btn-outline">Download receipt compilation</a>
     </div>
 @endsection
 
 @section('content')
+    @include('org.partials.semester-report-workflow', [
+        'reportType' => 'fr',
+        'reportBundle' => $reportBundle ?? [],
+        'reportQueue' => $reportQueue ?? [],
+        'organizations' => $organizations ?? collect(),
+        'selectedOrganization' => $selectedOrganization ?? '',
+        'selectedSemester' => $selectedSemester ?? '1st Semester',
+        'selectedYear' => $selectedYear ?? '2025-2026',
+    ])
     <style>
         .org-fin-container {
             display: flex;
@@ -149,168 +162,6 @@
             font-weight: 700;
             color: #1a1618;
             line-height: 1.25;
-        }
-
-        /* 3. Status Stepper Card */
-        .org-stepper-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            padding: 1.35rem 1.6rem;
-            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
-        }
-
-        .org-stepper-track {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 0.75rem;
-            position: relative;
-            margin-top: 0.75rem;
-        }
-
-        .org-step-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            position: relative;
-        }
-
-        .org-step-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            top: 17px;
-            left: calc(50% + 18px);
-            width: calc(100% - 36px);
-            height: 2px;
-            background: #e8dedf;
-            z-index: 1;
-        }
-
-        .org-step-item.is-done:not(:last-child)::after {
-            background: #16a34a;
-        }
-
-        .org-step-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #faf4f5;
-            border: 2px solid #e8dedf;
-            color: #7a7074;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.82rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            position: relative;
-            z-index: 2;
-            transition: all 0.2s ease;
-        }
-
-        .org-step-item.is-done .org-step-circle {
-            background: #16a34a;
-            border-color: #16a34a;
-            color: #ffffff;
-        }
-
-        .org-step-item.is-active .org-step-circle {
-            background: #7a1222;
-            border-color: #7a1222;
-            color: #ffffff;
-            box-shadow: 0 0 0 4px rgba(122, 18, 34, 0.15);
-        }
-
-        .org-step-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #2b2427;
-            margin-bottom: 0.15rem;
-        }
-
-        .org-step-desc {
-            font-size: 0.68rem;
-            color: #786f73;
-        }
-
-        /* 4, 5, 6. Top Financial KPI Cards (Exact Dashboard Style) */
-        .org-kpi-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.25rem;
-        }
-
-        .org-kpi-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            padding: 1.25rem 1.4rem;
-            box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .org-kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(90, 15, 30, 0.06);
-        }
-
-        .org-kpi-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.25rem;
-        }
-
-        .org-kpi-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-        }
-
-        .org-kpi-icon.is-green { background: #dcfce7; color: #16a34a; }
-        .org-kpi-icon.is-amber { background: #fef3c7; color: #d97706; }
-        .org-kpi-icon.is-blue { background: #e0f2fe; color: #0284c7; }
-        .org-kpi-icon.is-pink { background: #fee2e2; color: #dc2626; }
-
-        .org-kpi-num {
-            font-size: 1.85rem;
-            font-weight: 800;
-            color: #1a1618;
-            line-height: 1;
-        }
-
-        .org-kpi-title {
-            font-size: 0.88rem;
-            font-weight: 700;
-            color: #1a1618;
-            margin: 0;
-        }
-
-        .org-kpi-sub {
-            font-size: 0.76rem;
-            color: #7a7074;
-            margin: 0;
-        }
-
-        /* 7, 8, 9. Financial Charts Section (3 Grid Charts) */
-        .org-fin-charts-3col {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1.25fr;
-            gap: 1.25rem;
-        }
-
-        .org-chart-box {
-            position: relative;
-            width: 100%;
-            height: 230px;
         }
 
         /* 10. Financial Details Data Table */
@@ -567,27 +418,69 @@
             margin-top: 0.1rem;
         }
 
+        .org-report-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #f6eff0;
+            color: #7a7074;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .org-report-pagination-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .org-report-page-btn {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 0.45rem;
+            border: 1px solid #e8dedf;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #7a1222;
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .org-report-page-btn:hover:not(:disabled),
+        .org-report-page-btn.is-active {
+            background: #7a1222;
+            border-color: #7a1222;
+            color: #ffffff;
+        }
+
+        .org-report-page-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
         /* Responsive Breakpoints */
         @media (max-width: 1200px) {
             .org-info-panels-grid,
-            .org-fin-charts-3col,
             .org-bottom-3col,
             .org-docs-grid {
                 grid-template-columns: 1fr;
             }
-            .org-kpi-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
 
         @media (max-width: 768px) {
-            .org-kpi-row {
-                grid-template-columns: 1fr;
+            .org-report-pagination {
+                align-items: flex-start;
+                flex-direction: column;
             }
-            .org-stepper-track {
-                grid-template-columns: 1fr;
-                gap: 1rem;
+
+            .org-report-pagination-nav {
+                align-self: flex-end;
             }
+
             .org-info-fields-grid {
                 grid-template-columns: 1fr;
             }
@@ -595,90 +488,12 @@
     </style>
 
     <div class="org-fin-container">
+        {{-- OSO reviews the financial report; organization fund setup belongs in Budget Utilization. --}}
+        @if (($office->office_role ?? '') === 'so')
+            @include('org.partials.fund-balances')
+        @endif
 
-        @isset($fundSourceOptions)
-            <form method="get" action="{{ route('office.financial') }}" class="org-fin-filter-bar" style="margin-bottom:0;" aria-label="Fund Source Filter">
-                <div class="org-fin-filter-left">
-                    <div class="org-fin-filter-title">
-                        <i class="bi bi-wallet2"></i>
-                        <span>Fund Source:</span>
-                    </div>
-                    <select name="fund_source" class="org-fin-select" onchange="this.form.submit()">
-                        <option value="">All Sources</option>
-                        @foreach ($fundSourceOptions as $value => $label)
-                            <option value="{{ $value }}" @selected(($fundSourceFilter ?? '') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                @if (!empty($fundSourceFilter))
-                    <a href="{{ route('office.financial') }}" class="org-fin-badge-pill">Clear filter</a>
-                @endif
-            </form>
-        @endisset
-
-        @isset($reportStatus)
-            <section class="org-fin-card" aria-label="Financial Report Status">
-                <div class="org-fin-card-head">
-                    <h3><i class="bi bi-flag-fill" style="color:#8b1828;"></i> FR Workflow Status</h3>
-                    <span class="org-fin-badge-pill">{{ strtoupper(str_replace('_', ' ', $reportStatus->status ?? 'draft')) }}</span>
-                </div>
-                <form method="post" action="{{ route('office.reports.status', $reportStatus) }}" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end;">
-                    @csrf
-                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800;">
-                        Advance Status
-                        <select name="status" class="org-fin-select" required>
-                            @foreach (['draft','ready_for_review','oso_review','sdo_review','ovcaa_review','verified','returned'] as $st)
-                                <option value="{{ $st }}" @selected(($reportStatus->status ?? '') === $st)>{{ strtoupper(str_replace('_', ' ', $st)) }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label style="display:grid; gap:0.25rem; font-size:0.78rem; font-weight:800; flex:1; min-width:180px;">
-                        Notes
-                        <input type="text" name="notes" value="{{ old('notes', $reportStatus->notes) }}" maxlength="1000" class="org-fin-select" style="min-width:180px;" placeholder="Optional notes">
-                    </label>
-                    <button type="submit" class="org-btn org-btn-primary">Update Status</button>
-                </form>
-            </section>
-        @endisset
-
-        {{-- 0. Top Interactive Filter Toolbar --}}
-        <section class="org-fin-filter-bar" aria-label="Financial Report Controls">
-            <div class="org-fin-filter-left">
-                <div class="org-fin-filter-title">
-                    <i class="bi bi-funnel-fill"></i>
-                    <span>Report Scope:</span>
-                </div>
-
-                {{-- Activity Selection Filter --}}
-                <select id="finActivitySelect" class="org-fin-select" onchange="switchFinancialReport(this.value)">
-                    <option value="consolidated" selected>📊 Consolidated Semester Report</option>
-                    <option value="innovation">🚀 Innovation Fair Booth Series</option>
-                    <option value="leadership">👑 Leadership Summit 2026</option>
-                    <option value="wellness">🌿 Campus Wellness Week</option>
-                    <option value="sportsfest">🏅 BatStateU Sportsfest 2026</option>
-                </select>
-
-                {{-- Academic Year Selector --}}
-                <select id="finYearSelect" class="org-fin-select" onchange="switchFinancialReport(document.getElementById('finActivitySelect').value)">
-                    <option value="2025-2026" selected>A.Y. 2025–2026</option>
-                    <option value="2026-2027">A.Y. 2026–2027</option>
-                </select>
-
-                {{-- Semester Selector --}}
-                <select id="finSemSelect" class="org-fin-select" onchange="switchFinancialReport(document.getElementById('finActivitySelect').value)">
-                    <option value="1st Semester" selected>1st Semester</option>
-                    <option value="2nd Semester">2nd Semester</option>
-                    <option value="Midyear">Midyear</option>
-                </select>
-            </div>
-
-            <div>
-                <span class="org-fin-badge-pill" id="finReportPeriodBadge">
-                    <i class="bi bi-check2-circle"></i>
-                    <span id="finReportPeriodText">1st Semester · A.Y. 2025–2026</span>
-                </span>
-            </div>
-        </section>
+        {{-- 0. Report filters live in the semester-report workflow above. --}}
 
         {{-- 1 & 2. Organization Information & Activity/Project Information Panels --}}
         <div class="org-info-panels-grid">
@@ -686,24 +501,24 @@
             <section class="org-fin-card" aria-label="Organization Information">
                 <div class="org-fin-card-head">
                     <h3><i class="bi bi-building-check" style="color: #7a1222;"></i> Organization Information</h3>
-                    <span class="org-fin-badge-pill" id="orgCategoryBadge">Academic Org</span>
+                    <span class="org-fin-badge-pill" id="orgCategoryBadge">{{ $financialDataset['orgCategory'] }}</span>
                 </div>
                 <div class="org-info-fields-grid">
                     <div class="org-info-field">
                         <small>Organization Name</small>
-                        <strong id="orgNameVal">Association of Computing Machinery (ACM)</strong>
+                        <strong id="orgNameVal">{{ $financialDataset['orgName'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Academic Year &amp; Term</small>
-                        <strong id="orgTermVal">A.Y. 2025–2026 · 1st Semester</strong>
+                        <strong id="orgTermVal">{{ $financialDataset['term'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Report Period</small>
-                        <strong id="orgPeriodVal">Aug 01, 2025 – Dec 15, 2025</strong>
+                        <strong id="orgPeriodVal">{{ $financialDataset['period'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Faculty Advisor</small>
-                        <strong id="orgAdvisorVal">Engr. Maria Santos, MIT</strong>
+                        <strong id="orgAdvisorVal">{{ $financialDataset['advisor'] }}</strong>
                     </div>
                 </div>
             </section>
@@ -712,139 +527,30 @@
             <section class="org-fin-card" aria-label="Activity and Project Information">
                 <div class="org-fin-card-head">
                     <h3><i class="bi bi-folder2-open" style="color: #7a1222;"></i> Activity / Project Scope</h3>
-                    <span class="org-fin-badge-pill" id="actScopePill" style="background:#f0fdf4; color:#16a34a; border-color:#bbf7d0;">Institutional Scope</span>
+                    <span class="org-fin-badge-pill" id="actScopePill" style="background:#f0fdf4; color:#16a34a; border-color:#bbf7d0;">{{ $financialDataset['actScope'] }}</span>
                 </div>
                 <div class="org-info-fields-grid">
                     <div class="org-info-field">
                         <small>Activity / Project Name</small>
-                        <strong id="actNameVal">Consolidated Student Organization Portfolio</strong>
+                        <strong id="actNameVal">{{ $financialDataset['actName'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Activity Type / Category</small>
-                        <strong id="actTypeVal">Semestral Financial Liquidation</strong>
+                        <strong id="actTypeVal">{{ $financialDataset['actType'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Execution Date</small>
-                        <strong id="actDateVal">Aug 2025 – Dec 2025</strong>
+                        <strong id="actDateVal">{{ $financialDataset['actDate'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Venue / Campus Location</small>
-                        <strong id="actVenueVal">BatStateU Alangilan Campus</strong>
+                        <strong id="actVenueVal">{{ $financialDataset['actVenue'] }}</strong>
                     </div>
                 </div>
             </section>
         </div>
 
-        {{-- 3. Report Status Badge & Stepper --}}
-        <section class="org-stepper-card" aria-label="Financial Report Status">
-            <div class="org-fin-card-head" style="margin-bottom: 0.5rem;">
-                <h3><i class="bi bi-shield-check" style="color: #7a1222;"></i> Report Status &amp; Verification Workflow</h3>
-                <span class="org-fin-badge-pill" id="stepperCurrentBadge" style="background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;">
-                    <i class="bi bi-patch-check-fill"></i> Verified &amp; Audit Cleared
-                </span>
-            </div>
-            <div class="org-stepper-track" id="workflowStepperTrack">
-                <div class="org-step-item is-done" id="stepDraft">
-                    <div class="org-step-circle"><i class="bi bi-check-lg"></i></div>
-                    <div class="org-step-title">1. Draft</div>
-                    <div class="org-step-desc">Entries Compiled</div>
-                </div>
-                <div class="org-step-item is-done" id="stepSubmitted">
-                    <div class="org-step-circle"><i class="bi bi-check-lg"></i></div>
-                    <div class="org-step-title">2. Submitted</div>
-                    <div class="org-step-desc">Transmitted to OSO</div>
-                </div>
-                <div class="org-step-item is-done" id="stepReview">
-                    <div class="org-step-circle"><i class="bi bi-check-lg"></i></div>
-                    <div class="org-step-title">3. Under Verification</div>
-                    <div class="org-step-desc">Receipts Audited</div>
-                </div>
-                <div class="org-step-item is-done" id="stepVerified">
-                    <div class="org-step-circle"><i class="bi bi-check-lg"></i></div>
-                    <div class="org-step-title">4. Verified</div>
-                    <div class="org-step-desc">Audit Signed Off</div>
-                </div>
-                <div class="org-step-item is-active" id="stepApproval">
-                    <div class="org-step-circle"><i class="bi bi-shield-check"></i></div>
-                    <div class="org-step-title">5. Final Settlement</div>
-                    <div class="org-step-desc">Ledger Sealed</div>
-                </div>
-            </div>
-        </section>
-
-        {{-- 4, 5, 6. Total Revenue, Total Expenses, Remaining Balance (Exact Dashboard Card Style) --}}
-        <div class="org-kpi-row">
-            {{-- 4. Total Revenue / Funds Received --}}
-            <article class="org-kpi-card">
-                <div class="org-kpi-head">
-                    <div class="org-kpi-icon is-green">
-                        <i class="bi bi-cash-coin"></i>
-                    </div>
-                    <div class="org-kpi-num" id="kpiTotalRevenue">₱185,000</div>
-                </div>
-                <h3 class="org-kpi-title">Total Funds Received</h3>
-                <p class="org-kpi-sub" id="kpiRevenueSub">Institutional allocations &amp; sponsorships</p>
-            </article>
-
-            {{-- 5. Total Expenses --}}
-            <article class="org-kpi-card">
-                <div class="org-kpi-head">
-                    <div class="org-kpi-icon is-amber">
-                        <i class="bi bi-receipt"></i>
-                    </div>
-                    <div class="org-kpi-num" id="kpiTotalExpenses">₱115,150</div>
-                </div>
-                <h3 class="org-kpi-title">Total Expenses</h3>
-                <p class="org-kpi-sub" id="kpiExpensesSub">100% liquidated with official receipts</p>
-            </article>
-
-            {{-- 6. Remaining Balance --}}
-            <article class="org-kpi-card">
-                <div class="org-kpi-head">
-                    <div class="org-kpi-icon is-blue">
-                        <i class="bi bi-wallet2"></i>
-                    </div>
-                    <div class="org-kpi-num" id="kpiRemainingBalance">₱69,850</div>
-                </div>
-                <h3 class="org-kpi-title">Remaining Balance</h3>
-                <p class="org-kpi-sub" id="kpiBalanceSub">Net surplus balance available for rollover</p>
-            </article>
-        </div>
-
-        {{-- 7, 8, 9. Income / Fund Sources, Expense Breakdown, Income vs. Expenses Charts --}}
-        <div class="org-fin-charts-3col">
-            {{-- 7. Income / Fund Sources (Donut Chart) --}}
-            <section class="org-fin-card" aria-label="Income and Fund Sources">
-                <div class="org-fin-card-head">
-                    <h3><i class="bi bi-pie-chart-fill" style="color: #16a34a;"></i> Fund Sources</h3>
-                </div>
-                <div class="org-chart-box">
-                    <canvas id="incomeSourcesChart"></canvas>
-                </div>
-            </section>
-
-            {{-- 8. Expense Breakdown (Donut Chart) --}}
-            <section class="org-fin-card" aria-label="Expense Breakdown">
-                <div class="org-fin-card-head">
-                    <h3><i class="bi bi-pie-chart" style="color: #d97706;"></i> Expense Breakdown</h3>
-                </div>
-                <div class="org-chart-box">
-                    <canvas id="expenseBreakdownChart"></canvas>
-                </div>
-            </section>
-
-            {{-- 9. Income vs Expenses (Bar Chart) --}}
-            <section class="org-fin-card" aria-label="Income vs Expenses Comparison">
-                <div class="org-fin-card-head">
-                    <h3><i class="bi bi-bar-chart-fill" style="color: #7a1222;"></i> Inflow vs. Outflow</h3>
-                </div>
-                <div class="org-chart-box">
-                    <canvas id="incomeVsExpensesChart"></canvas>
-                </div>
-            </section>
-        </div>
-
-        {{-- 10. Financial Details (Data Table) --}}
+        {{-- 7. Financial Details (Data Table) --}}
         <section class="org-fin-card" aria-label="Financial Details and Itemized Transactions">
             <div class="org-fin-card-head">
                 <h3><i class="bi bi-table" style="color: #7a1222;"></i> Itemized Financial Ledger</h3>
@@ -857,7 +563,7 @@
                     <button type="button" class="org-tab-btn" onclick="filterLedger('inflow', this)">Inflows Only</button>
                     <button type="button" class="org-tab-btn" onclick="filterLedger('outflow', this)">Outflows Only</button>
                 </div>
-                <input type="text" id="ledgerSearchInput" class="org-search-input" placeholder="Search payee, item, OR #..." onkeyup="searchLedger(this.value)">
+                <input type="text" id="ledgerSearchInput" class="org-search-input" placeholder="Search payee, item, OR #..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" onkeyup="searchLedger(this.value)">
             </div>
 
             <div style="overflow-x: auto; width: 100%;">
@@ -878,12 +584,16 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4">NET SURPLUS / SUMMARY</td>
-                            <td id="tableFooterNet" style="color: #16a34a;">+₱69,850</td>
-                            <td colspan="2">Reconciled with Bank &amp; OSO</td>
+                            <td colspan="4">TOTAL RECEIPT-SUPPORTED EXPENSES</td>
+                            <td id="tableFooterNet">Php {{ number_format($periodExpenseTotal, 2) }}</td>
+                            <td colspan="2">Separate from the organization’s annual cash balance</td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+            <div class="org-report-pagination" id="financialLedgerPagination" aria-label="Financial ledger pagination">
+                <span id="financialLedgerPaginationInfo"></span>
+                <nav class="org-report-pagination-nav" id="financialLedgerPaginationNav" aria-label="Financial ledger pages"></nav>
             </div>
         </section>
 
@@ -892,11 +602,15 @@
             <div class="org-fin-card-head">
                 <h3><i class="bi bi-file-earmark-check" style="color: #7a1222;"></i> Supporting Documents &amp; Vouchers</h3>
                 <span class="org-fin-badge-pill" style="background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;">
-                    <i class="bi bi-patch-check"></i> 100% Digitally Verified
+                    <i class="bi bi-receipt"></i> {{ $receiptRows->count() }} recorded receipts
                 </span>
             </div>
             <div class="org-docs-grid" id="supportingDocsGrid">
                 {{-- Populated dynamically --}}
+            </div>
+            <div class="org-report-pagination" id="financialDocumentsPagination" aria-label="Financial document pagination">
+                <span id="financialDocumentsPaginationInfo"></span>
+                <nav class="org-report-pagination-nav" id="financialDocumentsPaginationNav" aria-label="Financial document pages"></nav>
             </div>
         </section>
 
@@ -910,19 +624,19 @@
                 <div class="org-info-fields-grid" style="grid-template-columns: 1fr;">
                     <div class="org-info-field">
                         <small>Verified By</small>
-                        <strong id="verByVal">Prof. Rodolfo M. Mendoza, CPA</strong>
+                        <strong id="verByVal">{{ $financialDataset['verifiedBy'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Designation / Office</small>
-                        <strong id="verOfficeVal">OSO Chief Financial Auditor</strong>
+                        <strong id="verOfficeVal">{{ $financialDataset['verifiedOffice'] }}</strong>
                     </div>
                     <div class="org-info-field">
                         <small>Verification Date</small>
-                        <strong id="verDateVal">October 12, 2026 · 03:45 PM</strong>
+                        <strong id="verDateVal">{{ $financialDataset['verifiedDate'] }}</strong>
                     </div>
                     <div class="org-info-field">
-                        <small>Audit Protocol Hash</small>
-                        <strong style="font-family: monospace; font-size: 0.78rem; color: #7a1222;">SHA256: 9e4b78...f42c1</strong>
+                        <small>Receipt hashes</small>
+                        <strong>See each receipt’s seal in Budget Utilization or the compilation register.</strong>
                     </div>
                 </div>
             </section>
@@ -930,15 +644,15 @@
             {{-- 13. Revision / Remarks --}}
             <section class="org-fin-card" aria-label="Auditor Remarks and Compliance Notes">
                 <div class="org-fin-card-head">
-                    <h3><i class="bi bi-chat-square-text-fill" style="color: #7a1222;"></i> Auditor Remarks</h3>
+                    <h3><i class="bi bi-chat-square-text-fill" style="color: #7a1222;"></i> Report Notes</h3>
                     <span class="org-fin-badge-pill" id="remarksPill" style="background:#f0fdf4; color:#16a34a; border-color:#bbf7d0;">Passed</span>
                 </div>
                 <div style="background: #faf4f5; border: 1.5px solid #f0e6e8; border-radius: 14px; padding: 1rem 1.15rem; font-size: 0.84rem; color: #40363a; line-height: 1.5;" id="remarksContent">
-                    "All itemized expenses and BIR-registered vendor receipts match the approved semestral activity proposal. Zero unliquidated cash advances found. 100% compliant with university financial guidelines."
+                    {{ $financialDataset['remarks'] }}
                 </div>
                 <div style="margin-top: 0.85rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; color: #7a7074;">
                     <i class="bi bi-shield-lock-fill" style="color: #16a34a;"></i>
-                    <span>Official Seal stamped &amp; digitally recorded.</span>
+                    <span>Semester acceptance is recorded separately by OSO.</span>
                 </div>
             </section>
 
@@ -950,440 +664,155 @@
                 <div class="org-timeline-list" id="reportHistoryTimeline">
                     {{-- Populated dynamically --}}
                 </div>
+                <div class="org-report-pagination" id="financialHistoryPagination" aria-label="Financial report history pagination">
+                    <span id="financialHistoryPaginationInfo"></span>
+                    <nav class="org-report-pagination-nav" id="financialHistoryPaginationNav" aria-label="Financial report history pages"></nav>
+                </div>
             </section>
         </div>
 
     </div>
 
-    {{-- Chart.js --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <script>
-        window.frInflowOutflow = @json($inflowOutflow ?? null);
+        window.frLive = @json($frLive ?? null);
         // Financial Dataset Dictionary
-        const financialDatasets = {
-            consolidated: {
-                orgName: 'Association of Computing Machinery (ACM)',
-                orgCategory: 'Academic Org',
-                term: 'A.Y. 2025–2026 · 1st Semester',
-                period: 'Aug 01, 2025 – Dec 15, 2025',
-                advisor: 'Engr. Maria Santos, MIT',
-                actName: 'Consolidated Student Organization Portfolio',
-                actType: 'Semestral Financial Liquidation',
-                actDate: 'Aug 2025 – Dec 2025',
-                actVenue: 'BatStateU Alangilan Campus',
-                actScope: 'Institutional Scope',
-                stepperStep: 4,
-                stepperStatusText: 'Verified & Audit Cleared',
-                stepperBadgeStyle: 'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;',
-                revenue: 185000,
-                revenueSub: 'Institutional allocations & sponsorships',
-                expenses: 115150,
-                expensesSub: '100% liquidated with official receipts',
-                balance: 69850,
-                balanceSub: 'Net surplus balance available for rollover',
-                incomeSources: {
-                    labels: ['Institutional Grant', 'Membership Dues', 'Corporate Sponsorships', 'Fundraising'],
-                    data: [100000, 40000, 30000, 15000],
-                    colors: ['#7a1222', '#16a34a', '#0284c7', '#d97706']
-                },
-                expenseBreakdown: {
-                    labels: ['Venue & Logistics', 'Food & Catering', 'Materials & Kits', 'Honoraria', 'Transportation'],
-                    data: [38000, 32150, 22000, 15000, 8000],
-                    colors: ['#8b1828', '#d97706', '#0284c7', '#16a34a', '#9333ea']
-                },
-                inflowVsOutflow: (window.frInflowOutflow && window.frInflowOutflow.labels)
-                    ? {
-                        labels: window.frInflowOutflow.labels,
-                        inflows: window.frInflowOutflow.inflows || [],
-                        outflows: window.frInflowOutflow.outflows || []
-                    }
-                    : {
-                    labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    inflows: [60000, 45000, 35000, 25000, 20000],
-                    outflows: [25000, 32000, 28150, 18000, 12000]
-                },
-                ledger: [
-                    { date: 'Aug 10, 2025', desc: 'University Semestral Allocation', cat: 'Institutional', type: 'inflow', amount: 100000, ref: 'BUR-2025-081', status: 'Cleared' },
-                    { date: 'Aug 18, 2025', desc: 'Membership Fees Collection (200 Members)', cat: 'Dues', type: 'inflow', amount: 40000, ref: 'OR-ACM-0014', status: 'Deposited' },
-                    { date: 'Aug 28, 2025', desc: 'Innovation Fair Venue Rental & Audio Setup', cat: 'Venue & Logistics', type: 'outflow', amount: 15000, ref: 'OR-INV-8910', status: 'Verified' },
-                    { date: 'Sep 12, 2025', desc: 'Tech Titan Corp Sponsorship Grant', cat: 'Sponsorship', type: 'inflow', amount: 30000, ref: 'CHK-TT-902', status: 'Cleared' },
-                    { date: 'Sep 25, 2025', desc: 'Leadership Summit Hotel & Workshop Hall', cat: 'Venue & Logistics', type: 'outflow', amount: 42750, ref: 'OR-HTL-4412', status: 'Verified' },
-                    { date: 'Oct 14, 2025', desc: 'Volunteer Appreciation Catering & Certificates', cat: 'Food & Catering', type: 'outflow', amount: 12500, ref: 'OR-CAT-9921', status: 'Verified' },
-                    { date: 'Nov 05, 2025', desc: 'Campus Wellness Kits & Medical Supplies', cat: 'Materials', type: 'outflow', amount: 24900, ref: 'OR-MED-3180', status: 'Verified' },
-                    { date: 'Nov 22, 2025', desc: 'Sportsfest Uniforms, Trophies & Hydration', cat: 'Logistics', type: 'outflow', amount: 20000, ref: 'OR-SPT-1142', status: 'Verified' }
-                ],
-                documents: [
-                    { name: 'Consolidated_Financial_Report_AY2526.pdf', size: '3.8 MB', date: 'Dec 18, 2025', tag: 'Official FR' },
-                    { name: 'BIR_Official_Receipts_Compilation.pdf', size: '12.4 MB', date: 'Dec 16, 2025', tag: 'Receipts' },
-                    { name: 'Bank_Passbook_Reconciliation_Ledger.pdf', size: '1.9 MB', date: 'Dec 15, 2025', tag: 'Bank Record' },
-                    { name: 'Sponsorship_Agreements_Signed.pdf', size: '2.4 MB', date: 'Sep 15, 2025', tag: 'Legal' },
-                    { name: 'Disbursement_Vouchers_Batch_1_to_8.pdf', size: '4.1 MB', date: 'Dec 10, 2025', tag: 'Vouchers' },
-                    { name: 'Student_Council_Auditor_Clearance.pdf', size: '890 KB', date: 'Dec 14, 2025', tag: 'Clearance' }
-                ],
-                verifiedBy: 'Prof. Rodolfo M. Mendoza, CPA',
-                verifiedOffice: 'OSO Chief Financial Auditor',
-                verifiedDate: 'October 12, 2026 · 03:45 PM',
-                remarks: '"All itemized expenses and BIR-registered vendor receipts match the approved semestral activity proposal. Zero unliquidated cash advances found. 100% compliant with university financial guidelines."',
-                history: [
-                    { title: 'Official Audit Cleared & Ledger Sealed', date: 'Dec 20, 2025 · 04:30 PM', badge: 'is-green', icon: 'bi-patch-check-fill' },
-                    { title: 'OSO Desk Verification Completed', date: 'Dec 18, 2025 · 02:15 PM', badge: 'is-blue', icon: 'bi-check-circle' },
-                    { title: 'Supporting Receipts Uploaded', date: 'Dec 16, 2025 · 11:00 AM', badge: 'is-maroon', icon: 'bi-file-earmark-arrow-up' },
-                    { title: 'Draft Financial Report Created', date: 'Dec 10, 2025 · 09:30 AM', badge: 'is-maroon', icon: 'bi-pencil' }
-                ]
-            },
-            innovation: {
-                orgName: 'Association of Computing Machinery (ACM)',
-                orgCategory: 'Academic Org',
-                term: 'A.Y. 2025–2026 · 1st Semester',
-                period: 'Jul 01, 2026 – Jul 10, 2026',
-                advisor: 'Engr. Maria Santos, MIT',
-                actName: 'Innovation Fair Booth Series',
-                actType: 'In-Campus Project',
-                actDate: 'Jul 05, 2026 – Jul 08, 2026',
-                actVenue: 'CEAFA Gymnasium, Alangilan',
-                actScope: 'In-Campus Only',
-                stepperStep: 4,
-                stepperStatusText: 'Verified & Audited',
-                stepperBadgeStyle: 'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;',
-                revenue: 15000,
-                revenueSub: 'University Innovation Grant',
-                expenses: 15000,
-                expensesSub: '100% liquidated with official receipts',
-                balance: 0,
-                balanceSub: 'Zero deficit · fully liquidated',
-                incomeSources: {
-                    labels: ['University Grant', 'Booth Registration'],
-                    data: [12000, 3000],
-                    colors: ['#7a1222', '#0284c7']
-                },
-                expenseBreakdown: {
-                    labels: ['Sound & Lighting', 'Display Boards', 'Electrical Extensions'],
-                    data: [8000, 4500, 2500],
-                    colors: ['#8b1828', '#d97706', '#0284c7']
-                },
-                inflowVsOutflow: {
-                    labels: ['Jul 01', 'Jul 04', 'Jul 06', 'Jul 08'],
-                    inflows: [12000, 3000, 0, 0],
-                    outflows: [0, 8000, 4500, 2500]
-                },
-                ledger: [
-                    { date: 'Jul 01, 2026', desc: 'Innovation Grant Disbursement', cat: 'Grant', type: 'inflow', amount: 12000, ref: 'BUR-26-001', status: 'Cleared' },
-                    { date: 'Jul 04, 2026', desc: 'Sound & Lighting Rental', cat: 'Logistics', type: 'outflow', amount: 8000, ref: 'OR-SL-102', status: 'Verified' },
-                    { date: 'Jul 05, 2026', desc: 'Participant Registration Collection', cat: 'Fees', type: 'inflow', amount: 3000, ref: 'OR-ACM-092', status: 'Deposited' },
-                    { date: 'Jul 06, 2026', desc: 'Display Boards & Tarpaulins', cat: 'Materials', type: 'outflow', amount: 4500, ref: 'OR-PR-772', status: 'Verified' },
-                    { date: 'Jul 08, 2026', desc: 'Electrical Accessories & Cables', cat: 'Materials', type: 'outflow', amount: 2500, ref: 'OR-EL-419', status: 'Verified' }
-                ],
-                documents: [
-                    { name: 'Innovation_Fair_Receipts_Official.pdf', size: '2.1 MB', date: 'Jul 10, 2026', tag: 'Receipts' },
-                    { name: 'Sound_System_Rental_Contract.pdf', size: '1.2 MB', date: 'Jul 04, 2026', tag: 'Contract' },
-                    { name: 'Liquidation_Summary_Sheet.pdf', size: '850 KB', date: 'Jul 10, 2026', tag: 'Summary' }
-                ],
-                verifiedBy: 'Engr. Daniel Ramirez',
-                verifiedOffice: 'Student Activities Coordinator',
-                verifiedDate: 'July 10, 2026 · 02:15 PM',
-                remarks: '"Fully compliant liquidation with zero remaining balance. All receipts match CEAFA venue requirements."',
-                history: [
-                    { title: 'Financial Audit Cleared & Signed', date: 'Jul 10, 2026 · 02:15 PM', badge: 'is-green', icon: 'bi-patch-check-fill' },
-                    { title: 'Receipts Audited by OSO Desk', date: 'Jul 09, 2026 · 11:30 AM', badge: 'is-blue', icon: 'bi-check-circle' },
-                    { title: 'Liquidation Submitted', date: 'Jul 08, 2026 · 05:00 PM', badge: 'is-maroon', icon: 'bi-file-earmark-arrow-up' }
-                ]
-            },
-            leadership: {
-                orgName: 'Association of Computing Machinery (ACM)',
-                orgCategory: 'Academic Org',
-                term: 'A.Y. 2025–2026 · 1st Semester',
-                period: 'Aug 01, 2026 – Aug 25, 2026',
-                advisor: 'Engr. Maria Santos, MIT',
-                actName: 'Leadership Summit 2026',
-                actType: 'Off-Campus Project',
-                actDate: 'Aug 14, 2026 – Aug 16, 2026',
-                actVenue: 'Tagaytay City International Convention Center',
-                actScope: 'Off-Campus Approved',
-                stepperStep: 3,
-                stepperStatusText: 'Under OSO Audit Review',
-                stepperBadgeStyle: 'background: #fefce8; color: #b45309; border-color: #fef08a;',
-                revenue: 75000,
-                revenueSub: 'Off-campus development subsidy',
-                expenses: 42750,
-                expensesSub: 'Disbursed for Phase 1 accommodation',
-                balance: 32250,
-                balanceSub: 'Surplus uncommitted balance',
-                incomeSources: {
-                    labels: ['University Subsidy', 'Delegate Fees', 'Partner Sponsors'],
-                    data: [45000, 20000, 10000],
-                    colors: ['#7a1222', '#0284c7', '#16a34a']
-                },
-                expenseBreakdown: {
-                    labels: ['Convention Hall', 'Bus Transportation', 'Conference Kits', 'Speaker Honorarium'],
-                    data: [25000, 10000, 4750, 3000],
-                    colors: ['#8b1828', '#d97706', '#0284c7', '#16a34a']
-                },
-                inflowVsOutflow: {
-                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                    inflows: [45000, 20000, 10000, 0],
-                    outflows: [10000, 25000, 4750, 3000]
-                },
-                ledger: [
-                    { date: 'Aug 02, 2026', desc: 'University Subsidy Initial Tranche', cat: 'Subsidy', type: 'inflow', amount: 45000, ref: 'BUR-26-089', status: 'Cleared' },
-                    { date: 'Aug 05, 2026', desc: 'Bus Transportation Deposit (3 Buses)', cat: 'Transport', type: 'outflow', amount: 10000, ref: 'OR-BUS-112', status: 'Verified' },
-                    { date: 'Aug 10, 2026', desc: 'Delegate Registration Remittance', cat: 'Fees', type: 'inflow', amount: 20000, ref: 'OR-ACM-102', status: 'Deposited' },
-                    { date: 'Aug 14, 2026', desc: 'Convention Hall & Meals Final Payment', cat: 'Venue', type: 'outflow', amount: 25000, ref: 'OR-TGY-991', status: 'Verified' },
-                    { date: 'Aug 16, 2026', desc: 'Conference Kits & Badges', cat: 'Materials', type: 'outflow', amount: 4750, ref: 'OR-KIT-204', status: 'Verified' },
-                    { date: 'Aug 18, 2026', desc: 'Guest Speaker Honorarium', cat: 'Honoraria', type: 'outflow', amount: 3000, ref: 'OR-SPK-009', status: 'Pending Review' }
-                ],
-                documents: [
-                    { name: 'Off_Campus_CHED_Permit_Signed.pdf', size: '1.8 MB', date: 'Aug 12, 2026', tag: 'Permit' },
-                    { name: 'Hotel_Convention_BIR_Receipt.pdf', size: '3.4 MB', date: 'Aug 17, 2026', tag: 'Receipt' },
-                    { name: 'Passenger_Insurance_Manifest.pdf', size: '1.1 MB', date: 'Aug 13, 2026', tag: 'Insurance' }
-                ],
-                verifiedBy: 'Dr. Evelyn Morales, CPA',
-                verifiedOffice: 'OSO Senior Auditor',
-                verifiedDate: 'August 20, 2026 · 10:00 AM',
-                remarks: '"Phase 1 receipts verified. Pending final speaker honorarium acknowledgement receipt."',
-                history: [
-                    { title: 'Auditor Review In Progress', date: 'Aug 20, 2026 · 10:00 AM', badge: 'is-blue', icon: 'bi-hourglass-split' },
-                    { title: 'Financial Liquidation Submitted', date: 'Aug 18, 2026 · 04:30 PM', badge: 'is-maroon', icon: 'bi-file-earmark-arrow-up' }
-                ]
-            },
-            wellness: {
-                orgName: 'Association of Computing Machinery (ACM)',
-                orgCategory: 'Academic Org',
-                term: 'A.Y. 2025–2026 · 1st Semester',
-                period: 'May 10, 2026 – May 25, 2026',
-                advisor: 'Engr. Maria Santos, MIT',
-                actName: 'Campus Wellness Week',
-                actType: 'In-Campus Project',
-                actDate: 'May 18, 2026 – May 22, 2026',
-                actVenue: 'Student Center Grounds',
-                actScope: 'In-Campus Only',
-                stepperStep: 4,
-                stepperStatusText: 'Verified & Audited',
-                stepperBadgeStyle: 'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;',
-                revenue: 42500,
-                revenueSub: 'University Health & Wellness Grant',
-                expenses: 24900,
-                expensesSub: '58.5% burn rate compliant',
-                balance: 17600,
-                balanceSub: 'Unused allocation returned to fund',
-                incomeSources: {
-                    labels: ['Health Grant', 'Community Donation'],
-                    data: [35000, 7500],
-                    colors: ['#7a1222', '#16a34a']
-                },
-                expenseBreakdown: {
-                    labels: ['Medical Supplies', 'Wellness Speakers', 'Refreshments & Fruit Kits'],
-                    data: [12900, 7000, 5000],
-                    colors: ['#8b1828', '#0284c7', '#d97706']
-                },
-                inflowVsOutflow: {
-                    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
-                    inflows: [35000, 7500, 0, 0, 0],
-                    outflows: [5000, 8000, 4900, 4000, 3000]
-                },
-                ledger: [
-                    { date: 'May 10, 2026', desc: 'University Health Grant', cat: 'Grant', type: 'inflow', amount: 35000, ref: 'BUR-26-050', status: 'Cleared' },
-                    { date: 'May 12, 2026', desc: 'Alumni Association Health Donation', cat: 'Donation', type: 'inflow', amount: 7500, ref: 'CHK-ALM-11', status: 'Cleared' },
-                    { date: 'May 18, 2026', desc: 'First Aid & Mental Health Toolkits', cat: 'Supplies', type: 'outflow', amount: 12900, ref: 'OR-MED-990', status: 'Verified' },
-                    { date: 'May 20, 2026', desc: 'Licensed Psychologist Honoraria', cat: 'Honoraria', type: 'outflow', amount: 7000, ref: 'OR-DOC-021', status: 'Verified' },
-                    { date: 'May 22, 2026', desc: 'Fresh Fruits & Healthy Refreshments', cat: 'Food', type: 'outflow', amount: 5000, ref: 'OR-FRT-881', status: 'Verified' }
-                ],
-                documents: [
-                    { name: 'Wellness_Medical_Supplies_OR.pdf', size: '2.8 MB', date: 'May 23, 2026', tag: 'Receipt' },
-                    { name: 'Doctor_Honorarium_Voucher.pdf', size: '940 KB', date: 'May 22, 2026', tag: 'Voucher' }
-                ],
-                verifiedBy: 'Dr. Evelyn Morales, CPA',
-                verifiedOffice: 'OSO Senior Auditor',
-                verifiedDate: 'May 25, 2026 · 09:30 AM',
-                remarks: '"Health program liquidation complete. Unused balance of ₱17,600 successfully reconciled."',
-                history: [
-                    { title: 'Liquidation Audit Cleared', date: 'May 25, 2026 · 09:30 AM', badge: 'is-green', icon: 'bi-patch-check-fill' },
-                    { title: 'Liquidation Form Submitted', date: 'May 23, 2026 · 03:00 PM', badge: 'is-maroon', icon: 'bi-file-earmark-arrow-up' }
-                ]
-            },
-            sportsfest: {
-                orgName: 'Association of Computing Machinery (ACM)',
-                orgCategory: 'Academic Org',
-                term: 'A.Y. 2025–2026 · 1st Semester',
-                period: 'Sep 01, 2026 – Sep 30, 2026',
-                advisor: 'Engr. Maria Santos, MIT',
-                actName: 'BatStateU Sportsfest 2026',
-                actType: 'In-Campus Project',
-                actDate: 'Sep 20, 2026 – Sep 24, 2026',
-                actVenue: 'University Athletic Field',
-                actScope: 'In-Campus Only',
-                stepperStep: 3,
-                stepperStatusText: 'Verification In Progress',
-                stepperBadgeStyle: 'background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;',
-                revenue: 40000,
-                revenueSub: 'Sports development fund',
-                expenses: 20000,
-                expensesSub: '50% disbursed for team equipment',
-                balance: 20000,
-                balanceSub: 'Remaining balance for closing banquet',
-                incomeSources: {
-                    labels: ['Sports Fund', 'Jersey Sponsorship'],
-                    data: [30000, 10000],
-                    colors: ['#7a1222', '#0284c7']
-                },
-                expenseBreakdown: {
-                    labels: ['Sports Uniforms', 'Trophies & Medals', 'Hydration & Ice'],
-                    data: [12000, 5000, 3000],
-                    colors: ['#8b1828', '#d97706', '#16a34a']
-                },
-                inflowVsOutflow: {
-                    labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'],
-                    inflows: [30000, 10000, 0, 0],
-                    outflows: [12000, 5000, 3000, 0]
-                },
-                ledger: [
-                    { date: 'Sep 02, 2026', desc: 'University Sports Development Fund', cat: 'Grant', type: 'inflow', amount: 30000, ref: 'BUR-26-092', status: 'Cleared' },
-                    { date: 'Sep 08, 2026', desc: 'Jersey Sponsor Donation', cat: 'Sponsorship', type: 'inflow', amount: 10000, ref: 'CHK-JRS-44', status: 'Cleared' },
-                    { date: 'Sep 15, 2026', desc: 'Customized ACM Athletic Jerseys', cat: 'Equipment', type: 'outflow', amount: 12000, ref: 'OR-SPT-901', status: 'Verified' },
-                    { date: 'Sep 18, 2026', desc: 'Tournament Trophies & Gold Medals', cat: 'Awards', type: 'outflow', amount: 5000, ref: 'OR-TRP-221', status: 'Verified' },
-                    { date: 'Sep 22, 2026', desc: 'Mineral Water & Electrolytes Delivery', cat: 'Hydration', type: 'outflow', amount: 3000, ref: 'OR-ICE-330', status: 'Verified' }
-                ],
-                documents: [
-                    { name: 'Sportsfest_Official_Receipts.pdf', size: '3.1 MB', date: 'Sep 25, 2026', tag: 'Receipts' },
-                    { name: 'Trophy_Vendor_Invoice.pdf', size: '1.1 MB', date: 'Sep 19, 2026', tag: 'Invoice' }
-                ],
-                verifiedBy: 'Prof. Rodolfo M. Mendoza, CPA',
-                verifiedOffice: 'OSO Chief Financial Auditor',
-                verifiedDate: 'September 28, 2026 · 04:00 PM',
-                remarks: '"Equipment and jersey receipts valid. Awaiting closing ceremony receipts to seal final audit."',
-                history: [
-                    { title: 'Mid-Event Audit Reviewed', date: 'Sep 28, 2026 · 04:00 PM', badge: 'is-blue', icon: 'bi-hourglass-split' },
-                    { title: 'Partial Liquidation Submitted', date: 'Sep 26, 2026 · 01:15 PM', badge: 'is-maroon', icon: 'bi-file-earmark-arrow-up' }
-                ]
-            }
-        };
+        const financialDatasets = { consolidated: @json($financialDataset) };
+        function escFinancial(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+        }
 
-        // Chart instances
-        let incomeChartInst = null;
-        let expenseChartInst = null;
-        let comparisonChartInst = null;
         let currentLedgerData = [];
+        let currentLedgerFilter = 'all';
+        let currentLedgerSearch = '';
+        let currentFinancialDocuments = [];
+        let currentFinancialHistory = [];
+        let currentLedgerPage = 1;
+        let currentFinancialDocumentsPage = 1;
+        let currentFinancialHistoryPage = 1;
+        const FINANCIAL_PAGE_SIZE = 7;
+        const FINANCIAL_DOCUMENT_PAGE_SIZE = 4;
+        const FINANCIAL_HISTORY_PAGE_SIZE = 5;
 
-        function initCharts(data) {
-            // 1. Income Sources Donut Chart
-            const ctxIncome = document.getElementById('incomeSourcesChart').getContext('2d');
-            if (incomeChartInst) incomeChartInst.destroy();
-            incomeChartInst = new Chart(ctxIncome, {
-                type: 'doughnut',
-                data: {
-                    labels: data.incomeSources.labels,
-                    datasets: [{
-                        data: data.incomeSources.data,
-                        backgroundColor: data.incomeSources.colors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11, family: 'Inter, sans-serif' } }
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
+        function financialPaginate(items, page, pageSize) {
+            const safeItems = Array.isArray(items) ? items : [];
+            const totalPages = Math.max(1, Math.ceil(safeItems.length / pageSize));
+            const safePage = Math.min(Math.max(Number(page) || 1, 1), totalPages);
+            const start = safeItems.length ? (safePage - 1) * pageSize : 0;
+            const end = Math.min(start + pageSize, safeItems.length);
+            return { items: safeItems.slice(start, end), total: safeItems.length, page: safePage, totalPages, start, end };
+        }
 
-            // 2. Expense Breakdown Donut Chart
-            const ctxExpense = document.getElementById('expenseBreakdownChart').getContext('2d');
-            if (expenseChartInst) expenseChartInst.destroy();
-            expenseChartInst = new Chart(ctxExpense, {
-                type: 'doughnut',
-                data: {
-                    labels: data.expenseBreakdown.labels,
-                    datasets: [{
-                        data: data.expenseBreakdown.data,
-                        backgroundColor: data.expenseBreakdown.colors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11, family: 'Inter, sans-serif' } }
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
+        function renderFinancialPagination({ barId, infoId, navId, total, page, pageSize, label, handler }) {
+            const bar = document.getElementById(barId);
+            const info = document.getElementById(infoId);
+            const nav = document.getElementById(navId);
+            if (!bar || !info || !nav) return;
 
-            // 3. Inflow vs Outflow Bar Chart
-            const ctxComp = document.getElementById('incomeVsExpensesChart').getContext('2d');
-            if (comparisonChartInst) comparisonChartInst.destroy();
-            comparisonChartInst = new Chart(ctxComp, {
-                type: 'bar',
-                data: {
-                    labels: data.inflowVsOutflow.labels,
-                    datasets: [
-                        {
-                            label: 'Funds Inflow',
-                            data: data.inflowVsOutflow.inflows,
-                            backgroundColor: '#16a34a',
-                            borderRadius: 6
-                        },
-                        {
-                            label: 'Expenses Outflow',
-                            data: data.inflowVsOutflow.outflows,
-                            backgroundColor: '#7a1222',
-                            borderRadius: 6
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f5eaec' },
-                            ticks: {
-                                callback: val => '₱' + (val >= 1000 ? (val / 1000) + 'k' : val),
-                                font: { size: 10 }
-                            }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { size: 10 } }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11, family: 'Inter, sans-serif' } }
-                        }
-                    }
+            if (!total || total <= pageSize) {
+                bar.style.display = 'none';
+                info.textContent = '';
+                nav.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(total / pageSize);
+            const safePage = Math.min(Math.max(Number(page) || 1, 1), totalPages);
+            const start = ((safePage - 1) * pageSize) + 1;
+            const end = Math.min(safePage * pageSize, total);
+            info.innerHTML = `Showing <strong>${start}</strong> to <strong>${end}</strong> of <strong>${total}</strong> ${label}`;
+
+            let html = `<button type="button" class="org-report-page-btn" ${safePage === 1 ? 'disabled' : ''} onclick="${handler}(${safePage - 1})" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>`;
+            for (let p = 1; p <= totalPages; p += 1) {
+                if (totalPages <= 7 || p === 1 || p === totalPages || (p >= safePage - 1 && p <= safePage + 1)) {
+                    html += `<button type="button" class="org-report-page-btn ${p === safePage ? 'is-active' : ''}" onclick="${handler}(${p})" aria-label="Page ${p}" ${p === safePage ? 'aria-current="page"' : ''}>${p}</button>`;
+                } else if (p === safePage - 2 || p === safePage + 2) {
+                    html += '<span aria-hidden="true">&hellip;</span>';
                 }
-            });
+            }
+            html += `<button type="button" class="org-report-page-btn" ${safePage === totalPages ? 'disabled' : ''} onclick="${handler}(${safePage + 1})" aria-label="Next page"><i class="bi bi-chevron-right"></i></button>`;
+            bar.style.display = 'flex';
+            nav.innerHTML = html;
+        }
+
+        function parseFinancialDate(value) {
+            if (!value) return null;
+            const parsed = new Date(value);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function financialAcademicPeriod(date) {
+            const month = date.getMonth() + 1;
+            const startYear = month < 8 ? date.getFullYear() - 1 : date.getFullYear();
+            const semester = month >= 8 && month <= 12
+                ? '1st Semester'
+                : (month <= 5 ? '2nd Semester' : 'Midyear');
+            return { year: `${startYear}-${startYear + 1}`, semester };
+        }
+
+        function matchesFinancialPeriod(value, year, semester) {
+            const date = parseFinancialDate(value);
+            if (!date) return false;
+            const period = financialAcademicPeriod(date);
+            return period.year === year && period.semester === semester;
+        }
+
+        function formatFinancialPeriod(ledger, year, semester) {
+            const dates = ledger
+                .map((item) => parseFinancialDate(item.date))
+                .filter(Boolean)
+                .sort((a, b) => a - b);
+            if (!dates.length) return `${semester} · A.Y. ${year}`;
+            const format = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            return dates.length === 1
+                ? format(dates[0])
+                : `${format(dates[0])} – ${format(dates[dates.length - 1])}`;
+        }
+
+        function filteredFinancialData(data, year, semester) {
+            const sourceLedger = Array.isArray(data.ledger) ? data.ledger : [];
+            const ledger = sourceLedger.filter((item) => matchesFinancialPeriod(item.date, year, semester));
+            const documents = (Array.isArray(data.documents) ? data.documents : [])
+                .filter((item) => matchesFinancialPeriod(item.date, year, semester));
+            const revenue = ledger
+                .filter((item) => item.type === 'inflow')
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+            const expenses = ledger
+                .filter((item) => item.type === 'outflow')
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+            return {
+                ...data,
+                ledger,
+                documents,
+                revenue,
+                expenses,
+                balance: revenue - expenses,
+                term: `${semester} · A.Y. ${year}`,
+                period: formatFinancialPeriod(ledger, year, semester),
+                actDate: formatFinancialPeriod(ledger, year, semester)
+            };
         }
 
         function renderLedgerTable(items) {
             const tbody = document.getElementById('ledgerTableBody');
+            const safeItems = Array.isArray(items) ? items : [];
+            const page = financialPaginate(safeItems, currentLedgerPage, FINANCIAL_PAGE_SIZE);
+            currentLedgerPage = page.page;
             tbody.innerHTML = '';
-            
             let totalIn = 0;
             let totalOut = 0;
 
-            items.forEach(item => {
+            safeItems.forEach(item => {
                 if (item.type === 'inflow') totalIn += item.amount;
                 else totalOut += item.amount;
+            });
 
+            page.items.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${item.date}</strong></td>
-                    <td>${item.desc}</td>
-                    <td><span style="background: #faf4f5; border: 1px solid #f0e6e8; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.74rem; font-weight: 600;">${item.cat}</span></td>
+                    <td><strong>${escFinancial(item.date)}</strong></td>
+                    <td>${escFinancial(item.desc)}</td>
+                    <td><span style="background: #faf4f5; border: 1px solid #f0e6e8; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.74rem; font-weight: 600;">${escFinancial(item.cat)}</span></td>
                     <td>
                         <span class="org-flow-pill ${item.type === 'inflow' ? 'org-flow-in' : 'org-flow-out'}">
                             <i class="bi ${item.type === 'inflow' ? 'bi-arrow-down-left' : 'bi-arrow-up-right'}"></i>
@@ -1392,32 +821,57 @@
                     </td>
                     <td><strong style="color: ${item.type === 'inflow' ? '#16a34a' : '#7a1222'};">${item.type === 'inflow' ? '+' : '-'}₱${item.amount.toLocaleString()}</strong></td>
                     <td>
-                        <a href="javascript:void(0)" onclick="alert('Viewing digital copy for receipt ${item.ref}...')" style="color: #7a1222; font-weight: 700; text-decoration: none;">
-                            <i class="bi bi-paperclip"></i> ${item.ref}
-                        </a>
+                        ${item.url
+                            ? `<a href="${escFinancial(item.url)}" target="_blank" rel="noopener" style="color: #7a1222; font-weight: 700; text-decoration: none;">
+                                <i class="bi bi-paperclip"></i> ${escFinancial(item.ref)}
+                               </a>`
+                            : `<span style="color:#a39a9d; font-weight: 600;">
+                                <i class="bi bi-paperclip"></i> ${escFinancial(item.ref)}
+                               </span>`}
                     </td>
                     <td>
                         <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.76rem; font-weight: 700; color: #16a34a;">
-                            <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span> ${item.status}
+                            ${escFinancial(item.status)}
                         </span>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
+            if (!safeItems.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align:center;color:#7a7074;padding:1.6rem;">
+                            No financial transactions match the selected academic year and semester.
+                        </td>
+                    </tr>`;
+            }
+
             const net = totalIn - totalOut;
             const footEl = document.getElementById('tableFooterNet');
-            footEl.textContent = (net >= 0 ? '+₱' : '-₱') + Math.abs(net).toLocaleString();
-            footEl.style.color = net >= 0 ? '#16a34a' : '#dc2626';
+            footEl.textContent = '₱' + totalOut.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            footEl.style.color = '#7a1222';
 
-            document.getElementById('tableRecordCountBadge').textContent = items.length + ' Transactions';
+            document.getElementById('tableRecordCountBadge').textContent = safeItems.length + ' Transactions';
+            renderFinancialPagination({
+                barId: 'financialLedgerPagination',
+                infoId: 'financialLedgerPaginationInfo',
+                navId: 'financialLedgerPaginationNav',
+                total: page.total,
+                page: page.page,
+                pageSize: FINANCIAL_PAGE_SIZE,
+                label: 'ledger transactions',
+                handler: 'goToFinancialLedgerPage'
+            });
         }
 
         function renderSupportingDocs(docs) {
             const grid = document.getElementById('supportingDocsGrid');
+            const page = financialPaginate(docs, currentFinancialDocumentsPage, FINANCIAL_DOCUMENT_PAGE_SIZE);
+            currentFinancialDocumentsPage = page.page;
             grid.innerHTML = '';
 
-            docs.forEach(doc => {
+            page.items.forEach(doc => {
                 const card = document.createElement('div');
                 card.className = 'org-doc-card';
                 card.innerHTML = `
@@ -1426,23 +880,43 @@
                             <i class="bi bi-file-earmark-pdf-fill"></i>
                         </div>
                         <div class="org-doc-meta">
-                            <strong title="${doc.name}">${doc.name}</strong>
-                            <small>${doc.size} · ${doc.date}</small>
+                            <strong title="${escFinancial(doc.name)}">${escFinancial(doc.name)}</strong>
+                            <small>${escFinancial(doc.size)} · ${escFinancial(doc.date)}</small>
                         </div>
                     </div>
-                    <button type="button" class="org-doc-btn" title="View Document" onclick="alert('Opening document: ${doc.name}')">
-                        <i class="bi bi-eye-fill"></i>
-                    </button>
+                    ${doc.url
+                        ? `<a href="${escFinancial(doc.url)}" target="_blank" rel="noopener" class="org-doc-btn" title="View Document" style="text-decoration:none;display:inline-flex;">
+                            <i class="bi bi-eye-fill"></i>
+                           </a>`
+                        : `<span class="org-doc-btn" style="opacity:.4;" title="No file on record">
+                            <i class="bi bi-eye-slash"></i>
+                           </span>`}
                 `;
                 grid.appendChild(card);
+            });
+
+            if (!page.total) {
+                grid.innerHTML = '<p style="margin:0;color:#7a7074;font-size:0.84rem;">No supporting documents match the selected academic period.</p>';
+            }
+            renderFinancialPagination({
+                barId: 'financialDocumentsPagination',
+                infoId: 'financialDocumentsPaginationInfo',
+                navId: 'financialDocumentsPaginationNav',
+                total: page.total,
+                page: page.page,
+                pageSize: FINANCIAL_DOCUMENT_PAGE_SIZE,
+                label: 'supporting documents',
+                handler: 'goToFinancialDocumentsPage'
             });
         }
 
         function renderTimeline(history) {
             const container = document.getElementById('reportHistoryTimeline');
+            const page = financialPaginate(history, currentFinancialHistoryPage, FINANCIAL_HISTORY_PAGE_SIZE);
+            currentFinancialHistoryPage = page.page;
             container.innerHTML = '';
 
-            history.forEach(item => {
+            page.items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'org-timeline-item';
                 div.innerHTML = `
@@ -1450,22 +924,87 @@
                         <i class="bi ${item.icon}"></i>
                     </div>
                     <div class="org-tl-content">
-                        <strong>${item.title}</strong>
-                        <small>${item.date}</small>
+                        <strong>${escFinancial(item.title)}</strong>
+                        <small>${escFinancial(item.date)}</small>
                     </div>
                 `;
                 container.appendChild(div);
             });
+
+            if (!page.total) {
+                container.innerHTML = '<p style="margin:0;color:#7a7074;font-size:0.84rem;">No report history is available for this period.</p>';
+            }
+            renderFinancialPagination({
+                barId: 'financialHistoryPagination',
+                infoId: 'financialHistoryPaginationInfo',
+                navId: 'financialHistoryPaginationNav',
+                total: page.total,
+                page: page.page,
+                pageSize: FINANCIAL_HISTORY_PAGE_SIZE,
+                label: 'history events',
+                handler: 'goToFinancialHistoryPage'
+            });
         }
 
+        // Live DB overrides merged into the consolidated report view.
+        (function applyLiveFrData() {
+            const live = window.frLive || null;
+            const base = (typeof financialDatasets !== 'undefined' && financialDatasets.consolidated) || null;
+            if (!live || !base) return;
+            if (live.organizationFilterActive) {
+                const organizationLabel = live.organizationLabel || 'Selected Organization';
+                base.orgName = organizationLabel;
+                base.orgCategory = 'Organization Portfolio';
+                base.actName = organizationLabel + ' Financial Report';
+                base.actType = 'Organization Financial Liquidation';
+                base.revenueSub = 'Organization budget allocations';
+                base.expensesSub = 'Recorded organization disbursements';
+                base.balanceSub = 'Remaining organization allocation';
+                base.ledger = Array.isArray(live.ledger) ? live.ledger : [];
+                base.documents = Array.isArray(live.docsLive) ? live.docsLive : [];
+                base.history = Array.isArray(live.history)
+                    ? live.history.map((h) => ({ title: h.title, date: h.date, badge: 'is-blue', icon: 'bi-check-circle' }))
+                    : [];
+                return;
+            }
+            if (Number.isFinite(Number(live.revenue))) {
+                base.revenue = live.revenue;
+            }
+            if (Number.isFinite(Number(live.expenses))) {
+                base.expenses = live.expenses;
+            }
+            if (Number.isFinite(Number(live.balance))) {
+                base.balance = live.balance;
+            }
+            if (Array.isArray(live.ledger) && live.ledger.length) base.ledger = live.ledger;
+            if (Array.isArray(live.ledgerLive) && live.ledgerLive.length) base.ledger = [...live.ledgerLive, ...base.ledger];
+            if (Array.isArray(live.docsLive) && live.docsLive.length) base.documents = [...live.docsLive, ...(base.documents || [])];
+            if (Array.isArray(live.history) && live.history.length) {
+                base.history = live.history.map((h) => ({ title: h.title, date: h.date, badge: 'is-blue', icon: 'bi-check-circle' }));
+            }
+        })();
+
+        const activeFinancialPeriod = {
+            year: @json($selectedYear),
+            semester: @json($selectedSemester),
+        };
+
         function switchFinancialReport(key) {
-            const data = financialDatasets[key] || financialDatasets.consolidated;
+            const baseData = financialDatasets[key] || financialDatasets.consolidated;
+            const sem = activeFinancialPeriod.semester;
+            const year = activeFinancialPeriod.year;
+            const data = filteredFinancialData(baseData, year, sem);
             currentLedgerData = data.ledger;
+            currentFinancialDocuments = Array.isArray(data.documents) ? data.documents : [];
+            currentFinancialHistory = Array.isArray(data.history) ? data.history : [];
+            currentLedgerPage = 1;
+            currentFinancialDocumentsPage = 1;
+            currentFinancialHistoryPage = 1;
 
             // 1. Organization & Activity Information
             document.getElementById('orgNameVal').textContent = data.orgName;
             document.getElementById('orgCategoryBadge').textContent = data.orgCategory;
-            document.getElementById('orgTermVal').textContent = data.term;
+            document.getElementById('orgTermVal').textContent = `${sem} · A.Y. ${year}`;
             document.getElementById('orgPeriodVal').textContent = data.period;
             document.getElementById('orgAdvisorVal').textContent = data.advisor;
 
@@ -1475,64 +1014,66 @@
             document.getElementById('actVenueVal').textContent = data.actVenue;
             document.getElementById('actScopePill').textContent = data.actScope;
 
-            // 2. Stepper & Status Badge
-            const stepperBadge = document.getElementById('stepperCurrentBadge');
-            stepperBadge.innerHTML = `<i class="bi bi-patch-check-fill"></i> ${data.stepperStatusText}`;
-            stepperBadge.style = data.stepperBadgeStyle;
-
-            // 3. Top 3 KPI Cards
-            document.getElementById('kpiTotalRevenue').textContent = '₱' + data.revenue.toLocaleString();
-            document.getElementById('kpiRevenueSub').textContent = data.revenueSub;
-            document.getElementById('kpiTotalExpenses').textContent = '₱' + data.expenses.toLocaleString();
-            document.getElementById('kpiExpensesSub').textContent = data.expensesSub;
-            document.getElementById('kpiRemainingBalance').textContent = '₱' + data.balance.toLocaleString();
-            document.getElementById('kpiBalanceSub').textContent = data.balanceSub;
-
-            // 4. Charts
-            initCharts(data);
-
-            // 5. Ledger Table
+            // 2. Ledger Table
             renderLedgerTable(data.ledger);
 
-            // 6. Supporting Documents
-            renderSupportingDocs(data.documents);
+            // 3. Supporting Documents
+            renderSupportingDocs(currentFinancialDocuments);
 
-            // 7. Verification Details, Remarks & History
+            // 4. Verification Details, Remarks & History
             document.getElementById('verByVal').textContent = data.verifiedBy;
             document.getElementById('verOfficeVal').textContent = data.verifiedOffice;
             document.getElementById('verDateVal').textContent = data.verifiedDate;
             document.getElementById('remarksContent').textContent = data.remarks;
-            renderTimeline(data.history);
+            renderTimeline(currentFinancialHistory);
 
-            // Top Badge Text
-            const sem = document.getElementById('finSemSelect').value;
-            const year = document.getElementById('finYearSelect').value;
-            document.getElementById('finReportPeriodText').textContent = `${sem} · A.Y. ${year}`;
+            document.getElementById('remarksPill').textContent = data.ledger.length ? 'Period filtered' : 'No records';
+            document.getElementById('remarksPill').style.background = data.ledger.length ? '#f0fdf4' : '#fff7ed';
+            document.getElementById('remarksPill').style.color = data.ledger.length ? '#16a34a' : '#c2410c';
+            document.getElementById('remarksPill').style.borderColor = data.ledger.length ? '#bbf7d0' : '#fed7aa';
+            renderLedgerView();
+        }
+
+        function renderLedgerView() {
+            let rows = currentLedgerData;
+            if (currentLedgerFilter !== 'all') {
+                rows = rows.filter((item) => item.type === currentLedgerFilter);
+            }
+            const query = currentLedgerSearch.toLowerCase().trim();
+            if (query) {
+                rows = rows.filter((item) => [item.desc, item.cat, item.ref]
+                    .some((value) => String(value || '').toLowerCase().includes(query)));
+            }
+            renderLedgerTable(rows);
         }
 
         function filterLedger(type, btn) {
             document.querySelectorAll('.org-tab-btn').forEach(b => b.classList.remove('is-active'));
-            btn.classList.add('is-active');
-
-            if (type === 'all') {
-                renderLedgerTable(currentLedgerData);
-            } else {
-                renderLedgerTable(currentLedgerData.filter(i => i.type === type));
-            }
+            if (btn) btn.classList.add('is-active');
+            currentLedgerFilter = type;
+            currentLedgerPage = 1;
+            renderLedgerView();
         }
 
         function searchLedger(query) {
-            const q = query.toLowerCase().trim();
-            if (!q) {
-                renderLedgerTable(currentLedgerData);
-                return;
-            }
-            const filtered = currentLedgerData.filter(i => 
-                i.desc.toLowerCase().includes(q) || 
-                i.cat.toLowerCase().includes(q) || 
-                i.ref.toLowerCase().includes(q)
-            );
-            renderLedgerTable(filtered);
+            currentLedgerSearch = query || '';
+            currentLedgerPage = 1;
+            renderLedgerView();
+        }
+
+        function goToFinancialLedgerPage(page) {
+            currentLedgerPage = page;
+            renderLedgerView();
+        }
+
+        function goToFinancialDocumentsPage(page) {
+            currentFinancialDocumentsPage = page;
+            renderSupportingDocs(currentFinancialDocuments);
+        }
+
+        function goToFinancialHistoryPage(page) {
+            currentFinancialHistoryPage = page;
+            renderTimeline(currentFinancialHistory);
         }
 
         // Initialize on DOMContentLoaded

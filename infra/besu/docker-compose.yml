@@ -1,0 +1,127 @@
+services:
+  node-1:
+    image: hyperledger/besu:${BESU_VERSION:-latest}
+    container_name: orgchain-besu-node-1
+    restart: unless-stopped
+    command:
+      - --genesis-file=/opt/besu/network/genesis.json
+      - --data-path=/opt/besu/data
+      - --node-private-key-file=/opt/besu/keys/key
+      - --p2p-host=172.28.0.11
+      - --p2p-port=30303
+      - --bootnodes=enode://${NODE1_PUBLIC_KEY}@172.28.0.11:30303,enode://${NODE2_PUBLIC_KEY}@172.28.0.12:30303,enode://${NODE3_PUBLIC_KEY}@172.28.0.13:30303,enode://${NODE4_PUBLIC_KEY}@172.28.0.14:30303
+      - --rpc-http-enabled
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      - --host-allowlist=*
+      - --rpc-http-cors-origins=all
+      - --min-gas-price=0
+    volumes:
+      - ./networkFiles/genesis.json:/opt/besu/network/genesis.json:ro
+      - ./networkFiles/node-1:/opt/besu/keys:ro
+      - ./networkFiles/node-1-data-runtime:/opt/besu/data
+    ports:
+      - '8545:8545'
+      - '30303:30303/tcp'
+      - '30303:30303/udp'
+    networks:
+      orgchain-besu:
+        ipv4_address: 172.28.0.11
+
+  node-2:
+    image: hyperledger/besu:${BESU_VERSION:-latest}
+    container_name: orgchain-besu-node-2
+    restart: unless-stopped
+    command:
+      - --genesis-file=/opt/besu/network/genesis.json
+      - --data-path=/opt/besu/data
+      - --node-private-key-file=/opt/besu/keys/key
+      - --p2p-host=172.28.0.12
+      - --p2p-port=30303
+      - --bootnodes=enode://${NODE1_PUBLIC_KEY}@172.28.0.11:30303,enode://${NODE2_PUBLIC_KEY}@172.28.0.12:30303,enode://${NODE3_PUBLIC_KEY}@172.28.0.13:30303,enode://${NODE4_PUBLIC_KEY}@172.28.0.14:30303
+      - --rpc-http-enabled
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      - --host-allowlist=*
+      - --rpc-http-cors-origins=all
+      - --min-gas-price=0
+    volumes:
+      - ./networkFiles/genesis.json:/opt/besu/network/genesis.json:ro
+      - ./networkFiles/node-2:/opt/besu/keys:ro
+      - ./networkFiles/node-2-data-runtime:/opt/besu/data
+    ports:
+      - '8546:8545'
+      - '30304:30303/tcp'
+      - '30304:30303/udp'
+    networks:
+      orgchain-besu:
+        ipv4_address: 172.28.0.12
+
+  node-3:
+    image: hyperledger/besu:${BESU_VERSION:-latest}
+    container_name: orgchain-besu-node-3
+    restart: unless-stopped
+    command:
+      - --genesis-file=/opt/besu/network/genesis.json
+      - --data-path=/opt/besu/data
+      - --node-private-key-file=/opt/besu/keys/key
+      - --p2p-host=172.28.0.13
+      - --p2p-port=30303
+      - --bootnodes=enode://${NODE1_PUBLIC_KEY}@172.28.0.11:30303,enode://${NODE2_PUBLIC_KEY}@172.28.0.12:30303,enode://${NODE3_PUBLIC_KEY}@172.28.0.13:30303,enode://${NODE4_PUBLIC_KEY}@172.28.0.14:30303
+      - --rpc-http-enabled
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      - --host-allowlist=*
+      - --rpc-http-cors-origins=all
+      - --min-gas-price=0
+    volumes:
+      - ./networkFiles/genesis.json:/opt/besu/network/genesis.json:ro
+      - ./networkFiles/node-3:/opt/besu/keys:ro
+      - ./networkFiles/node-3-data-runtime:/opt/besu/data
+    ports:
+      - '8547:8545'
+      - '30305:30303/tcp'
+      - '30305:30303/udp'
+    networks:
+      orgchain-besu:
+        ipv4_address: 172.28.0.13
+
+  node-4:
+    image: hyperledger/besu:${BESU_VERSION:-latest}
+    container_name: orgchain-besu-node-4
+    restart: unless-stopped
+    command:
+      - --genesis-file=/opt/besu/network/genesis.json
+      - --data-path=/opt/besu/data
+      - --node-private-key-file=/opt/besu/keys/key
+      - --p2p-host=172.28.0.14
+      - --p2p-port=30303
+      - --bootnodes=enode://${NODE1_PUBLIC_KEY}@172.28.0.11:30303,enode://${NODE2_PUBLIC_KEY}@172.28.0.12:30303,enode://${NODE3_PUBLIC_KEY}@172.28.0.13:30303,enode://${NODE4_PUBLIC_KEY}@172.28.0.14:30303
+      - --rpc-http-enabled
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      - --host-allowlist=*
+      - --rpc-http-cors-origins=all
+      - --min-gas-price=0
+    volumes:
+      - ./networkFiles/genesis.json:/opt/besu/network/genesis.json:ro
+      - ./networkFiles/node-4:/opt/besu/keys:ro
+      - ./networkFiles/node-4-data-runtime:/opt/besu/data
+    ports:
+      - '8548:8545'
+      - '30306:30303/tcp'
+      - '30306:30303/udp'
+    networks:
+      orgchain-besu:
+        ipv4_address: 172.28.0.14
+
+networks:
+  orgchain-besu:
+    name: orgchain-besu
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

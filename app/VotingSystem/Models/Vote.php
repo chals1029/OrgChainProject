@@ -132,7 +132,11 @@ class Vote extends Model
                      ballot_root = :ballot_root,
                      voter_commitment = :voter_commitment,
                      nodes_confirmed = :nodes_confirmed,
-                     node_confirmations = :node_confirmations
+                     node_confirmations = :node_confirmations,
+                     chain_driver = :chain_driver,
+                     chain_tx_hash = :chain_tx_hash,
+                     chain_block_number = :chain_block_number,
+                     chain_contract_address = :chain_contract_address
                  WHERE reference_code = :reference_code'
             );
             $update->execute([
@@ -142,6 +146,10 @@ class Vote extends Model
                 'voter_commitment' => $chain['voter_commitment'],
                 'nodes_confirmed' => (int) $chain['nodes_confirmed'],
                 'node_confirmations' => json_encode($chain['node_confirmations'], JSON_UNESCAPED_SLASHES),
+                'chain_driver' => $chain['chain_driver'] ?? 'file',
+                'chain_tx_hash' => $chain['chain_tx_hash'] ?? null,
+                'chain_block_number' => $chain['chain_block_number'] ?? null,
+                'chain_contract_address' => $chain['chain_contract_address'] ?? null,
                 'reference_code' => $referenceCode,
             ]);
         } catch (\Throwable $exception) {

@@ -16,7 +16,7 @@
     @else
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
-        <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
 </head>
 <body class="landing-body">
@@ -264,7 +264,7 @@
                             <span class="bc-step-num">3</span>
                             <div>
                                 <strong>Sustainable Development Office</strong>
-                                <p>Checks sustainability alignment and seals the next record.</p>
+                                <p>Checks the submitted activity documents and Waste Policy Compliance Form, then seals the next record.</p>
                             </div>
                         </li>
                         <li>

@@ -49,23 +49,25 @@ status: active
 | **How to sign in** | BatStateU **email** + password (not username) |
 | **After login** | `/office-desk` |
 
-| Role | Email | Password |
-| :--- | :---- | :------- |
-| **SO** | `so.office@g.batstate-u.edu.ph` | `Office@2026!` |
-| **OSO** | `oso.office@g.batstate-u.edu.ph` | `Office@2026!` |
-| **SDO** | `sdo.office@g.batstate-u.edu.ph` | `Office@2026!` |
+| Role      | Email                              | Password       |
+| :-------- | :--------------------------------- | :------------- |
+| **SO**    | `so.office@g.batstate-u.edu.ph`    | `Office@2026!` |
+| **OSO**   | `oso.office@g.batstate-u.edu.ph`   | `Office@2026!` |
+| **SDO**   | `sdo.office@g.batstate-u.edu.ph`   | `Office@2026!` |
 | **OVCAA** | `ovcaa.office@g.batstate-u.edu.ph` | `Office@2026!` |
+| OC        | sc.office@g.batstate-u.edu.ph      | `Office@2026!` |
+|           |                                    |                |
 
 **Office screens after login**
 - `/office-desk` — Dashboard
 - `/office-desk/analytics` — Analytics
 - `/office-desk/activities` — Activities / proposals desk
-- `/office-desk/activities/create` — Create activity (SO)
+- `/office-desk/activities/create` — Create activity (SO): In-Campus / Local Off-Campus checklist, official template preview, budget, and uploads
 - `/office-desk/calendar` — Calendar
 - `/office-desk/budget-utilization` — Budget + receipt OCR + budget chain seals
-- `/office-desk/financial-report` — Financial report
-- `/office-desk/financial-report/print` — Printable financial report
-- `/office-desk/accomplishment-report` — Accomplishment report
+- `/office-desk/financial-report` — Financial report (SO / OSO)
+- `/office-desk/financial-report/print` — Printable financial report (SO / OSO)
+- `/office-desk/accomplishment-report` — Accomplishment report (SO / OSO)
 - `/office-desk/updates` — Updates / announcements
 - `/office-desk/renewal` — **Organization Renewal** (SO submit · OSO open/close) → [[Organization Renewal Filing Window]]
 - `/office-desk/archive` — Archive (OSO nav)
@@ -74,6 +76,7 @@ status: active
 > [!note]
 > Login form requires `@g.batstate-u.edu.ph` or `@batstate-u.edu.ph`. Path comes from `.env` → `OFFICE_LOGIN_PATH`.
 > Renewal is **locked for SO** until OSO opens the filing window. SDO/OVCAA get **403** on `/office-desk/renewal`.
+> Semester AR/FR pages and staged-document links are also **SO/OSO only**. SDO and OVCAA stay focused on activity/SDG/final-approval review.
 
 ---
 
@@ -82,13 +85,18 @@ status: active
 | Who | Login screen | After login |
 | :-- | :----------- | :---------- |
 | **Voter (student)** | `/voting-system` → BatStateU Google | Ballot / vote flows under `/voting-system/...` |
-| **Voting admin / staff** | `/voting-system/ssc-access-c7b4f2e91a6d` | Admin dashboard under `/voting-system/admin/...` |
+| **Voting Admin / Staff** | `/voting-system/ssc-access-c7b4f2e91a6d` | Admin dashboard (`/voting-system/admin/dashboard`) or Canvassing dashboard |
 
-**Active voting staff emails in DB** (passwords hashed — not in seed plaintext)
-- `admin@ssc.test` (admin)
-- `canvass@ssc.test` (canvassing)
-- `canvassing@ssc.test` (canvassing)
-- Plus Gmail admin accounts present in `admin_users`
+| Side / Role | Name | Email | Password | Access & Auth Flow |
+| :--- | :--- | :---- | :------- | :----------------- |
+| **Admin Side** | Main Admin | `admin@ssc.test` | `Admin@2026!` | Full Admin Control Center (displays 6-digit code on-screen) |
+| **Admin Side** | SSC Election Admin | `ssc.admin@g.batstate-u.edu.ph` | `Admin@2026!` | Full Admin Control Center (displays 6-digit code on-screen) |
+| **Canvassing Side** | Canvassing Officer | `canvass@ssc.test` | `Canvass@2026!` | Direct access to Canvassing Dashboard & Tally (no OTP) |
+| **Canvassing Side** | SSC Canvassing Desk | `ssc.canvass@g.batstate-u.edu.ph` | `Canvass@2026!` | Direct access to Canvassing Dashboard & Tally (no OTP) |
+
+> [!note]
+> - **Canvassing side** signs in with Email + Password and bypasses OTP, redirecting directly to `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91`.
+> - **Admin side** enters Email + Password, then types the 6-digit verification code generated and displayed directly on the screen to reach `/voting-system/admin/dashboard`.
 
 **Voting screens**
 - `/voting-system` — Public voting home

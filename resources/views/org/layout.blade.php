@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') | {{ $brand['title'] }}</title>
-    <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ !empty(data_get($officeSettings ?? [], 'general.logo_path')) ? asset('storage/'.data_get($officeSettings, 'general.logo_path')) : asset('Orgchain logo.png') }}">
 
     @fonts
 
@@ -14,11 +14,15 @@
     @else
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet">
-        <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
-    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=14">
+    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=16">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
+@php
+    $officeRole = $office->office_role ?? '';
+    $isStudentOrgDesk = $officeRole === 'so';
+@endphp
 <body class="org-body">
     <div class="org-ambient" aria-hidden="true">
         <span class="org-blob org-blob-a"></span>
@@ -47,45 +51,54 @@
                         <em class="org-badge-new">New</em>
                     @endif
                 </a>
-                <a href="{{ route('office.analytics') }}" class="org-nav-link {{ ($activeNav ?? '') === 'analytics' ? 'is-active' : '' }}">
-                    <i class="bi bi-bar-chart-fill is-ico-violet"></i>
-                    <span>Analytics</span>
-                </a>
+                @if (!$isStudentOrgDesk)
+                    <a href="{{ route('office.analytics') }}" class="org-nav-link {{ ($activeNav ?? '') === 'analytics' ? 'is-active' : '' }}">
+                        <i class="bi bi-bar-chart-fill is-ico-violet"></i>
+                        <span>Analytics</span>
+                    </a>
+                @endif
 
-                {{-- Activities / Proposals / SDG Review / OVCAA Review --}}
+                {{-- Activities / Proposals / SDO Document Review / OVCAA Review --}}
                 <a href="{{ route('office.activities') }}" class="org-nav-link {{ ($activeNav ?? '') === 'activities' ? 'is-active' : '' }}">
                     @if (($office->office_role ?? '') === 'oso')
                         <i class="bi bi-file-earmark-check-fill is-ico-blue"></i>
                         <span>Proposals</span>
                     @elseif (($office->office_role ?? '') === 'sdo')
                         <i class="bi bi-leaf-fill is-ico-green"></i>
-                        <span>SDG Document Review</span>
+                        <span>SDO Document Review</span>
                     @elseif (($office->office_role ?? '') === 'ovcaa')
                         <i class="bi bi-patch-check-fill is-ico-green"></i>
-                        <span>Final Approval</span>
+                        <span>OVCAA Review</span>
+                    @elseif (($office->office_role ?? '') === 'oc')
+                        <i class="bi bi-shield-check is-ico-slate"></i>
+                        <span>OC Final Approval</span>
                     @else
                         <i class="bi bi-lightning-charge-fill is-ico-gold"></i>
                         <span>Activities</span>
                     @endif
-                    <em class="org-badge-count">12</em>
+                    @if (!$isStudentOrgDesk)
+                        <em class="org-badge-count">12</em>
+                    @endif
                 </a>
 
                 <a href="{{ route('office.calendar') }}" class="org-nav-link {{ ($activeNav ?? '') === 'calendar' ? 'is-active' : '' }}">
                     <i class="bi bi-calendar3 is-ico-blue"></i>
                     <span>Calendar</span>
-                    <em class="org-badge-count">3</em>
+                    @if (!$isStudentOrgDesk)
+                        <em class="org-badge-count">3</em>
+                    @endif
                 </a>
 
-                {{-- Budget Utilization: removed on OVCAA DESK ONLY --}}
-                @if (($office->office_role ?? '') !== 'ovcaa')
+                {{-- Budget Utilization is limited to SO/OSO/SDO desks; approval desks do not configure funds. --}}
+                @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'oc'], true))
                 <a href="{{ route('office.budget') }}" class="org-nav-link {{ ($activeNav ?? '') === 'budget' ? 'is-active' : '' }}">
                     <i class="bi bi-wallet2 is-ico-green"></i>
                     <span>Budget Utilization</span>
                 </a>
                 @endif
 
-                {{-- Financial Report: removed on OVCAA and SDO --}}
-                @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'sdo']))
+                {{-- Semester AR/FR reports belong only to SO and OSO. --}}
+                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
                     <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
                     <span>Financial Report</span>
@@ -93,8 +106,7 @@
                 </a>
                 @endif
 
-                {{-- Accomplishment Report: removed on OVCAA and SDO --}}
-                @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'sdo']))
+                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
                     <i class="bi bi-trophy is-ico-gold"></i>
                     <span>Accomplishment Report</span>
@@ -105,7 +117,9 @@
                 <a href="{{ route('office.updates') }}" class="org-nav-link {{ ($activeNav ?? '') === 'updates' ? 'is-active' : '' }}">
                     <i class="bi bi-megaphone-fill is-ico-red"></i>
                     <span>Updates</span>
-                    <em class="org-badge-count">3</em>
+                    @if (!$isStudentOrgDesk)
+                        <em class="org-badge-count">3</em>
+                    @endif
                 </a>
                 @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                     <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
@@ -123,15 +137,22 @@
                         <i class="bi bi-archive-fill is-ico-slate"></i>
                         <span>Archive</span>
                     </a>
+                    <a href="{{ route('office.student-reports') }}" class="org-nav-link {{ ($activeNav ?? '') === 'reports' ? 'is-active' : '' }}">
+                        <i class="bi bi-chat-square-text-fill is-ico-maroon"></i>
+                        <span>Student Reports</span>
+                        @if (($navBadges['reports_pending'] ?? 0) > 0)
+                            <em class="org-badge-count" style="background:#fefce8;color:#b45309;border:1px solid #fde68a;">{{ $navBadges['reports_pending'] }}</em>
+                        @endif
+                    </a>
                     <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
                         <i class="bi bi-award-fill is-ico-maroon"></i>
-                        <span>TOSA Module</span>
+                        <span>TOSA</span>
                         <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
                     </a>
                 @endif
             </nav>
 
-            @if (in_array(($office->office_role ?? ''), ['oso', 'ovcaa']))
+            @if (in_array(($office->office_role ?? ''), ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true))
             <div style="margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--org-line); display: flex; flex-direction: column; gap: 0.35rem;">
                 <button type="button" class="org-nav-link org-sidebar-settings-btn" onclick="openSettingsModal()" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.75rem; font-family: inherit;">
                     <i class="bi bi-gear-fill is-ico-slate"></i>
@@ -149,11 +170,13 @@
                 <div>
                     <p class="org-module-kicker">
                         @if (($office->office_role ?? '') === 'oso')
-                            BSU Office of Student Organizations (OSO) Review Desk
+                            {{ data_get($officeSettings ?? [], 'general.office_name', 'BSU Office of Student Organizations (OSO)') }} Review Desk
                         @elseif (($office->office_role ?? '') === 'sdo')
-                            Sustainable Development Office (SDO) — SDG Alignment Review
+                            Sustainable Development Office (SDO) — Document Review Desk
                         @elseif (($office->office_role ?? '') === 'ovcaa')
-                            OVCAA Final Approval Desk
+                            OVCAA Review Desk
+                        @elseif (($office->office_role ?? '') === 'oc')
+                            Office of the Chancellor (OC) — Final Approval Desk
                         @else
                             BSU Student Organization Module
                         @endif
@@ -176,7 +199,7 @@
                             </div>
                             <div class="org-user-pill-info">
                                 <span class="org-user-pill-name">{{ $office->name }}</span>
-                                <span class="org-user-pill-role">{{ $brand['role'] }}</span>
+                                <span class="org-user-pill-role">{{ strtoupper($office->office_role ?? '') }} Desk</span>
                             </div>
                             <i class="bi bi-chevron-down org-user-chevron"></i>
                         </button>
@@ -195,10 +218,12 @@
 
                             <div class="org-dropdown-divider"></div>
 
-                            <button type="button" class="org-dropdown-item org-dropdown-settings-btn" onclick="openSettingsModal()">
-                                <i class="bi bi-gear-wide-connected" style="color: var(--org-red);"></i>
-                                <span>Settings</span>
-                            </button>
+                            @if (in_array(($office->office_role ?? ''), ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true))
+                                <button type="button" class="org-dropdown-item org-dropdown-settings-btn" onclick="openSettingsModal()">
+                                    <i class="bi bi-gear-wide-connected" style="color: var(--org-red);"></i>
+                                    <span>Settings</span>
+                                </button>
+                            @endif
 
                             <button type="button" class="org-dropdown-item org-dropdown-logout-btn" onclick="openLogoutModal()">
                                 <i class="bi bi-box-arrow-left"></i>
@@ -210,6 +235,12 @@
             </header>
 
             <div class="org-content">
+                @if (session('success') || session('error'))
+                    <div role="alert" style="margin:0 0 1rem;padding:0.8rem 1rem;border-radius:12px;font-size:0.88rem;font-weight:600;display:flex;align-items:center;gap:0.6rem;{{ session('error') ? 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;' : 'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;' }}">
+                        <i class="bi {{ session('error') ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
+                        <span>{{ session('success') ?? session('error') }}</span>
+                    </div>
+                @endif
                 @yield('content')
             </div>
         </div>
@@ -218,8 +249,10 @@
     <div class="org-page-loader" id="orgPageLoader" aria-hidden="true"><span></span></div>
     <div class="org-sidebar-overlay" id="orgSidebarOverlay" hidden></div>
 
-    {{-- Executive Settings Hub Component (Front-End Only) --}}
-    @include('org.settings-modal')
+    {{-- Office-user settings component; institutional management panels remain OSO-only. --}}
+    @if (in_array(($office->office_role ?? ''), ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true))
+        @include('org.settings-modal')
+    @endif
 
     {{-- Hidden Logout Form --}}
     <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" style="display: none;">
@@ -299,14 +332,28 @@
             }
         }
 
-        /* No-reload sidebar navigation: swap topbar + content via fetch. */
-        (function () {
-            const executedScripts = new Set();
-            document.querySelectorAll('script:not([src])').forEach((s) => {
-                if (s.textContent.trim()) executedScripts.add(s.textContent);
+            /* Instant feedback + preloading so full-page tab switches feel fast.
+               Shows the top progress bar the moment a sidebar tab is clicked,
+               and quietly pre-loads tabs on hover so the next click is near-instant. */
+            const orgPrefetched = new Set();
+            const showOrgLoader = () => document.getElementById('orgPageLoader')?.classList.add('is-loading');
+            const hideOrgLoader = () => document.getElementById('orgPageLoader')?.classList.remove('is-loading');
+            const prefetchOrgPage = (url) => {
+                if (!url || orgPrefetched.has(url)) return;
+                orgPrefetched.add(url);
+                try {
+                    fetch(url, { credentials: 'same-origin', headers: { 'X-Org-Prefetch': '1' } }).catch(() => {});
+                } catch (err) { /* prefetch is best-effort only */ }
+            };
+
+            document.querySelectorAll('.org-nav a.org-nav-link[href]').forEach((link) => {
+                link.addEventListener('mouseenter', () => prefetchOrgPage(link.href), { passive: true });
+                link.addEventListener('focus', () => prefetchOrgPage(link.href), { passive: true });
             });
 
-            const loader = () => document.getElementById('orgPageLoader');
+            window.addEventListener('pageshow', hideOrgLoader);
+            document.addEventListener('DOMContentLoaded', hideOrgLoader);
+        (function () {
             const sidebar = () => document.getElementById('orgSidebar');
             const overlay = () => document.getElementById('orgSidebarOverlay');
 
@@ -324,58 +371,12 @@
                 document.body.classList.add('org-no-scroll');
             };
 
-            const runScript = (el) => {
-                if (el.src) {
-                    if (!document.querySelector('script[src="' + el.src + '"]')) {
-                        const ns = document.createElement('script');
-                        ns.src = el.src;
-                        if (el.defer) ns.defer = true;
-                        document.body.appendChild(ns);
-                    }
-                    return;
-                }
-                const code = el.textContent || '';
-                if (!code.trim() || executedScripts.has(code)) return;
-                executedScripts.add(code);
-                const ns = document.createElement('script');
-                ns.textContent = code;
-                document.body.appendChild(ns);
-            };
-
-            const markActive = (url) => {
-                let path = '';
-                try { path = new URL(url, location.origin).pathname; } catch (_) { return; }
-                document.querySelectorAll('.org-nav a.org-nav-link[href]').forEach((a) => {
-                    let ap = '';
-                    try { ap = new URL(a.getAttribute('href'), location.origin).pathname; } catch (_) { return; }
-                    a.classList.toggle('is-active', ap === path);
-                });
-            };
-
-            window.orgNavigate = async function (url, push = true) {
-                const bar = loader();
-                if (bar) bar.classList.add('is-loading');
-                try {
-                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
-                    const html = await res.text();
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const newTopbar = doc.querySelector('.org-topbar');
-                    const newContent = doc.querySelector('.org-content');
-                    if (!newTopbar || !newContent) { location.href = url; return; }
-                    document.querySelector('.org-topbar')?.replaceWith(newTopbar);
-                    document.querySelector('.org-content')?.replaceWith(newContent);
-                    if (doc.title) document.title = doc.title;
-                    doc.querySelectorAll('body script').forEach(runScript);
-                    markActive(url);
-                    if (push) history.pushState({ orgNav: true }, '', url);
-                    window.closeOrgSidebar();
-                    document.querySelector('.org-main')?.scrollTo({ top: 0 });
-                    window.scrollTo({ top: 0 });
-                } catch (_) {
-                    location.href = url;
-                } finally {
-                    if (bar) bar.classList.remove('is-loading');
-                }
+            // NOTE: Sidebar links intentionally perform full page loads.
+            // The previous fetch-and-swap navigation left pages half-initialized
+            // (inline scripts ran once, DOMContentLoaded never refired), which
+            // killed buttons like Upload / Open Camera until a manual refresh.
+            window.orgNavigate = function (url) {
+                location.href = url;
             };
 
             document.addEventListener('click', (e) => {
@@ -391,8 +392,10 @@
                 }
                 const link = e.target.closest('.org-nav a.org-nav-link[href]');
                 if (link && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
-                    e.preventDefault();
-                    window.orgNavigate(link.getAttribute('href'), true);
+                    // Full page load (see note on window.orgNavigate) —
+                    // show the top progress bar instantly so it never feels stuck.
+                    showOrgLoader();
+                    window.closeOrgSidebar();
                 }
             });
 
@@ -413,9 +416,89 @@
                 orgDesktopQuery.addListener(syncOrgSidebarToViewport);
             }
 
-            window.addEventListener('popstate', () => {
-                window.orgNavigate(location.href, false);
+            // Full page loads: native back/forward needs no interception.
+        })();
+
+        /* Shared server-backed upload behavior. Page-specific workflows still
+           own their processing (OCR, redirects, and previews), while this
+           layer keeps file validation, selected-file feedback, and duplicate
+           submit protection consistent across the OSO desk. */
+        (function () {
+            const formatBytes = (bytes) => {
+                if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+                const units = ['B', 'KB', 'MB', 'GB'];
+                const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+                return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
+            };
+
+            const statusFor = (input) => {
+                const explicitId = input.dataset.uploadStatusId;
+                if (explicitId) return document.getElementById(explicitId);
+
+                let status = input.parentElement?.querySelector('[data-org-upload-status]');
+                if (!status && input.type !== 'hidden' && getComputedStyle(input).display !== 'none') {
+                    status = document.createElement('span');
+                    status.className = 'org-upload-status';
+                    status.dataset.orgUploadStatus = '';
+                    status.setAttribute('aria-live', 'polite');
+                    input.insertAdjacentElement('afterend', status);
+                }
+                return status;
+            };
+
+            const updateFileState = (input) => {
+                const files = Array.from(input.files || []);
+                const status = statusFor(input);
+                const maxBytes = Number(input.dataset.maxSize || 20480) * 1024;
+                const oversized = files.find((file) => file.size > maxBytes);
+
+                input.dataset.uploadInvalid = oversized ? 'true' : 'false';
+                input.setCustomValidity(oversized ? `${oversized.name} is larger than ${formatBytes(maxBytes)}.` : '');
+
+                if (!status) return;
+                status.classList.toggle('is-selected', files.length > 0 && !oversized);
+                status.classList.toggle('is-error', Boolean(oversized));
+                if (oversized) {
+                    status.textContent = `${oversized.name} is too large. Maximum: ${formatBytes(maxBytes)}.`;
+                } else if (!files.length) {
+                    status.textContent = 'No file selected.';
+                } else if (files.length === 1) {
+                    status.textContent = `Selected: ${files[0].name} (${formatBytes(files[0].size)}).`;
+                } else {
+                    status.textContent = `${files.length} files selected (${formatBytes(files.reduce((sum, file) => sum + file.size, 0))} total).`;
+                }
+            };
+
+            document.addEventListener('change', (event) => {
+                const input = event.target.closest?.('input[type="file"][data-org-upload]');
+                if (input) updateFileState(input);
             });
+
+            document.addEventListener('submit', (event) => {
+                const form = event.target.closest?.('form[data-org-upload-form]');
+                if (!form) return;
+
+                if (form.dataset.orgUploadSubmitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+
+                const invalidInput = form.querySelector('input[type="file"][data-org-upload][data-upload-invalid="true"]');
+                if (invalidInput) {
+                    event.preventDefault();
+                    invalidInput.focus();
+                    return;
+                }
+
+                form.dataset.orgUploadSubmitting = 'true';
+                form.classList.add('is-uploading');
+                form.setAttribute('aria-busy', 'true');
+                form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                    button.disabled = true;
+                });
+            });
+
+            document.querySelectorAll('input[type="file"][data-org-upload]').forEach(updateFileState);
         })();
     </script>
     @stack('scripts')

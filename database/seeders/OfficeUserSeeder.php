@@ -38,6 +38,13 @@ class OfficeUserSeeder extends Seeder
                 'office_role' => 'ovcaa',
                 'office_title' => 'Office of the Vice Chancellor for Academic Affairs',
             ],
+            [
+                'username' => 'oc.office',
+                'email' => 'oc.office@g.batstate-u.edu.ph',
+                'name' => 'OC Officer',
+                'office_role' => 'oc',
+                'office_title' => 'Office of the Chancellor',
+            ],
         ];
 
         foreach ($accounts as $account) {

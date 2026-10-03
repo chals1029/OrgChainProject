@@ -145,6 +145,30 @@ class AuthAndOtpTest extends TestCase
         $this->get('/portal')->assertRedirect();
     }
 
+    public function test_authenticated_student_can_preview_and_download_the_real_tosa_docx(): void
+    {
+        $student = $this->ensureActiveStudent('21-00001');
+
+        $this->actingAs($student, 'student')
+            ->get('/portal')
+            ->assertOk()
+            ->assertSee('Official TOSA Application Form', false)
+            ->assertSee('Preview DOCX', false)
+            ->assertSee('Download DOCX', false);
+
+        $this->actingAs($student, 'student')
+            ->get(route('portal.tosa.template', ['preview' => 1]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            ->assertHeader('content-disposition', 'inline; filename="TOSA Application Form 2025.docx"');
+
+        $this->actingAs($student, 'student')
+            ->get(route('portal.tosa.template', ['download' => 1]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            ->assertHeader('content-disposition', 'attachment; filename="TOSA Application Form 2025.docx"');
+    }
+
     public function test_google_student_login_unconfigured_returns_to_home(): void
     {
         config([

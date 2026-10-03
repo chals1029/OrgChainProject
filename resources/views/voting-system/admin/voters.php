@@ -68,7 +68,10 @@
                     name="sr_code"
                     value="<?= e($filterSrCode) ?>"
                     placeholder="Example: 22-74239"
-                    autocomplete="off">
+                    autocomplete="off"
+                    autocapitalize="none"
+                    autocorrect="off"
+                    spellcheck="false">
             </label>
 
             <label class="voter-filter-field" for="voterCollegeFilter">

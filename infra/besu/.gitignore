@@ -1,0 +1,6 @@
+# Generated validator and application keys are intentionally never committed.
+networkFiles/*
+!networkFiles/.gitkeep
+.env
+
+contracts/build/

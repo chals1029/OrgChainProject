@@ -19,6 +19,8 @@ class OrgRenewalSubmission extends Model
         'dean_name',
         'status',
         'notes',
+        'review_remarks',
+        'reviewed_at',
         'submitted_at',
     ];
 
@@ -26,6 +28,7 @@ class OrgRenewalSubmission extends Model
     {
         return [
             'submitted_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 

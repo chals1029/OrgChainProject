@@ -23,6 +23,9 @@ class DatabaseSeeder extends Seeder
         $this->call(StudentPortalSeeder::class);
         $this->call(OrgChainUserAccountsSeeder::class);
         $this->call(OfficeUserSeeder::class);
+        $this->call(SystemAdminSeeder::class);
+        $this->call(VotingStaffSeeder::class);
         $this->call(PreOralDemoSeeder::class);
+        $this->call(BudgetUtilizationDemoSeeder::class);
     }
 }

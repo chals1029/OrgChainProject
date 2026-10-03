@@ -9,6 +9,7 @@ class BudgetItem extends Model
     protected $connection = 'mysql';
 
     protected $fillable = [
+        'org_activity_id',
         'title',
         'category',
         'college',

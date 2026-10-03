@@ -3,6 +3,7 @@
 namespace Tests\Support;
 
 use App\Models\OfficeUser;
+use App\Models\SystemAdminUser;
 use App\Models\UserAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -82,6 +83,7 @@ trait UsesLaragonDatabase
                 'password' => Hash::make('Office@2026!'),
                 'office_role' => $role,
                 'office_title' => strtoupper($role).' Desk',
+                'student_organization_id' => null,
                 'is_active' => true,
             ]
         );
@@ -92,6 +94,20 @@ trait UsesLaragonDatabase
         }
 
         return $user;
+    }
+
+    protected function ensureSystemAdmin(): SystemAdminUser
+    {
+        return SystemAdminUser::query()->updateOrCreate(
+            ['email' => 'system.admin@g.batstate-u.edu.ph'],
+            [
+                'name' => 'OrgChain System Administrator',
+                'username' => 'system_admin',
+                'password' => 'SystemAdmin@2026!',
+                'role' => 'system_admin',
+                'is_active' => true,
+            ]
+        );
     }
 
     protected function ensureActiveStudent(string $srCode = '21-00001'): UserAccount

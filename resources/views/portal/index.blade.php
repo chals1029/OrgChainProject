@@ -740,11 +740,19 @@
                             'remaining' => $budgetAlloc - $budgetSpent,
                             'rate' => round(($budgetSpent / max($budgetAlloc, 1)) * 100, 1),
                             'tx_hash' => '0x' . substr(md5($act->title . ($act->id ?? '1')), 0, 40),
-                            'items' => [
-                                ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
-                                ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
-                                ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
-                            ]
+                            'items' => !empty($publicExpenseItemsByActivity[$act->id])
+                                ? collect($publicExpenseItemsByActivity[$act->id])->map(fn ($it) => [
+                                    'category' => $it['name'],
+                                    'allocated' => $it['total'],
+                                    'spent' => $it['total'],
+                                    'variance' => 0,
+                                    'status' => 'Receipt Verified',
+                                ])->all()
+                                : [
+                                    ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
+                                    ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
+                                    ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
+                                ]
                         ]
                     ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                 @endphp
@@ -889,11 +897,19 @@
                                         'remaining' => $budgetAlloc - $budgetSpent,
                                         'rate' => round(($budgetSpent / max($budgetAlloc, 1)) * 100, 1),
                                         'tx_hash' => '0x' . substr(md5($act->title . ($act->id ?? '1')), 0, 40),
-                                        'items' => [
-                                            ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
-                                            ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
-                                            ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
-                                        ]
+                                        'items' => !empty($publicExpenseItemsByActivity[$act->id])
+                                            ? collect($publicExpenseItemsByActivity[$act->id])->map(fn ($it) => [
+                                                'category' => $it['name'],
+                                                'allocated' => $it['total'],
+                                                'spent' => $it['total'],
+                                                'variance' => 0,
+                                                'status' => 'Receipt Verified',
+                                            ])->all()
+                                            : [
+                                                ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
+                                                ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
+                                                ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
+                                            ]
                                     ]
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                             @endphp
@@ -998,6 +1014,26 @@
                 <span>Read Only</span>
             </div>
         </div>
+
+        @if (!empty($tosaTemplate['available']))
+            <div class="sp-tosa-download-strip" style="background: #fff8f8; border: 1px solid #fecdd3; border-radius: 10px; padding: 0.75rem 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <i class="bi bi-file-earmark-word-fill" style="color: #8b1828; font-size: 1.35rem;"></i>
+                    <div>
+                        <strong style="color: #8b1828; font-size: 0.9rem;">Official TOSA Application Form</strong>
+                        <div style="color: #6b7280; font-size: 0.76rem;">Download or preview the official nomination document (AY 2025–2026).</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <a href="{{ $tosaTemplate['preview_url'] }}" target="_blank" class="sp-btn sp-btn-xs" style="background: #ffffff; border: 1px solid #d1d5db; color: #374151; font-weight: 600; text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <i class="bi bi-eye"></i> Preview DOCX
+                    </a>
+                    <a href="{{ $tosaTemplate['download_url'] }}" class="sp-btn sp-btn-xs" style="background: #8b1828; color: #ffffff; border: none; font-weight: 600; text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <i class="bi bi-download"></i> Download DOCX
+                    </a>
+                </div>
+            </div>
+        @endif
 
         {{-- Announcements Table Card --}}
         <div class="sp-announcements-table-card liquid-glass">

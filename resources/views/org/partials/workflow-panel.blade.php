@@ -1,21 +1,13 @@
 {{-- Shared workflow + urgency widgets for pre-oral demo --}}
 @php
     $role = $office->office_role ?? 'so';
-    $workflow = $workflowStages ?? ['created','college_review','oso_review','sdo_review','ovcaa_review','oc_approved'];
+    $workflow = $workflowStages ?? ['created','college_review','oso_review','sdo_review','ovcaa_review','oc_review','oc_approved'];
 @endphp
 
 <section class="org-panel liquid-glass" style="margin-bottom:1.25rem;">
     <div class="org-panel-head">
-        <h2><i class="bi bi-diagram-3"></i> Approval Workflow Pipeline</h2>
+        <h2><i class="bi bi-diagram-3"></i> Desk Overview</h2>
         <span>System-checked</span>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
-        @foreach ($workflow as $step)
-            <span style="padding:0.35rem 0.75rem;border-radius:999px;background:rgba(122,18,34,0.08);border:1px solid rgba(122,18,34,0.15);font-size:0.78rem;font-weight:800;color:#7a1222;">
-                {{ strtoupper(str_replace('_', ' ', $step)) }}
-                @if (! $loop->last) <i class="bi bi-arrow-right"></i> @endif
-            </span>
-        @endforeach
     </div>
 
     @if (($role ?? '') === 'so' && !empty($fundAccount))
@@ -66,34 +58,21 @@
                         <strong>{{ $row['title'] }}</strong>
                         <div style="font-size:0.78rem;color:#7a7074;">{{ $row['status'] }}@if(!empty($row['returned_to'])) · return to {{ $row['returned_to'] }}@endif</div>
                     </div>
-                    @if (!empty($row['id']))
-                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                            <form method="post" action="{{ route('office.activities.advance', $row['id']) }}">@csrf
-                                <button class="org-btn org-btn-primary" type="submit" style="font-size:0.75rem;">Advance</button>
-                            </form>
-                            <form method="post" action="{{ route('office.activities.return', $row['id']) }}" style="display:flex;gap:0.35rem;">@csrf
-                                <select name="returned_to" style="font-size:0.75rem;border-radius:8px;border:1px solid #e8dedf;">
-                                    <option value="so">SO</option>
-                                    <option value="college_reviewer">College</option>
-                                    <option value="oso">OSO</option>
-                                    <option value="sdo">SDO</option>
-                                </select>
-                                <button class="org-btn" type="submit" style="font-size:0.75rem;">Return</button>
-                            </form>
-                        </div>
-                    @endif
                 </div>
             @endforeach
         </div>
     @endif
 
     @if (($role ?? '') === 'oso' && !empty($studentFeedback) && count($studentFeedback))
-        <h3 style="font-size:0.95rem;margin:1rem 0 0.65rem;">Student Voice</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:1rem 0 0.65rem;">
+            <h3 style="font-size:0.95rem;margin:0;">Student Voice</h3>
+            <a href="{{ route('office.student-reports') }}" style="font-size:0.75rem;font-weight:800;color:#8b1828;text-decoration:none;">Open verification queue &rarr;</a>
+        </div>
         <ul style="list-style:none;margin:0;padding:0;display:grid;gap:0.45rem;">
             @foreach ($studentFeedback as $fb)
                 <li style="padding:0.6rem 0.75rem;border:1px solid #f0e6e8;border-radius:12px;font-size:0.82rem;">
                     <strong>{{ $fb->is_anonymous ? 'Anonymous' : ($fb->author_name ?: 'Student') }}</strong>
-                    <span style="color:#7a7074;"> · {{ $fb->topic }} · {{ $fb->program }}</span>
+                    <span style="color:#7a7074;"> · {{ $fb->topic }}@if(!empty($fb->college)) · {{ $fb->college }}@endif</span>
                     <div>{{ \Illuminate\Support\Str::limit($fb->body, 140) }}</div>
                 </li>
             @endforeach

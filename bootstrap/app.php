@@ -23,10 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'student.auth' => \App\Http\Middleware\EnsureStudentAuthenticated::class,
             'office.auth' => \App\Http\Middleware\EnsureOfficeAuthenticated::class,
+            'system_admin.auth' => \App\Http\Middleware\EnsureSystemAdminAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*', 'office-desk/budget-utilization/receipts/scan'),
         );
     })->create();

@@ -1,16 +1,16 @@
 @extends('org.layout')
 
-@section('title', 'Archive Vault')
+@section('title', $currentFolder ? $currentFolder->name . ' — Archive Vault' : 'Archive Vault')
 
 @section('header')
-    <h1><strong>Archive Vault &amp; Records</strong></h1>
-    <p class="org-welcome">Official permanent depository for student organization proposals, financial liquidation records, accomplishment reports, and compliance archives.</p>
+    <h1><strong>Archive Vault &amp; Depository</strong></h1>
+    <p class="org-welcome">Official permanent institutional repository for student organization proposals, financial liquidations, accomplishment reports, and compliance archives.</p>
 @endsection
 
 @section('actions')
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="openNewFolderModal()">
-            <i class="bi bi-folder-plus"></i> New Folder
+            <i class="bi bi-folder-plus"></i> {{ $currentFolder ? 'New Subfolder' : 'New Folder' }}
         </button>
         <button type="button" class="org-btn org-btn-primary org-btn-sm" onclick="openUploadDocumentModal()">
             <i class="bi bi-cloud-upload-fill"></i> Upload Document
@@ -21,112 +21,95 @@
 @section('content')
     <style>
         /* ==========================================================================
-           Impeccable & Unslop Design System for Archive Vault
+           Google Drive-Style Archive Vault System
            ========================================================================== */
         :root {
-            --arc-maroon: #8b1828;
-            --arc-maroon-dark: #62101c;
-            --arc-maroon-light: #fdf0f2;
-            --arc-maroon-border: #f2dfe2;
-            --arc-ink-dark: #1a1618;
-            --arc-ink-body: #3f3538;
-            --arc-ink-muted: #7a7074;
-            --arc-border: #f0e6e8;
-            --arc-border-subtle: #f9f2f4;
-            --arc-radius-lg: 20px;
-            --arc-radius-md: 14px;
-            --arc-radius-sm: 10px;
-            --arc-shadow-sm: 0 4px 16px rgba(90, 15, 30, 0.03);
-            --arc-shadow-md: 0 8px 24px rgba(90, 15, 30, 0.06);
-            --arc-shadow-hover: 0 12px 32px rgba(90, 15, 30, 0.08);
+            --g-maroon: #8b1828;
+            --g-maroon-dark: #62101c;
+            --g-maroon-light: #fdf0f2;
+            --g-maroon-border: #f2dfe2;
+            --g-ink-dark: #1e293b;
+            --g-ink-body: #334155;
+            --g-ink-muted: #64748b;
+            --g-border: #e2e8f0;
+            --g-border-subtle: #f1f5f9;
+            --g-bg-card: #ffffff;
+            --g-bg-hover: #f8fafc;
+            --g-radius-lg: 18px;
+            --g-radius-md: 12px;
+            --g-radius-sm: 8px;
+            --g-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+            --g-shadow-md: 0 6px 20px rgba(15, 23, 42, 0.07);
+            --g-shadow-hover: 0 10px 28px rgba(139, 24, 40, 0.09);
         }
 
-        /* 1. Archive Summary KPI Cards */
-        .arc-stats-row {
+        /* 1. Summary KPI Bar */
+        .gdrive-stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
             margin-bottom: 1.5rem;
         }
 
-        .arc-stat-card {
+        .gdrive-stat-card {
             background: #ffffff;
-            border: 1.5px solid var(--arc-border);
-            border-radius: var(--arc-radius-lg);
-            padding: 1.25rem 1.4rem;
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-lg);
+            padding: 1.1rem 1.3rem;
             display: flex;
             align-items: center;
             gap: 1rem;
-            box-shadow: var(--arc-shadow-sm);
-            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            box-shadow: var(--g-shadow-sm);
+            transition: all 0.2s ease;
         }
 
-        .arc-stat-card:hover {
+        .gdrive-stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: var(--arc-shadow-md);
-            border-color: var(--arc-maroon-border);
+            border-color: var(--g-maroon-border);
+            box-shadow: var(--g-shadow-md);
         }
 
-        .arc-stat-icon {
-            width: 42px;
-            height: 42px;
+        .gdrive-stat-icon {
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1.35rem;
             flex-shrink: 0;
         }
 
-        .arc-stat-icon.is-red {
-            background: #fee2e2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
+        .gdrive-stat-icon.is-red { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .gdrive-stat-icon.is-gold { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .gdrive-stat-icon.is-green { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+        .gdrive-stat-icon.is-blue { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
 
-        .arc-stat-icon.is-gold {
-            background: #fef3c7;
-            color: #d97706;
-            border: 1px solid #fde68a;
-        }
-
-        .arc-stat-icon.is-green {
-            background: #dcfce7;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
-        }
-
-        .arc-stat-icon.is-blue {
-            background: #e0f2fe;
-            color: #0284c7;
-            border: 1px solid #bae6fd;
-        }
-
-        .arc-stat-meta strong {
+        .gdrive-stat-meta strong {
             display: block;
             font-size: 1.35rem;
             font-weight: 800;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             line-height: 1.2;
             letter-spacing: -0.02em;
         }
 
-        .arc-stat-meta span {
-            font-size: 0.8rem;
-            color: var(--arc-ink-muted);
+        .gdrive-stat-meta span {
+            font-size: 0.78rem;
+            color: var(--g-ink-muted);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
 
-        /* 2. Search & Filter Bar Section */
-        .arc-filter-panel {
+        /* 2. Google Drive Navigation Toolbar & Breadcrumbs Bar */
+        .gdrive-nav-panel {
             background: #ffffff;
-            border: 1px solid var(--arc-border);
-            border-radius: var(--arc-radius-lg);
-            padding: 1.25rem 1.5rem;
-            margin-bottom: 1.75rem;
-            box-shadow: var(--arc-shadow-sm);
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-lg);
+            padding: 1rem 1.4rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--g-shadow-sm);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -134,29 +117,101 @@
             flex-wrap: wrap;
         }
 
-        .arc-search-wrapper {
-            position: relative;
-            flex: 1;
-            min-width: 260px;
+        .gdrive-breadcrumb-trail {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--g-ink-dark);
+            min-width: 0;
         }
 
-        .arc-search-wrapper i {
+        .gdrive-level-up-btn {
+            background: #f1f5f9;
+            color: var(--g-ink-dark);
+            border: 1px solid var(--g-border);
+            border-radius: var(--g-radius-sm);
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            margin-right: 0.35rem;
+            flex-shrink: 0;
+        }
+
+        .gdrive-level-up-btn:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            transform: translateX(-2px);
+        }
+
+        .gdrive-crumb-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--g-ink-muted);
+            text-decoration: none;
+            padding: 0.35rem 0.65rem;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .gdrive-crumb-item:hover {
+            color: var(--g-maroon);
+            background: var(--g-maroon-light);
+        }
+
+        .gdrive-crumb-item.is-active {
+            color: var(--g-maroon);
+            font-weight: 800;
+            background: var(--g-maroon-light);
+            border: 1px solid var(--g-maroon-border);
+        }
+
+        .gdrive-crumb-divider {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+
+        .gdrive-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .gdrive-search-box {
+            position: relative;
+            min-width: 240px;
+        }
+
+        .gdrive-search-box i {
             position: absolute;
-            left: 1rem;
+            left: 0.95rem;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--arc-ink-muted);
+            color: var(--g-ink-muted);
             font-size: 0.9rem;
             pointer-events: none;
         }
 
-        .arc-search-input {
+        .gdrive-search-input {
             width: 100%;
-            border: 1.5px solid var(--arc-border);
+            border: 1.5px solid var(--g-border);
             border-radius: 9999px;
-            padding: 0.55rem 1.15rem 0.55rem 2.4rem;
-            font-size: 0.88rem;
-            color: var(--arc-ink-dark);
+            padding: 0.5rem 1rem 0.5rem 2.3rem;
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: var(--g-ink-dark);
             background: #f8fafc;
             outline: none;
             transition: all 0.2s ease;
@@ -164,110 +219,205 @@
             font-family: inherit;
         }
 
-        .arc-search-input:focus {
+        .gdrive-search-input:focus {
             background: #ffffff;
-            border-color: var(--arc-maroon);
-            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.06);
+            border-color: var(--g-maroon);
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.08);
         }
 
-        .arc-filter-dropdowns {
+        .gdrive-view-toggle-group {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .gdrive-view-btn {
+            background: transparent;
+            border: none;
+            width: 34px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--g-ink-muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .gdrive-view-btn:hover { color: var(--g-ink-dark); }
+
+        .gdrive-view-btn.is-active {
+            background: #ffffff;
+            color: var(--g-maroon);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+        }
+
+        /* 3. Main Container Card */
+        .gdrive-main-card {
+            background: #ffffff;
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-lg);
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--g-shadow-md);
+        }
+
+        .gdrive-section-title-bar {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.15rem;
             gap: 0.75rem;
             flex-wrap: wrap;
         }
 
-        .arc-select {
-            border: 1.5px solid var(--arc-border);
-            border-radius: 10px;
-            padding: 0.5rem 0.9rem;
-            font-size: 0.84rem;
-            font-weight: 600;
-            color: var(--arc-ink-dark);
-            background: #ffffff;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            font-family: inherit;
-        }
-
-        .arc-select:focus {
-            border-color: var(--arc-maroon);
-            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.06);
-        }
-
-        /* 3. Organization Folders Section */
-        .arc-section-card {
-            background: #ffffff;
-            border: 1px solid var(--arc-border);
-            border-radius: var(--arc-radius-lg);
-            padding: 1.75rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--arc-shadow-md);
-        }
-
-        .arc-section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
-            flex-wrap: wrap;
-        }
-
-        .arc-section-title {
+        .gdrive-section-heading {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 800;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             display: flex;
             align-items: center;
-            gap: 0.55rem;
+            gap: 0.5rem;
             letter-spacing: -0.01em;
         }
 
-        .arc-section-sub {
-            margin: 0.2rem 0 0;
-            font-size: 0.82rem;
-            color: var(--arc-ink-muted);
+        .gdrive-badge-count {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: var(--g-ink-muted);
+            padding: 0.15rem 0.55rem;
+            border-radius: 9999px;
+            border: 1px solid #e2e8f0;
         }
 
-        .arc-folder-grid {
+        /* 4. Google Drive Folder Grid */
+        .gdrive-folder-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 1rem;
+            margin-bottom: 2.25rem;
         }
 
-        .arc-folder-card {
+        .gdrive-folder-card {
             background: #ffffff;
-            border: 1.5px solid var(--arc-border);
-            border-radius: var(--arc-radius-md);
-            padding: 1.15rem 1.25rem;
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-md);
+            padding: 1rem 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.18s ease;
+            position: relative;
+            box-shadow: var(--g-shadow-sm);
+        }
+
+        .gdrive-folder-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--g-maroon);
+            background: #faf7f8;
+            box-shadow: var(--g-shadow-hover);
+        }
+
+        .gdrive-folder-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .gdrive-folder-card:hover .gdrive-folder-icon {
+            transform: scale(1.08);
+        }
+
+        .gdrive-folder-icon.is-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .gdrive-folder-icon.is-blue { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .gdrive-folder-icon.is-green { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .gdrive-folder-icon.is-violet { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
+        .gdrive-folder-icon.is-gold { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+        .gdrive-folder-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .gdrive-folder-name {
+            display: block;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--g-ink-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        .gdrive-folder-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.74rem;
+            color: var(--g-ink-muted);
+            margin-top: 0.25rem;
+            font-weight: 600;
+        }
+
+        .gdrive-folder-subfolders {
+            color: var(--g-maroon);
+            font-weight: 700;
+        }
+
+        /* 5. Google Drive Document Cards (Grid View) */
+        .gdrive-file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 1.15rem;
+        }
+
+        .gdrive-file-card {
+            background: #ffffff;
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-md);
+            padding: 1.15rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--g-shadow-sm);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .gdrive-file-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--g-maroon-border);
+            box-shadow: var(--g-shadow-hover);
+        }
+
+        .gdrive-file-top {
             display: flex;
             align-items: flex-start;
             gap: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            box-shadow: var(--arc-shadow-sm);
+            margin-bottom: 0.75rem;
         }
 
-        .arc-folder-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--arc-maroon-border);
-            box-shadow: var(--arc-shadow-hover);
-        }
-
-        .arc-folder-card.is-active {
-            border-color: var(--arc-maroon);
-            background: linear-gradient(135deg, rgba(250, 242, 244, 0.7), #ffffff);
-            box-shadow: 0 0 0 2px rgba(139, 24, 40, 0.15), var(--arc-shadow-md);
-        }
-
-        .arc-folder-icon {
+        .gdrive-file-icon {
             width: 42px;
             height: 42px;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -275,114 +425,17 @@
             flex-shrink: 0;
         }
 
-        .arc-folder-icon.is-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .arc-folder-icon.is-blue { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-        .arc-folder-icon.is-green { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .arc-folder-icon.is-violet { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
-        .arc-folder-icon.is-gold { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .gdrive-file-icon.is-pdf { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .gdrive-file-icon.is-xlsx { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .gdrive-file-icon.is-docx { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .gdrive-file-icon.is-other { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
-        .arc-folder-info {
+        .gdrive-file-details {
             flex: 1;
             min-width: 0;
         }
 
-        .arc-folder-name {
-            display: block;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--arc-ink-dark);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.3;
-        }
-
-        .arc-folder-org {
-            display: block;
-            font-size: 0.76rem;
-            color: var(--arc-ink-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-top: 0.15rem;
-        }
-
-        .arc-folder-meta {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 0.65rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--arc-border-subtle);
-            font-size: 0.72rem;
-            color: var(--arc-ink-muted);
-            font-weight: 600;
-        }
-
-        .arc-chip-sem {
-            background: #f1f5f9;
-            color: #475569;
-            padding: 0.12rem 0.45rem;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
-        }
-
-        /* 4. Archived Documents Grid & List Table */
-        .arc-doc-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.25rem;
-        }
-
-        .arc-doc-card {
-            background: #ffffff;
-            border: 1px solid var(--arc-border);
-            border-radius: var(--arc-radius-md);
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: var(--arc-shadow-sm);
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .arc-doc-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--arc-maroon-border);
-            box-shadow: var(--arc-shadow-hover);
-        }
-
-        .arc-doc-top {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .arc-file-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-
-        .arc-file-icon.is-pdf { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .arc-file-icon.is-xlsx { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .arc-file-icon.is-docx { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-        .arc-file-icon.is-other { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
-
-        .arc-doc-details {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .arc-doc-tag-row {
+        .gdrive-file-badge-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -390,22 +443,7 @@
             margin-bottom: 0.25rem;
         }
 
-        .arc-doc-folder-pill {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--arc-maroon);
-            background: var(--arc-maroon-light);
-            padding: 0.12rem 0.5rem;
-            border-radius: 9999px;
-            border: 1px solid var(--arc-maroon-border);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 160px;
-        }
-
-        .arc-doc-format-badge {
-            margin-left: auto;
+        .gdrive-file-format-badge {
             font-size: 0.68rem;
             font-weight: 800;
             color: #475569;
@@ -417,10 +455,10 @@
             white-space: nowrap;
         }
 
-        .arc-doc-name {
-            font-size: 0.94rem;
+        .gdrive-file-name {
+            font-size: 0.92rem;
             font-weight: 700;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             margin: 0;
             line-height: 1.35;
             display: -webkit-box;
@@ -428,35 +466,36 @@
             line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            word-break: break-word;
         }
 
-        .arc-doc-info-row {
+        .gdrive-file-meta-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.76rem;
-            color: var(--arc-ink-muted);
+            font-size: 0.75rem;
+            color: var(--g-ink-muted);
             font-weight: 600;
             margin-top: 0.85rem;
             padding-top: 0.65rem;
-            border-top: 1px solid var(--arc-border-subtle);
+            border-top: 1px solid var(--g-border-subtle);
         }
 
-        .arc-doc-actions {
+        .gdrive-file-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.5rem;
             margin-top: 0.75rem;
         }
 
-        .arc-btn-action-preview {
+        .gdrive-btn-preview {
             background: #f8fafc;
-            border: 1px solid var(--arc-border);
-            border-radius: var(--arc-radius-sm);
-            padding: 0.42rem 0.65rem;
+            border: 1px solid var(--g-border);
+            border-radius: var(--g-radius-sm);
+            padding: 0.45rem 0.65rem;
             font-size: 0.8rem;
             font-weight: 700;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -465,103 +504,104 @@
             transition: all 0.15s ease;
         }
 
-        .arc-btn-action-preview:hover {
+        .gdrive-btn-preview:hover {
             background: #f1f5f9;
             border-color: #cbd5e1;
         }
 
-        .arc-btn-action-download {
-            background: var(--arc-maroon-light);
-            border: 1px solid var(--arc-maroon-border);
-            border-radius: var(--arc-radius-sm);
-            padding: 0.42rem 0.65rem;
+        .gdrive-btn-download {
+            background: var(--g-maroon-light);
+            border: 1px solid var(--g-maroon-border);
+            border-radius: var(--g-radius-sm);
+            padding: 0.45rem 0.65rem;
             font-size: 0.8rem;
             font-weight: 700;
-            color: var(--arc-maroon);
+            color: var(--g-maroon);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.35rem;
             cursor: pointer;
             transition: all 0.15s ease;
+            text-decoration: none;
         }
 
-        .arc-btn-action-download:hover {
-            background: var(--arc-maroon);
+        .gdrive-btn-download:hover {
+            background: var(--g-maroon);
             color: #ffffff;
-            border-color: var(--arc-maroon);
+            border-color: var(--g-maroon);
         }
 
-        /* 5. List Table View */
-        .arc-table-wrapper {
+        /* 6. Google Drive Document Table (List View) */
+        .gdrive-table-wrapper {
             background: #ffffff;
-            border: 1px solid var(--arc-border);
-            border-radius: var(--arc-radius-md);
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-md);
             overflow: hidden;
-            box-shadow: var(--arc-shadow-sm);
+            box-shadow: var(--g-shadow-sm);
         }
 
-        .arc-data-table {
+        .gdrive-data-table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
             font-size: 0.88rem;
         }
 
-        .arc-data-table thead {
+        .gdrive-data-table thead {
             background: #f8fafc;
-            border-bottom: 1px solid var(--arc-border);
+            border-bottom: 1px solid var(--g-border);
         }
 
-        .arc-data-table th {
+        .gdrive-data-table th {
             padding: 0.85rem 1.15rem;
             font-size: 0.75rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--arc-ink-muted);
+            color: var(--g-ink-muted);
             white-space: nowrap;
         }
 
-        .arc-data-table tbody tr {
-            border-bottom: 1px solid var(--arc-border-subtle);
+        .gdrive-data-table tbody tr {
+            border-bottom: 1px solid var(--g-border-subtle);
             transition: background 0.15s ease;
         }
 
-        .arc-data-table tbody tr:last-child {
+        .gdrive-data-table tbody tr:last-child {
             border-bottom: none;
         }
 
-        .arc-data-table tbody tr:hover {
+        .gdrive-data-table tbody tr:hover {
             background: #faf7f8;
         }
 
-        .arc-data-table td {
-            padding: 0.9rem 1.15rem;
+        .gdrive-data-table td {
+            padding: 0.85rem 1.15rem;
             vertical-align: middle;
-            color: var(--arc-ink-body);
+            color: var(--g-ink-body);
         }
 
-        .arc-tbl-row-doc {
+        .gdrive-tbl-row-doc {
             display: flex;
             align-items: center;
             gap: 0.85rem;
         }
 
-        .arc-tbl-doc-name {
+        .gdrive-tbl-doc-name {
             font-weight: 700;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             font-size: 0.92rem;
             line-height: 1.3;
         }
 
-        .arc-tbl-actions {
+        .gdrive-tbl-actions {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
         }
 
-        .arc-tbl-btn {
+        .gdrive-tbl-btn {
             padding: 0.35rem 0.65rem;
             font-size: 0.78rem;
             font-weight: 700;
@@ -572,63 +612,77 @@
             cursor: pointer;
             border: 1px solid transparent;
             transition: all 0.15s ease;
+            text-decoration: none;
         }
 
-        .arc-tbl-btn.is-preview {
+        .gdrive-tbl-btn.is-preview {
             background: #f1f5f9;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             border-color: #e2e8f0;
         }
 
-        .arc-tbl-btn.is-preview:hover { background: #e2e8f0; }
+        .gdrive-tbl-btn.is-preview:hover { background: #e2e8f0; }
 
-        .arc-tbl-btn.is-download {
-            background: var(--arc-maroon-light);
-            color: var(--arc-maroon);
-            border-color: var(--arc-maroon-border);
+        .gdrive-tbl-btn.is-download {
+            background: var(--g-maroon-light);
+            color: var(--g-maroon);
+            border-color: var(--g-maroon-border);
         }
 
-        .arc-tbl-btn.is-download:hover {
-            background: var(--arc-maroon);
+        .gdrive-tbl-btn.is-download:hover {
+            background: var(--g-maroon);
             color: #ffffff;
-            border-color: var(--arc-maroon);
+            border-color: var(--g-maroon);
         }
 
-        /* 6. View Switcher Icon-only */
-        .arc-view-switcher {
-            display: inline-flex;
-            align-items: center;
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 2px;
-            gap: 2px;
+        /* 7. Google Drive Empty State */
+        .gdrive-empty-dropzone {
+            text-align: center;
+            padding: 4.5rem 1.5rem;
+            background: #fbfcfe;
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--g-radius-lg);
+            margin: 1rem 0;
+            transition: all 0.2s ease;
         }
 
-        .arc-view-toggle {
-            background: transparent;
-            border: none;
-            width: 34px;
-            height: 32px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            color: var(--arc-ink-muted);
-            cursor: pointer;
-            display: inline-flex;
+        .gdrive-empty-dropzone:hover {
+            border-color: var(--g-maroon);
+            background: #ffffff;
+        }
+
+        .gdrive-empty-icon {
+            font-size: 3.5rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            display: inline-block;
+            line-height: 1;
+        }
+
+        .gdrive-empty-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--g-ink-dark);
+            margin: 0 0 0.4rem;
+        }
+
+        .gdrive-empty-desc {
+            font-size: 0.88rem;
+            color: var(--g-ink-muted);
+            max-width: 440px;
+            margin: 0 auto 1.5rem;
+            line-height: 1.45;
+        }
+
+        .gdrive-empty-actions {
+            display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.15s ease;
+            gap: 0.85rem;
+            flex-wrap: wrap;
         }
 
-        .arc-view-toggle:hover { color: var(--arc-ink-dark); }
-
-        .arc-view-toggle.is-active {
-            background: #ffffff;
-            color: var(--arc-maroon);
-            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
-        }
-
-        /* 7. Modal Dialogs - Centered in viewport */
+        /* 8. Modals (Center Overlay Dialog) */
         .arc-modal {
             border: none;
             border-radius: 20px;
@@ -651,14 +705,14 @@
         }
 
         .arc-modal::backdrop {
-            background: rgba(15, 23, 42, 0.45);
+            background: rgba(15, 23, 42, 0.5);
             backdrop-filter: blur(5px);
         }
 
         .arc-modal-box {
             background: #ffffff;
             border-radius: 20px;
-            border: 1px solid var(--arc-border);
+            border: 1px solid var(--g-border);
             padding: 1.85rem;
             box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.25);
             width: 100%;
@@ -678,7 +732,7 @@
             align-items: center;
             justify-content: space-between;
             padding-bottom: 1rem;
-            border-bottom: 1px solid var(--arc-border-subtle);
+            border-bottom: 1px solid var(--g-border-subtle);
             margin-bottom: 1.25rem;
         }
 
@@ -686,7 +740,7 @@
             margin: 0;
             font-size: 1.15rem;
             font-weight: 800;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -696,16 +750,15 @@
             background: none;
             border: none;
             font-size: 1.35rem;
-            color: var(--arc-ink-muted);
+            color: var(--g-ink-muted);
             cursor: pointer;
             line-height: 1;
             padding: 0.2rem;
             border-radius: 6px;
         }
 
-        .arc-modal-close:hover { color: var(--arc-ink-dark); background: #f1f5f9; }
+        .arc-modal-close:hover { color: var(--g-ink-dark); background: #f1f5f9; }
 
-        /* Form Inputs in Modals */
         .arc-form-group {
             margin-bottom: 1rem;
         }
@@ -716,18 +769,18 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--arc-ink-muted);
+            color: var(--g-ink-muted);
             margin-bottom: 0.35rem;
         }
 
         .arc-form-input {
             width: 100%;
-            border: 1.5px solid var(--arc-border);
-            border-radius: var(--arc-radius-sm);
+            border: 1.5px solid var(--g-border);
+            border-radius: var(--g-radius-sm);
             padding: 0.65rem 0.95rem;
             font-size: 0.9rem;
             font-weight: 600;
-            color: var(--arc-ink-dark);
+            color: var(--g-ink-dark);
             background: #ffffff;
             outline: none;
             transition: all 0.2s ease;
@@ -736,14 +789,52 @@
         }
 
         .arc-form-input:focus {
-            border-color: var(--arc-maroon);
-            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.06);
+            border-color: var(--g-maroon);
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.08);
+        }
+
+        .arc-select {
+            border: 1.5px solid var(--g-border);
+            border-radius: 10px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: var(--g-ink-dark);
+            background: #ffffff;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .arc-select:focus {
+            border-color: var(--g-maroon);
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.08);
         }
 
         .arc-form-row-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.85rem;
+        }
+
+        .arc-parent-indicator {
+            background: #f8fafc;
+            border: 1px solid var(--g-border);
+            border-radius: var(--g-radius-sm);
+            padding: 0.6rem 0.85rem;
+            font-size: 0.84rem;
+            color: var(--g-ink-dark);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .arc-parent-indicator i {
+            color: var(--g-maroon);
+            font-size: 1.1rem;
         }
 
         /* Toast Container */
@@ -781,315 +872,186 @@
             from { opacity: 0; transform: translateY(16px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* Empty State */
-        .arc-empty-state {
-            text-align: center;
-            padding: 3rem 1.5rem;
-            color: var(--arc-ink-muted);
-        }
-
-        .arc-empty-state i {
-            font-size: 2.5rem;
-            color: #cbd5e1;
-            margin-bottom: 0.75rem;
-            display: block;
-        }
-
-        /* 8. Pagination Controls (Unslop & Impeccable Style) */
-        .arc-pagination-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 1.25rem;
-            margin-top: 1.25rem;
-            border-top: 1px solid var(--arc-border-subtle);
-            flex-wrap: wrap;
-            gap: 0.85rem;
-        }
-
-        .arc-pagination-info {
-            font-size: 0.84rem;
-            font-weight: 600;
-            color: var(--arc-ink-muted);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .arc-pagination-info strong {
-            color: var(--arc-ink-dark);
-            font-weight: 800;
-        }
-
-        .arc-pagination-nav {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .arc-page-btn {
-            min-width: 36px;
-            height: 36px;
-            padding: 0 0.6rem;
-            border-radius: var(--arc-radius-sm);
-            border: 1px solid var(--arc-border);
-            background: #ffffff;
-            color: var(--arc-ink-body);
-            font-size: 0.84rem;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-            user-select: none;
-            text-decoration: none;
-        }
-
-        .arc-page-btn:hover:not(:disabled) {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: var(--arc-ink-dark);
-            transform: translateY(-1px);
-        }
-
-        .arc-page-btn.is-active {
-            background: var(--arc-maroon);
-            color: #ffffff;
-            border-color: var(--arc-maroon);
-            box-shadow: 0 2px 8px rgba(139, 24, 40, 0.28);
-        }
-
-        .arc-page-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            background: #f8fafc;
-            border-color: var(--arc-border-subtle);
-            transform: none;
-        }
-
-        .arc-page-ellipsis {
-            padding: 0 0.35rem;
-            color: var(--arc-ink-muted);
-            font-weight: 700;
-            font-size: 0.85rem;
-            user-select: none;
-        }
     </style>
 
-    {{-- 1. Archive Summary / KPI Cards --}}
-    <div class="arc-stats-row">
-        <div class="arc-stat-card">
-            <div class="arc-stat-icon is-red">
+    {{-- 1. Vault Overview KPI Cards --}}
+    <div class="gdrive-stats-row">
+        <div class="gdrive-stat-card">
+            <div class="gdrive-stat-icon is-red">
                 <i class="bi bi-files"></i>
             </div>
-            <div class="arc-stat-meta">
-                <strong id="statTotalDocs">{{ $totalDocuments ?? count($documents) }}</strong>
+            <div class="gdrive-stat-meta">
+                <strong>{{ $totalDocuments }}</strong>
                 <span>Total Documents</span>
             </div>
         </div>
 
-        <div class="arc-stat-card">
-            <div class="arc-stat-icon is-gold">
+        <div class="gdrive-stat-card">
+            <div class="gdrive-stat-icon is-gold">
                 <i class="bi bi-folder-fill"></i>
             </div>
-            <div class="arc-stat-meta">
-                <strong id="statTotalFolders">{{ $totalFolders ?? count($folders) }}</strong>
+            <div class="gdrive-stat-meta">
+                <strong>{{ $totalFolders }}</strong>
                 <span>Archived Folders</span>
             </div>
         </div>
 
-        <div class="arc-stat-card">
-            <div class="arc-stat-icon is-green">
+        <div class="gdrive-stat-card">
+            <div class="gdrive-stat-icon is-green">
                 <i class="bi bi-calendar-check-fill"></i>
             </div>
-            <div class="arc-stat-meta">
-                <strong>{{ $currentSemester ?? '2nd Semester' }}</strong>
+            <div class="gdrive-stat-meta">
+                <strong>{{ $currentSemester }}</strong>
                 <span>Current Archive Period</span>
             </div>
         </div>
 
-        <div class="arc-stat-card">
-            <div class="arc-stat-icon is-blue">
+        <div class="gdrive-stat-card">
+            <div class="gdrive-stat-icon is-blue">
                 <i class="bi bi-shield-check"></i>
             </div>
-            <div class="arc-stat-meta">
-                <strong>48.5 MB</strong>
+            <div class="gdrive-stat-meta">
+                <strong>{{ $storageUsedFormatted }}</strong>
                 <span>Storage Vault Used</span>
             </div>
         </div>
     </div>
 
-    {{-- 2. Search & Filter Bar --}}
-    <div class="arc-filter-panel">
-        <div class="arc-search-wrapper">
-            <i class="bi bi-search"></i>
-            <input type="text" id="archiveSearchInput" placeholder="Search folders, documents, or authors..." class="arc-search-input" oninput="handleGlobalArchiveSearch(this.value)">
+    {{-- 2. Google Drive Breadcrumbs & Controls Toolbar --}}
+    <div class="gdrive-nav-panel">
+        <div class="gdrive-breadcrumb-trail">
+            {{-- Up One Level Button --}}
+            @if ($currentFolder)
+                @php
+                    $upUrl = $parentFolderId
+                        ? route('office.archive', ['folder_id' => $parentFolderId])
+                        : route('office.archive');
+                @endphp
+                <a href="{{ $upUrl }}" class="gdrive-level-up-btn" title="Go up one folder level" aria-label="Go up one level">
+                    <i class="bi bi-arrow-up-short"></i>
+                </a>
+            @endif
+
+            {{-- Interactive Breadcrumb Path --}}
+            @foreach ($breadcrumbs as $index => $crumb)
+                @php
+                    $isLast = $index === count($breadcrumbs) - 1;
+                    $crumbUrl = $crumb['id']
+                        ? route('office.archive', ['folder_id' => $crumb['id']])
+                        : route('office.archive');
+                @endphp
+
+                @if ($isLast)
+                    <span class="gdrive-crumb-item is-active" aria-current="page">
+                        <i class="bi {{ $crumb['id'] ? 'bi-folder2-open' : 'bi-hdd-network' }}"></i>
+                        <span>{{ $crumb['name'] }}</span>
+                    </span>
+                @else
+                    <a href="{{ $crumbUrl }}" class="gdrive-crumb-item">
+                        <i class="bi {{ $crumb['id'] ? 'bi-folder-fill' : 'bi-hdd-network' }}"></i>
+                        <span>{{ $crumb['name'] }}</span>
+                    </a>
+                    <i class="bi bi-chevron-right gdrive-crumb-divider"></i>
+                @endif
+            @endforeach
         </div>
 
-        <div class="arc-filter-dropdowns">
-            <select class="arc-select" id="orgSelectFilter" onchange="handleOrgFilterChange(this.value)">
-                <option value="">All Organizations</option>
-                @php
-                    $uniqueOrgs = collect($folders)->pluck('name')->unique()->sort();
-                @endphp
-                @foreach ($uniqueOrgs as $orgName)
-                    <option value="{{ $orgName }}">{{ $orgName }}</option>
-                @endforeach
-            </select>
+        {{-- Search & View Toggle --}}
+        <div class="gdrive-toolbar-actions">
+            <div class="gdrive-search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="gdriveSearchInput" class="gdrive-search-input" placeholder="Search folders &amp; files..." oninput="handleGdriveFilter(this.value)">
+            </div>
 
-            <select class="arc-select" id="semesterSelectFilter" onchange="handleSemesterFilterChange(this.value)">
-                <option value="">All Semesters</option>
-                <option value="1st Semester">1st Semester</option>
-                <option value="2nd Semester">2nd Semester</option>
-                <option value="Midyear">Midyear</option>
-            </select>
+            <div class="gdrive-view-toggle-group" role="group" aria-label="View Switcher">
+                <button type="button" class="gdrive-view-btn is-active" id="btnGdriveGrid" onclick="setGdriveView('grid')" title="Grid View" aria-label="Grid View">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+                <button type="button" class="gdrive-view-btn" id="btnGdriveList" onclick="setGdriveView('list')" title="List View" aria-label="List View">
+                    <i class="bi bi-view-list"></i>
+                </button>
+            </div>
         </div>
     </div>
 
-    {{-- 3. Organization Folders Section --}}
-    <section class="arc-section-card" id="folderSection">
-        <div class="arc-section-header">
-            <div>
-                <h2 class="arc-section-title"><i class="bi bi-folder2-open" style="color: var(--arc-maroon);"></i> Organization Folders</h2>
-                <p class="arc-section-sub">
-                    @isset($activityFolders)
-                        Folders are organized per activity (plus saved and demo folders). Click any folder to filter documents below.
-                    @else
-                        Archived folders grouped by student organization. Click any folder to filter documents below.
-                    @endisset
+    {{-- 3. Main Content Container (Folders & Files) --}}
+    <main class="gdrive-main-card">
+        @php
+            $hasFolders = count($folders) > 0;
+            $hasDocs = count($documents) > 0;
+            $isEmptyFolder = !$hasFolders && !$hasDocs;
+        @endphp
+
+        @if ($isEmptyFolder)
+            {{-- Google Drive Style Empty Folder State --}}
+            <div class="gdrive-empty-dropzone">
+                <i class="bi bi-folder2-open gdrive-empty-icon"></i>
+                <h3 class="gdrive-empty-title">This folder is empty</h3>
+                <p class="gdrive-empty-desc">
+                    There are no subfolders or archived documents filed under <strong>{{ $currentFolder?->name ?? 'this folder' }}</strong> yet. Create a subfolder or upload your first document below.
                 </p>
-            </div>
-            <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="resetFolderSelectionBtn" style="display: none;" onclick="clearFolderSelection()">
-                <i class="bi bi-x-circle"></i> Clear Folder Filter
-            </button>
-        </div>
-
-        <div class="arc-folder-grid" id="archiveFolderGrid">
-            @foreach ($folders as $folder)
-                <article class="arc-folder-card" data-folder-name="{{ $folder['name'] }}" data-folder-semester="{{ $folder['semester'] ?? '2nd Semester' }}" onclick="selectFolderCard('{{ addslashes($folder['name']) }}', this)" title="Click to view documents for {{ $folder['name'] }}">
-                    <div class="arc-folder-icon is-{{ $folder['color'] ?? 'red' }}">
-                        <i class="bi bi-{{ $folder['icon'] ?? 'folder-fill' }}"></i>
-                    </div>
-                    <div class="arc-folder-info">
-                        <strong class="arc-folder-name">{{ $folder['name'] }}</strong>
-                        <span class="arc-folder-org">{{ $folder['org'] ?? $folder['name'] }}</span>
-                        <div class="arc-folder-meta">
-                            <span class="arc-chip-sem">{{ $folder['semester'] ?? '2nd Sem' }}</span>
-                            <span class="doc-count-badge"><strong class="folder-doc-count">{{ $folder['documents'] ?? 0 }}</strong> files</span>
-                        </div>
-                    </div>
-                </article>
-            @endforeach
-        </div>
-
-        <div id="foldersEmptyState" class="arc-empty-state" style="display: none;">
-            <i class="bi bi-folder-x"></i>
-            <strong style="display: block; font-size: 1rem; color: var(--arc-ink-dark); margin-bottom: 0.25rem;">No Matching Folders</strong>
-            <span>Try resetting your search query or semester filter.</span>
-        </div>
-    </section>
-
-    {{-- 4. Archived Documents Section (With Grid & List Table Options) --}}
-    <section class="arc-section-card" id="documentsSection">
-        <div class="arc-section-header">
-            <div>
-                <h2 class="arc-section-title">
-                    <i class="bi bi-file-earmark-text-fill" style="color: var(--arc-maroon);"></i> 
-                    <span id="activeFolderNameTitle">All Archived Documents</span>
-                </h2>
-                <p class="arc-section-sub" id="activeFolderSubTitle">Showing all permanent compliance submissions and verified records.</p>
-            </div>
-            
-            <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
-                {{-- Grid vs List Table View Switcher (Icon-only on the right) --}}
-                <div class="arc-view-switcher" role="group" aria-label="Document View Options">
-                    <button type="button" class="arc-view-toggle is-active" id="btnDocGrid" onclick="setDocumentView('grid')" title="Card Grid View" aria-label="Grid View">
-                        <i class="bi bi-grid-fill"></i>
+                <div class="gdrive-empty-actions">
+                    <button type="button" class="org-btn org-btn-ghost" onclick="openNewFolderModal()">
+                        <i class="bi bi-folder-plus"></i> Create Subfolder
                     </button>
-                    <button type="button" class="arc-view-toggle" id="btnDocList" onclick="setDocumentView('list')" title="List Table View" aria-label="List Table View">
-                        <i class="bi bi-view-list"></i>
+                    <button type="button" class="org-btn org-btn-primary" onclick="openUploadDocumentModal()">
+                        <i class="bi bi-cloud-upload-fill"></i> Upload Document
                     </button>
                 </div>
             </div>
-        </div>
+        @else
+            {{-- Section A: Folders Grid (Only if folder count > 0) --}}
+            @if ($hasFolders)
+                <section id="gdriveFoldersSection">
+                    <div class="gdrive-section-title-bar">
+                        <h2 class="gdrive-section-heading">
+                            <i class="bi bi-folder2-open" style="color: var(--g-maroon);"></i>
+                            <span>Folders</span>
+                            <span class="gdrive-badge-count" id="gdriveFolderCount">{{ count($folders) }}</span>
+                        </h2>
+                    </div>
 
-        {{-- Option A: Document Cards Grid --}}
-        <div class="arc-doc-grid" id="documentsGrid">
-            @foreach ($documents as $doc)
-                @php
-                    $type = strtoupper($doc['type'] ?? pathinfo($doc['name'] ?? '', PATHINFO_EXTENSION) ?: 'DOC');
-                    $iconClass = match($type) {
-                        'PDF' => 'is-pdf',
-                        'XLSX', 'XLS', 'CSV' => 'is-xlsx',
-                        'DOC', 'DOCX' => 'is-docx',
-                        default => 'is-other',
-                    };
-                    $iconBi = match($type) {
-                        'PDF' => 'bi-file-earmark-pdf-fill',
-                        'XLSX', 'XLS', 'CSV' => 'bi-file-earmark-spreadsheet-fill',
-                        'DOC', 'DOCX' => 'bi-file-earmark-word-fill',
-                        default => 'bi-file-earmark-fill',
-                    };
-                    $folderName = $doc['folder_name'] ?? 'General Archive';
-                @endphp
-                <article class="arc-doc-card" 
-                         data-doc-name="{{ strtolower($doc['name']) }}" 
-                         data-doc-folder="{{ strtolower($folderName) }}" 
-                         data-doc-folder-exact="{{ $folderName }}"
-                         data-doc-author="{{ strtolower($doc['author'] ?? '') }}"
-                         data-doc-type="{{ $type }}">
-                    <div>
-                        <div class="arc-doc-top">
-                            <div class="arc-file-icon {{ $iconClass }}">
-                                <i class="bi {{ $iconBi }}"></i>
-                            </div>
-                            <div class="arc-doc-details">
-                                <div class="arc-doc-tag-row">
-                                    <span class="arc-doc-folder-pill" title="{{ $folderName }}">{{ $folderName }}</span>
-                                    <span class="arc-doc-format-badge">{{ $type }}</span>
+                    <div class="gdrive-folder-grid" id="gdriveFolderGrid">
+                        @foreach ($folders as $folder)
+                            @php
+                                $folderUrl = route('office.archive', ['folder_id' => $folder['id']]);
+                                $subCount = $folder['subfolders'] ?? 0;
+                                $docCount = $folder['documents'] ?? 0;
+                                $metaText = [];
+                                if ($subCount > 0) {
+                                    $metaText[] = $subCount . ' ' . ($subCount === 1 ? 'folder' : 'folders');
+                                }
+                                $metaText[] = $docCount . ' ' . ($docCount === 1 ? 'file' : 'files');
+                            @endphp
+                            <a href="{{ $folderUrl }}" class="gdrive-folder-card" data-name="{{ strtolower($folder['name']) }}" title="Open {{ $folder['name'] }}">
+                                <div class="gdrive-folder-icon is-{{ $folder['color'] ?? 'blue' }}">
+                                    <i class="bi bi-{{ $folder['icon'] ?? 'folder-fill' }}"></i>
                                 </div>
-                                <h3 class="arc-doc-name" title="{{ $doc['name'] }}">{{ $doc['name'] }}</h3>
-                            </div>
-                        </div>
+                                <div class="gdrive-folder-info">
+                                    <strong class="gdrive-folder-name">{{ $folder['name'] }}</strong>
+                                    <div class="gdrive-folder-meta">
+                                        <span>{{ implode(', ', $metaText) }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            {{-- Section B: Documents / Files Section --}}
+            @if ($hasDocs)
+                <section id="gdriveFilesSection">
+                    <div class="gdrive-section-title-bar">
+                        <h2 class="gdrive-section-heading">
+                            <i class="bi bi-file-earmark-text-fill" style="color: var(--g-maroon);"></i>
+                            <span>{{ $currentFolder ? 'Files in this folder' : 'Recent Documents' }}</span>
+                            <span class="gdrive-badge-count" id="gdriveFileCount">{{ count($documents) }}</span>
+                        </h2>
                     </div>
 
-                    <div>
-                        <div class="arc-doc-info-row">
-                            <span><i class="bi bi-person-fill"></i> {{ $doc['author'] ?? 'Student Org' }}</span>
-                            <span><i class="bi bi-hdd"></i> {{ $doc['size'] ?? '1.2 MB' }}</span>
-                            <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? 'Apr 2026' }}</span>
-                        </div>
-                        <div class="arc-doc-actions">
-                            <button type="button" class="arc-btn-action-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $doc['url'] ?? '' }}')">
-                                <i class="bi bi-eye"></i> Preview
-                            </button>
-                            <button type="button" class="arc-btn-action-download" onclick="downloadArchiveDoc('{{ addslashes($doc['name']) }}', '{{ $doc['url'] ?? '' }}')">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            @endforeach
-        </div>
-
-        {{-- Option B: Document List Table --}}
-        <div class="arc-table-wrapper" id="documentsTableView" style="display: none;">
-            <div style="overflow-x: auto;">
-                <table class="arc-data-table">
-                    <thead>
-                        <tr>
-                            <th>File Name &amp; Type</th>
-                            <th>Organization / Folder</th>
-                            <th>File Size</th>
-                            <th>Uploaded Date</th>
-                            <th>Uploader</th>
-                            <th style="text-align: right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="documentsTableBody">
+                    {{-- Mode 1: Grid View --}}
+                    <div class="gdrive-file-grid" id="gdriveFilesGrid">
                         @foreach ($documents as $doc)
                             @php
                                 $type = strtoupper($doc['type'] ?? pathinfo($doc['name'] ?? '', PATHINFO_EXTENSION) ?: 'DOC');
@@ -1105,156 +1067,173 @@
                                     'DOC', 'DOCX' => 'bi-file-earmark-word-fill',
                                     default => 'bi-file-earmark-fill',
                                 };
-                                $folderName = $doc['folder_name'] ?? 'General Archive';
+                                $folderName = $doc['folder_name'] ?? 'Archive Vault';
+                                $docUrl = $doc['url'] ?? '#';
                             @endphp
-                            <tr data-doc-name="{{ strtolower($doc['name']) }}" 
-                                data-doc-folder="{{ strtolower($folderName) }}" 
-                                data-doc-folder-exact="{{ $folderName }}"
-                                data-doc-author="{{ strtolower($doc['author'] ?? '') }}"
-                                data-doc-type="{{ $type }}">
-                                <td>
-                                    <div class="arc-tbl-row-doc">
-                                        <div class="arc-file-icon {{ $iconClass }}" style="width: 36px; height: 36px; font-size: 1.15rem; border-radius: 8px;">
-                                            <i class="bi {{ $iconBi }}"></i>
-                                        </div>
-                                        <div>
-                                            <div class="arc-tbl-doc-name">{{ $doc['name'] }}</div>
-                                            <span class="arc-doc-format-badge" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">{{ $type }}</span>
-                                        </div>
+                            <article class="gdrive-file-card" data-name="{{ strtolower($doc['name']) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
+                                <div class="gdrive-file-top">
+                                    <div class="gdrive-file-icon {{ $iconClass }}">
+                                        <i class="bi {{ $iconBi }}"></i>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="arc-doc-folder-pill">{{ $folderName }}</span>
-                                </td>
-                                <td style="font-weight: 600; color: var(--arc-ink-body);">
-                                    {{ $doc['size'] ?? '1.2 MB' }}
-                                </td>
-                                <td style="font-size: 0.8rem; color: var(--arc-ink-muted);">
-                                    {{ $doc['date'] ?? 'Apr 2026' }}
-                                </td>
-                                <td style="font-size: 0.82rem; font-weight: 600; color: var(--arc-ink-dark);">
-                                    {{ $doc['author'] ?? 'Student Org' }}
-                                </td>
-                                <td style="text-align: right; white-space: nowrap;">
-                                    <div class="arc-tbl-actions">
-                                        <button type="button" class="arc-tbl-btn is-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $doc['url'] ?? '' }}')">
+                                    <div class="gdrive-file-details">
+                                        <div class="gdrive-file-badge-row">
+                                            <span class="gdrive-file-format-badge">{{ $type }}</span>
+                                        </div>
+                                        <h3 class="gdrive-file-name" title="{{ $doc['name'] }}">{{ $doc['name'] }}</h3>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="gdrive-file-meta-row">
+                                        <span><i class="bi bi-person-fill"></i> {{ $doc['author'] ?? 'Student Org' }}</span>
+                                        <span><i class="bi bi-hdd"></i> {{ $doc['size'] ?? '1.2 MB' }}</span>
+                                        <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? 'Apr 2026' }}</span>
+                                    </div>
+                                    <div class="gdrive-file-actions">
+                                        <button type="button" class="gdrive-btn-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $docUrl }}')">
                                             <i class="bi bi-eye"></i> Preview
                                         </button>
-                                        <button type="button" class="arc-tbl-btn is-download" onclick="downloadArchiveDoc('{{ addslashes($doc['name']) }}', '{{ $doc['url'] ?? '' }}')">
+                                        <a href="{{ $docUrl }}" class="gdrive-btn-download" download="{{ $doc['name'] }}" onclick="handleDownloadToast('{{ addslashes($doc['name']) }}')">
                                             <i class="bi bi-download"></i> Download
-                                        </button>
+                                        </a>
                                     </div>
-                                </td>
-                            </tr>
+                                </div>
+                            </article>
                         @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- Pagination (Displays automatically when matching docs > 10) --}}
-        <div class="arc-pagination-bar" id="archivePagination" style="display: none;">
-            <div class="arc-pagination-info" id="paginationInfoText">
-                Showing <strong>1</strong> to <strong>10</strong> of <strong>14</strong> archived documents
-            </div>
-            <div class="arc-pagination-nav" id="paginationNavButtons">
-                <!-- Dynamically populated page buttons -->
-            </div>
-        </div>
-
-        <div id="docsEmptyState" class="arc-empty-state" style="display: none;">
-            <i class="bi bi-file-earmark-x"></i>
-            <strong style="display: block; font-size: 1rem; color: var(--arc-ink-dark); margin-bottom: 0.25rem;">No Documents Found</strong>
-            <span>No files match your search query in this archive folder.</span>
-        </div>
-    </section>
-
-    {{-- 5. Document Preview Modal Dialog (Perfect Centered) --}}
-    <dialog class="arc-modal" id="archiveDocPreviewModal">
-        <div class="arc-modal-box">
-            <div class="arc-modal-header">
-                <h3><i class="bi bi-file-earmark-check-fill" style="color: var(--arc-maroon);"></i> Document Details</h3>
-                <button type="button" class="arc-modal-close" onclick="closeArchivePreviewModal()">&times;</button>
-            </div>
-
-            <div style="margin-bottom: 1.25rem;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-                    <span class="arc-doc-folder-pill" id="prevDocFolder">Organization Folder</span>
-                    <span class="arc-doc-format-badge" id="prevDocFormat">PDF</span>
-                </div>
-                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--arc-ink-dark); line-height: 1.35; margin: 0 0 0.85rem;" id="prevDocTitle">
-                    Document Filename
-                </h2>
-
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.84rem;">
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--arc-ink-muted); font-weight: 700;">File Size</span>
-                            <strong style="color: var(--arc-ink-dark);" id="prevDocSize">2.4 MB</strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--arc-ink-muted); font-weight: 700;">Uploaded On</span>
-                            <strong style="color: var(--arc-ink-dark);" id="prevDocDate">Apr 6, 2026</strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--arc-ink-muted); font-weight: 700;">Uploaded By</span>
-                            <strong style="color: var(--arc-ink-dark);" id="prevDocAuthor">Officer Name</strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--arc-ink-muted); font-weight: 700;">Archive Status</span>
-                            <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="bi bi-patch-check-fill"></i> Verified Permanent</span>
-                        </div>
                     </div>
-                </div>
 
-                <div style="background: #ffffff; border: 1.5px dashed var(--arc-border); border-radius: 12px; padding: 1.5rem; text-align: center; color: var(--arc-ink-muted);">
-                    <i class="bi bi-file-earmark-pdf" style="font-size: 2.2rem; color: var(--arc-maroon); display: block; margin-bottom: 0.5rem;"></i>
-                    <span style="font-size: 0.86rem; font-weight: 600; display: block; color: var(--arc-ink-dark);">Permanent Compliance Record</span>
-                    <small style="font-size: 0.75rem; color: var(--arc-ink-muted);">Encrypted &amp; logged for official institutional review.</small>
-                </div>
+                    {{-- Mode 2: List View Table --}}
+                    <div class="gdrive-table-wrapper" id="gdriveFilesTableWrapper" style="display: none;">
+                        <table class="gdrive-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name &amp; Type</th>
+                                    <th>Location Folder</th>
+                                    <th>File Size</th>
+                                    <th>Uploaded Date</th>
+                                    <th>Uploader</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gdriveTableBody">
+                                @foreach ($documents as $doc)
+                                    @php
+                                        $type = strtoupper($doc['type'] ?? pathinfo($doc['name'] ?? '', PATHINFO_EXTENSION) ?: 'DOC');
+                                        $iconClass = match($type) {
+                                            'PDF' => 'is-pdf',
+                                            'XLSX', 'XLS', 'CSV' => 'is-xlsx',
+                                            'DOC', 'DOCX' => 'is-docx',
+                                            default => 'is-other',
+                                        };
+                                        $iconBi = match($type) {
+                                            'PDF' => 'bi-file-earmark-pdf-fill',
+                                            'XLSX', 'XLS', 'CSV' => 'bi-file-earmark-spreadsheet-fill',
+                                            'DOC', 'DOCX' => 'bi-file-earmark-word-fill',
+                                            default => 'bi-file-earmark-fill',
+                                        };
+                                        $folderName = $doc['folder_name'] ?? 'Archive Vault';
+                                        $docUrl = $doc['url'] ?? '#';
+                                    @endphp
+                                    <tr data-name="{{ strtolower($doc['name']) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
+                                        <td>
+                                            <div class="gdrive-tbl-row-doc">
+                                                <div class="gdrive-file-icon {{ $iconClass }}" style="width: 34px; height: 34px; font-size: 1.1rem; border-radius: 8px;">
+                                                    <i class="bi {{ $iconBi }}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="gdrive-tbl-doc-name">{{ $doc['name'] }}</div>
+                                                    <span class="gdrive-file-format-badge" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">{{ $type }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--g-maroon);">{{ $folderName }}</span>
+                                        </td>
+                                        <td style="font-weight: 600;">{{ $doc['size'] ?? '1.2 MB' }}</td>
+                                        <td style="font-size: 0.82rem; color: var(--g-ink-muted);">{{ $doc['date'] ?? 'Apr 2026' }}</td>
+                                        <td style="font-size: 0.84rem; font-weight: 600;">{{ $doc['author'] ?? 'Student Org' }}</td>
+                                        <td style="text-align: right; white-space: nowrap;">
+                                            <div class="gdrive-tbl-actions">
+                                                <button type="button" class="gdrive-tbl-btn is-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $docUrl }}')">
+                                                    <i class="bi bi-eye"></i> Preview
+                                                </button>
+                                                <a href="{{ $docUrl }}" class="gdrive-tbl-btn is-download" download="{{ $doc['name'] }}" onclick="handleDownloadToast('{{ addslashes($doc['name']) }}')">
+                                                    <i class="bi bi-download"></i> Download
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            @endif
+
+            {{-- No Search Results Found --}}
+            <div id="gdriveNoSearchResults" class="gdrive-empty-dropzone" style="display: none; padding: 3rem 1.5rem;">
+                <i class="bi bi-search" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 0.75rem;"></i>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--g-ink-dark); margin: 0 0 0.35rem;">No matching items found</h4>
+                <p style="font-size: 0.85rem; color: var(--g-ink-muted); margin: 0;">Try adjusting your search query in this folder.</p>
             </div>
+        @endif
+    </main>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.65rem; border-top: 1px solid var(--arc-border-subtle); padding-top: 1rem;">
-                <button type="button" class="org-btn org-btn-ghost" onclick="closeArchivePreviewModal()">Close</button>
-                <button type="button" class="org-btn org-btn-primary" id="prevDocDownloadBtn">
-                    <i class="bi bi-download"></i> Download Document
-                </button>
-            </div>
-        </div>
-    </dialog>
-
-    {{-- 6. New Folder Modal Dialog (Perfect Centered) --}}
+    {{-- Modal 1: Create New Folder / Subfolder --}}
     <dialog class="arc-modal" id="newFolderModal">
         <div class="arc-modal-box">
             <div class="arc-modal-header">
-                <h3><i class="bi bi-folder-plus" style="color: var(--arc-maroon);"></i> Create Archive Folder</h3>
+                <h3><i class="bi bi-folder-plus" style="color: var(--g-maroon);"></i> {{ $currentFolder ? 'Create Subfolder' : 'Create Archive Folder' }}</h3>
                 <button type="button" class="arc-modal-close" onclick="closeNewFolderModal()">&times;</button>
             </div>
-            <form onsubmit="handleCreateFolderSubmit(event)">
+            <form method="post" action="{{ route('office.archive.folders.store') }}">
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                
+                @if ($currentFolder && !($currentFolder->is_activity ?? false))
+                    <input type="hidden" name="parent_id" value="{{ $currentFolder->id }}">
+                    <div class="arc-parent-indicator">
+                        <i class="bi bi-diagram-3-fill"></i>
+                        <span>Creating subfolder inside: <strong>{{ $currentFolder->name }}</strong></span>
+                    </div>
+                @else
+                    <div class="arc-form-group">
+                        <label for="folderParentSelect">Parent Destination Folder</label>
+                        <select id="folderParentSelect" name="parent_id" class="arc-select" style="width: 100%;">
+                            <option value="">📁 Archive Vault (Root Level)</option>
+                            @foreach ($allSavedFolders as $savedF)
+                                <option value="{{ $savedF['id'] }}" {{ ($currentFolderId == $savedF['id']) ? 'selected' : '' }}>
+                                    📁 {{ $savedF['path'] ?? $savedF['name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
                 <div class="arc-form-group">
                     <label for="folderNameInput">Folder Name *</label>
-                    <input type="text" id="folderNameInput" class="arc-form-input" placeholder="e.g., Computer Science Guild" required>
+                    <input type="text" id="folderNameInput" name="name" class="arc-form-input" placeholder="e.g., Financial Reports 2026" required maxlength="255" autofocus>
                 </div>
 
                 <div class="arc-form-group">
-                    <label for="folderOrgInput">Organization Name *</label>
-                    <input type="text" id="folderOrgInput" class="arc-form-input" placeholder="e.g., Association of Computing Students" required>
+                    <label for="folderOrgInput">Organization Name</label>
+                    <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" placeholder="{{ $currentFolder->organization_name ?? 'e.g., BSIT Society' }}" value="{{ $currentFolder->organization_name ?? '' }}" maxlength="255">
                 </div>
 
                 <div class="arc-form-row-2">
                     <div class="arc-form-group">
-                        <label for="folderSemesterSelect">Semester Period *</label>
-                        <select id="folderSemesterSelect" class="arc-select" style="width: 100%;">
-                            <option value="1st Semester">1st Semester</option>
-                            <option value="2nd Semester" selected>2nd Semester</option>
-                            <option value="Midyear">Midyear</option>
+                        <label for="folderSemesterSelect">Semester Period</label>
+                        <select id="folderSemesterSelect" name="semester" class="arc-select" style="width: 100%;">
+                            <option value="1st Semester" {{ ($currentFolder->semester ?? '') === '1st Semester' ? 'selected' : '' }}>1st Semester</option>
+                            <option value="2nd Semester" {{ ($currentFolder->semester ?? '') !== '1st Semester' && ($currentFolder->semester ?? '') !== 'Midyear' ? 'selected' : '' }}>2nd Semester</option>
+                            <option value="Midyear" {{ ($currentFolder->semester ?? '') === 'Midyear' ? 'selected' : '' }}>Midyear</option>
                         </select>
                     </div>
                     <div class="arc-form-group">
                         <label for="folderColorSelect">Folder Color Theme</label>
-                        <select id="folderColorSelect" class="arc-select" style="width: 100%;">
+                        <select id="folderColorSelect" name="color" class="arc-select" style="width: 100%;">
+                            <option value="blue" selected>Royal Blue</option>
                             <option value="red">Crimson Red</option>
-                            <option value="blue">Royal Blue</option>
                             <option value="green">Emerald Green</option>
                             <option value="violet">Deep Violet</option>
                             <option value="gold">Warm Gold</option>
@@ -1262,7 +1241,7 @@
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--arc-border-subtle); padding-top: 1rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
                     <button type="button" class="org-btn org-btn-ghost" onclick="closeNewFolderModal()">Cancel</button>
                     <button type="submit" class="org-btn org-btn-primary">
                         <i class="bi bi-folder-plus"></i> Create Folder
@@ -1272,42 +1251,45 @@
         </div>
     </dialog>
 
-    {{-- 7. Upload Archive Document Modal Dialog (Perfect Centered) --}}
+    {{-- Modal 2: Upload Document to Archive --}}
     <dialog class="arc-modal" id="uploadDocumentModal">
         <div class="arc-modal-box">
             <div class="arc-modal-header">
-                <h3><i class="bi bi-cloud-upload-fill" style="color: var(--arc-maroon);"></i> Upload Archived Document</h3>
+                <h3><i class="bi bi-cloud-upload-fill" style="color: var(--g-maroon);"></i> Upload Document</h3>
                 <button type="button" class="arc-modal-close" onclick="closeUploadDocumentModal()">&times;</button>
             </div>
-            <form onsubmit="handleUploadDocSubmit(event)">
+            <form method="post" action="{{ route('office.archive.documents.store') }}" enctype="multipart/form-data" data-org-upload-form>
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                
                 <div class="arc-form-group">
-                    <label for="uploadFolderSelect">Target Archive Folder *</label>
-                    <select id="uploadFolderSelect" class="arc-select" style="width: 100%;" required>
-                        @foreach ($folders as $f)
-                            <option value="{{ $f['name'] }}">{{ $f['name'] }} ({{ $f['semester'] ?? '2nd Semester' }})</option>
-                        @endforeach
+                    <label for="uploadFolderSelect">Target Destination Folder *</label>
+                    <select id="uploadFolderSelect" name="archive_folder_id" class="arc-select" style="width: 100%;" required @disabled($allSavedFolders->isEmpty())>
+                        @forelse ($allSavedFolders as $f)
+                            <option value="{{ $f['id'] }}" {{ ($currentFolderId == $f['id']) ? 'selected' : '' }}>
+                                📁 {{ $f['path'] ?? $f['name'] }}
+                            </option>
+                        @empty
+                            <option value="" selected disabled>Create an archive folder first</option>
+                        @endforelse
                     </select>
                 </div>
 
                 <div class="arc-form-group">
                     <label for="uploadDocTitleInput">Document Title / Subject *</label>
-                    <input type="text" id="uploadDocTitleInput" class="arc-form-input" placeholder="e.g., Annual Financial Audit Report 2026" required>
-                </div>
-
-                <div class="arc-form-group">
-                    <label for="uploadAuthorInput">Uploader / Officer Name</label>
-                    <input type="text" id="uploadAuthorInput" class="arc-form-input" placeholder="e.g., Student Officer Name" value="{{ $office->name ?? 'OSO Officer' }}">
+                    <input type="text" id="uploadDocTitleInput" name="name" class="arc-form-input" placeholder="e.g., Annual Accomplishment Report 2026" maxlength="255" required>
                 </div>
 
                 <div class="arc-form-group">
                     <label for="uploadFileInput">Choose Document File (.pdf, .docx, .xlsx, .zip) *</label>
-                    <input type="file" id="uploadFileInput" class="arc-form-input" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg">
-                    <small style="font-size: 0.74rem; color: var(--arc-ink-muted); display: block; margin-top: 0.35rem;">
+                    <input type="file" id="uploadFileInput" name="document" class="arc-form-input" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg" data-org-upload data-max-size="20480" data-upload-status-id="gdriveUploadStatus">
+                    <span id="gdriveUploadStatus" class="org-upload-status" aria-live="polite">No file selected.</span>
+                    <small style="font-size: 0.74rem; color: var(--g-ink-muted); display: block; margin-top: 0.35rem;">
                         Max file size: 20MB. Accepted formats: PDF, Word, Excel, PowerPoint, ZIP.
                     </small>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--arc-border-subtle); padding-top: 1rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
                     <button type="button" class="org-btn org-btn-ghost" onclick="closeUploadDocumentModal()">Cancel</button>
                     <button type="submit" class="org-btn org-btn-primary">
                         <i class="bi bi-cloud-arrow-up-fill"></i> Upload &amp; Archive
@@ -1317,263 +1299,144 @@
         </div>
     </dialog>
 
-    {{-- Toast Notification Container --}}
+    {{-- Modal 3: Document Preview & Details --}}
+    <dialog class="arc-modal" id="archiveDocPreviewModal">
+        <div class="arc-modal-box">
+            <div class="arc-modal-header">
+                <h3><i class="bi bi-file-earmark-check-fill" style="color: var(--g-maroon);"></i> Document Details</h3>
+                <button type="button" class="arc-modal-close" onclick="closeArchivePreviewModal()">&times;</button>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--g-maroon); background: var(--g-maroon-light); padding: 0.15rem 0.6rem; border-radius: 9999px; border: 1px solid var(--g-maroon-border);" id="prevDocFolder">Organization Folder</span>
+                    <span class="gdrive-file-format-badge" id="prevDocFormat">PDF</span>
+                </div>
+                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--g-ink-dark); line-height: 1.35; margin: 0 0 0.85rem;" id="prevDocTitle">
+                    Document Filename
+                </h2>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.84rem;">
+                        <div>
+                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">File Size</span>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocSize">2.4 MB</strong>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded On</span>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocDate">Apr 6, 2026</strong>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded By</span>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocAuthor">Officer Name</strong>
+                        </div>
+                        <div>
+                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Vault Status</span>
+                            <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="bi bi-patch-check-fill"></i> Verified Permanent</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px dashed var(--g-border); border-radius: 12px; padding: 1.5rem; text-align: center; color: var(--g-ink-muted);">
+                    <i class="bi bi-file-earmark-pdf" style="font-size: 2.2rem; color: var(--g-maroon); display: block; margin-bottom: 0.5rem;"></i>
+                    <span style="font-size: 0.86rem; font-weight: 600; display: block; color: var(--g-ink-dark);">Permanent Institutional Record</span>
+                    <small style="font-size: 0.75rem; color: var(--g-ink-muted);">Encrypted &amp; logged in the official institutional depository.</small>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.65rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
+                <button type="button" class="org-btn org-btn-ghost" onclick="closeArchivePreviewModal()">Close</button>
+                <a href="#" class="org-btn org-btn-primary" id="prevDocDownloadLink" download>
+                    <i class="bi bi-download"></i> Download Document
+                </a>
+            </div>
+        </div>
+    </dialog>
+
+    {{-- Toast Container --}}
     <div class="arc-toast-container" id="arcToastContainer"></div>
 
     <script>
-        let currentActiveFolder = null;
-        let currentSearchQuery = '';
-        let currentSelectedOrg = '';
-        let currentSelectedSemester = '';
-        let currentDocView = 'grid'; // 'grid' | 'list'
-        const PAGE_SIZE = 10;
-        let currentDocPage = 1;
+        let currentGdriveView = localStorage.getItem('gdrive_archive_view') || 'grid';
 
-        // =========================================================================
-        // View Switcher (Grid vs List Table)
-        // =========================================================================
-        function setDocumentView(view) {
-            currentDocView = view;
-            const gridEl = document.getElementById('documentsGrid');
-            const tableEl = document.getElementById('documentsTableView');
-            const btnGrid = document.getElementById('btnDocGrid');
-            const btnList = document.getElementById('btnDocList');
+        function setGdriveView(view) {
+            currentGdriveView = view;
+            localStorage.setItem('gdrive_archive_view', view);
+
+            const gridEl = document.getElementById('gdriveFilesGrid');
+            const tableEl = document.getElementById('gdriveFilesTableWrapper');
+            const btnGrid = document.getElementById('btnGdriveGrid');
+            const btnList = document.getElementById('btnGdriveList');
+
+            if (!gridEl || !tableEl) return;
 
             if (view === 'grid') {
                 gridEl.style.display = 'grid';
                 tableEl.style.display = 'none';
-                btnGrid.classList.add('is-active');
-                btnList.classList.remove('is-active');
+                if (btnGrid) btnGrid.classList.add('is-active');
+                if (btnList) btnList.classList.remove('is-active');
             } else {
                 gridEl.style.display = 'none';
                 tableEl.style.display = 'block';
-                btnList.classList.add('is-active');
-                btnGrid.classList.remove('is-active');
-            }
-
-            applyAllFilters();
-        }
-
-        // =========================================================================
-        // Folder Selection Interaction
-        // =========================================================================
-        function selectFolderCard(folderName, cardEl) {
-            if (currentActiveFolder === folderName) {
-                clearFolderSelection();
-                return;
-            }
-
-            currentActiveFolder = folderName;
-            currentDocPage = 1;
-
-            document.querySelectorAll('#archiveFolderGrid .arc-folder-card').forEach(c => c.classList.remove('is-active'));
-            if (cardEl) cardEl.classList.add('is-active');
-
-            document.getElementById('activeFolderNameTitle').textContent = `Folder: ${folderName}`;
-            document.getElementById('activeFolderSubTitle').textContent = `Showing archived records exclusively filed under ${folderName}.`;
-            document.getElementById('resetFolderSelectionBtn').style.display = 'inline-flex';
-
-            const orgDropdown = document.getElementById('orgSelectFilter');
-            if (orgDropdown) orgDropdown.value = folderName;
-            currentSelectedOrg = folderName;
-
-            applyAllFilters();
-
-            const docsSec = document.getElementById('documentsSection');
-            if (docsSec) docsSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function clearFolderSelection() {
-            currentActiveFolder = null;
-            currentSelectedOrg = '';
-            currentDocPage = 1;
-            document.querySelectorAll('#archiveFolderGrid .arc-folder-card').forEach(c => c.classList.remove('is-active'));
-            document.getElementById('activeFolderNameTitle').textContent = 'All Archived Documents';
-            document.getElementById('activeFolderSubTitle').textContent = 'Showing all permanent compliance submissions and verified records.';
-            document.getElementById('resetFolderSelectionBtn').style.display = 'none';
-
-            const orgDropdown = document.getElementById('orgSelectFilter');
-            if (orgDropdown) orgDropdown.value = '';
-
-            applyAllFilters();
-        }
-
-        // =========================================================================
-        // Filtering & Pagination (Search, Org, Semester, Pagination)
-        // =========================================================================
-        function handleGlobalArchiveSearch(query) {
-            currentSearchQuery = query.toLowerCase().trim();
-            currentDocPage = 1;
-            applyAllFilters();
-        }
-
-        function handleOrgFilterChange(org) {
-            currentSelectedOrg = org;
-            currentActiveFolder = org || null;
-            currentDocPage = 1;
-
-            document.querySelectorAll('#archiveFolderGrid .arc-folder-card').forEach(card => {
-                const name = card.getAttribute('data-folder-name');
-                card.classList.toggle('is-active', org && name === org);
-            });
-
-            if (org) {
-                document.getElementById('activeFolderNameTitle').textContent = `Folder: ${org}`;
-                document.getElementById('activeFolderSubTitle').textContent = `Showing archived records exclusively filed under ${org}.`;
-                document.getElementById('resetFolderSelectionBtn').style.display = 'inline-flex';
-            } else {
-                document.getElementById('activeFolderNameTitle').textContent = 'All Archived Documents';
-                document.getElementById('activeFolderSubTitle').textContent = 'Showing all permanent compliance submissions and verified records.';
-                document.getElementById('resetFolderSelectionBtn').style.display = 'none';
-            }
-
-            applyAllFilters();
-        }
-
-        function handleSemesterFilterChange(sem) {
-            currentSelectedSemester = sem;
-            currentDocPage = 1;
-            applyAllFilters();
-        }
-
-        function goToDocPage(page) {
-            currentDocPage = page;
-            applyAllFilters();
-            const docsSec = document.getElementById('documentsSection');
-            if (docsSec) {
-                docsSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (btnList) btnList.classList.add('is-active');
+                if (btnGrid) btnGrid.classList.remove('is-active');
             }
         }
 
-        function applyAllFilters() {
-            // 1. Filter Folders
-            const folderCards = document.querySelectorAll('#archiveFolderGrid .arc-folder-card');
-            let visibleFoldersCount = 0;
+        function handleGdriveFilter(query) {
+            const q = (query || '').toLowerCase().trim();
+            const folderCards = document.querySelectorAll('#gdriveFolderGrid .gdrive-folder-card');
+            const fileCards = document.querySelectorAll('#gdriveFilesGrid .gdrive-file-card');
+            const fileRows = document.querySelectorAll('#gdriveTableBody tr');
+
+            let visibleFolders = 0;
+            let visibleFiles = 0;
 
             folderCards.forEach(card => {
-                const name = (card.getAttribute('data-folder-name') || '').toLowerCase();
-                const sem = card.getAttribute('data-folder-semester') || '';
-
-                let matchSearch = !currentSearchQuery || name.includes(currentSearchQuery);
-                let matchOrg = !currentSelectedOrg || name === currentSelectedOrg.toLowerCase();
-                let matchSem = !currentSelectedSemester || sem === currentSelectedSemester;
-
-                if (matchSearch && matchOrg && matchSem) {
-                    card.style.display = '';
-                    visibleFoldersCount++;
-                } else {
-                    card.style.display = 'none';
-                }
+                const name = card.getAttribute('data-name') || '';
+                const match = !q || name.includes(q);
+                card.style.display = match ? '' : 'none';
+                if (match) visibleFolders++;
             });
 
-            const foldersEmpty = document.getElementById('foldersEmptyState');
-            if (foldersEmpty) foldersEmpty.style.display = visibleFoldersCount === 0 ? 'block' : 'none';
+            fileCards.forEach(card => {
+                const name = card.getAttribute('data-name') || '';
+                const author = card.getAttribute('data-author') || '';
+                const match = !q || name.includes(q) || author.includes(q);
+                card.style.display = match ? '' : 'none';
+                if (match) visibleFiles++;
+            });
 
-            // 2. Filter & Paginate Documents (Cards & Rows)
-            const docCards = Array.from(document.querySelectorAll('#documentsGrid .arc-doc-card'));
-            const docRows = Array.from(document.querySelectorAll('#documentsTableBody tr'));
+            fileRows.forEach(row => {
+                const name = row.getAttribute('data-name') || '';
+                const author = row.getAttribute('data-author') || '';
+                const match = !q || name.includes(q) || author.includes(q);
+                row.style.display = match ? '' : 'none';
+            });
 
-            const checkDocMatch = (el) => {
-                const name = el.getAttribute('data-doc-name') || '';
-                const folder = el.getAttribute('data-doc-folder') || '';
-                const author = el.getAttribute('data-doc-author') || '';
-
-                let matchSearch = !currentSearchQuery || name.includes(currentSearchQuery) || folder.includes(currentSearchQuery) || author.includes(currentSearchQuery);
-                let matchFolder = !currentActiveFolder || folder === currentActiveFolder.toLowerCase();
-                let matchOrg = !currentSelectedOrg || folder === currentSelectedOrg.toLowerCase();
-
-                return matchSearch && matchFolder && matchOrg;
-            };
-
-            const matchingCards = docCards.filter(checkDocMatch);
-            const matchingRows = docRows.filter(checkDocMatch);
-            const totalMatching = matchingCards.length;
-
-            const totalPages = Math.ceil(totalMatching / PAGE_SIZE);
-            if (currentDocPage > totalPages && totalPages > 0) {
-                currentDocPage = totalPages;
-            }
-            if (currentDocPage < 1) {
-                currentDocPage = 1;
+            const folderSection = document.getElementById('gdriveFoldersSection');
+            if (folderSection && folderCards.length > 0) {
+                folderSection.style.display = visibleFolders > 0 ? '' : 'none';
             }
 
-            const startIndex = (currentDocPage - 1) * PAGE_SIZE;
-            const endIndex = Math.min(startIndex + PAGE_SIZE, totalMatching);
-
-            // Hide all documents first
-            docCards.forEach(card => card.style.display = 'none');
-            docRows.forEach(row => row.style.display = 'none');
-
-            // Show items for the current page only
-            for (let i = startIndex; i < endIndex; i++) {
-                if (matchingCards[i]) matchingCards[i].style.display = '';
-                if (matchingRows[i]) matchingRows[i].style.display = '';
+            const filesSection = document.getElementById('gdriveFilesSection');
+            if (filesSection && (fileCards.length > 0 || fileRows.length > 0)) {
+                filesSection.style.display = visibleFiles > 0 ? '' : 'none';
             }
 
-            const docsEmpty = document.getElementById('docsEmptyState');
-            if (docsEmpty) docsEmpty.style.display = totalMatching === 0 ? 'block' : 'none';
-
-            // 3. Render Pagination Bar (Only when totalMatching > PAGE_SIZE)
-            const paginationBar = document.getElementById('archivePagination');
-            const paginationInfo = document.getElementById('paginationInfoText');
-            const paginationNav = document.getElementById('paginationNavButtons');
-
-            if (paginationBar && paginationInfo && paginationNav) {
-                if (totalMatching > PAGE_SIZE) {
-                    paginationBar.style.display = 'flex';
-                    paginationInfo.innerHTML = `Showing <strong>${startIndex + 1}</strong> to <strong>${endIndex}</strong> of <strong>${totalMatching}</strong> archived documents`;
-
-                    let navHtml = '';
-                    // Previous button
-                    navHtml += `<button type="button" class="arc-page-btn" ${currentDocPage === 1 ? 'disabled' : ''} onclick="goToDocPage(${currentDocPage - 1})" title="Previous Page" aria-label="Previous Page"><i class="bi bi-chevron-left"></i></button>`;
-
-                    // Page numbers with smart truncation/ellipsis
-                    for (let p = 1; p <= totalPages; p++) {
-                        if (totalPages <= 7 || p === 1 || p === totalPages || (p >= currentDocPage - 1 && p <= currentDocPage + 1)) {
-                            navHtml += `<button type="button" class="arc-page-btn ${p === currentDocPage ? 'is-active' : ''}" onclick="goToDocPage(${p})">${p}</button>`;
-                        } else if (p === currentDocPage - 2 || p === currentDocPage + 2) {
-                            navHtml += `<span class="arc-page-ellipsis">&hellip;</span>`;
-                        }
-                    }
-
-                    // Next button
-                    navHtml += `<button type="button" class="arc-page-btn ${currentDocPage === totalPages ? 'disabled' : ''} onclick="goToDocPage(${currentDocPage + 1})" title="Next Page" aria-label="Next Page"><i class="bi bi-chevron-right"></i></button>`;
-
-                    paginationNav.innerHTML = navHtml;
-                } else {
-                    paginationBar.style.display = 'none';
-                }
+            const noResults = document.getElementById('gdriveNoSearchResults');
+            if (noResults) {
+                const totalVisible = visibleFolders + visibleFiles;
+                noResults.style.display = (q && totalVisible === 0) ? 'block' : 'none';
             }
+
+            const folderCountBadge = document.getElementById('gdriveFolderCount');
+            if (folderCountBadge) folderCountBadge.textContent = visibleFolders;
+
+            const fileCountBadge = document.getElementById('gdriveFileCount');
+            if (fileCountBadge) fileCountBadge.textContent = visibleFiles;
         }
 
-        // =========================================================================
-        // Document Preview Modal Dialog
-        // =========================================================================
-        function openArchivePreviewModal(title, folder, format, size, date, author, url) {
-            document.getElementById('prevDocTitle').textContent = title;
-            document.getElementById('prevDocFolder').textContent = folder;
-            document.getElementById('prevDocFormat').textContent = format;
-            document.getElementById('prevDocSize').textContent = size;
-            document.getElementById('prevDocDate').textContent = date;
-            document.getElementById('prevDocAuthor').textContent = author;
-
-            document.getElementById('prevDocDownloadBtn').onclick = function() {
-                downloadArchiveDoc(title, url);
-                closeArchivePreviewModal();
-            };
-
-            const dialog = document.getElementById('archiveDocPreviewModal');
-            if (dialog) dialog.showModal();
-        }
-
-        function closeArchivePreviewModal() {
-            const dialog = document.getElementById('archiveDocPreviewModal');
-            if (dialog) dialog.close();
-        }
-
-        // =========================================================================
-        // Create New Folder Modal Dialog
-        // =========================================================================
         function openNewFolderModal() {
             const dialog = document.getElementById('newFolderModal');
             if (dialog) dialog.showModal();
@@ -1584,67 +1447,6 @@
             if (dialog) dialog.close();
         }
 
-        function handleCreateFolderSubmit(e) {
-            e.preventDefault();
-            const name = document.getElementById('folderNameInput').value.trim();
-            const org = document.getElementById('folderOrgInput').value.trim();
-            const semester = document.getElementById('folderSemesterSelect').value;
-            const color = document.getElementById('folderColorSelect').value;
-
-            if (!name || !org) return;
-
-            // Insert into Folder Grid
-            const grid = document.getElementById('archiveFolderGrid');
-            const card = document.createElement('article');
-            card.className = 'arc-folder-card';
-            card.setAttribute('data-folder-name', name);
-            card.setAttribute('data-folder-semester', semester);
-            card.onclick = function() { selectFolderCard(name, this); };
-            card.style.animation = 'arcSlideUp 0.35s ease';
-
-            card.innerHTML = `
-                <div class="arc-folder-icon is-${color}">
-                    <i class="bi bi-folder-fill"></i>
-                </div>
-                <div class="arc-folder-info">
-                    <strong class="arc-folder-name">${escapeHtml(name)}</strong>
-                    <span class="arc-folder-org">${escapeHtml(org)}</span>
-                    <div class="arc-folder-meta">
-                        <span class="arc-chip-sem">${escapeHtml(semester)}</span>
-                        <span class="doc-count-badge"><strong class="folder-doc-count">0</strong> files</span>
-                    </div>
-                </div>
-            `;
-            grid.insertBefore(card, grid.firstChild);
-
-            // Add to dropdowns
-            const orgSelect = document.getElementById('orgSelectFilter');
-            if (orgSelect) {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                orgSelect.appendChild(opt);
-            }
-
-            const uploadFolderSelect = document.getElementById('uploadFolderSelect');
-            if (uploadFolderSelect) {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = `${name} (${semester})`;
-                uploadFolderSelect.appendChild(opt);
-            }
-
-            // Update stats
-            const statFolders = document.getElementById('statTotalFolders');
-            if (statFolders) statFolders.textContent = parseInt(statFolders.textContent || '0') + 1;
-
-            closeNewFolderModal();
-            showArchiveToast(`Archive folder "${name}" successfully created!`, 'success');
-        }
-
-        // =========================================================================
-        // Upload Document Modal Dialog
-        // =========================================================================
         function openUploadDocumentModal() {
             const dialog = document.getElementById('uploadDocumentModal');
             if (dialog) dialog.showModal();
@@ -1655,130 +1457,34 @@
             if (dialog) dialog.close();
         }
 
-        function handleUploadDocSubmit(e) {
-            e.preventDefault();
-            const folder = document.getElementById('uploadFolderSelect').value;
-            const title = document.getElementById('uploadDocTitleInput').value.trim();
-            const author = document.getElementById('uploadAuthorInput').value.trim() || 'OSO Officer';
-            const file = document.getElementById('uploadFileInput').files[0];
+        function openArchivePreviewModal(title, folder, format, size, date, author, url) {
+            document.getElementById('prevDocTitle').textContent = title;
+            document.getElementById('prevDocFolder').textContent = folder;
+            document.getElementById('prevDocFormat').textContent = format;
+            document.getElementById('prevDocSize').textContent = size;
+            document.getElementById('prevDocDate').textContent = date;
+            document.getElementById('prevDocAuthor').textContent = author;
 
-            if (!title || !file) return;
+            const dlLink = document.getElementById('prevDocDownloadLink');
+            if (dlLink) {
+                dlLink.href = url;
+                dlLink.download = title;
+                dlLink.onclick = function() {
+                    handleDownloadToast(title);
+                    closeArchivePreviewModal();
+                };
+            }
 
-            const ext = file.name.split('.').pop().toUpperCase();
-            const sizeStr = formatBytes(file.size);
-            const iconClass = ext === 'PDF' ? 'is-pdf' : (['XLSX', 'XLS', 'CSV'].includes(ext) ? 'is-xlsx' : (['DOC', 'DOCX'].includes(ext) ? 'is-docx' : 'is-other'));
-            const iconBi = ext === 'PDF' ? 'bi-file-earmark-pdf-fill' : (['XLSX', 'XLS', 'CSV'].includes(ext) ? 'bi-file-earmark-spreadsheet-fill' : 'bi-file-earmark-word-fill');
-
-            // 1. Insert into Document Grid
-            const grid = document.getElementById('documentsGrid');
-            const card = document.createElement('article');
-            card.className = 'arc-doc-card';
-            card.setAttribute('data-doc-name', title.toLowerCase());
-            card.setAttribute('data-doc-folder', folder.toLowerCase());
-            card.setAttribute('data-doc-folder-exact', folder);
-            card.setAttribute('data-doc-author', author.toLowerCase());
-            card.setAttribute('data-doc-type', ext);
-            card.style.animation = 'arcSlideUp 0.35s ease';
-
-            card.innerHTML = `
-                <div>
-                    <div class="arc-doc-top">
-                        <div class="arc-file-icon ${iconClass}">
-                            <i class="bi ${iconBi}"></i>
-                        </div>
-                        <div class="arc-doc-details">
-                            <div class="arc-doc-tag-row">
-                                <span class="arc-doc-folder-pill" title="${escapeHtml(folder)}">${escapeHtml(folder)}</span>
-                                <span class="arc-doc-format-badge">${ext}</span>
-                            </div>
-                            <h3 class="arc-doc-name" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <div class="arc-doc-info-row">
-                        <span><i class="bi bi-person-fill"></i> ${escapeHtml(author)}</span>
-                        <span><i class="bi bi-hdd"></i> ${sizeStr}</span>
-                        <span><i class="bi bi-calendar3"></i> Just now</span>
-                    </div>
-                    <div class="arc-doc-actions">
-                        <button type="button" class="arc-btn-action-preview" onclick="openArchivePreviewModal('${escapeHtml(title)}', '${escapeHtml(folder)}', '${ext}', '${sizeStr}', 'Just now', '${escapeHtml(author)}', '')">
-                            <i class="bi bi-eye"></i> Preview
-                        </button>
-                        <button type="button" class="arc-btn-action-download" onclick="downloadArchiveDoc('${escapeHtml(title)}', '')">
-                            <i class="bi bi-download"></i> Download
-                        </button>
-                    </div>
-                </div>
-            `;
-            grid.insertBefore(card, grid.firstChild);
-
-            // 2. Insert into Document List Table
-            const tbody = document.getElementById('documentsTableBody');
-            const row = document.createElement('tr');
-            row.setAttribute('data-doc-name', title.toLowerCase());
-            row.setAttribute('data-doc-folder', folder.toLowerCase());
-            row.setAttribute('data-doc-folder-exact', folder);
-            row.setAttribute('data-doc-author', author.toLowerCase());
-            row.setAttribute('data-doc-type', ext);
-            row.style.animation = 'arcSlideUp 0.35s ease';
-
-            row.innerHTML = `
-                <td>
-                    <div class="arc-tbl-row-doc">
-                        <div class="arc-file-icon ${iconClass}" style="width: 36px; height: 36px; font-size: 1.15rem; border-radius: 8px;">
-                            <i class="bi ${iconBi}"></i>
-                        </div>
-                        <div>
-                            <div class="arc-tbl-doc-name">${escapeHtml(title)}</div>
-                            <span class="arc-doc-format-badge" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">${ext}</span>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="arc-doc-folder-pill">${escapeHtml(folder)}</span>
-                </td>
-                <td style="font-weight: 600; color: var(--arc-ink-body);">
-                    ${sizeStr}
-                </td>
-                <td style="font-size: 0.8rem; color: var(--arc-ink-muted);">
-                    Just now
-                </td>
-                <td style="font-size: 0.82rem; font-weight: 600; color: var(--arc-ink-dark);">
-                    ${escapeHtml(author)}
-                </td>
-                <td style="text-align: right; white-space: nowrap;">
-                    <div class="arc-tbl-actions">
-                        <button type="button" class="arc-tbl-btn is-preview" onclick="openArchivePreviewModal('${escapeHtml(title)}', '${escapeHtml(folder)}', '${ext}', '${sizeStr}', 'Just now', '${escapeHtml(author)}', '')">
-                            <i class="bi bi-eye"></i> Preview
-                        </button>
-                        <button type="button" class="arc-tbl-btn is-download" onclick="downloadArchiveDoc('${escapeHtml(title)}', '')">
-                            <i class="bi bi-download"></i> Download
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.insertBefore(row, tbody.firstChild);
-
-            // Increment folder file count
-            const folderCard = document.querySelector(`#archiveFolderGrid .arc-folder-card[data-folder-name="${folder}"] .folder-doc-count`);
-            if (folderCard) folderCard.textContent = parseInt(folderCard.textContent || '0') + 1;
-
-            // Increment total documents
-            const statTotal = document.getElementById('statTotalDocs');
-            if (statTotal) statTotal.textContent = parseInt(statTotal.textContent || '0') + 1;
-
-            currentDocPage = 1;
-            applyAllFilters();
-
-            closeUploadDocumentModal();
-            showArchiveToast(`Document "${title}" uploaded to ${folder}!`, 'success');
+            const dialog = document.getElementById('archiveDocPreviewModal');
+            if (dialog) dialog.showModal();
         }
 
-        // =========================================================================
-        // Download and Toast Helpers
-        // =========================================================================
-        function downloadArchiveDoc(name, url) {
+        function closeArchivePreviewModal() {
+            const dialog = document.getElementById('archiveDocPreviewModal');
+            if (dialog) dialog.close();
+        }
+
+        function handleDownloadToast(name) {
             showArchiveToast(`Downloading "${name}"...`, 'success');
         }
 
@@ -1801,14 +1507,6 @@
             }, 3200);
         }
 
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -1816,9 +1514,8 @@
             return div.innerHTML;
         }
 
-        // Initialize view & pagination on DOM load
         document.addEventListener('DOMContentLoaded', () => {
-            applyAllFilters();
+            setGdriveView(currentGdriveView);
         });
     </script>
 @endsection

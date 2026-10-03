@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
+
 /**
  * Permissioned 3-node hash chain for budget utilization / expense seals.
  * Ledgers: storage/app/orgchain/budget/node-{1,2,3}/budget.jsonl
@@ -21,6 +23,10 @@ class BudgetChainService
         $lock = $this->acquireLock();
 
         try {
+            if ($this->besu()->isEnabled()) {
+                return $this->sealExpenseWithBesu($payload);
+            }
+
             $previousHash = $this->latestHash();
             $index = $this->nextIndex();
             $sealedAt = now()->toIso8601String();
@@ -38,6 +44,7 @@ class BudgetChainService
                 'unit_cost' => (float) ($payload['unit_cost'] ?? 0),
                 'total' => (float) ($payload['total'] ?? (($payload['quantity'] ?? 1) * ($payload['unit_cost'] ?? 0))),
                 'expense_date' => (string) ($payload['expense_date'] ?? ''),
+                'file_hash' => (string) ($payload['file_hash'] ?? ''),
                 'sealed_at' => $sealedAt,
             ];
 
@@ -56,6 +63,7 @@ class BudgetChainService
                 'nodes_confirmed' => count(array_filter($confirmations, static fn (array $c): bool => ($c['status'] ?? '') === 'ok')),
                 'node_confirmations' => $confirmations,
                 'sealed_at' => $sealedAt,
+                'chain_driver' => 'file',
             ];
         } finally {
             $this->releaseLock($lock);
@@ -67,6 +75,35 @@ class BudgetChainService
      */
     public function recentBlocks(int $limit = 8): array
     {
+        if ($this->besu()->isEnabled()) {
+            return DB::table('expense_receipt_reviews')
+                ->whereNotNull('chain_hash')
+                ->orderByDesc('id')
+                ->limit($limit)
+                ->get()
+                ->map(static fn (object $row): array => [
+                    'type' => 'budget_utilization',
+                    'index' => (int) $row->id,
+                    'previous_hash' => (string) ($row->previous_hash ?? self::GENESIS_HASH),
+                    'activity_title' => (string) ($row->activity_title ?? ''),
+                    'item_name' => (string) ($row->item_name ?? ''),
+                    'supplier' => (string) ($row->supplier ?? ''),
+                    'organization_name' => (string) ($row->organization_name ?? ''),
+                    'receipt_reference' => (string) ($row->receipt_reference ?? ''),
+                    'quantity' => (int) ($row->quantity ?? 0),
+                    'unit_cost' => (float) ($row->unit_cost ?? 0),
+                    'total' => (float) (($row->quantity ?? 0) * ($row->unit_cost ?? 0)),
+                    'expense_date' => (string) ($row->expense_date ?? ''),
+                    'sealed_at' => (string) ($row->created_at ?? ''),
+                    'block_hash' => (string) $row->chain_hash,
+                    'chain_driver' => (string) ($row->chain_driver ?? 'besu'),
+                    'chain_tx_hash' => $row->chain_tx_hash ?? null,
+                    'chain_block_number' => $row->chain_block_number ?? null,
+                    'chain_contract_address' => $row->chain_contract_address ?? null,
+                ])
+                ->all();
+        }
+
         $path = $this->nodeLedgerPath(1);
         if (! is_file($path)) {
             return [];
@@ -89,7 +126,20 @@ class BudgetChainService
 
     public function verifyHash(string $blockHash): array
     {
+        if ($this->besu()->isEnabled()) {
+            $row = DB::table('expense_receipt_reviews')
+                ->where('chain_hash', $blockHash)
+                ->first();
+
+            return [
+                ...$this->besu()->verifyAnchor($blockHash, $row?->chain_tx_hash),
+                'chain_driver' => 'besu',
+                'sealed_at' => $row?->updated_at ?? $row?->created_at,
+            ];
+        }
+
         $found = [];
+        $matchedBlock = null;
         for ($node = 1; $node <= self::NODE_COUNT; $node++) {
             $path = $this->nodeLedgerPath($node);
             $ok = false;
@@ -98,6 +148,7 @@ class BudgetChainService
                     $decoded = json_decode($line, true);
                     if (is_array($decoded) && ($decoded['block_hash'] ?? '') === $blockHash) {
                         $ok = true;
+                        $matchedBlock ??= $decoded;
                         break;
                     }
                 }
@@ -111,10 +162,60 @@ class BudgetChainService
             'ok' => $confirmed === self::NODE_COUNT,
             'nodes_confirmed' => $confirmed,
             'nodes' => $found,
+            'chain_driver' => 'file',
+            'sealed_at' => $matchedBlock['sealed_at'] ?? null,
             'message' => $confirmed === self::NODE_COUNT
                 ? 'Budget seal verified across all 3 nodes.'
                 : 'Budget seal incomplete ('.$confirmed.'/'.self::NODE_COUNT.' nodes).',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function sealExpenseWithBesu(array $payload): array
+    {
+        $previousHash = (string) (DB::table('expense_receipt_reviews')
+            ->whereNotNull('chain_hash')
+            ->orderByDesc('id')
+            ->value('chain_hash') ?? self::GENESIS_HASH);
+        $index = (int) DB::table('expense_receipt_reviews')
+            ->whereNotNull('chain_hash')
+            ->count() + 1;
+        $sealedAt = now()->toIso8601String();
+
+        $core = [
+            'type' => 'budget_utilization',
+            'index' => $index,
+            'previous_hash' => $previousHash,
+            'activity_title' => (string) ($payload['activity_title'] ?? ''),
+            'item_name' => (string) ($payload['item_name'] ?? ''),
+            'supplier' => (string) ($payload['supplier'] ?? ''),
+            'organization_name' => (string) ($payload['organization_name'] ?? ''),
+            'receipt_reference' => (string) ($payload['receipt_reference'] ?? ''),
+            'quantity' => (int) ($payload['quantity'] ?? 1),
+            'unit_cost' => (float) ($payload['unit_cost'] ?? 0),
+            'total' => (float) ($payload['total'] ?? (($payload['quantity'] ?? 1) * ($payload['unit_cost'] ?? 0))),
+            'expense_date' => (string) ($payload['expense_date'] ?? ''),
+            'file_hash' => (string) ($payload['file_hash'] ?? ''),
+            'sealed_at' => $sealedAt,
+        ];
+
+        $blockHash = hash('sha256', json_encode($core, JSON_UNESCAPED_SLASHES));
+
+        return $this->besu()->anchor(
+            'budget_utilization',
+            $blockHash,
+            hash('sha256', (string) $core['receipt_reference']),
+            ['index' => $index, 'sealed_at' => $sealedAt],
+            $previousHash,
+        );
+    }
+
+    private function besu(): BesuChainService
+    {
+        return app(BesuChainService::class);
     }
 
     private function latestHash(): string

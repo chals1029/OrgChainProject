@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\OfficeUser;
+use App\Models\SystemAdminUser;
 use App\Models\UserAccount;
 use App\Models\User;
 
@@ -52,6 +53,10 @@ return [
             'driver' => 'session',
             'provider' => 'office_users',
         ],
+        'system_admin' => [
+            'driver' => 'session',
+            'provider' => 'system_admin_users',
+        ],
     ],
 
     /*
@@ -83,6 +88,10 @@ return [
         'office_users' => [
             'driver' => 'eloquent',
             'model' => OfficeUser::class,
+        ],
+        'system_admin_users' => [
+            'driver' => 'eloquent',
+            'model' => SystemAdminUser::class,
         ],
     ],
 

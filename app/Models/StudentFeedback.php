@@ -20,12 +20,17 @@ class StudentFeedback extends Model
         'body',
         'is_anonymous',
         'visibility',
+        'status',
+        'review_note',
+        'verified_by',
+        'verified_at',
     ];
 
     protected function casts(): array
     {
         return [
             'is_anonymous' => 'boolean',
+            'verified_at' => 'datetime',
         ];
     }
 

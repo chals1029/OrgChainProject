@@ -11,7 +11,7 @@ class Database
     /**
      * Bump this when you add a new auto-migration so it re-runs once.
      */
-    private const SCHEMA_VERSION = '2026.07.24.1';
+    private const SCHEMA_VERSION = '2026.09.20.1';
 
     private static ?PDO $connection = null;
 
@@ -235,6 +235,10 @@ class Database
             'voter_commitment' => 'ALTER TABLE vote_receipts ADD COLUMN voter_commitment VARCHAR(64) NULL AFTER ballot_root',
             'nodes_confirmed' => 'ALTER TABLE vote_receipts ADD COLUMN nodes_confirmed TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER voter_commitment',
             'node_confirmations' => 'ALTER TABLE vote_receipts ADD COLUMN node_confirmations JSON NULL AFTER nodes_confirmed',
+            'chain_driver' => 'ALTER TABLE vote_receipts ADD COLUMN chain_driver VARCHAR(32) NULL AFTER node_confirmations',
+            'chain_tx_hash' => 'ALTER TABLE vote_receipts ADD COLUMN chain_tx_hash VARCHAR(66) NULL AFTER chain_driver',
+            'chain_block_number' => 'ALTER TABLE vote_receipts ADD COLUMN chain_block_number BIGINT UNSIGNED NULL AFTER chain_tx_hash',
+            'chain_contract_address' => 'ALTER TABLE vote_receipts ADD COLUMN chain_contract_address VARCHAR(42) NULL AFTER chain_block_number',
         ];
 
         foreach ($columns as $column => $sql) {

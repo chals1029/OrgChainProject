@@ -69,6 +69,7 @@ class DatabaseBackendTest extends TestCase
             'community_posts',
             'community_comments',
             'community_likes',
+            'community_comment_likes',
         ];
 
         foreach ($required as $table) {
@@ -81,7 +82,7 @@ class DatabaseBackendTest extends TestCase
 
     public function test_office_roles_exist_for_all_desks(): void
     {
-        foreach (['so', 'oso', 'sdo', 'ovcaa'] as $role) {
+        foreach (['so', 'oso', 'sdo', 'ovcaa', 'oc'] as $role) {
             $user = $this->ensureOfficeUser($role);
             $this->assertTrue($user->is_active);
             $this->assertSame($role, $user->office_role);
@@ -89,7 +90,7 @@ class DatabaseBackendTest extends TestCase
         }
 
         $this->assertGreaterThanOrEqual(
-            4,
+            5,
             OfficeUser::query()->where('is_active', true)->count()
         );
     }

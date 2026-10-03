@@ -17,6 +17,10 @@ class CommunityPost extends Model
         'image_path',
         'likes_count',
         'comments_count',
+        'views_count',
+        'feeling',
+        'tagged_users',
+        'audience',
     ];
 
     public function student(): BelongsTo

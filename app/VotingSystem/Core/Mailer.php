@@ -44,6 +44,12 @@ class Mailer
         $previousHash = trim((string) ($chain['previous_hash'] ?? ''));
         $ballotRoot = trim((string) ($chain['ballot_root'] ?? ''));
         $nodesConfirmed = (int) ($chain['nodes_confirmed'] ?? 0);
+        $nodeTotal = ($chain['chain_driver'] ?? 'file') === 'besu'
+            ? (int) config('besu.validator_count', 4)
+            : 3;
+        $chainLabel = ($chain['chain_driver'] ?? 'file') === 'besu'
+            ? 'Hyperledger Besu QBFT network'
+            : 'local hash chain';
 
         $text = "Hello {$voterName},\n\n"
             . "Your official ballot for {$electionTitle} has been received.\n\n"
@@ -60,7 +66,7 @@ class Mailer
                 $text .= "Ballot root: {$ballotRoot}\n";
             }
             if ($nodesConfirmed > 0) {
-                $text .= "Nodes confirmed: {$nodesConfirmed}/3\n";
+                $text .= "Validators confirmed: {$nodesConfirmed}/{$nodeTotal}\n";
             }
         }
 
@@ -81,12 +87,12 @@ class Mailer
                 $rows .= $this->detailRow('Ballot Root', $ballotRoot, false, true);
             }
             if ($nodesConfirmed > 0) {
-                $rows .= $this->detailRow('Nodes Confirmed', $nodesConfirmed . ' / 3');
+                $rows .= $this->detailRow('Validators Confirmed', $nodesConfirmed . ' / '.$nodeTotal);
             }
         }
 
         $chainNote = $blockHash !== ''
-            ? '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">Your ballot was sealed to the local 3-node hash chain. Keep this receipt so you can verify the block hash later. For privacy, your selected candidates are not included in this email.</p>'
+            ? '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">Your ballot was sealed to the '.$chainLabel.'. Keep this receipt so you can verify the block hash later. For privacy, your selected candidates are not included in this email.</p>'
             : '<p style="margin:16px 0 0;color:#4f564c;font-size:14px;line-height:1.6;">This receipt confirms successful ballot submission only. For privacy, your selected candidates are not included in this email.</p>';
 
         $html = $this->template(

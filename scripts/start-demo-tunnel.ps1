@@ -34,7 +34,7 @@ try {
   Invoke-WebRequest -Uri "http://127.0.0.1:$Port" -UseBasicParsing -TimeoutSec 5 | Out-Null
   Write-Host "Local app OK: http://127.0.0.1:$Port"
 } catch {
-  Write-Host "WARN: local app not responding yet — tunnel may still work after serve boots." -ForegroundColor Yellow
+  Write-Host "WARN: local app not responding yet - tunnel may still work after serve boots." -ForegroundColor Yellow
 }
 
 # 2) Start tunnel

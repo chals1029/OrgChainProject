@@ -12,6 +12,36 @@
     $heroPubmatUrl = $heroPubmatPath !== ''
         ? (preg_match('#^https?://#i', $heroPubmatPath) ? $heroPubmatPath : voting_asset($heroPubmatPath))
         : voting_asset('img/HirayaNew.jpg');
+
+    $homeChain = is_array($blockchainStatus ?? null) ? $blockchainStatus : [];
+    $homeChainHealth = is_array($homeChain['nodes_health'] ?? null) ? $homeChain['nodes_health'] : [];
+    $homeChainRpcOnline = strtolower((string) ($homeChainHealth['rpc'] ?? '')) === 'online';
+    $homeChainOperational = strtolower((string) ($homeChain['status'] ?? '')) === 'operational';
+    $homeChainOnline = $homeChainRpcOnline || $homeChainOperational;
+    $homeChainHash = trim((string) ($homeChain['latest_block_hash'] ?? ''));
+    $homeGenesisHash = str_repeat('0', 64);
+    $homeHasSealedBallot = (int) ($homeChain['total_sealed_blocks'] ?? 0) > 0
+        && $homeChainHash !== ''
+        && $homeChainHash !== $homeGenesisHash;
+    $homeNetworkLabel = trim((string) ($homeChain['consensus_algorithm'] ?? '')) ?: 'OrgChain public ledger';
+    $homeValidatorTotal = max(
+        (int) ($homeChainHealth['qbft_validators'] ?? 0),
+        (int) ($homeChain['node_count'] ?? 0)
+    );
+    $homePeerCount = max(0, (int) ($homeChainHealth['peers'] ?? 0));
+    $homeBlockNumber = $homeChainHealth['block_number'] ?? null;
+    $homeStatusLabel = $homeChainOnline ? 'Live' : 'Offline';
+    $homePublicHashes = [];
+    foreach ((array) ($blockchainHashes ?? []) as $publicHash) {
+        $publicHash = trim((string) $publicHash);
+        if ($publicHash !== '' && ! in_array($publicHash, $homePublicHashes, true)) {
+            $homePublicHashes[] = $publicHash;
+        }
+    }
+    if ($homePublicHashes === [] && $homeHasSealedBallot) {
+        $homePublicHashes[] = $homeChainHash;
+    }
+    $homePublicHashCount = count($homePublicHashes);
 ?>
 
 
@@ -123,6 +153,101 @@
             </div>
         </div>
 
+    </div>
+</section>
+
+<section class="home-ledger-band" aria-labelledby="publicLedgerTitle">
+    <div class="container">
+        <section class="public-proof-card home-chain-card <?= $homeChainOnline ? 'is-verified' : 'is-recorded is-offline' ?>" aria-labelledby="publicLedgerTitle">
+            <div class="proof-card-orbit" aria-hidden="true"></div>
+            <div class="proof-card-topline">
+                <div class="proof-card-heading">
+                    <span class="proof-card-icon" aria-hidden="true"><i class="bi bi-diagram-3-fill"></i></span>
+                    <div>
+                        <p class="proof-card-kicker">Public blockchain status</p>
+                        <h2 id="publicLedgerTitle">Election records stay verifiable</h2>
+                    </div>
+                </div>
+                <span class="proof-card-status">
+                    <span class="proof-status-dot" aria-hidden="true"></span>
+                    <?= e($homeStatusLabel) ?>
+                </span>
+            </div>
+
+            <p class="proof-card-summary">
+                OrgChain anchors each submitted ballot to a public integrity hash. Voter identity, ballot choices, and receipt details remain private.
+            </p>
+
+            <div class="proof-hash-panel">
+                <div class="proof-hash-label">
+                    <span>Public block hashes</span>
+                    <span class="proof-hash-algorithm"><?= $homePublicHashCount ?> record<?= $homePublicHashCount === 1 ? '' : 's' ?></span>
+                </div>
+                <?php if ($homePublicHashCount > 0): ?>
+                    <div class="proof-hash-elevator" data-hash-elevator data-hash-count="<?= $homePublicHashCount ?>">
+                        <div class="proof-hash-elevator-viewport" aria-label="Public block hash history">
+                            <div class="proof-hash-elevator-track" data-hash-elevator-track>
+                                <?php foreach ($homePublicHashes as $hashIndex => $publicHash): ?>
+                                    <?php $hashPreview = strlen($publicHash) > 28 ? substr($publicHash, 0, 14).'…'.substr($publicHash, -10) : $publicHash; ?>
+                                    <article class="proof-hash-elevator-card" data-hash-elevator-card data-hash="<?= e($publicHash) ?>" <?= $hashIndex === 0 ? 'aria-hidden="false"' : 'aria-hidden="true"' ?>>
+                                        <div class="proof-hash-elevator-card-head">
+                                            <span>Public hash <?= $hashIndex + 1 ?></span>
+                                            <span><?= $hashIndex === 0 ? 'Latest sealed record' : 'Sealed record' ?></span>
+                                        </div>
+                                        <code class="proof-hash-value user-select-all" title="Full public block hash: <?= e($publicHash) ?>"><?= e($hashPreview) ?></code>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <div class="proof-hash-elevator-footer">
+                            <span data-hash-elevator-status>Rolling through <?= $homePublicHashCount ?> public hash<?= $homePublicHashCount === 1 ? '' : 'es' ?></span>
+                            <button type="button" class="proof-copy-button" data-copy-proof-hash="<?= e($homePublicHashes[0]) ?>" data-copy-default-label="Copy current hash" aria-label="Copy current public block hash">
+                                <i class="bi bi-copy" aria-hidden="true"></i>
+                                <span data-copy-proof-label>Copy current hash</span>
+                            </button>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <span class="proof-hash-empty">Awaiting the first sealed ballot</span>
+                    <span class="proof-hash-empty-note">The live network is ready. A public block hash appears here after a ballot is submitted.</span>
+                <?php endif; ?>
+            </div>
+
+            <div class="proof-card-metrics" aria-label="Public blockchain status">
+                <div>
+                    <span>Network</span>
+                    <strong><?= e($homeNetworkLabel) ?></strong>
+                </div>
+                <div>
+                    <span>Validators</span>
+                    <strong><?= $homeValidatorTotal > 0 ? $homeValidatorTotal : '—' ?><?= $homeValidatorTotal > 0 && $homePeerCount > 0 ? ' · '.$homePeerCount.' peers' : '' ?></strong>
+                </div>
+                <div>
+                    <span>Sealed ballots</span>
+                    <strong><?= number_format((int) ($homeChain['total_sealed_blocks'] ?? 0)) ?></strong>
+                </div>
+            </div>
+
+            <details class="proof-chain-details">
+                <summary>View public chain details</summary>
+                <dl class="receipt-chain-meta small mb-0">
+                    <dt>Consensus</dt>
+                    <dd><?= e($homeNetworkLabel) ?></dd>
+                    <dt>RPC status</dt>
+                    <dd><?= e(ucfirst((string) ($homeChainHealth['rpc'] ?? 'offline'))) ?></dd>
+                    <?php if ($homeChain['chain_id'] ?? null): ?>
+                        <dt>Chain ID</dt>
+                        <dd><?= e((string) $homeChain['chain_id']) ?></dd>
+                    <?php endif; ?>
+                    <?php if ($homeBlockNumber !== null): ?>
+                        <dt>Latest network block</dt>
+                        <dd><?= number_format((int) $homeBlockNumber) ?></dd>
+                    <?php endif; ?>
+                    <dt>Private ballot data</dt>
+                    <dd>Kept private</dd>
+                </dl>
+            </details>
+        </section>
     </div>
 </section>
 
