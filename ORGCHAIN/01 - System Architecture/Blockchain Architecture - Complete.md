@@ -109,7 +109,7 @@ MySQL stores the data required to run OrgChain, including:
 - users, organizations, roles, and permissions;
 - activities, approval statuses, budgets, and reporting periods;
 - uploaded-document metadata and private receipt paths;
-- OCR results and receipt review status;
+- expense liquidation and receipt verification status;
 - anonymized vote receipts and election metadata;
 - the application SHA-256 hash and its previous-hash link;
 - Besu transaction hash, chain block number, contract address, and driver name.
@@ -208,17 +208,14 @@ The budget implementation is coordinated by `ActivityBudgetService` and `BudgetC
 sequenceDiagram
     participant SO as Student organization
     participant L as Laravel budget service
-    participant O as OCR receipt scanner
     participant D as MySQL budget tables
     participant B as BudgetChainService
     participant C as OrgChainAnchor
     participant Q as 4 QBFT validators
 
-    SO->>L: Choose final-approved activity and upload receipt
+    SO->>L: Choose final-approved activity, upload receipt attachment, and enter details
     L->>L: Check activity, fund account, remaining activity budget, and cash
-    L->>O: Scan and validate receipt image/document
-    O-->>L: OCR fields and validation result
-    L->>D: Store private original and expense row as pending_seal
+    L->>D: Store private original attachment and expense row as pending_seal
     L->>D: Update implemented budget and budget item
     L->>B: Seal the receipt expense
     B->>B: Build normalized expense payload and previous_hash
@@ -232,8 +229,8 @@ sequenceDiagram
 ```
 
 ### Step-by-Step Budget Sealing Flow Explained
-1. **Activity & Balance Check:** An authorized officer uploads an expense receipt for an approved activity (`workflow_status = oc_approved`). Laravel checks that the organization has an active fund account and sufficient remaining activity allocation.
-2. **OCR Scanning:** The OCR engine automatically extracts the vendor/supplier, date, line items, and total amount from the uploaded receipt image.
+1. **Activity & Balance Check:** An authorized officer uploads an expense receipt and enters itemized details for an approved activity (`workflow_status = oc_approved`). Laravel checks that the organization has an active fund account and sufficient remaining activity allocation.
+2. **Itemized Entry & Attachment:** The officer attaches receipt image(s) or PDF documents and confirms the merchant, transaction date, items, unit costs, and official receipt reference numbers.
 3. **Deterministic Payload:** Laravel creates a normalized expense summary:
    `[activity_title, item_name, supplier, organization, receipt_reference, quantity, unit_cost, total, expense_date, previous_hash]`.
 4. **On-Chain Anchoring:** The payload is hashed with SHA-256 into `chain_hash` and anchored in `OrgChainAnchor.sol` with record type `budget_utilization`.
@@ -358,14 +355,14 @@ The chain does not independently perform or replace:
 
 - student/organization authentication;
 - activity approval by SO, OSO, SDO, or OVCAA;
-- OCR judgment or human receipt review;
+- expense verification or human receipt review;
 - storage of DOCX, PDF, or receipt-image files;
 - budget arithmetic and financial-report compilation;
 - access control or privacy enforcement;
 - correction of bad source data;
 - automatic conversion of legacy records to Besu records.
 
-Those responsibilities stay in Laravel, MySQL, private storage, OCR, and the office workflow. The blockchain adds tamper-evident anchoring and independent network confirmation.
+Those responsibilities stay in Laravel, MySQL, private storage, and the office workflow. The blockchain adds tamper-evident anchoring and independent network confirmation.
 
 ## 15. Code and infrastructure map
 
@@ -377,7 +374,7 @@ Those responsibilities stay in Laravel, MySQL, private storage, OCR, and the off
 | Transaction signing | `app/Services/BesuTransactionSigner.php` | Sign raw application transactions |
 | Voting integration | `app/VotingSystem/Core/VoteBlockchain.php` | Build and seal ballot hashes |
 | Budget integration | `app/Services/BudgetChainService.php` | Build and seal expense hashes |
-| Budget lifecycle | `app/Services/ActivityBudgetService.php` | Approval, fund checks, OCR record, one-time debit, sealing |
+| Budget lifecycle | `app/Services/ActivityBudgetService.php` | Approval, fund checks, receipt record, one-time debit, sealing |
 | Smart contract | `infra/besu/contracts/OrgChainAnchor.sol` | Authorized hash anchoring and lookup |
 | Network | `infra/besu/docker-compose.yml` | Four Besu validator containers |
 | Genesis | `infra/besu/networkFiles/genesis.json` | Chain ID, QBFT settings, validator allocation |
@@ -419,7 +416,7 @@ This page is the consolidated current architecture reference. The following olde
 - [[End-to-End Data Flow]] - useful workflow diagrams, with legacy JSONL sections.
 - [[VoteChain Cryptographic Engine]] - detailed fallback/file-ledger behavior.
 - [[Multi-Laptop 3-Node Blockchain Setup Runbook]] - legacy JSONL node topology.
-- [[Budget Utilization and OCR Receipts]] - budget behavior and historical chain notes.
+- [[Budget Utilization and Receipt Records]] - budget behavior and historical chain notes.
 - [[Session Log 2026-09-21 Activity Budget Lifecycle]] - latest implementation/session findings.
 
 When those pages conflict with this document or with the current code, use this page, `config/besu.php`, the Besu services, and the live runtime configuration as the source of truth.

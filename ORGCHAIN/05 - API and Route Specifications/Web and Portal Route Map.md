@@ -34,7 +34,6 @@ created: 2026-08-20
 | `DELETE` | `/office-desk/activities/{submission}/attachments/{key}` | `office.auth` | `OfficePortalController@deleteAttachment` | `office.activities.attachments.destroy` |
 | `GET` | `/office-desk/calendar` | `office.auth` | `OfficePortalController@calendar` | `office.calendar` |
 | `GET` | `/office-desk/budget-utilization` | `office.auth` | `OfficePortalController@budget` | `office.budget` |
-| `POST` | `/office-desk/budget-utilization/receipts/scan` | `office.auth` + SO only + throttle | `ReceiptScanController` | `office.budget.receipts.scan` |
 | `POST` | `/office-desk/budget-utilization/receipts/validate-document` | `office.auth` + SO only + throttle | `ReceiptDocumentValidationController` | `office.budget.receipts.validate-document` |
 | `POST` | `/office-desk/budget-utilization/receipt-reviews` | `office.auth` + SO only | `OfficePortalController@storeReceiptReview` | `office.budget.receipts.store` |
 | `GET` | `/office-desk/budget-utilization/receipts/{review}/view` | `office.auth` | `OfficePortalController@viewReceipt` | `office.budget.receipts.view` |

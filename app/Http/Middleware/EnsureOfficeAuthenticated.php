@@ -12,7 +12,7 @@ class EnsureOfficeAuthenticated
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::guard('office')->check()) {
-            if ($request->is('office-desk/budget-utilization/receipts/scan') || $request->is('office-desk/budget-utilization/receipts/validate-document')) abort(401, 'Your session expired. Sign in and validate the receipt again.');
+            if ($request->is('office-desk/budget-utilization/receipts/validate-document')) abort(401, 'Your session expired. Sign in and validate the document again.');
             $loginPath = '/'.trim((string) config('orgchain.office_login_path', '/orgchain-office-access-a9e2f71c4b83'), '/');
 
             return redirect($loginPath);
@@ -22,7 +22,7 @@ class EnsureOfficeAuthenticated
 
         if (! $user || ! $user->is_active) {
             Auth::guard('office')->logout();
-            if ($request->is('office-desk/budget-utilization/receipts/scan') || $request->is('office-desk/budget-utilization/receipts/validate-document')) abort(401, 'This office account is inactive.');
+            if ($request->is('office-desk/budget-utilization/receipts/validate-document')) abort(401, 'This office account is inactive.');
 
             $loginPath = '/'.trim((string) config('orgchain.office_login_path', '/orgchain-office-access-a9e2f71c4b83'), '/');
 

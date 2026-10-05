@@ -40,7 +40,7 @@ graph TD
 
 | Office Role | Code | Primary Responsibilities | Can Approve Stages |
 | :--- | :--- | :--- | :--- |
-| **Student Organization** | `so` | Draft proposals, manage members, stage the paired AR + FR semester package, submit OCR expense receipts | Draft submissions and report preparation |
+| **Student Organization** | `so` | Draft proposals, manage members, stage the paired AR + FR semester package, submit expense receipts | Draft submissions and report preparation |
 | **Office of Student Orgs** | `oso` | Verify institutional checklist, audit faculty-in-charge assignments, review activities, make the final AR + FR report decision, and archive accepted packages | Activity endorsement plus AR + FR return/accept |
 | **Sustainable Dev Office** | `sdo` | Audit environmental compliance, waste management policies, and UN SDG mappings | Activity SDG review only |
 | **OVCAA Review Desk** | `ovcaa` | Review SDO-verified packages and endorse the complete activity record to OC | OVCAA review only |

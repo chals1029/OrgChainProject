@@ -84,8 +84,6 @@ class BudgetUtilizationDemoSeeder extends Seeder
                 'receipt_path' => $path,
                 'receipt_name' => $receipt['file'],
                 'receipt_reference' => $receipt['reference'],
-                'ocr_confidence' => 98,
-                'ocr_quality' => 'complete',
                 'chain_hash' => $seal['block_hash'],
                 'previous_hash' => $seal['previous_hash'],
                 'nodes_confirmed' => $seal['nodes_confirmed'],

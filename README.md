@@ -16,7 +16,7 @@ It links Student Organizations (SO) with the Office of Student Organizations (OS
 | Create activity | `GET /office-desk/activities/create[?edit=slug]` | Guided in-campus + local off-campus submission wizard (draft or submit for review) |
 | Save activity | `POST /office-desk/activities`, `PUT /office-desk/activities/{submission}` | Persists structured details, TinyMCE document HTML, and checklist uploads |
 | Calendar | `GET /office-desk/calendar[?month=YYYY-MM]` | Month grid with real activity dates; clicking a date shows its activities |
-| Budget Utilization | `GET /office-desk/budget-utilization` | Record expenses per approved activity, receipt OCR scan, verification queue |
+| Budget Utilization | `GET /office-desk/budget-utilization` | Record expenses per approved activity, receipt attachment upload, verification queue |
 | Submit receipt | `POST /office-desk/budget-utilization/receipt-reviews` | Stores reviewed receipt + expense for office review |
 | Financial Report | `GET /office-desk/financial-report` | Semester expense lines sourced from recorded utilization |
 | Accomplishment Report | `GET /office-desk/accomplishment-report` | End-of-term accomplishment submissions |
@@ -65,10 +65,6 @@ Integrated official voting module (admin, voter flows, Google OAuth, canvassing)
   - **Smart Contract Layer:** Solidity smart contract (`OrgChainAnchor.sol`) for anchoring voter cryptographic receipts and financial expense liquidations
   - **RPC Bridge:** JSON-RPC over HTTP (`web3p/ethereum-tx` / custom RPC client) connecting Laravel to the Besu ledger
 - **Voting Ledger Engine:** VoteChain 3-node fault-tolerant SHA-256 JSONL hash-chained audit ledger with receipt verification codes
-
-### AI & Receipt OCR Processing
-- **Server Microservice:** Python 3.11 OCR service ([FastAPI](https://fastapi.tiangolo.com) / Tesseract OCR / OpenCV) running in Docker
-- **Client-Side Scanner:** [Tesseract.js](https://tesseract.projectnaptha.com) in-browser OCR pipeline for real-time receipt total and merchant pre-filling
 
 ### Document Processing & Preview Engine
 - **In-Browser Document Preview:** Self-hosted `docx-preview.js`, `jszip`, and browser PDF view engines for reviewing submitted requirements without external software

@@ -23,15 +23,15 @@
             <div class="sys-stat-icon"><i class="bi bi-person-check-fill"></i></div>
             <div><span>Active office accounts</span><strong>{{ number_format($stats['active_office_users']) }}</strong><small>Across SO, OSO, SDO, and OVCAA</small></div>
         </article>
-        <article class="sys-stat-card sys-stat-card-blue">
+        <article class="sys-stat-card sys-stat-card-maroon">
             <div class="sys-stat-icon"><i class="bi bi-diagram-3-fill"></i></div>
             <div><span>Pending workflows</span><strong>{{ number_format($stats['pending_workflows']) }}</strong><small>Activities awaiting an office action</small></div>
         </article>
-        <article class="sys-stat-card sys-stat-card-green">
+        <article class="sys-stat-card sys-stat-card-maroon">
             <div class="sys-stat-icon"><i class="bi bi-receipt-cutoff"></i></div>
             <div><span>Receipt records</span><strong>{{ number_format($stats['receipt_records']) }}</strong><small>Stored financial review entries</small></div>
         </article>
-        <article class="sys-stat-card sys-stat-card-gold">
+        <article class="sys-stat-card sys-stat-card-maroon">
             <div class="sys-stat-icon"><i class="bi bi-award-fill"></i></div>
             <div><span>Top 10 Outstanding Students</span><strong>{{ number_format($stats['tosa_applicants']) }}</strong><small>Candidate dossiers in the system</small></div>
         </article>

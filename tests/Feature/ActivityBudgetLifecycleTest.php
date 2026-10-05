@@ -111,16 +111,11 @@ class ActivityBudgetLifecycleTest extends TestCase
             'org_activity_id' => $a->id, 'request_key' => (string) Str::uuid(),
             'item_name' => 'Printed learning kits', 'supplier' => 'Test supplier', 'quantity' => 3, 'unit_cost' => '123.45',
             'expense_date' => '2026-10-01', 'receipt_reference' => 'TEST-'.Str::uuid(),
-            'ocr_quality' => 'complete', 'receipt_reviewed' => '1',
+            'receipt_reviewed' => '1',
             'receipt_type' => 'paper_receipt', 'payment_method' => 'cash',
             'receipt' => UploadedFile::fake()->image('Original Receipt.jpg'),
         ], $override);
-        $scan = \App\Models\ReceiptScan::create([
-            'uploaded_by' => $this->offices['so']->id, 'file_hash' => hash_file('sha256', $data['receipt']->getRealPath()),
-            'engine' => 'test-fixture', 'raw_text' => 'SYNTHETIC TEST RECEIPT', 'confidence' => 90,
-            'extracted' => ['quality' => 'complete', 'fields' => []], 'expires_at' => now()->addHour(),
-        ]);
-        return $data + ['receipt_scan_id' => $scan->id];
+        return $data;
     }
 
     public function test_submission_office_handoffs_and_final_approval_reserve_the_correct_org_budget(): void

@@ -36,8 +36,7 @@ This Map of Content indexes every architectural document, module specification, 
 ### 🏢 Office Portal & Administrative Desk
 - [[Multi-Tier Office Roles SO OSO SDO OVCAA]]: Governance tier hierarchy, role permissions, and navigation badges.
 - [[Activity Proposal Approval Pipeline]]: 4-stage document verification workflow and proposal lifecycle.
-- Activity filing documents: Official In-Campus / Local Off-Campus templates can be previewed in the browser, downloaded explicitly, completed externally, and uploaded for review.
-- [[Budget Utilization and OCR Receipts]]: Financial accounting, expense itemization, OCR receipt verification.
+- [[Budget Utilization and Receipt Records]]: Financial accounting, expense itemization, and receipt attachment verification.
 - [[Organization Renewal Filing Window]]: OSO-controlled open/close; SO locked tab until filing opens; 10-doc packet.
 - [[Interactive Activity Calendar]]: Campus activity scheduling, month aggregation, and status color codes.
 - [[Document Archive and Compliance Repository]]: Organization folder structure, multi-file uploads, semester archiving.
@@ -63,7 +62,7 @@ This Map of Content indexes every architectural document, module specification, 
   - [[Model - Election Position Candidate]]: Ballot configuration and candidate data models.
   - [[Model - Vote and VoteReceipt]]: Anonymized ballots and cryptographic receipts.
   - [[Model - InCampusActivitySubmission and OrgActivity]]: Event submissions and activity tracking.
-  - [[Model - BudgetItem and ExpenseReceiptReview]]: Budget accounting and OCR review models.
+  - [[Model - BudgetItem and ExpenseReceiptReview]]: Budget accounting and expense review models.
   - [[Model - CommunityPost Comment Like]]: Social community models.
   - [[Model - ArchiveFolder and ArchiveDocument]]: Document repository models.
   - [[Model - AuditLog and SecurityEvent]]: Forensics, audit trails, and IDS event logging.

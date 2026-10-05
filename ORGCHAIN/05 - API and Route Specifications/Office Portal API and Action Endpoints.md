@@ -13,7 +13,6 @@ created: 2026-08-20
 - The activity form does not expose an in-app editor or generated document export. Official templates are completed externally and submitted as checklist uploads.
 - `POST /office-desk/activities` and `PUT /office-desk/activities/{id}` accept `submission_action=draft|submit`, selected `activity_type`, conditional requirement flags, keyed `attachments[...]`, and bulk `supporting_documents[]` uploads.
 - Final submission creates or updates `activity_compliance_docs` rows for active checklist requirements.
-- `POST /office-desk/budget-utilization/receipts/scan`: SO-only image OCR preflight; returns a short-lived scan UUID bound to the uploader and exact file hash.
 - `POST /office-desk/budget-utilization/receipts/validate-document`: SO-only DOCX preflight; checks the DOCX archive and visible text for receipt-like content, rejecting activity/proposal templates before final submission.
 - `POST /office-desk/budget-utilization/receipt-reviews`: SO-only itemized receipt submission. Accepts one to 20 `expenses[]` rows, each with one receipt file. The server revalidates every row, writes the batch atomically, updates activity and organization balances, and seals each receipt through the permissioned validator nodes. OSO/SDO/OVCAA/OC do not manually approve receipt rows.
 - `GET /office-desk/budget-utilization/receipts/{review}/view`: Serves a sealed receipt file for viewing (`office.budget.receipts.view`).

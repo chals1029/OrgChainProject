@@ -23,13 +23,13 @@ status: active
 ```mermaid
 flowchart LR
     A[🏛️ Multi-Tier Approvals<br/>SO ➔ OSO ➔ SDO ➔ OVCAA] --> OrgChain[OrgChain Platform]
-    B[💰 Budget Transparency<br/>Public Allocations & OCR Audits] --> OrgChain
+    B[💰 Budget Transparency<br/>Public Allocations & Expense Liquidations] --> OrgChain
     C[🗳️ Cryptographic Voting<br/>3-Node Append-Only VoteChain] --> OrgChain
     D[🎓 Student Community<br/>Engaged Campus Dialogue] --> OrgChain
 ```
 
 1. **Streamlined Institutional Governance**: Replace paper routing with a 4-tier digital document workflow ([[Multi-Tier Office Roles SO OSO SDO OVCAA]]) that validates compliance checklists in accordance with University and CHED policies.
-2. **Transparent Financial Liquidation**: Provide real-time visibility into organization budget allocations and expenditures, backed by OCR receipt auditing ([[Budget Utilization and OCR Receipts]]).
+2. **Transparent Financial Liquidation**: Provide real-time visibility into organization budget allocations and expenditures, backed by cryptographic expense liquidations ([[Budget Utilization and Receipt Records]]).
 3. **Provable Election Integrity**: Eliminate electoral disputes by securing voter ballots with a 3-node localized blockchain ledger ([[VoteChain Cryptographic Engine]]), ensuring that ballots cannot be modified or deleted without invalidating cryptographic hash seals.
 4. **Active Student Engagement**: Connect students to university events through an interactive campus feed ([[Community Feed Posts and Likes]]) and calendar ([[Interactive Activity Calendar]]).
 
@@ -40,7 +40,7 @@ flowchart LR
 | Traditional Challenge | OrgChain Solution | Impact |
 | :--- | :--- | :--- |
 | **Lost or stalled paper endorsements** across multiple administration buildings | Centralized digital submission queue with real-time status badges (`created`, `verification`, `ovcaa_approved`) | Approval turnaround reduced from weeks to days |
-| **Opaque student org fund utilization** leading to mistrust | Public portal showing categorized budget items, spent totals, and OCR receipt audits | 100% financial transparency for student fee allocations |
+| **Opaque student org fund utilization** leading to mistrust | Public portal showing categorized budget items, spent totals, and receipt liquidations | 100% financial transparency for student fee allocations |
 | **Allegations of election tampering** or database manipulation | 3-node JSONL append-only cryptographic ledger with Merkle ballot roots and SHA-256 chain links | Cryptographically verifiable election results with zero ballot tampering |
 | **Disjointed campus event awareness** | Unified portal calendar and community feed linking directly to approved proposals | Higher student participation in campus life |
 

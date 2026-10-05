@@ -1,6 +1,6 @@
 ---
 title: Expense Review & Financial Liquidation Flow
-tags: [finance, ocr, budget, liquidation]
+tags: [finance, budget, liquidation]
 created: 2026-08-20
 ---
 
@@ -8,10 +8,9 @@ created: 2026-08-20
 
 ```mermaid
 flowchart TD
-    RECEIPT[Receipt Uploaded] --> OCR[OCR Parsing Engine]
-    OCR --> REVIEW[Student Affirmation of OCR Items]
-    REVIEW --> QUEUE[Submitted to Office Review Queue]
-    QUEUE --> AUDITOR[Audit by OSO / SDO]
-    AUDITOR -- Approved --> DEDUCT[Deduct from BudgetItem.utilized]
-    AUDITOR -- Rejected --> NOTE[Add Reason to ExpenseReview]
+    RECEIPT[Receipt Attached / Uploaded] --> ENTRY[Manual Item & Amount Entry by SO]
+    ENTRY --> RECORD[Submitted & Recorded in Ledger]
+    RECORD --> DEDUCT[Deduct from Remaining Budget & Cash]
+    RECORD --> SEAL[Cryptographic Seal on Blockchain]
+    SEAL --> AUDIT[Office Oversight & Verification by OSO]
 ```

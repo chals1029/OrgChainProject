@@ -28,15 +28,15 @@
 
 @section('actions')
     @if ($isSdo)
-        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary" style="background: #15803d; box-shadow: 0 4px 14px rgba(21,128,61,0.25);">
+        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
             <i class="bi bi-file-earmark-check-fill"></i> SDO Document Review
         </a>
     @elseif ($isOvcaa)
-        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary" style="background: #1d4ed8; box-shadow: 0 4px 14px rgba(29,78,216,0.25);">
+        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
             <i class="bi bi-patch-check-fill"></i> OVCAA Review Queue
         </a>
     @elseif ($isOc)
-        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary" style="background: #334155; box-shadow: 0 4px 14px rgba(51,65,85,0.22);">
+        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
             <i class="bi bi-shield-check"></i> OC Final Approval Queue
         </a>
     @elseif ($isOso)
@@ -1089,25 +1089,25 @@
         }
 
         .org-status-purple {
-            background: #f3e8ff;
-            color: #7e22ce;
-            border: 1px solid #e9d5ff;
+            background: #fdf0f2;
+            color: #8b1828;
+            border: 1px solid #fae1e5;
         }
-        .org-status-purple .org-status-dot { background: #7e22ce; }
+        .org-status-purple .org-status-dot { background: #8b1828; }
 
         .org-status-yellow {
-            background: #fefce8;
-            color: #b45309;
-            border: 1px solid #fef08a;
+            background: #fdf0f2;
+            color: #8b1828;
+            border: 1px solid #fae1e5;
         }
-        .org-status-yellow .org-status-dot { background: #d97706; }
+        .org-status-yellow .org-status-dot { background: #8b1828; }
 
         .org-status-blue {
-            background: #eff6ff;
-            color: #2563eb;
-            border: 1px solid #dbeafe;
+            background: #fdf0f2;
+            color: #8b1828;
+            border: 1px solid #fae1e5;
         }
-        .org-status-blue .org-status-dot { background: #2563eb; }
+        .org-status-blue .org-status-dot { background: #8b1828; }
 
         .org-status-red {
             background: #fef2f2;
@@ -1117,11 +1117,11 @@
         .org-status-red .org-status-dot { background: #dc2626; }
 
         .org-status-green {
-            background: #f0fdf4;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
+            background: #f8fafc;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
         }
-        .org-status-green .org-status-dot { background: #16a34a; }
+        .org-status-green .org-status-dot { background: #8b1828; }
 
         /* Bottom Row */
         .org-dash-bottom-grid {
@@ -1222,10 +1222,10 @@
             margin-top: 0.1rem;
         }
 
-        .org-role-chip.is-oso { background: #e0f2fe; color: #0369a1; }
-        .org-role-chip.is-sdo { background: #dcfce7; color: #15803d; }
-        .org-role-chip.is-system { background: #f3e8ff; color: #7e22ce; }
-        .org-role-chip.is-ovcaa { background: #dbeafe; color: #1d4ed8; }
+        .org-role-chip.is-oso { background: #fdf0f2; color: #8b1828; border: 1px solid #fae1e5; }
+        .org-role-chip.is-sdo { background: #fdf0f2; color: #8b1828; border: 1px solid #fae1e5; }
+        .org-role-chip.is-system { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+        .org-role-chip.is-ovcaa { background: #fdf0f2; color: #8b1828; border: 1px solid #fae1e5; }
 
         .org-recent-update-text strong {
             display: block;
@@ -1278,12 +1278,12 @@
         }
 
         .oso-kpi-badge.is-pink { background: #fdf0f2; color: #8b1828; }
-        .oso-kpi-badge.is-yellow { background: #fef9c3; color: #ca8a04; }
-        .oso-kpi-badge.is-green { background: #dcfce7; color: #16a34a; }
+        .oso-kpi-badge.is-yellow { background: #fdf0f2; color: #8b1828; border: 1px solid #fae1e5; }
+        .oso-kpi-badge.is-green { background: #fdf0f2; color: #8b1828; border: 1px solid #fae1e5; }
 
         .oso-kpi-card.is-pink .oso-kpi-num { color: #8b1828; }
-        .oso-kpi-card.is-yellow .oso-kpi-num { color: #ca8a04; }
-        .oso-kpi-card.is-green .oso-kpi-num { color: #16a34a; }
+        .oso-kpi-card.is-yellow .oso-kpi-num { color: #8b1828; }
+        .oso-kpi-card.is-green .oso-kpi-num { color: #8b1828; }
 
         .oso-kpi-num {
             font-size: 2.15rem;
@@ -1331,9 +1331,9 @@
             background: conic-gradient(
                 #8b1828 0% 40%, 
                 #ffffff 40% 40.5%, 
-                #10b981 40.5% 80%, 
+                #c43b52 40.5% 80%, 
                 #ffffff 80% 80.5%, 
-                #ca8a04 80.5% 99.5%, 
+                #4a0a15 80.5% 99.5%, 
                 #ffffff 99.5% 100%
             );
             box-shadow: 0 4px 14px rgba(0,0,0,0.06);
@@ -1359,8 +1359,8 @@
         }
 
         .oso-legend-dot.is-maroon { background: #8b1828; }
-        .oso-legend-dot.is-green { background: #10b981; }
-        .oso-legend-dot.is-yellow { background: #ca8a04; }
+        .oso-legend-dot.is-green { background: #c43b52; }
+        .oso-legend-dot.is-yellow { background: #4a0a15; }
 
         .oso-legend-text strong {
             display: block;
@@ -1539,9 +1539,9 @@
         }
 
         .oso-stat-icon.is-maroon { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
-        .oso-stat-icon.is-amber { background: #fefce8; color: #b45309; border: 1px solid #fef08a; }
-        .oso-stat-icon.is-emerald { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .oso-stat-icon.is-sky { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .oso-stat-icon.is-amber { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
+        .oso-stat-icon.is-emerald { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
+        .oso-stat-icon.is-sky { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
 
         .oso-stat-badge {
             font-size: 0.72rem;
@@ -1554,7 +1554,7 @@
         }
 
         .oso-stat-badge.is-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .oso-stat-badge.is-positive { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .oso-stat-badge.is-positive { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
         .oso-stat-badge.is-neutral { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
         .oso-stat-val {
@@ -1956,10 +1956,10 @@
         }
 
         .oso-type-proposal { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
-        .oso-type-renewal { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
-        .oso-type-fr { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
-        .oso-type-ar { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-        .oso-type-tosa { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .oso-type-renewal { background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; }
+        .oso-type-fr { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
+        .oso-type-ar { background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; }
+        .oso-type-tosa { background: #fdf0f2; color: #8b1828; border: 1px solid #fae0e5; }
 
         .oso-sla-pill {
             font-size: 0.72rem;
@@ -2858,7 +2858,7 @@
                                         <circle class="ovcaa-donut-fill" cx="49" cy="49" r="40" style="stroke: url(#sdoDonutGrad); stroke-dashoffset: 50.3;"></circle>
                                     </svg>
                                     <div class="ovcaa-donut-content">
-                                        <span class="ovcaa-donut-val" style="color: #15803d;">80%</span>
+                                        <span class="ovcaa-donut-val" style="color: #8b1828;">80%</span>
                                         <span class="ovcaa-donut-lbl">Verified</span>
                                     </div>
                                 </div>
@@ -2868,26 +2868,26 @@
                             <div class="ovcaa-distribution-box">
                                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
                                     <span>Document packages cleared</span>
-                                    <strong style="color: #15803d;">4 / 5 Activities (80%)</strong>
+                                    <strong style="color: #8b1828;">4 / 5 Activities (80%)</strong>
                                 </div>
                                 <div class="org-mini-progress" style="margin-bottom: 0.75rem; height: 7px;">
-                                    <div class="org-mini-fill-green" style="width: 80%; background: linear-gradient(90deg, #15803d, #22c55e);"></div>
+                                    <div class="org-mini-fill-green" style="width: 80%; background: linear-gradient(90deg, #8b1828, #c43b52);"></div>
                                 </div>
 
                                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
                                     <span>WPCF Protocol Compliance</span>
-                                    <strong style="color: #ca8a04;">3 Cleared · 1 Pending (75%)</strong>
+                                    <strong style="color: #1a1618;">3 Cleared · 1 Pending (75%)</strong>
                                 </div>
                                 <div class="org-mini-progress" style="margin-bottom: 0.25rem; height: 7px;">
-                                    <div class="org-mini-fill-maroon" style="width: 75%; background: linear-gradient(90deg, #ca8a04, #eab308);"></div>
+                                    <div class="org-mini-fill-maroon" style="width: 75%; background: linear-gradient(90deg, #4a0a15, #8b1828);"></div>
                                 </div>
                             </div>
 
                             {{-- Sub-stats & document-type chips --}}
                             <div class="org-budget-sub-stats" style="margin-top: -0.25rem;">
-                                <div class="org-budget-sub-box is-green" style="background: #f0fdf4; border: 1px solid #dcfce7; padding: 0.65rem 0.85rem;">
-                                    <span style="color: #166534; font-size: 0.7rem;">WPCF clearance</span>
-                                    <strong style="color: #15803d; font-size: 0.88rem;">3 cleared · 1 pending</strong>
+                                <div class="org-budget-sub-box is-maroon" style="background: #fdf0f2; border: 1px solid #fae1e5; padding: 0.65rem 0.85rem;">
+                                    <span style="color: #8b1828; font-size: 0.7rem;">WPCF clearance</span>
+                                    <strong style="color: #8b1828; font-size: 0.88rem;">3 cleared · 1 pending</strong>
                                 </div>
                                 <div class="org-budget-sub-box is-pink" style="background: #fdf0f2; border: 1px solid #fae1e5; padding: 0.65rem 0.85rem;">
                                     <span style="color: #8b1828; font-size: 0.7rem;">Awaiting document check</span>
@@ -2896,9 +2896,9 @@
                             </div>
 
                             <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                                <span class="org-chip" style="background: #f0fdf4; color: #166534; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #dcfce7;">Activity proposal</span>
-                                <span class="org-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bfdbfe;">DOCX files</span>
-                                <span class="org-chip" style="background: #fefce8; color: #a16207; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fef08a;">WPCF</span>
+                                <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">Activity proposal</span>
+                                <span class="org-chip" style="background: #f8fafc; color: #1e293b; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #e2e8f0;">DOCX files</span>
+                                <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">WPCF</span>
                             </div>
                         </div>
                     </section>
@@ -2921,7 +2921,7 @@
                             {{-- Action 1: Campus Wellness Week --}}
                             <div class="ovcaa-action-item">
                                 <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #f0fdf4; color: #15803d; border-color: #dcfce7;">
+                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
                                         <i class="bi bi-heart-pulse-fill"></i>
                                     </div>
                                     <div class="ovcaa-action-meta">
@@ -2930,7 +2930,7 @@
                                     </div>
                                 </div>
                                 <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #dcfce7;">WPCF</span>
+                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">WPCF</span>
                                     <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="ovcaa-btn-decide">
                                         Review <i class="bi bi-arrow-right-short"></i>
                                     </a>
@@ -2940,7 +2940,7 @@
                             {{-- Action 2: Leadership Summit 2026 --}}
                             <div class="ovcaa-action-item">
                                 <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
+                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
                                         <i class="bi bi-award-fill"></i>
                                     </div>
                                     <div class="ovcaa-action-meta">
@@ -2949,7 +2949,7 @@
                                     </div>
                                 </div>
                                 <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #eff6ff; color: #2563eb; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bfdbfe;">DOCX</span>
+                                    <span class="org-chip" style="background: #f8fafc; color: #1e293b; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #e2e8f0;">DOCX</span>
                                     <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="ovcaa-btn-decide">
                                         Review <i class="bi bi-arrow-right-short"></i>
                                     </a>
@@ -2959,7 +2959,7 @@
                             {{-- Action 3: BatStateU Sportsfest 2026 --}}
                             <div class="ovcaa-action-item">
                                 <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #fefce8; color: #b45309; border-color: #fef08a;">
+                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </div>
                                     <div class="ovcaa-action-meta">
@@ -3309,7 +3309,7 @@
                                     labels: cats,
                                     datasets: [
                                         { label: 'Allocated', data: alloc, backgroundColor: '#8b1828', borderRadius: 6 },
-                                        { label: 'Utilized (Actual)', data: used, backgroundColor: '#ca8a04', borderRadius: 6 }
+                                        { label: 'Utilized (Actual)', data: used, backgroundColor: '#1a1618', borderRadius: 6 }
                                     ]
                                 },
                                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => '₱' + Number(v).toLocaleString() } } } }
@@ -3876,7 +3876,7 @@
                 if (donutCanvas) {
                     const donutLabels = ['Approved', 'Pending Review', 'For Revision'];
                     const donutData = initialOsoData.approvalDonut;
-                    const donutColors = ['#10b981', '#f59e0b', '#e11d48', '#64748b', '#8b1828', '#0284c7', '#9333ea'];
+                    const donutColors = ['#8b1828', '#c43b52', '#4a0a15', '#1a1618', '#786f73', '#94a3b8'];
                     window.osoCharts.donut = new Chart(donutCanvas.getContext('2d'), {
                         type: 'doughnut',
                         data: {

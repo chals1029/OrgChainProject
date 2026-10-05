@@ -11,11 +11,8 @@ status: active
 
 # 💰 Budget Utilization & Receipt Records
 
-> [!important] Active receipt workflow — 2026-09-21
-> The live SO Budget Utilization form is now manual: upload a receipt photo, enter the purchase details, and submit. It does not call OCR, require a scan token, or auto-fill fields. The scanner sections below are retained as historical/legacy compatibility notes only.
-
-> [!note] Legacy server receipt scanner — retained for compatibility
-> The previous OCR implementation and endpoints are retained only for older records or older clients. The active SO Budget Utilization form does not start a scan and does not require OCR before saving a manually entered receipt.
+> [!important] Standard receipt workflow
+> The SO Budget Utilization form is manual and direct: officers upload receipt and invoice attachments (image or PDF), enter the purchase details (merchant, item, unit cost, date, reference number), and submit. OCR scanning is not used in this project per project requirements.
 
 > [!important] Current behavior — 2026-09-21
 > [[Session Log 2026-09-21 Activity Budget Lifecycle]] supersedes historical demo, title-linked receipt, automatic audit, and public-storage descriptions below. Approved activities are the authoritative allocation/spending ledger. New receipts are activity-ID linked and private; pending seals already count as recorded expenses but are not shown publicly as confirmed. Approval reserves funds; receipts debit cash once. Semester ZIP exports include original receipts and the register. Fund setup and fund-balance visibility are SO-only; OSO, SDO, and OVCAA monitor activities and expenses without the organization-funds card. Shared SO accounts are not yet organization-isolated.

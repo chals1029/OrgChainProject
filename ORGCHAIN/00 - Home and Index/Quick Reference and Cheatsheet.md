@@ -64,7 +64,7 @@ status: active
 - `/office-desk/activities` — Activities / proposals desk
 - `/office-desk/activities/create` — Create activity (SO): In-Campus / Local Off-Campus checklist, official template preview, budget, and uploads
 - `/office-desk/calendar` — Calendar
-- `/office-desk/budget-utilization` — Budget + receipt OCR + budget chain seals
+- `/office-desk/budget-utilization` — Budget + receipt attachments + budget chain seals
 - `/office-desk/financial-report` — Financial report (SO / OSO)
 - `/office-desk/financial-report/print` — Printable financial report (SO / OSO)
 - `/office-desk/accomplishment-report` — Accomplishment report (SO / OSO)
@@ -196,7 +196,7 @@ php artisan test
 | **BudgetChain Nodes**     | `storage/app/orgchain/budget/node-{1,2,3}/` | Budget utilization JSONL seals |
 | **Renewal Uploads**       | `storage/app/public/renewal-documents/` | SO renewal packet files         |
 | **Uploaded Archive Docs** | `storage/app/public/archive_documents/` | Archived compliance files       |
-| **OCR Expense Receipts**  | `storage/app/public/receipts/`          | Scanned expense receipts        |
+| **Expense Receipts**      | `storage/app/public/receipts/`          | Uploaded expense receipts       |
 | **Smoke Report**          | `storage/app/console-smoke-report.json` | Playwright console smoke output |
 | **Voting Mail Log**       | `storage/logs/voting-mail.log`          | Simulated SMTP email logs       |
 | **In-Campus Templates**   | `In Campus/`                            | Official MS Word docx templates |

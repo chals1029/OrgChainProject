@@ -41,7 +41,7 @@ graph TB
 
     subgraph DomainLayer["4. Domain Logic & Business Rules"]
         PROP_ENG["📋 Compliance & Proposal Engine"]
-        OCR_ENG["🧾 OCR Receipt & Budget Processor"]
+        BUDGET_ENG["🧾 Receipt & Budget Processor"]
         VCHAIN["🔗 VoteBlockchain Cryptographic Engine"]
         NOTIF["📨 Mailer & OTP Service"]
     end
@@ -63,7 +63,7 @@ graph TB
 ## 🧩 Architectural Subsystem Decomposition
 
 ### 1. The Laravel Portal Kernel (`App\Http`)
-Handles student authentication, administrative office routing, dynamic form submission for in-campus and off-campus proposals, OCR receipt uploads, document archiving, and social feed interactions.
+Handles student authentication, administrative office routing, dynamic form submission for in-campus and off-campus proposals, receipt attachment uploads, document archiving, and social feed interactions.
 - **Middlewares**: `EnsureStudentAuthenticated`, `EnsureOfficeAuthenticated`
 - **Routing**: `routes/web.php`
 - **Views**: `resources/views/org/`, `resources/views/portal/`, `resources/views/office/`
@@ -78,5 +78,5 @@ A dedicated, self-contained sub-application embedded under `/voting-system`. It 
 ### 3. The Blockchain & Audit Layer (`Hyperledger Besu QBFT` & `BesuChainService`)
 A permissioned, 4-node Hyperledger Besu private network governed by Quorum Byzantine Fault Tolerance (QBFT) consensus and the `OrgChainAnchor.sol` smart contract.
 - **Voting Anchors**: Anchors SHA-256 ballot roots and voter commitments (`hash(electionId|voterId|referenceCode)`) for secret, mathematically verifiable voting.
-- **Budget Anchors**: Anchors OCR-verified expense receipts to ensure tamper-evident financial accountability.
+- **Budget Anchors**: Anchors itemized and receipt-supported expense liquidations to ensure tamper-evident financial accountability.
 - **Offline / Fallback Driver**: Retains the historical 3-node JSONL append-only ledgers (`storage/app/voting/chain/node-{1,2,3}/`) when running in `BLOCKCHAIN_DRIVER=file` mode.

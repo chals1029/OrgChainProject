@@ -12,7 +12,7 @@ status: active
 # 🔄 End-to-End Data Flow
 
 > [!abstract] Transaction Sequences
-> This document maps out the core data transactions across OrgChain: Activity Proposal Submission & Multi-Tier Review, Ballot Casting & 3-Node Cryptographic Sealing, and OCR Expense Liquidation.
+> This document maps out the core data transactions across OrgChain: Activity Proposal Submission & Multi-Tier Review, Ballot Casting & 3-Node Cryptographic Sealing, and Cryptographic Expense Liquidation.
 
 ---
 
@@ -93,21 +93,18 @@ sequenceDiagram
 
 ---
 
-## 3. 💰 Budget Liquidation & OCR Receipt Auditing Flow
+## 3. 💰 Budget Liquidation & Expense Sealing Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Org as Student Organization Treasurer
     participant OP as OfficePortalController
-    participant OCR as OCR Inspection Engine
     participant DB as MySQL Database
     participant NODES as OSO / SDO / OVCAA Validator Nodes
 
-    Org->>OP: Upload Expense Receipt Image + Enter Item Details
-    OP->>OP: Store Receipt in storage/app/public/receipts/
-    OP->>OCR: Scan Receipt (OCR Confidence Calculation)
-    OCR-->>OP: Extract Confidence Score & Matched Items
+    Org->>OP: Upload Expense Receipt Attachment + Enter Item Details
+    OP->>OP: Store Receipt in private storage
     OP->>NODES: Seal the receipt hash through validator consensus
     NODES-->>OP: Return nodes_confirmed + chain hash
     OP->>DB: Insert ExpenseReceiptReview (Status: 'verified')

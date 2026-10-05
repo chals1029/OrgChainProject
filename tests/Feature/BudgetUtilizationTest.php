@@ -110,8 +110,6 @@ class BudgetUtilizationTest extends TestCase
                     'organization_name' => $pending->organization_name,
                     'receipt_reviewed' => '1',
                     'receipt_detected' => '1',
-                    'ocr_quality' => 'complete',
-                    'ocr_confidence' => 95,
                     'receipt_type' => 'paper_receipt', 'payment_method' => 'cash',
                     'receipt' => UploadedFile::fake()->image('pending-receipt.jpg'),
                 ])
@@ -152,7 +150,6 @@ class BudgetUtilizationTest extends TestCase
                         'receipt_reference' => 'UNAUTHORIZED-'.$suffix,
                         'receipt_reviewed' => '1',
                         'receipt_detected' => '1',
-                        'ocr_quality' => 'complete',
                         'receipt' => UploadedFile::fake()->image('unauthorized.jpg'),
                     ])
                     ->assertForbidden();

@@ -420,7 +420,7 @@
         })();
 
         /* Shared server-backed upload behavior. Page-specific workflows still
-           own their processing (OCR, redirects, and previews), while this
+           own their processing (validation, redirects, and previews), while this
            layer keeps file validation, selected-file feedback, and duplicate
            submit protection consistent across the OSO desk. */
         (function () {

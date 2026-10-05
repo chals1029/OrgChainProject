@@ -12,7 +12,7 @@ status: active
 # 🏛️ OrgChain System Vault & Knowledge Base
 
 > [!abstract] Executive Summary
-> **OrgChain** is an enterprise-grade University Student Organization Governance, Transparency, and Cryptographic Voting Platform engineered specifically for **Batangas State University (BatStateU)**. It unifies administrative approval workflows, budget tracking with OCR receipt auditing, real-time student community engagement, and a permissioned **Hyperledger Besu QBFT blockchain** for tamper-evident campus elections and budget expense seals.
+> **OrgChain** is an enterprise-grade University Student Organization Governance, Transparency, and Cryptographic Voting Platform engineered specifically for **Batangas State University (BatStateU)**. It unifies administrative approval workflows, budget tracking with cryptographic expense liquidation, real-time student community engagement, and a permissioned **Hyperledger Besu QBFT blockchain** for tamper-evident campus elections and budget expense seals.
 
 ---
 
@@ -38,7 +38,7 @@ mindmap
     Office Desk and Governance
       [[Multi-Tier Office Roles SO OSO SDO OVCAA]]
       [[Activity Proposal Approval Pipeline]]
-      [[Budget Utilization and OCR Receipts]]
+      [[Budget Utilization and Receipt Records]]
       [[Organization Renewal Filing Window]]
       [[Interactive Activity Calendar]]
       [[Document Archive and Compliance Repository]]
@@ -76,7 +76,7 @@ mindmap
 | Subsystem | Primary Path | Target Persona | Key Technologies | Core Documentation |
 | :--- | :--- | :--- | :--- | :--- |
 | **🎓 Student Portal** | `/portal` | Students & Org Members | Laravel Blade, Tailwind CSS, Alpine.js | [[Student Profile and Authentication]] |
-| **🏢 Office Desk** | `/office-desk` | SO, OSO, SDO, OVCAA Officers | Multi-guard Auth, File Pipeline, OCR | [[Multi-Tier Office Roles SO OSO SDO OVCAA]] |
+| **🏢 Office Desk** | `/office-desk` | SO, OSO, SDO, OVCAA Officers | Multi-guard Auth, File Pipeline, Expense Seals | [[Multi-Tier Office Roles SO OSO SDO OVCAA]] |
 | **🗳️ Voter Ballot** | `/voting-system` | University Voters | SHA-256 + Besu QBFT anchor | [[Blockchain Architecture - Complete]] |
 | **📊 Canvassing Desk** | `/voting-system/ssc-...` | Election Commissioners (SSC) | Live Canvassing Tally, PIN Auth | [[Real-Time Canvassing and Tally]] |
 | **🛡️ Security Shield** | Global Middleware | System Administrators | SecurityGuard IDS, RateLimiter | [[Security Architecture and Guardrails]] |

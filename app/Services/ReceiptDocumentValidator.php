@@ -23,7 +23,7 @@ class ReceiptDocumentValidator
                 'valid' => true,
                 'kind' => 'photo',
                 'confidence' => null,
-                'message' => 'Photo will be scanned by the local receipt scanner before saving.',
+                'message' => 'Receipt photo attached. Details entered manually.',
             ],
             default => [
                 'valid' => false,

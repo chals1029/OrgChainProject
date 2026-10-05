@@ -156,20 +156,19 @@ class ActivityBudgetService
                         $receipts->push($prior); // Browser retries never charge the budget again.
                         continue;
                     }
-                    // The active SO workflow is deliberately manual: it stores the
-                    // uploaded receipt/supporting document and the details entered
-                    // by the user. Keep the legacy scan-token path only when an
-                    // older client explicitly sends receipt_scan_id. Current PDF
-                    // uploads are attachments, not OCR input.
+                    $extension = strtolower($file->getClientOriginalExtension());
+                    if ($extension === 'docx' || $file->getMimeType() === 'application/pdf') {
+                        $document = app(ReceiptDocumentValidator::class)->validate($file);
+                        if (! $document['valid']) {
+                            throw ValidationException::withMessages(['receipt' => $document['message']]);
+                        }
+                    }
                     $scanMetadata = [
                         'receipt_scan_id' => null,
                         'ocr_quality' => null,
                         'ocr_confidence' => null,
                         'ocr_corrections' => null,
                     ];
-                    if (array_key_exists('receipt_scan_id', $data)) {
-                        $scanMetadata = app(ReceiptScanner::class)->validatedMetadata($file, $actor, $data);
-                    }
                     $unitCents = (int) round((float) $data['unit_cost'] * 100);
                     $cents = $unitCents * (int) $data['quantity'];
                     $activityRemaining = (int) round(((float) $activity->approved_budget - (float) $activity->implemented_budget) * 100);

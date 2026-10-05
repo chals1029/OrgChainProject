@@ -25,7 +25,7 @@ status: active
 | **Ballot Structure** | `Election`, `Position`, `Candidate` | Native PDO | [[Model - Election Position Candidate]] |
 | **Blockchain Ballots** | `Vote`, `VoteReceipt`, `Voter` | Native PDO | [[Model - Vote and VoteReceipt]] |
 | **Activity Governance** | `InCampusActivitySubmission`, `OrgActivity` | Eloquent | [[Model - InCampusActivitySubmission and OrgActivity]] |
-| **Finance & OCR** | `BudgetItem`, `ExpenseReceiptReview` | Eloquent | [[Model - BudgetItem and ExpenseReceiptReview]] |
+| **Finance & Expenses** | `BudgetItem`, `ExpenseReceiptReview` | Eloquent | [[Model - BudgetItem and ExpenseReceiptReview]] |
 | **Org Renewal** | `OrgRenewalWindow`, `OrgRenewalSubmission`, `OrgRenewalDocument` | Eloquent | [[Model - OrgRenewalWindow Submission Document]] |
 | **Community Feed** | `CommunityPost`, `CommunityComment`, `CommunityLike` | Eloquent | [[Model - CommunityPost Comment Like]] |
 | **Document Vault** | `ArchiveFolder`, `ArchiveDocument` | Eloquent | [[Model - ArchiveFolder and ArchiveDocument]] |

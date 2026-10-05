@@ -95,7 +95,6 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
     Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
     Route::get('/budget-utilization/receipts/{review}/view', [OfficePortalController::class, 'viewReceipt'])->name('budget.receipts.view');
-    Route::post('/budget-utilization/receipts/scan', \App\Http\Controllers\ReceiptScanController::class)->middleware('throttle:12,1')->name('budget.receipts.scan');
     Route::post('/budget-utilization/receipts/validate-document', \App\Http\Controllers\ReceiptDocumentValidationController::class)->middleware('throttle:20,1')->name('budget.receipts.validate-document');
     Route::post('/budget-utilization/receipt-reviews', [OfficePortalController::class, 'storeReceiptReview'])->name('budget.receipts.store');
     Route::post('/budget-utilization/receipts/{review}/retry', [OfficePortalController::class, 'retryReceiptSeal'])->name('budget.receipts.retry');

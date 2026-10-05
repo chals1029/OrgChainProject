@@ -13,7 +13,7 @@ status: active
 # 🗄️ Database Schema & Entity-Relationship Diagram (ERD)
 
 > [!abstract] Relational Data Model
-> The OrgChain database integrates election management, student records, multi-tier proposal submissions, OCR expense auditing, document archiving, and security forensics.
+> The OrgChain database integrates election management, student records, multi-tier proposal submissions, expense liquidation, document archiving, and security forensics.
 
 ---
 
@@ -191,7 +191,7 @@ erDiagram
         text remarks
     }
 
-    %% Budget & OCR
+    %% Budget & Expenses
     BUDGET_ITEMS {
         bigint id PK
         string title
@@ -294,7 +294,7 @@ erDiagram
 
 - **New table `student_organizations`** (`2026_09_19_000005`) — canonical registry of the 32 OSO-recognized orgs for AY 2025–2026 (`name` unique, `short_name`, `college`, `academic_year`, `is_active`). **No email column by design** — real contact emails from the OSO list are never stored. Drives the Renewal picker, Budget filter, and Activity autocomplete (merged with org names already encoded in `budget_items`).
 - `budget_items` also carries `college`, `organization_name`, `supplier`, `is_approved`, `scope` (`in_campus` default).
-- `expense_receipt_reviews` also carries `supplier`, `organization_name`, `receipt_reference`, `ocr_quality`, `chain_hash`, `previous_hash`, `nodes_confirmed`.
+- `expense_receipt_reviews` also carries `supplier`, `organization_name`, `receipt_reference`, `chain_hash`, `previous_hash`, `nodes_confirmed`.
 
 ## 📝 2026-09-20 activity filing amendments
 

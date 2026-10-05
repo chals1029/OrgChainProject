@@ -37,4 +37,4 @@ pie title Total Budget Utilization (PHP)
 
 > [!tip] Desk path
 > Office seals: `/office-desk/budget-utilization` · Student view: `/portal` Budget Utilization section.
-> Details: [[Budget Utilization and OCR Receipts]]
+> Details: [[Budget Utilization and Receipt Records]]

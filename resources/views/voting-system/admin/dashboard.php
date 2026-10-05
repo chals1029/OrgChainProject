@@ -64,7 +64,7 @@
         <div class="progress-box">
             <span><i class="bi bi-broadcast-pin"></i> Live Status</span>
             <div class="progress-bar-small">
-                <div class="progress-bar-fill-small" style="width: <?= e($summary['turnout_rate']) ?>%; background-color: #22c55e;"></div>
+                <div class="progress-bar-fill-small" style="width: <?= e($summary['turnout_rate']) ?>%; background-color: #8b1828;"></div>
             </div>
             <span><?= e($summary['turnout_rate']) ?>% Turnout</span>
         </div>

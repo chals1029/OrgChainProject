@@ -68,9 +68,9 @@ button, input { font: inherit; }
 .sys-secondary-btn:hover { border-color: #bfcbd6; background: #f9fafb; }
 .sys-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .9rem; margin-bottom: 1rem; }
 .sys-stat-card { min-width: 0; display: flex; align-items: flex-start; gap: .8rem; padding: 1.1rem; border: 1px solid var(--sys-line); border-top: 3px solid var(--sys-maroon); border-radius: var(--sys-radius); background: var(--sys-panel); box-shadow: var(--sys-shadow); }
-.sys-stat-card-blue { border-top-color: var(--sys-blue); }.sys-stat-card-green { border-top-color: var(--sys-green); }.sys-stat-card-gold { border-top-color: #d97706; }
+.sys-stat-card-blue { border-top-color: var(--sys-maroon); }.sys-stat-card-green { border-top-color: var(--sys-maroon); }.sys-stat-card-gold { border-top-color: var(--sys-maroon); }
 .sys-stat-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 11px; color: var(--sys-maroon); background: #fdf0f2; font-size: 1rem; }
-.sys-stat-card-blue .sys-stat-icon { color: var(--sys-blue); background: #eff6ff; }.sys-stat-card-green .sys-stat-icon { color: var(--sys-green); background: #f0fdf4; }.sys-stat-card-gold .sys-stat-icon { color: var(--sys-gold); background: #fffbeb; }
+.sys-stat-card-blue .sys-stat-icon { color: var(--sys-maroon); background: #fdf0f2; }.sys-stat-card-green .sys-stat-icon { color: var(--sys-maroon); background: #fdf0f2; }.sys-stat-card-gold .sys-stat-icon { color: var(--sys-maroon); background: #fdf0f2; }
 .sys-stat-card span, .sys-stat-card strong, .sys-stat-card small { display: block; }.sys-stat-card span { color: var(--sys-muted); font-size: .72rem; font-weight: 700; }.sys-stat-card strong { margin: .12rem 0 .1rem; font-size: 1.65rem; letter-spacing: -.04em; }.sys-stat-card small { color: #8a95a3; font-size: .68rem; line-height: 1.35; }
 .sys-panel { margin-top: 1rem; border: 1px solid var(--sys-line); border-radius: var(--sys-radius); background: var(--sys-panel); box-shadow: var(--sys-shadow); overflow: hidden; }
 .sys-health-panel { background: linear-gradient(135deg, #fff 0%, #f8fbfd 100%); }
