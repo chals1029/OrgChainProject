@@ -1359,8 +1359,8 @@
         }
 
         .oso-legend-dot.is-maroon { background: #8b1828; }
-        .oso-legend-dot.is-green { background: #c43b52; }
-        .oso-legend-dot.is-yellow { background: #4a0a15; }
+        .oso-legend-dot.is-green { background: #10b981; }
+        .oso-legend-dot.is-yellow { background: #ca8a04; }
 
         .oso-legend-text strong {
             display: block;
@@ -3876,7 +3876,7 @@
                 if (donutCanvas) {
                     const donutLabels = ['Approved', 'Pending Review', 'For Revision'];
                     const donutData = initialOsoData.approvalDonut;
-                    const donutColors = ['#8b1828', '#c43b52', '#4a0a15', '#1a1618', '#786f73', '#94a3b8'];
+                    const donutColors = ['#10b981', '#f59e0b', '#e11d48'];
                     window.osoCharts.donut = new Chart(donutCanvas.getContext('2d'), {
                         type: 'doughnut',
                         data: {
