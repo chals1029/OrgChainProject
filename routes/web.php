@@ -123,9 +123,16 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/renewal', [OfficePortalController::class, 'renewal'])->name('renewal');
     Route::post('/renewal/window', [OfficePortalController::class, 'updateRenewalWindow'])->name('renewal.window');
     Route::post('/renewal/requirements/template', [OfficePortalController::class, 'storeRenewalRequirementTemplate'])->name('renewal.requirements.template');
+    Route::post('/renewal/requirements', [OfficePortalController::class, 'storeRenewalRequirement'])->name('renewal.requirements.store');
+    Route::patch('/renewal/requirements/{docKey}', [OfficePortalController::class, 'updateRenewalRequirement'])->name('renewal.requirements.update');
+    Route::delete('/renewal/requirements/{docKey}', [OfficePortalController::class, 'destroyRenewalRequirement'])->name('renewal.requirements.destroy');
+    Route::get('/renewal/requirements/{docKey}/file', [OfficePortalController::class, 'renewalRequirementFile'])->name('renewal.requirements.file');
     Route::post('/renewal/submit', [OfficePortalController::class, 'storeRenewalSubmission'])->name('renewal.submit');
     Route::post('/renewal/documents', [OfficePortalController::class, 'storeRenewalDocument'])->name('renewal.documents');
+    Route::get('/renewal/submissions/{submission}', [OfficePortalController::class, 'showRenewalSubmission'])->name('renewal.submissions.show');
     Route::post('/renewal/submissions/{submission}/review', [OfficePortalController::class, 'reviewRenewalSubmission'])->name('renewal.review');
+    Route::post('/renewal/documents/{document}/review', [OfficePortalController::class, 'reviewRenewalDocument'])->name('renewal.documents.review');
+    Route::get('/renewal/documents/{document}/file', [OfficePortalController::class, 'renewalDocumentFile'])->name('renewal.documents.file');
     Route::post('/renewal/organizations/{organization}/status', [OfficePortalController::class, 'updateOrganizationQualification'])->name('renewal.organization.status');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
     Route::post('/tosa/requirements/template', [OfficePortalController::class, 'storeTosaRequirementTemplate'])->name('tosa.requirements.template');

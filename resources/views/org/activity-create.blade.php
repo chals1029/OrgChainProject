@@ -7,7 +7,7 @@
         <i class="bi bi-arrow-left"></i> Back to activities
     </a>
     <h1 id="pageHeaderTitle">{{ !empty($editActivity) ? 'Edit Activity' : ($submission->exists ? 'Edit Activity' : 'Create an Activity') }}</h1>
-    <p class="org-welcome" id="pageHeaderDesc">Choose the request type and fill in the core activity details.</p>
+    <p class="org-welcome" id="pageHeaderDesc">Complete the activity details and upload the official proposal requirements.</p>
 @endsection
 
 
@@ -15,11 +15,10 @@
 @section('content')
     @php
         $activity = $submission->activity;
-        $isEditing = $submission->exists || !empty($editActivity);
         $currentType = old('activity_type', $submission->activity_type ?: 'in_campus');
 
         $editTitle = old('title', $editActivity['title'] ?? $activity?->title ?? '');
-        $editOrg = old('organization_name', $editActivity['organization'] ?? $submission->organization_name ?? 'Supreme Student Council');
+        $editOrg = $activityOrganization?->name ?? old('organization_name', $editActivity['organization'] ?? $submission->organization_name ?? '');
         $editLocation = old('location', $editActivity['location'] ?? $activity?->location ?? '');
         $editRationale = old('rationale', $editActivity['rationale'] ?? $submission->rationale ?? '');
         
@@ -61,1146 +60,305 @@
         $storedConditions = is_array($storedAttachments['conditions'] ?? null) ? $storedAttachments['conditions'] : [];
         $activeConditions = old('conditions', $storedConditions);
         $typeLabel = $currentType === 'local_off_campus' ? 'Local Off-Campus' : 'In-Campus';
+        $renewalLabel = match ($activityRenewalStatus) {
+            'approved' => 'Renewal approved',
+            'submitted' => 'Renewal under review',
+            'returned' => 'Renewal for revision',
+            'rejected' => 'Renewal rejected',
+            'draft' => 'Renewal draft',
+            default => 'Renewal not submitted',
+        };
+        $sdgDefinitions = [
+            1 => ['No Poverty', 'people-fill', '#e5243b'],
+            2 => ['Zero Hunger', 'cup-hot-fill', '#dda63a'],
+            3 => ['Good Health and Well-being', 'heart-pulse-fill', '#4c9f38'],
+            4 => ['Quality Education', 'book-fill', '#c5192d'],
+            5 => ['Gender Equality', 'gender-ambiguous', '#ff3a21'],
+            6 => ['Clean Water and Sanitation', 'droplet-fill', '#26bde2'],
+            7 => ['Affordable and Clean Energy', 'sun-fill', '#fcc30b'],
+            8 => ['Decent Work and Economic Growth', 'bar-chart-fill', '#a21942'],
+            9 => ['Industry, Innovation and Infrastructure', 'gear-fill', '#fd6925'],
+            10 => ['Reduced Inequalities', 'arrows-expand', '#dd1367'],
+            11 => ['Sustainable Cities and Communities', 'houses-fill', '#fd9d24'],
+            12 => ['Responsible Consumption and Production', 'recycle', '#bf8b2e'],
+            13 => ['Climate Action', 'globe-americas', '#3f7e44'],
+            14 => ['Life Below Water', 'water', '#0a97d9'],
+            15 => ['Life on Land', 'tree-fill', '#56c02b'],
+            16 => ['Peace, Justice and Strong Institutions', 'bank2', '#00689d'],
+            17 => ['Partnerships for the Goals', 'link-45deg', '#19486a'],
+        ];
+        $hasStoredFile = static fn ($file): bool => is_array($file)
+            && !empty($file['path'])
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($file['path']);
     @endphp
 
-    <style>
-        .org-back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            font-size: 0.88rem;
-            font-weight: 600;
-            color: #8b1828;
-            text-decoration: none;
-            margin-bottom: 0.6rem;
-            transition: color 0.15s ease;
-        }
-
-        .org-back-link:hover {
-            color: #6a101e;
-            text-decoration: underline;
-        }
-
-        .org-form-card {
-            background: #ffffff;
-            border-radius: 24px;
-            border: 1.5px solid #f0e6e8;
-            padding: 2rem 2.25rem;
-            margin-bottom: 1.75rem;
-            box-shadow: 0 6px 24px rgba(90, 15, 30, 0.03);
-        }
-
-        .org-form-card-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding-bottom: 1.25rem;
-            margin-bottom: 1.75rem;
-            border-bottom: 1px solid #f6eff0;
-        }
-
-        .org-form-card-head h2 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1a1618;
-            margin: 0 0 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-        }
-
-        .org-form-card-head p {
-            font-size: 0.88rem;
-            color: #635b5e;
-            margin: 0;
-        }
-
-        .org-card-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: #fdf0f2;
-            color: #961b2e;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.05rem;
-        }
-
-        .org-btn-outline-red-sm {
-            padding: 0.45rem 1.15rem;
-            border-radius: 9999px;
-            border: 1.5px solid #8b1828;
-            background: #ffffff;
-            color: #8b1828;
-            font-size: 0.84rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            transition: all 0.15s ease;
-            text-decoration: none;
-        }
-
-        .org-btn-outline-red-sm:hover {
-            background: #8b1828;
-            color: #ffffff;
-        }
-
-        .org-form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.35rem 1.5rem;
-        }
-
-        .org-form-field-wide {
-            grid-column: 1 / -1;
-        }
-
-        .org-form-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
-        }
-
-        .org-form-field span {
-            font-size: 0.86rem;
-            font-weight: 700;
-            color: #2b2528;
-        }
-
-        .org-form-field span b {
-            color: #dc2626;
-        }
-
-        .org-form-field input,
-        .org-form-field select,
-        .org-form-field textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-            border: 1.5px solid #e8dedf;
-            background: #ffffff;
-            font-size: 0.92rem;
-            font-family: inherit;
-            color: #1a1618;
-            outline: none;
-            transition: all 0.2s ease;
-            box-sizing: border-box;
-        }
-
-        .org-form-field input:focus,
-        .org-form-field select:focus,
-        .org-form-field textarea:focus {
-            border-color: #8b1828;
-            box-shadow: 0 0 0 4px rgba(139, 24, 40, 0.08);
-        }
-
-        .org-form-field input::placeholder,
-        .org-form-field textarea::placeholder {
-            color: #a3989c;
-        }
-
-        .org-form-field small {
-            font-size: 0.78rem;
-            color: #7a7074;
-            margin-top: 0.15rem;
-            line-height: 1.4;
-        }
-
-        .org-form-field em {
-            font-size: 0.78rem;
-            color: #dc2626;
-            font-style: normal;
-            margin-top: 0.2rem;
-        }
-
-        .org-sdg-field {
-            grid-column: 1 / -1;
-            min-width: 0;
-            margin: 0;
-            padding: 0;
-            border: 0;
-        }
-
-        .org-sdg-field legend {
-            padding: 0;
-            margin-bottom: 0.45rem;
-            font-size: 0.86rem;
-            font-weight: 700;
-            color: #2b2528;
-        }
-
-        .org-sdg-field legend b {
-            color: #dc2626;
-        }
-
-        .org-sdg-help {
-            display: block;
-            margin-bottom: 0.7rem;
-            color: #7a7074;
-            font-size: 0.78rem;
-            line-height: 1.4;
-        }
-
-        .org-sdg-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-            gap: 0.5rem;
-        }
-
-        .org-sdg-option {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-            min-height: 2.35rem;
-            padding: 0.45rem 0.65rem;
-            border: 1px solid #eadfe1;
-            border-radius: 10px;
-            background: #fff;
-            color: #3e3538;
-            font-size: 0.8rem;
-            cursor: pointer;
-        }
-
-        .org-sdg-option:hover {
-            border-color: #d9b7be;
-            background: #fffafb;
-        }
-
-        .org-sdg-option input {
-            width: auto;
-            margin: 0;
-            accent-color: #8b1828;
-        }
-
-        .org-template-preview-link {
-            border: 0;
-            padding: 0;
-            background: transparent;
-            color: #8b1828;
-            font: inherit;
-            font-size: 0.76rem;
-            cursor: pointer;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-        }
-
-        .org-template-preview-link:hover {
-            color: #65101d;
-        }
-
-        .org-doc-preview-dialog {
-            width: min(1120px, calc(100vw - 2rem));
-            max-width: none;
-            padding: 0;
-            border: 0;
-            border-radius: 18px;
-            background: transparent;
-            box-shadow: 0 22px 70px rgba(38, 23, 27, 0.28);
-        }
-
-        .org-doc-preview-dialog::backdrop {
-            background: rgba(36, 24, 28, 0.64);
-            backdrop-filter: blur(3px);
-        }
-
-        .org-doc-preview-box {
-            display: flex;
-            max-height: min(92vh, 980px);
-            flex-direction: column;
-            overflow: hidden;
-            border-radius: 18px;
-            background: #fff;
-        }
-
-        .org-doc-preview-head,
-        .org-doc-preview-foot {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.95rem 1.15rem;
-            background: #fff;
-        }
-
-        .org-doc-preview-head {
-            border-bottom: 1px solid #eee2e5;
-        }
-
-        .org-doc-preview-head strong {
-            color: #30272a;
-            font-size: 0.96rem;
-        }
-
-        .org-doc-preview-head small {
-            display: block;
-            margin-top: 0.18rem;
-            color: #8a7b80;
-            font-size: 0.72rem;
-        }
-
-        .org-doc-preview-close {
-            width: 32px;
-            height: 32px;
-            border: 1px solid #eadde0;
-            border-radius: 50%;
-            background: #fff;
-            color: #6f6064;
-            cursor: pointer;
-            font-size: 1.15rem;
-            line-height: 1;
-        }
-
-        .org-doc-preview-close:hover {
-            color: #8b1828;
-            border-color: #d9b7be;
-            background: #fdf5f6;
-        }
-
-        .org-doc-preview-body {
-            min-height: 360px;
-            max-height: 72vh;
-            overflow: auto;
-            padding: 1.25rem;
-            background: #e9e6e5;
-            scrollbar-width: thin;
-        }
-
-        .org-doc-preview-body .docx-wrapper {
-            padding: 0 !important;
-            background: transparent !important;
-        }
-
-        .org-doc-preview-body .docx {
-            margin: 0 auto 1.25rem !important;
-            box-shadow: 0 7px 24px rgba(42, 27, 30, 0.16) !important;
-        }
-
-        .org-doc-preview-body iframe {
-            display: block;
-            width: 100%;
-            min-height: 62vh;
-            border: 0;
-            border-radius: 10px;
-            background: #fff;
-        }
-
-        .org-doc-preview-loading,
-        .org-doc-preview-error {
-            display: grid;
-            min-height: 330px;
-            place-items: center;
-            padding: 2rem;
-            color: #77696d;
-            font-size: 0.86rem;
-            line-height: 1.5;
-            text-align: center;
-        }
-
-        .org-doc-preview-loading i,
-        .org-doc-preview-error i {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #8b1828;
-            font-size: 1.5rem;
-        }
-
-        .org-doc-preview-foot {
-            border-top: 1px solid #eee2e5;
-            justify-content: flex-end;
-        }
-
-        .org-doc-preview-download {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.55rem 0.85rem;
-            border-radius: 9px;
-            background: #8b1828;
-            color: #fff;
-            font-size: 0.78rem;
-            font-weight: 800;
-            text-decoration: none;
-        }
-
-        .org-doc-preview-download:hover {
-            background: #6e101f;
-        }
-
-        .org-requirement-intro {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.85rem;
-            padding: 0.95rem 1rem;
-            margin-bottom: 1rem;
-            border-radius: 14px;
-            background: #fdf5f6;
-            border: 1px solid #f4dfe3;
-            color: #5e454b;
-            font-size: 0.84rem;
-            line-height: 1.45;
-        }
-
-        .org-requirement-intro i {
-            color: #961b2e;
-            font-size: 1rem;
-            margin-top: 0.12rem;
-        }
-
-        .org-requirement-panel[hidden] {
-            display: none;
-        }
-
-        .org-requirement-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.7rem;
-        }
-
-        .org-requirement-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(220px, 0.46fr);
-            gap: 1rem;
-            align-items: center;
-            padding: 0.95rem 1rem;
-            border: 1px solid #eee2e5;
-            border-radius: 14px;
-            background: #fff;
-            transition: border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
-        }
-
-        .org-requirement-row.is-conditional {
-            background: #fffdf8;
-            border-color: #f1e6c5;
-        }
-
-        .org-requirement-row.is-inactive {
-            opacity: 0.62;
-        }
-
-        .org-requirement-copy {
-            min-width: 0;
-        }
-
-        .org-requirement-title-line {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.45rem;
-            margin-bottom: 0.2rem;
-        }
-
-        .org-requirement-title-line strong {
-            color: #2b2528;
-            font-size: 0.88rem;
-        }
-
-        .org-requirement-copy p {
-            margin: 0;
-            color: #786f73;
-            font-size: 0.79rem;
-            line-height: 1.4;
-        }
-
-        .org-requirement-meta {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            margin-top: 0.4rem;
-            color: #9a858b;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .org-requirement-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.18rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.67rem;
-            font-weight: 800;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        .org-requirement-badge.required {
-            color: #8b1828;
-            background: #fdf0f2;
-            border: 1px solid #f2cbd2;
-        }
-
-        .org-requirement-badge.optional {
-            color: #6b7280;
-            background: #f5f6f7;
-            border: 1px solid #e5e7eb;
-        }
-
-        .org-requirement-badge.conditional {
-            color: #9a6500;
-            background: #fff8df;
-            border: 1px solid #f1dda0;
-        }
-
-        .org-requirement-upload {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-            min-width: 0;
-        }
-
-        .org-requirement-upload input[type="file"] {
-            width: 100%;
-            font-size: 0.77rem;
-            color: #675c60;
-        }
-
-        .org-requirement-upload input[type="file"]::file-selector-button {
-            margin-right: 0.5rem;
-            padding: 0.42rem 0.7rem;
-            border: 1px solid #e7d5d9;
-            border-radius: 8px;
-            background: #fff7f8;
-            color: #8b1828;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .org-requirement-upload small {
-            color: #8d7e82;
-            font-size: 0.72rem;
-            line-height: 1.35;
-        }
-
-        .org-requirement-upload small.current-file {
-            color: #16803c;
-            font-weight: 700;
-        }
-
-        .org-condition-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            margin-bottom: 0.35rem;
-            color: #785e15;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .org-condition-toggle input {
-            accent-color: #8b1828;
-        }
-
-        .org-requirements-count {
-            color: #7a7074;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .org-submit-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 0.7rem;
-            flex-wrap: wrap;
-        }
-
-        .org-btn-draft {
-            padding: 0.75rem 1.5rem;
-            background: #ffffff;
-            color: #8b1828;
-            border: 1.5px solid #d9b9c0;
-            border-radius: 9999px;
-            font-size: 0.92rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-        }
-
-        .org-btn-draft:hover {
-            background: #fdf2f4;
-        }
-
-        /* Documents Table Styles */
-        .org-docs-table-wrap {
-            width: 100%;
-            overflow-x: auto;
-            margin-bottom: 1.25rem;
-        }
-
-        .org-docs-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            text-align: left;
-        }
-
-        .org-docs-table th {
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #7a7074;
-            border-bottom: 1px solid #f2e9eb;
-            background: #faf6f7;
-        }
-
-        .org-docs-table td {
-            padding: 1.1rem 1rem;
-            border-bottom: 1px solid #f6eff0;
-            vertical-align: middle;
-            color: #1a1618;
-        }
-
-        .org-doc-name-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 600;
-        }
-
-        .doc-type-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: #ffffff;
-            flex-shrink: 0;
-            text-transform: uppercase;
-        }
-
-        .doc-type-pdf { background: #dc2626; }
-        .doc-type-xlsx { background: #16a34a; }
-        .doc-type-docx { background: #2563eb; }
-
-        .org-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.3rem 0.85rem;
-            border-radius: 9999px;
-            font-size: 0.76rem;
-            font-weight: 700;
-            line-height: 1.2;
-            letter-spacing: 0.01em;
-        }
-
-        .org-status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .org-status-green {
-            background: #f0fdf4;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
-        }
-        .org-status-green .org-status-dot { background: #16a34a; }
-
-        .org-status-blue {
-            background: #eff6ff;
-            color: #2563eb;
-            border: 1px solid #dbeafe;
-        }
-        .org-status-blue .org-status-dot { background: #2563eb; }
-
-        .org-status-yellow {
-            background: #fefce8;
-            color: #b45309;
-            border: 1px solid #fef08a;
-        }
-        .org-status-yellow .org-status-dot { background: #d97706; }
-
-        .org-status-red {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
-        .org-status-red .org-status-dot { background: #dc2626; }
-
-        .doc-actions-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.85rem;
-        }
-
-        .doc-action-btn {
-            background: transparent;
-            border: none;
-            color: #4b4548;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            padding: 0.25rem 0.4rem;
-            border-radius: 6px;
-            transition: all 0.15s ease;
-        }
-
-        .doc-action-btn:hover {
-            color: #8b1828;
-            background: #fdf2f4;
-        }
-
-        .doc-action-btn.btn-delete:hover {
-            color: #dc2626;
-            background: #fef2f2;
-        }
-
-        /* Yellow Warning Box */
-        .org-doc-guideline-box {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            background: #fffbeb;
-            border: 1px solid #fef3c7;
-            border-radius: 14px;
-            padding: 0.95rem 1.15rem;
-            color: #92400e;
-            font-size: 0.86rem;
-            line-height: 1.45;
-        }
-
-        .org-doc-guideline-box i {
-            font-size: 1.1rem;
-            color: #d97706;
-            flex-shrink: 0;
-            margin-top: 0.1rem;
-        }
-
-        .org-doc-guideline-box strong {
-            color: #78350f;
-        }
-
-        .org-form-actions-footer {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 1.5rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .org-btn-save-submit {
-            padding: 0.75rem 2.25rem;
-            background: #8b1828;
-            color: #ffffff;
-            border: none;
-            border-radius: 9999px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(139, 24, 40, 0.25);
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .org-btn-save-submit:hover {
-            background: #71101e;
-            transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(139, 24, 40, 0.35);
-        }
-
-        .org-btn-cancel-link {
-            padding: 0.75rem 1.75rem;
-            background: #ffffff;
-            color: #5e5457;
-            border: 1.5px solid #e2d8da;
-            border-radius: 9999px;
-            font-size: 0.92rem;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.15s ease;
-        }
-
-        .org-btn-cancel-link:hover {
-            background: #fdf8f9;
-            border-color: #c4b0b4;
-            color: #1a1618;
-        }
-
-        @media (max-width: 768px) {
-            .org-form-grid {
-                grid-template-columns: 1fr;
-            }
-            .org-form-card {
-                padding: 1.5rem 1.25rem;
-            }
-            .org-requirement-row {
-                grid-template-columns: 1fr;
-            }
-            .org-doc-preview-dialog {
-                width: calc(100vw - 1rem);
-            }
-            .org-doc-preview-body {
-                padding: 0.65rem;
-            }
-            .org-doc-preview-head,
-            .org-doc-preview-foot {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-        }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/activity-create.css') }}?v={{ filemtime(public_path('css/activity-create.css')) }}">
 
     @if ($errors->any())
-        <div class="org-alert" style="margin-bottom: 1.5rem;">
-            <i class="bi bi-exclamation-triangle-fill"></i> Please correct the highlighted information before saving.
+        <div class="ap-rule" role="alert">
+            <i class="bi bi-exclamation-circle"></i>
+            <div>
+                <strong>Please correct the activity proposal.</strong>
+                <ul>@foreach ($errors->all() as $message)<li>{{ $message }}</li>@endforeach</ul>
+                <small>Files selected before a failed submission must be selected again.</small>
+            </div>
         </div>
     @endif
 
-    <form method="post" action="{{ $submission->exists ? route('office.activities.update', $submission) : route('office.activities.store') }}" enctype="multipart/form-data" data-org-upload-form>
+    <form id="activityProposalForm" class="ap-form" method="post"
+          action="{{ $submission->exists ? route('office.activities.update', $submission) : route('office.activities.store') }}"
+          enctype="multipart/form-data" data-template-url="{{ route('office.activities.templates.download') }}">
         @csrf
         @if ($submission->exists) @method('PUT') @endif
-
-        {{-- Card 1: Activity Information --}}
-        <div class="org-form-card">
-            <div class="org-form-card-head">
-                <div>
-                    <h2>Activity information</h2>
-                    <p>Choose the request type and fill in the core activity details.</p>
-                </div>
-            </div>
-
-            <div class="org-form-grid">
-                {{-- Activity type --}}
-                <label class="org-form-field org-form-field-wide">
-                    <span>Activity type <b>*</b></span>
-                    <select name="activity_type" id="activityType" required>
-                        <option value="in_campus" @selected($currentType === 'in_campus')>In-campus activity</option>
-                        <option value="local_off_campus" @selected($currentType === 'local_off_campus')>Local Off-campus activity</option>
-                    </select>
-                    <small>Select the category to generate the relevant official document templates and checklist requirements.</small>
-                </label>
-
-                {{-- Organization name --}}
-                <label class="org-form-field">
-                    <span>Organization name</span>
-                    <input type="text" name="organization_name" id="inputOrgName" value="{{ $editOrg }}" placeholder="e.g., Supreme Student Council" list="recognizedOrgsList">
-                    <datalist id="recognizedOrgsList">
-                        @foreach (($recognizedOrgs ?? []) as $org)
-                            <option value="{{ is_array($org) ? $org['name'] : $org->name }}">{{ is_array($org) ? ($org['college'] ?? '') : ($org->college ?? '') }}</option>
-                        @endforeach
-                    </datalist>
-                    @error('organization_name') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Activity title --}}
-                <label class="org-form-field">
-                    <span>Activity title <b>*</b></span>
-                    <input type="text" name="title" id="inputTitle" value="{{ $editTitle }}" required placeholder="e.g., Leadership Summit 2026">
-                    @error('title') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Reference in Approved Plan of Activities (Attachment I) --}}
-                <label class="org-form-field org-form-field-wide" style="background: #fffcf8; border: 1.5px solid #fed7aa; border-radius: 12px; padding: 0.85rem 1rem;">
-                    <span style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem;">
-                        <span style="font-weight: 700; color: #9a3412;">
-                            <i class="bi bi-calendar-check-fill" style="color: #ea580c; margin-right: 0.25rem;"></i> Reference in Approved Plan of Activities (Attachment I) <b>*</b>
-                        </span>
-                        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <a href="/templates/renewal/Attachment I_ Plan of Activities.pdf" target="_blank" style="font-size: 0.76rem; font-weight: 700; color: #8b1828; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                <i class="bi bi-eye"></i> View Attachment I Template
-                            </a>
-                            <span style="color: #cbd5e1;">·</span>
-                            <a href="/templates/renewal/Attachment I_ Plan of Activities.docx" download style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                <i class="bi bi-download"></i> Download .docx
-                            </a>
-                        </span>
-                    </span>
-                    <input type="text" name="plan_reference" id="inputPlanReference" value="{{ old('plan_reference', $submission->attachments['plan_reference'] ?? '') }}" required placeholder="e.g., Annual Plan Item #2: CodeSprint Hackathon 2026 (Semester 1 / Oct)">
-                    <small style="color: #7c2d12; margin-top: 0.35rem; display: block; font-size: 0.78rem;">
-                        <strong>OSO Policy:</strong> Organizations can only propose activities listed in their approved Renewal Plan of Activities (Attachment I). State the specific project number/title from your approved plan.
-                    </small>
-                    @error('plan_reference') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Start date and time --}}
-                <label class="org-form-field">
-                    <span>Start date and time <b>*</b></span>
-                    <input type="datetime-local" name="starts_at" id="inputStartsAt" required value="{{ $editStartsAt }}">
-                    @error('starts_at') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- End date and time --}}
-                <label class="org-form-field">
-                    <span>End date and time</span>
-                    <input type="datetime-local" name="ends_at" id="inputEndsAt" value="{{ $editEndsAt }}">
-                    @error('ends_at') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Allocated budget --}}
-                <label class="org-form-field">
-                    <span>Allocated budget (₱) <b>*</b></span>
-                    <input type="number" name="approved_budget" id="inputApprovedBudget" min="1" step="1" inputmode="numeric" required value="{{ $editBudget }}" placeholder="e.g., 25000">
-                    <small>Set the approved amount for this activity. Utilized remains ₱0 until expenses are recorded.</small>
-                    @error('approved_budget') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Venue / Destination --}}
-                <label class="org-form-field org-form-field-wide">
-                    <span>Venue / destination location <b>*</b></span>
-                    <input type="text" name="location" id="inputLocation" required value="{{ $editLocation }}" placeholder="e.g., Gymnasium / Tagaytay City, Cavite">
-                    @error('location') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Rationale --}}
-                <label class="org-form-field org-form-field-wide">
-                    <span>Rationale</span>
-                    <textarea name="rationale" rows="4" placeholder="Why is this activity needed?">{{ $editRationale }}</textarea>
-                    @error('rationale') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Objectives --}}
-                <label class="org-form-field org-form-field-wide">
-                    <span>Objectives</span>
-                    <textarea name="objectives" rows="4" placeholder="List the intended outcomes.">{{ $editObjectives }}</textarea>
-                    @error('objectives') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- SDG selection belongs to the Student Organization, not SDO. --}}
-                <fieldset class="org-sdg-field">
-                    <legend>Relevant SDG goals</legend>
-                    <small class="org-sdg-help">Select the goals this activity supports. SDO will review the submitted documents and Waste Policy Compliance Form; it will not re-enter these goals.</small>
-                    <div class="org-sdg-grid">
-                        @foreach (range(1, 17) as $number)
-                            <label class="org-sdg-option">
-                                <input type="checkbox" name="sdg_goals[]" value="SDG {{ $number }}" @checked(in_array('SDG '.$number, $editSdgGoals, true))>
-                                <span>SDG {{ $number }}</span>
-                            </label>
-                        @endforeach
+        <div class="ap-scroll">
+            <section class="ap-card" aria-labelledby="activityInformationHeading">
+                <div class="ap-card-head">
+                    <div class="ap-section-title">
+                        <span class="ap-section-number" aria-hidden="true">01</span>
+                        <div>
+                            <h2 id="activityInformationHeading">Activity information</h2>
+                            <p>Reference your approved plan and complete the core proposal details.</p>
+                        </div>
                     </div>
-                    @error('sdg_goals') <em>{{ $message }}</em> @enderror
-                </fieldset>
-
-                {{-- Participants --}}
-                <label class="org-form-field">
-                    <span>Participants involved</span>
-                    <textarea name="participants" rows="4" placeholder="Who will participate?">{{ old('participants', $submission->participants) }}</textarea>
-                    @error('participants') <em>{{ $message }}</em> @enderror
-                </label>
-
-                {{-- Safety Plan --}}
-                <label class="org-form-field">
-                    <span>Safety / emergency preparedness plan</span>
-                    <textarea name="safety_plan" rows="4" placeholder="Describe safety measures and emergency procedures.">{{ old('safety_plan', $submission->safety_plan) }}</textarea>
-                    @error('safety_plan') <em>{{ $message }}</em> @enderror
-                </label>
-            </div>
-        </div>
-
-        {{-- Card 2: Official checklist for the selected activity type --}}
-        <div class="org-form-card" id="activityRequirementsCard">
-            <div class="org-form-card-head">
-                <div>
-                    <h2>
-                        <span class="org-card-icon"><i class="bi bi-list-check"></i></span>
-                        <span id="requirementsHeading">{{ $typeLabel }} requirements</span>
-                    </h2>
-                    <p>Based on the official BatStateU activity checklist supplied in this project.</p>
+                    @if ($activityOrganization)
+                        <span class="ap-status {{ $activityRenewalStatus === 'approved' && $activityOrganization->is_active ? 'is-active' : 'is-warning' }}">
+                            <i class="bi {{ $activityRenewalStatus === 'approved' && $activityOrganization->is_active ? 'bi-check-lg' : 'bi-info-circle' }}"></i>
+                            {{ $renewalLabel }} · {{ $activityOrganization->is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                    @endif
                 </div>
-                <span class="org-requirements-count" id="requirementsCount">Core filing documents</span>
-            </div>
 
-            <div class="org-requirement-intro">
-                <i class="bi bi-shield-check"></i>
-                <div>
-                    Select every condition that applies to the activity and upload the corresponding file. Save a draft while preparing documents; <strong>Submit for review</strong> checks the required pre-activity documents for the selected type.
+                <div class="ap-grid">
+                    <fieldset class="ap-type-field ap-span-6">
+                        <legend>Activity type <b>*</b></legend>
+                        <div class="ap-type-choices">
+                            <label class="ap-type-choice">
+                                <input type="radio" name="activity_type" value="in_campus" @checked($currentType === 'in_campus') required>
+                                <span><strong>In-campus</strong><small>Within any BatStateU campus</small></span>
+                            </label>
+                            <label class="ap-type-choice">
+                                <input type="radio" name="activity_type" value="local_off_campus" @checked($currentType === 'local_off_campus') required>
+                                <span><strong>Off-campus</strong><small>Outside university premises</small></span>
+                            </label>
+                        </div>
+                        @error('activity_type') <em>{{ $message }}</em> @enderror
+                    </fieldset>
+
+                    <label class="ap-field ap-span-3">
+                        <span>Organization</span>
+                        <input name="organization_name" value="{{ $editOrg }}" maxlength="255"
+                               @readonly($activityOrganization !== null) @if (!$activityOrganization) list="recognizedOrgsList" @endif
+                               placeholder="Organization responsible for this activity">
+                        @error('organization_name') <em>{{ $message }}</em> @enderror
+                    </label>
+                    @if (!$activityOrganization)
+                        <datalist id="recognizedOrgsList">
+                            @foreach (($recognizedOrgs ?? []) as $org)
+                                <option value="{{ is_array($org) ? $org['name'] : $org->name }}"></option>
+                            @endforeach
+                        </datalist>
+                    @endif
+                    <label class="ap-field ap-span-3">
+                        <span>Activity title <b>*</b></span>
+                        <input name="title" id="inputTitle" value="{{ $editTitle }}" maxlength="255" required placeholder="Enter the activity title">
+                        @error('title') <em>{{ $message }}</em> @enderror
+                    </label>
+
+                    <div class="ap-field ap-plan-reference ap-span-6">
+                        <label for="inputPlanReference">Reference in approved Plan of Activities <b>*</b></label>
+                        <input name="plan_reference" id="inputPlanReference"
+                               value="{{ old('plan_reference', $storedAttachments['plan_reference'] ?? '') }}"
+                               maxlength="500" required placeholder="Project number / title — semester and planned date">
+                        <small>Enter the project listed in your approved Attachment I. OSO will verify the reference against your submitted plan.</small>
+                        @error('plan_reference') <em>{{ $message }}</em> @enderror
+                    </div>
+
+                    <label class="ap-field ap-span-2">
+                        <span>Start date and time <b>*</b></span>
+                        <input type="datetime-local" name="starts_at" id="inputStartsAt" required value="{{ $editStartsAt }}">
+                        @error('starts_at') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-2">
+                        <span>End date and time</span>
+                        <input type="datetime-local" name="ends_at" id="inputEndsAt" value="{{ $editEndsAt }}">
+                        @error('ends_at') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-2">
+                        <span>Allocated budget (₱) <b>*</b></span>
+                        <input type="number" name="approved_budget" id="inputApprovedBudget"
+                               min="0.01" step="0.01" inputmode="decimal" required value="{{ $editBudget }}" placeholder="0.00">
+                        @error('approved_budget') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-3">
+                        <span>Venue / destination <b>*</b></span>
+                        <input name="location" id="inputLocation" required maxlength="255" value="{{ $editLocation }}" placeholder="Enter the venue or destination">
+                        @error('location') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-6">
+                        <span>Activity objectives</span>
+                        <textarea name="objectives" rows="3" maxlength="10000" placeholder="Describe the intended outcomes of this activity.">{{ $editObjectives }}</textarea>
+                        @error('objectives') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-3">
+                        <span>Participants involved</span>
+                        <textarea name="participants" rows="3" maxlength="10000" placeholder="Students, faculty, guests, and other participants.">{{ old('participants', $submission->participants) }}</textarea>
+                        @error('participants') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <label class="ap-field ap-span-3">
+                        <span>Safety / emergency preparedness plan</span>
+                        <textarea name="safety_plan" rows="3" maxlength="10000" placeholder="Safety measures, emergency contacts, and response procedures.">{{ old('safety_plan', $submission->safety_plan) }}</textarea>
+                        @error('safety_plan') <em>{{ $message }}</em> @enderror
+                    </label>
+                    <details class="ap-rationale ap-span-6" @if(filled($editRationale)) open @endif>
+                        <summary>Additional rationale <small>Optional</small></summary>
+                        <label class="ap-field">
+                            <span>Why is this activity needed?</span>
+                            <textarea name="rationale" rows="3" maxlength="10000">{{ $editRationale }}</textarea>
+                            @error('rationale') <em>{{ $message }}</em> @enderror
+                        </label>
+                    </details>
+                    <fieldset class="ap-sdg-field ap-span-6">
+                        <legend>Sustainable Development Goals</legend>
+                        <small>Select all applicable goals. Hover or focus a tile to see its full description.</small>
+                        <div class="ap-sdg-grid">
+                            @foreach ($sdgDefinitions as $number => [$goalName, $goalIcon, $goalColor])
+                                <label class="ap-sdg-option" title="SDG {{ $number }}: {{ $goalName }}">
+                                    <input type="checkbox" name="sdg_goals[]" value="SDG {{ $number }}"
+                                           aria-label="SDG {{ $number }}: {{ $goalName }}" @checked(in_array('SDG '.$number, $editSdgGoals, true))>
+                                    <span class="ap-sdg-tile">
+                                        <span class="ap-sdg-icon" style="--sdg-color: {{ $goalColor }}" aria-hidden="true"><i class="bi bi-{{ $goalIcon }}"></i></span>
+                                        <span class="ap-sdg-number">{{ str_pad($number, 2, '0', STR_PAD_LEFT) }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('sdg_goals') <em>{{ $message }}</em> @enderror
+                    </fieldset>
                 </div>
-            </div>
+            </section>
 
-            @foreach ($requirementSets as $typeKey => $requirements)
-                @php
-                    $isVisibleRequirementSet = $currentType === $typeKey;
-                    $typeName = $typeKey === 'local_off_campus' ? 'Local Off-Campus' : 'In-Campus';
-                @endphp
-                <div class="org-requirement-panel" data-requirement-type="{{ $typeKey }}" @if (!$isVisibleRequirementSet) hidden @endif>
-                    <div class="org-requirement-list">
+            <section class="ap-card" aria-labelledby="requirementsHeading">
+                <div class="ap-card-head">
+                    <div class="ap-section-title">
+                        <span class="ap-section-number" aria-hidden="true">02</span>
+                        <div>
+                            <h2 id="requirementsHeading">{{ $typeLabel }} requirements</h2>
+                            <p>View or download the official templates, then attach your completed documents.</p>
+                        </div>
+                    </div>
+                    <span class="ap-status" id="requirementsCount">Checking requirements…</span>
+                </div>
+                <progress class="ap-progress" id="requirementsProgress" value="0" max="1" aria-label="Required documents complete"></progress>
+                <div class="ap-rule">
+                    <i class="bi bi-info-circle"></i>
+                    <span><strong>Submission rule:</strong> Complete all required pre-activity documents. Enable each condition that applies; other documents remain available for later upload.</span>
+                </div>
+                <div id="activityUploadNotice" class="ap-upload-notice" role="status" aria-live="polite" hidden></div>
+                @foreach ($requirementSets as $typeKey => $requirements)
+                    <div class="ap-requirement-panel" data-requirement-type="{{ $typeKey }}" @if ($currentType !== $typeKey) hidden @endif>
                         @foreach ($requirements as $requirement)
                             @php
                                 $condition = $requirement['condition'] ?? null;
-                                $conditionIsActive = $condition
-                                    ? (bool) data_get($activeConditions, $condition, false) || !empty($storedAttachments[$requirement['key']])
-                                    : true;
                                 $storedFile = $storedAttachments[$requirement['key']] ?? null;
+                                $hasFile = $hasStoredFile($storedFile);
+                                $conditionIsActive = !$condition || (bool) data_get($activeConditions, $condition, false) || $hasFile;
                                 $isRequired = !empty($requirement['required_on_submit']);
+                                $sourceFile = $requirement['source_file'] ?? null;
+                                $fileId = 'activity-file-'.$typeKey.'-'.$requirement['key'];
                             @endphp
-                            <div class="org-requirement-row {{ $condition ? 'is-conditional' : '' }} {{ $condition && !$conditionIsActive ? 'is-inactive' : '' }}" data-requirement-row data-condition="{{ $condition ?? '' }}">
-                                <div class="org-requirement-copy">
-                                    <div class="org-requirement-title-line">
+                            <div class="ap-requirement-row {{ $condition && !$conditionIsActive ? 'is-inactive' : '' }} {{ $hasFile ? 'has-file' : '' }}"
+                                 data-requirement-row data-condition="{{ $condition ?? '' }}" data-required="{{ $isRequired ? '1' : '0' }}" data-existing-file="{{ $hasFile ? '1' : '0' }}">
+                                <span class="ap-file-icon" aria-hidden="true"><i class="bi {{ $hasFile ? 'bi-check-lg' : 'bi-file-earmark-text' }}" data-file-icon></i></span>
+                                <div class="ap-requirement-copy">
+                                    <div class="ap-requirement-title">
+                                        <span class="ap-requirement-kicker">Requirement {{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}{{ $isRequired && !$condition ? ' *' : '' }}</span>
                                         <strong>{{ $requirement['title'] }}</strong>
-                                        @if ($condition)
-                                            <span class="org-requirement-badge conditional">If applicable</span>
-                                        @elseif ($isRequired)
-                                            <span class="org-requirement-badge required">Required to submit</span>
-                                        @else
-                                            <span class="org-requirement-badge optional">Later upload</span>
-                                        @endif
                                     </div>
                                     <p>{{ $requirement['description'] }}</p>
-                                    <div class="org-requirement-meta">
-                                        <i class="bi bi-calendar3"></i> {{ $requirement['phase'] ?? 'Before activity' }}
-                                        @if (!empty($requirement['source_file']))
-                                            <span aria-hidden="true">·</span>
-                                            <button type="button"
-                                                    class="org-template-preview-link"
-                                                    data-doc-preview
-                                                    data-doc-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $requirement['source_file']]) }}"
+                                    <div class="ap-document-links">
+                                        @if ($sourceFile)
+                                            <button type="button" data-doc-preview
+                                                    data-doc-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"
                                                     data-doc-preview-title="{{ $requirement['title'] }} — Official template"
-                                                    data-doc-preview-download-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $requirement['source_file']]) }}">
-                                                Official template
-                                            </button>
+                                                    data-doc-preview-download-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-eye"></i> View</button>
+                                            <a href="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-download"></i> Download</a>
+                                        @else
+                                            <small>No official template supplied; attach your organization's completed document.</small>
                                         @endif
+                                        @if (!$isRequired)<small>{{ $requirement['phase'] ?? 'Later upload' }} · Not required for initial filing</small>@endif
                                     </div>
                                     @if ($condition)
-                                        <label class="org-condition-toggle">
-                                            <input type="checkbox" name="conditions[{{ $condition }}]" value="1" data-condition-toggle="{{ $condition }}" @checked($conditionIsActive)>
-                                            This condition applies to my activity
+                                        <label class="ap-condition-toggle">
+                                            <input type="checkbox" name="conditions[{{ $condition }}]" value="1" data-condition-toggle="{{ $condition }}"
+                                                   @checked($conditionIsActive) @disabled($currentType !== $typeKey)>
+                                            Applicable to this activity
                                         </label>
                                     @endif
-                                </div>
-                                <div class="org-requirement-upload">
-                                    <input type="file"
-                                           name="attachments[{{ $requirement['key'] }}]"
-                                           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg"
-                                           data-requirement-file
-                                           data-condition-file="{{ $condition ?? '' }}"
-                                           @if ($condition && !$conditionIsActive) disabled @endif>
-                                    @if (is_array($storedFile) && !empty($storedFile['name']))
-                                        <small class="current-file"><i class="bi bi-check-circle-fill"></i> Current file: {{ $storedFile['name'] }}</small>
-                                    @elseif ($condition && !$conditionIsActive)
-                                        <small>Enable the condition above if this document applies.</small>
-                                    @elseif ($isRequired)
-                                        <small>Upload before submitting for review.</small>
-                                    @else
-                                        <small>Upload when available; this is not required for the initial filing.</small>
+                                    @error('attachments.'.$requirement['key']) <em>{{ $message }}</em> @enderror
+                                    @if ($hasFile && $submission->exists)
+                                        <div class="ap-document-links">
+                                            <button type="button" data-doc-preview
+                                                    data-doc-preview-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
+                                                    data-doc-preview-title="{{ $storedFile['name'] ?? $requirement['title'] }}"
+                                                    data-doc-preview-download-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}">View current file</button>
+                                            <button type="button" data-attachment-delete
+                                                    data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $requirement['key']]) }}"
+                                                    data-attachment-name="{{ $storedFile['name'] ?? $requirement['title'] }}">Remove current file</button>
+                                        </div>
                                     @endif
+                                </div>
+                                <div class="ap-requirement-upload">
+                                    <span class="ap-file-status" data-file-status data-current-name="{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : '' }}">{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : 'No file selected.' }}</span>
+                                    <label class="ap-upload-button" for="{{ $fileId }}">
+                                        <i class="bi bi-upload" aria-hidden="true"></i>
+                                        <span data-upload-label>{{ $hasFile ? 'Replace file' : 'Upload' }}</span>
+                                        <input id="{{ $fileId }}" type="file" name="attachments[{{ $requirement['key'] }}]"
+                                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg"
+                                               aria-label="Upload {{ $requirement['title'] }}" data-requirement-file data-condition-file="{{ $condition ?? '' }}"
+                                               @disabled($currentType !== $typeKey || !$conditionIsActive)>
+                                    </label>
                                 </div>
                             </div>
                         @endforeach
                     </div>
-                </div>
-            @endforeach
-        </div>
+                @endforeach
+            </section>
 
-        {{-- Card 3: Official document pack and uploaded files --}}
-        <div class="org-form-card">
-            <div class="org-form-card-head">
-                <h2>
-                    <span class="org-card-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
-                    Documents
-                </h2>
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                    <a id="downloadTemplatesBtn"
-                       href="{{ route('office.activities.templates.download', ['type' => $currentType]) }}"
-                       class="org-btn-outline-red-sm"
-                       style="text-decoration:none;">
-                        <i class="bi bi-download"></i> Download Documents
-                    </a>
-                    <button type="button" class="org-btn-outline-red-sm" onclick="document.getElementById('bulkDocUpload')?.click()">
-                        <i class="bi bi-plus-lg"></i> Upload / Import
-                    </button>
-                    <input type="file" id="bulkDocUpload" name="supporting_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.ppt,.pptx,.zip" data-org-upload data-max-size="20480" data-upload-status-id="bulkDocUploadStatus" style="display:none;">
-                    <span id="bulkDocUploadStatus" class="org-upload-status" aria-live="polite">No files selected.</span>
+            <details class="ap-card ap-supporting">
+                <summary>Official checklist and supporting documents <small>Optional extras</small></summary>
+                <p>Download the full template pack or attach supporting files. Extra files do not replace the required checklist uploads.</p>
+                <div class="ap-footer-actions">
+                    <a id="downloadTemplatesBtn" href="{{ route('office.activities.templates.download', ['type' => $currentType]) }}" class="ap-button ap-button-outline"><i class="bi bi-download"></i> Download template pack</a>
+                    <label class="ap-upload-button" for="bulkDocUpload">
+                        <i class="bi bi-upload"></i> Add supporting files
+                        <input id="bulkDocUpload" type="file" name="supporting_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg">
+                    </label>
+                    <span id="bulkDocUploadStatus" class="ap-file-status" aria-live="polite">No supporting files selected.</span>
                 </div>
-            </div>
-            <p style="margin:0 0 1rem; font-size:0.82rem; color:#7a7074;">
-                Download the official BatStateU document pack for the selected activity type, fill them out, then upload / import your completed files.
-            </p>
-
-            @foreach ($activityDocsByType as $docsType => $docs)
-                <div class="org-docs-table-wrap" data-document-type="{{ $docsType }}" @if ($docsType !== $currentType) hidden @endif>
-                    <table class="org-docs-table">
-                        <thead>
-                            <tr>
-                                <th>Document Name</th>
-                                <th>Status</th>
-                                <th>Uploaded On</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($docs as $doc)
-                                <tr>
-                                    <td>
-                                        <div class="org-doc-name-cell">
-                                            <span class="doc-type-icon doc-type-{{ $doc['ext'] ?? 'pdf' }}">{{ $doc['ext'] ?? 'pdf' }}</span>
-                                            <div>
-                                                <span>{{ $doc['name'] }}</span>
-                                                @if (($doc['kind'] ?? '') === 'template')
-                                                    <small style="display: block; font-size: 0.76rem; color: #786f73; margin-top: 0.2rem;">Official {{ $docsType === 'local_off_campus' ? 'off-campus' : 'in-campus' }} template — download, fill out, then upload your completed file.</small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="org-status-pill org-status-{{ ($doc['kind'] ?? '') === 'template' ? 'blue' : 'green' }}">
-                                            <span class="org-status-dot"></span> {{ $doc['status'] }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $doc['date'] }}</td>
-                                    <td>
-                                        <div class="doc-actions-cell">
-                                            <button type="button"
-                                                    class="doc-action-btn"
-                                                     data-doc-preview
-                                                     data-doc-preview-url="{{ $doc['url'] }}"
-                                                     data-doc-preview-title="{{ $doc['name'] }}"
-                                                     data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"
-                                                     title="Preview document">
-                                                <i class="bi bi-eye"></i> Preview
-                                            </button>
-                                            @if (($doc['kind'] ?? '') === 'upload' && isset($submission->id))
-                                                {{-- Do not nest a delete form inside the main edit form. Nested forms make
-                                                     browsers submit the outer activity form with the inner DELETE method. --}}
-                                                <button type="button"
-                                                        class="doc-action-btn btn-delete"
-                                                        data-attachment-delete
-                                                        data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}"
-                                                        data-attachment-name="{{ $doc['name'] }}"
-                                                        title="Delete document">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" style="text-align:center;padding:1.25rem;color:#786f73;font-size:0.85rem;">No documents yet — download the official templates above and upload your completed files.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @endforeach
-
-            <div class="org-doc-guideline-box">
-                <i class="bi bi-info-circle-fill"></i>
-                <div>
-                    If your document is returned for revision, please upload the updated file via Upload / Import above (uploaded files can be removed with the trash icon).
-                    <strong>Once all documents are complete and approved, your activity will be marked as completed.</strong>
-                </div>
-            </div>
+                @foreach ($activityDocsByType as $docsType => $docs)
+                    @php $checklistSources = array_column($requirementSets[$docsType] ?? [], 'source_file'); $checklistKeys = array_column($requirementSets[$docsType] ?? [], 'key'); @endphp
+                    <div class="ap-extra-docs" data-document-type="{{ $docsType }}" @if ($docsType !== $currentType) hidden @endif>
+                        @foreach ($docs as $doc)
+                            @if ((($doc['kind'] ?? '') === 'template' && !in_array($doc['name'], $checklistSources, true)) || (($doc['kind'] ?? '') === 'upload' && !in_array($doc['key'], $checklistKeys, true)))
+                                <div class="ap-requirement-row">
+                                    <span class="ap-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                                    <div class="ap-requirement-copy">
+                                        <strong>{{ $doc['name'] }}</strong>
+                                        <p>{{ $doc['status'] }}{{ filled($doc['date'] ?? '') && $doc['date'] !== '—' ? ' · '.$doc['date'] : '' }}</p>
+                                    </div>
+                                    <div class="ap-document-links">
+                                        <button type="button" data-doc-preview data-doc-preview-url="{{ $doc['url'] }}" data-doc-preview-title="{{ $doc['name'] }}" data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
+                                        <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
+                                        @if (($doc['kind'] ?? '') === 'upload' && $submission->exists)
+                                            <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @endforeach
+            </details>
         </div>
 
         {{-- Real DOCX/PDF/image preview modal. Preview never navigates directly to a download response. --}}
@@ -1225,16 +383,15 @@
             </div>
         </dialog>
 
-        {{-- Form Actions Footer --}}
-        <div class="org-form-actions-footer">
-            <a href="{{ route('office.activities') }}" class="org-btn-cancel-link">Cancel</a>
-            <div class="org-submit-actions">
-                <button type="submit" name="submission_action" value="draft" class="org-btn-draft">
-                    <i class="bi bi-save2"></i> Save draft
-                </button>
-                <button type="submit" name="submission_action" value="submit" class="org-btn-save-submit">
-                    <i class="bi bi-send-check"></i> Submit for review
-                </button>
+        <div class="ap-footer">
+            <div class="ap-footer-copy" aria-live="polite">
+                <strong id="activityRemainingCount">Preparing the required-document checklist…</strong>
+                <small id="activityRemainingHelp">Files are uploaded when you save or submit. Maximum 20 MB per file.</small>
+            </div>
+            <div class="ap-footer-actions">
+                <a href="{{ route('office.activities') }}" class="ap-button ap-button-quiet">Cancel</a>
+                <button type="submit" name="submission_action" value="draft" class="ap-button ap-button-outline"><i class="bi bi-save2"></i> Save draft</button>
+                <button type="submit" name="submission_action" value="submit" id="activitySubmitButton" class="ap-button ap-button-primary" disabled><i class="bi bi-arrow-right"></i> Submit for Review</button>
             </div>
         </div>
     </form>
@@ -1429,58 +586,5 @@
         })();
     </script>
 
-    <script>
-        (function () {
-            const typeSelect = document.getElementById('activityType');
-            const downloadBtn = document.getElementById('downloadTemplatesBtn');
-            const requirementPanels = Array.from(document.querySelectorAll('[data-requirement-type]'));
-            const documentPanels = Array.from(document.querySelectorAll('[data-document-type]'));
-            const requirementHeading = document.getElementById('requirementsHeading');
-            const pageHeaderDesc = document.getElementById('pageHeaderDesc');
-            if (!typeSelect) return;
-
-            const baseUrl = @json(route('office.activities.templates.download'));
-
-            const syncDownloadLink = () => {
-                const type = typeSelect.value || 'in_campus';
-                if (downloadBtn) {
-                    downloadBtn.href = baseUrl + '?type=' + encodeURIComponent(type);
-                }
-
-                const isOffCampus = type === 'local_off_campus';
-                const label = isOffCampus ? 'Local Off-Campus' : 'In-Campus';
-                if (requirementHeading) requirementHeading.textContent = label + ' requirements';
-                if (pageHeaderDesc) pageHeaderDesc.textContent = isOffCampus
-                    ? 'Prepare a local off-campus filing under the CHED and BatStateU requirements.'
-                    : 'Prepare an in-campus filing under the BatStateU activity checklist.';
-
-                requirementPanels.forEach((panel) => {
-                    const active = panel.dataset.requirementType === type;
-                    panel.hidden = !active;
-                    panel.querySelectorAll('input[type="file"]').forEach((input) => {
-                        const toggle = input.dataset.conditionFile
-                            ? panel.querySelector(`[data-condition-toggle="${input.dataset.conditionFile}"]`)
-                            : null;
-                        input.disabled = !active || (!!toggle && !toggle.checked);
-                    });
-                    panel.querySelectorAll('[data-requirement-row][data-condition]').forEach((row) => {
-                        const condition = row.dataset.condition;
-                        const toggle = panel.querySelector(`[data-condition-toggle="${condition}"]`);
-                        row.classList.toggle('is-inactive', !!toggle && !toggle.checked);
-                    });
-                });
-
-                documentPanels.forEach((panel) => {
-                    panel.hidden = panel.dataset.documentType !== type;
-                });
-            };
-
-            typeSelect.addEventListener('change', syncDownloadLink);
-            document.querySelectorAll('[data-condition-toggle]').forEach((toggle) => {
-                toggle.addEventListener('change', syncDownloadLink);
-            });
-
-            syncDownloadLink();
-        })();
-    </script>
+    <script src="{{ asset('js/activity-create.js') }}?v={{ filemtime(public_path('js/activity-create.js')) }}"></script>
 @endsection

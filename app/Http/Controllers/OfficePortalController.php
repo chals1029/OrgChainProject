@@ -38,9 +38,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipArchive;
 
@@ -61,6 +63,10 @@ class OfficePortalController extends Controller
             && in_array($office->office_role, ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true);
         $officeSettings = $isOso ? OfficeSetting::publicValuesFor('oso') : [];
         $brand = $this->brandFor($office->office_role);
+        if (($office->office_role ?? '') === 'so') {
+            $organization = $office->studentOrganization;
+            $brand['title'] = $organization?->short_name ?: $organization?->name ?: $brand['title'];
+        }
         if ($isOso) {
             $brand['title'] = data_get($officeSettings, 'general.office_name', $brand['title']);
         }
@@ -1328,7 +1334,7 @@ class OfficePortalController extends Controller
             $submission->load('activity');
         }
 
-        return view('org.activity-create', array_merge($this->deskContext(), [
+        return view('org.activity-create', array_merge($this->deskContext(), $this->activityFormOrganizationContext(), [
             'activeNav' => 'activities',
             'editActivity' => $editActivity,
             'submission' => $submission,
@@ -1342,6 +1348,23 @@ class OfficePortalController extends Controller
                 'local_off_campus' => $this->buildActivityDocRows(null, 'local_off_campus'),
             ],
         ]));
+    }
+
+    private function activityFormOrganizationContext(): array
+    {
+        $office = Auth::guard('office')->user();
+        $organization = $office?->office_role === 'so' ? $office->studentOrganization : null;
+        $windowId = $organization ? OrgRenewalWindow::query()->latest('id')->value('id') : null;
+
+        return [
+            'activityOrganization' => $organization,
+            'activityRenewalStatus' => $organization && $windowId
+                ? OrgRenewalSubmission::query()
+                    ->where('renewal_window_id', $windowId)
+                    ->where('organization_name', $organization->name)
+                    ->latest('id')->value('status')
+                : null,
+        ];
     }
 
     /**
@@ -1596,7 +1619,7 @@ class OfficePortalController extends Controller
         $this->assertOfficeOrganizationName($submission->organization_name ?: $submission->activity?->organization_name);
         $submission->load('activity');
 
-        return view('org.activity-create', array_merge($this->deskContext(), [
+        return view('org.activity-create', array_merge($this->deskContext(), $this->activityFormOrganizationContext(), [
             'activeNav' => 'activities',
             'submission' => $submission,
             'inCampusRequirements' => $this->inCampusRequirements(),
@@ -3058,22 +3081,22 @@ class OfficePortalController extends Controller
         $orgStats = ['total' => 0, 'qualified' => 0, 'not_qualified' => 0, 'inactive' => 0];
 
         if ($role === 'oso') {
-            $submissions = OrgRenewalSubmission::query()
-                ->with('documents')
-                ->when($window, fn ($q) => $q->where('renewal_window_id', $window->id))
-                ->latest()
-                ->get();
+            $submissions = $window
+                ? OrgRenewalSubmission::query()->with('documents')
+                    ->where('renewal_window_id', $window->id)->latest('id')->get()
+                : collect();
+            $submissionsByOrganization = $submissions->keyBy(fn (OrgRenewalSubmission $sub) => mb_strtolower($sub->organization_name));
 
             $allOrganizations = StudentOrganization::query()
                 ->orderBy('name')
                 ->get()
-                ->map(function (StudentOrganization $org) use ($window, $submissions) {
-                    $sub = $submissions->firstWhere('organization_name', $org->name)
-                        ?? OrgRenewalSubmission::query()
-                            ->where('organization_name', $org->name)
-                            ->when($window, fn ($q) => $q->where('renewal_window_id', $window->id))
-                            ->latest('id')
-                            ->first();
+                ->map(function (StudentOrganization $org) use ($submissionsByOrganization, $requiredDocs) {
+                    $sub = $submissionsByOrganization->get(mb_strtolower($org->name));
+                    $review = $sub?->requiredDocumentReview($requiredDocs)
+                        ?? ['required' => count($requiredDocs), 'verified' => 0, 'missing' => count($requiredDocs)];
+                    // Final approval is authoritative, including approvals made before
+                    // later template/checklist edits. Administrative flags stay separate.
+                    $officiallyActive = (bool) $org->is_active && $sub?->status === 'approved';
 
                     return [
                         'id' => $org->id,
@@ -3082,19 +3105,27 @@ class OfficePortalController extends Controller
                         'college' => $org->college ?: 'Campus Wide',
                         'is_active' => (bool) $org->is_active,
                         'is_qualified_for_renewal' => (bool) ($org->is_qualified_for_renewal ?? true),
+                        'can_file_renewal' => (bool) $org->is_active && (bool) ($org->is_qualified_for_renewal ?? true),
                         'disqualification_reason' => $org->disqualification_reason,
                         'status_updated_at' => $org->status_updated_at ? $org->status_updated_at->format('M j, Y g:i A') : null,
                         'submission_status' => $sub?->status ?? 'none',
                         'submission_id' => $sub?->id,
-                        'docs_count' => $sub ? $sub->documents()->count() : 0,
+                        'submitted_at' => $sub?->submitted_at,
+                        'officially_active' => $officiallyActive,
+                        'requirements_required' => $review['required'],
+                        'requirements_verified' => $review['verified'],
+                        'requirements_pending' => max(0, $review['required'] - $review['verified']),
+                        'requirements_missing' => $review['missing'],
+                        'docs_count' => $review['required'] - $review['missing'],
+                        'status_url' => route('office.renewal.organization.status', $org),
                     ];
                 });
 
             $orgStats = [
                 'total' => $allOrganizations->count(),
-                'qualified' => $allOrganizations->where('is_qualified_for_renewal', true)->count(),
-                'not_qualified' => $allOrganizations->where('is_qualified_for_renewal', false)->count(),
-                'inactive' => $allOrganizations->where('is_active', false)->count(),
+                'qualified' => $allOrganizations->where('can_file_renewal', true)->count(),
+                'not_qualified' => $allOrganizations->where('can_file_renewal', false)->count(),
+                'inactive' => $allOrganizations->where('officially_active', false)->count(),
             ];
         } else {
             $assignedOrg = $this->assignedOrganizationName();
@@ -3115,9 +3146,32 @@ class OfficePortalController extends Controller
             }
         }
 
-        $targetOrg = 'College of Informatics and Computing Sciences Student Council (CICS-SC)';
-        $targetCollege = 'College of Informatics and Computing Sciences';
-        $targetOrgModel = StudentOrganization::query()->where('name', $targetOrg)->first();
+        $defaultTargetOrg = 'College of Informatics and Computing Sciences Student Council (CICS-SC)';
+        $targetOrg = $role === 'so'
+            ? ($office?->studentOrganization?->name ?? ($orgName ?? $defaultTargetOrg))
+            : $defaultTargetOrg;
+        $targetOrgModel = $role === 'so'
+            ? ($office?->studentOrganization ?? StudentOrganization::query()->where('name', $targetOrg)->first())
+            : StudentOrganization::query()->where('name', $targetOrg)->first();
+        $targetOrg = $targetOrgModel?->name ?? $targetOrg;
+        $targetCollege = $targetOrgModel?->college ?? ($role === 'so' ? '' : 'College of Informatics and Computing Sciences');
+        $officialRequirementFiles = [];
+        foreach ($requiredDocs as $doc) {
+            $file = $this->resolveRenewalTemplate($doc);
+            $preview = $this->resolveRenewalTemplate($doc, true);
+            $parameters = [
+                'docKey' => $doc['key'], 'window_id' => $window?->id,
+                'v' => substr(hash('sha256', ($doc['template_path'] ?? '').'|'.($doc['pdf_path'] ?? '')), 0, 16),
+            ];
+            $officialRequirementFiles[$doc['key']] = array_merge($doc, [
+                'code' => $this->renewalRequirementCode($doc),
+                'file_available' => $window !== null && $file !== null,
+                'file_name' => $file['name'] ?? null,
+                'preview_type' => $preview['extension'] ?? null,
+                'preview_url' => route('office.renewal.requirements.file', $parameters + ['preview' => 1]),
+                'download_url' => route('office.renewal.requirements.file', $parameters + ['download' => 1]),
+            ]);
+        }
 
         return view('org.renewal', array_merge($this->deskContext(), [
             'activeNav' => 'renewal',
@@ -3131,6 +3185,8 @@ class OfficePortalController extends Controller
             'targetOrgModel' => $targetOrgModel,
             'allOrganizations' => $allOrganizations,
             'orgStats' => $orgStats,
+            'officialRequirementFiles' => $officialRequirementFiles,
+            'otherRenewalSubmissions' => $submissions->whereNotIn('id', $allOrganizations->pluck('submission_id')->filter())->values(),
             'orgChoices' => [$targetOrg],
         ]));
     }
@@ -3139,144 +3195,238 @@ class OfficePortalController extends Controller
     {
         $office = Auth::guard('office')->user();
         abort_unless(($office?->office_role ?? '') === 'oso', 403);
-
         $validated = $request->validate([
+            'window_id' => ['nullable', 'integer'],
             'academic_year' => ['required', 'string', 'max:32'],
             'semester' => ['required', 'string', 'max:40'],
-            'is_open' => ['nullable', 'boolean'],
+            'is_open' => ['required', 'boolean'],
             'opens_at' => ['nullable', 'date'],
             'closes_at' => ['nullable', 'date', 'after_or_equal:opens_at'],
             'instructions' => ['nullable', 'string', 'max:5000'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'required_docs' => ['sometimes', 'array', 'max:30'],
-            'required_docs.*.key' => ['nullable', 'string', 'max:80'],
-            'required_docs.*.title' => ['required', 'string', 'max:255'],
+            'required_docs' => ['prohibited'],
         ]);
 
-        $isOpen = $request->boolean('is_open');
-        $window = OrgRenewalWindow::query()->latest('id')->first();
-        $currentDocs = $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs();
-        $currentByKey = collect($currentDocs)
-            ->filter(fn ($doc) => is_array($doc) && isset($doc['key']))
-            ->keyBy('key');
-        $requestedDocs = $validated['required_docs'] ?? [];
-        $usedKeys = [];
-        $requiredDocs = $requestedDocs !== [] ? [] : $currentDocs;
-
-        foreach ($requestedDocs as $doc) {
-            $title = trim($doc['title']);
-            $candidateKey = trim((string) ($doc['key'] ?? ''));
-            $key = isset($currentByKey[$candidateKey]) && ! isset($usedKeys[$candidateKey])
-                ? $candidateKey
-                : null;
-
-            if (! $key) {
-                $baseKey = substr(Str::slug($title, '_') ?: 'requirement', 0, 70);
-                $key = $baseKey;
-                $suffix = 2;
-                while (isset($usedKeys[$key])) {
-                    $key = $baseKey.'_'.$suffix++;
-                }
+        DB::connection('mysql')->transaction(function () use ($request, $validated, $office): void {
+            $window = OrgRenewalWindow::query()->latest('id')->lockForUpdate()->first();
+            if (($window?->id ?? 0) !== (int) ($validated['window_id'] ?? 0)) {
+                throw ValidationException::withMessages(['renewal' => 'The renewal window changed. Refresh the dashboard before saving.']);
             }
-
-            $normalized = [
-                'key' => $key,
-                'title' => $title,
+            $isOpen = $request->boolean('is_open');
+            $payload = [
+                'academic_year' => trim($validated['academic_year']),
+                'semester' => trim($validated['semester']),
+                'is_open' => $isOpen,
+                'opens_at' => $validated['opens_at'] ?? ($isOpen ? now() : null),
+                'closes_at' => $validated['closes_at'] ?? null,
+                'instructions' => $validated['instructions'] ?? null,
+                'notes' => $validated['notes'] ?? $window?->notes,
+                'required_docs' => $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs(),
+                'opened_by' => $isOpen ? $office->id : $window?->opened_by,
+                'closed_by' => $isOpen ? null : $office->id,
             ];
-            $previous = $currentByKey[$key] ?? null;
-            if (is_array($previous)) {
-                foreach (['template_path', 'template_name'] as $templateField) {
-                    if (! empty($previous[$templateField])) {
-                        $normalized[$templateField] = $previous[$templateField];
-                    }
-                }
+            // A new period must not inherit last year's final approvals.
+            if ($window && $window->academic_year === $payload['academic_year'] && $window->semester === $payload['semester']) {
+                $window->update($payload);
+            } else {
+                OrgRenewalWindow::query()->create($payload);
             }
+        });
 
-            $requiredDocs[] = $normalized;
-            $usedKeys[$key] = true;
-        }
-
-        $payload = [
-            'academic_year' => $validated['academic_year'],
-            'semester' => $validated['semester'],
-            'is_open' => $isOpen,
-            'opens_at' => $validated['opens_at'] ?? ($isOpen ? now() : null),
-            'closes_at' => $validated['closes_at'] ?? null,
-            'instructions' => $validated['instructions'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'required_docs' => $requiredDocs,
-        ];
-
-        if ($isOpen) {
-            $payload['opened_by'] = $office->id;
-            $payload['closed_by'] = null;
-        } else {
-            $payload['closed_by'] = $office->id;
-        }
-
-        if ($window) {
-            $window->update($payload);
-        } else {
-            OrgRenewalWindow::query()->create($payload);
-        }
-
-        return redirect()
-            ->route('office.renewal')
-            ->with('success', $isOpen
-                ? 'Renewal window is now OPEN for student organizations.'
-                : 'Renewal window is LOCKED. SO desks cannot submit.');
+        return redirect()->route('office.renewal')->with('success', 'Renewal window settings saved.');
     }
 
-    /**
-     * Store the official blank/template for one of the renewal requirements.
-     * The requirement checklist is JSON-backed, so template metadata stays with
-     * the current renewal window without creating a second configuration table.
-     */
+    public function storeRenewalRequirement(Request $request): RedirectResponse
+    {
+        abort_unless(Auth::guard('office')->user()?->office_role === 'oso', 403);
+        $validated = $request->validate([
+            'window_id' => ['required', 'integer'],
+            'code' => ['required', 'string', 'max:80'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
+        ]);
+        $storedPath = null;
+        try {
+            DB::connection('mysql')->transaction(function () use ($request, $validated, &$storedPath): void {
+                $window = $this->lockedRenewalWindow($request);
+                $docs = $window->requiredDocList();
+                if (count($docs) >= 30) {
+                    throw ValidationException::withMessages(['renewal' => 'A filing window can contain at most 30 requirements.']);
+                }
+                $code = trim($validated['code']);
+                foreach ($docs as $doc) {
+                    if (mb_strtolower($this->renewalRequirementCode($doc)) === mb_strtolower($code)) {
+                        throw ValidationException::withMessages(['code' => 'This requirement code already exists.']);
+                    }
+                }
+                $file = $request->file('document');
+                $storedPath = $file->store('renewal-templates', 'public');
+                if (! $storedPath) {
+                    throw new \RuntimeException('The official template could not be stored.');
+                }
+                $docs[] = [
+                    // Never reconnect an old signed upload to a newly added requirement.
+                    'key' => substr(Str::slug($code, '_') ?: 'requirement', 0, 50).'_'.Str::lower((string) Str::ulid()),
+                    'attachment_label' => $code,
+                    'title' => trim($validated['title']),
+                    'description' => trim((string) ($validated['description'] ?? '')),
+                    'template_path' => $storedPath,
+                    'template_name' => $file->getClientOriginalName(),
+                ];
+                $window->update(['required_docs' => $docs]);
+            });
+        } catch (\Throwable $error) {
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
+            throw $error;
+        }
+        return redirect()->route('office.renewal')->with('success', 'Official renewal requirement added.');
+    }
+
+    public function updateRenewalRequirement(Request $request, string $docKey): RedirectResponse
+    {
+        abort_unless(Auth::guard('office')->user()?->office_role === 'oso', 403);
+        $validated = $request->validate([
+            'window_id' => ['required', 'integer'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'code' => ['prohibited'],
+            'key' => ['prohibited'],
+        ]);
+        DB::connection('mysql')->transaction(function () use ($request, $validated, $docKey): void {
+            $window = $this->lockedRenewalWindow($request);
+            $docs = $window->requiredDocList();
+            $index = collect($docs)->search(fn ($doc) => $doc['key'] === $docKey);
+            abort_if($index === false, 404);
+            $docs[$index]['title'] = trim($validated['title']);
+            $docs[$index]['description'] = trim((string) ($validated['description'] ?? ''));
+            $window->update(['required_docs' => $docs]);
+        });
+        return redirect()->route('office.renewal')->with('success', 'Official renewal requirement updated.');
+    }
+
+    public function destroyRenewalRequirement(Request $request, string $docKey): RedirectResponse
+    {
+        abort_unless(Auth::guard('office')->user()?->office_role === 'oso', 403);
+        $request->validate(['window_id' => ['required', 'integer']]);
+        DB::connection('mysql')->transaction(function () use ($request, $docKey): void {
+            $window = $this->lockedRenewalWindow($request);
+            $docs = $window->requiredDocList();
+            abort_unless(collect($docs)->contains('key', $docKey), 404);
+            if (count($docs) <= 1) {
+                throw ValidationException::withMessages(['renewal' => 'Keep at least one official renewal requirement.']);
+            }
+            // Remove the checklist entry, not signed documents or shared historical files.
+            $window->update(['required_docs' => array_values(array_filter($docs, fn ($doc) => $doc['key'] !== $docKey))]);
+        });
+        return redirect()->route('office.renewal')->with('success', 'Official requirement removed from the current checklist.');
+    }
+
     public function storeRenewalRequirementTemplate(Request $request): RedirectResponse
     {
-        $office = Auth::guard('office')->user();
-        abort_unless(($office?->office_role ?? '') === 'oso', 403);
-
-        $window = OrgRenewalWindow::query()->latest('id')->first();
-        if (! $window) {
-            return back()->withErrors(['renewal' => 'Save the renewal window before uploading requirement templates.']);
-        }
-
+        abort_unless(Auth::guard('office')->user()?->office_role === 'oso', 403);
         $validated = $request->validate([
+            'window_id' => ['required', 'integer'],
             'doc_key' => ['required', 'string', 'max:80'],
             'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
         ]);
-
-        $requiredDocs = $window->requiredDocList();
-        $docMeta = collect($requiredDocs)->firstWhere('key', $validated['doc_key']);
-        if (! is_array($docMeta)) {
-            return back()->withErrors(['document' => 'Unknown renewal requirement.']);
-        }
-
-        $file = $request->file('document');
-        $oldPath = $docMeta['template_path'] ?? null;
-        $path = $file->store('renewal-templates', 'public');
-
-        $window->update([
-            'required_docs' => collect($requiredDocs)->map(function (array $doc) use ($validated, $path, $file): array {
-                if ($doc['key'] !== $validated['doc_key']) {
-                    return $doc;
+        $storedPath = null;
+        try {
+            DB::connection('mysql')->transaction(function () use ($request, $validated, &$storedPath): void {
+                $window = $this->lockedRenewalWindow($request);
+                $docs = $window->requiredDocList();
+                $index = collect($docs)->search(fn ($doc) => $doc['key'] === $validated['doc_key']);
+                abort_if($index === false, 404);
+                $file = $request->file('document');
+                $storedPath = $file->store('renewal-templates', 'public');
+                if (! $storedPath) {
+                    throw new \RuntimeException('The official template could not be stored.');
                 }
-
-                return array_merge($doc, [
-                    'template_path' => $path,
-                    'template_name' => $file->getClientOriginalName(),
-                ]);
-            })->values()->all(),
-        ]);
-
-        if ($oldPath && $oldPath !== $path && Storage::disk('public')->exists($oldPath)) {
-            Storage::disk('public')->delete($oldPath);
+                $docs[$index]['template_path'] = $storedPath;
+                $docs[$index]['template_name'] = $file->getClientOriginalName();
+                unset($docs[$index]['pdf_path']);
+                $window->update(['required_docs' => $docs]);
+            });
+        } catch (\Throwable $error) {
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
+            throw $error;
         }
+        return redirect()->route('office.renewal')->with('success', 'Official template replaced. Submitted organization files are unchanged.');
+    }
 
-        return redirect()
-            ->route('office.renewal')
-            ->with('success', $docMeta['title'].' template uploaded for SO desks.');
+    public function renewalRequirementFile(Request $request, string $docKey): BinaryFileResponse
+    {
+        abort_unless(in_array(Auth::guard('office')->user()?->office_role, ['oso', 'so'], true), 403);
+        $request->validate(['window_id' => ['nullable', 'integer'], 'preview' => ['nullable', 'boolean'], 'download' => ['nullable', 'boolean']]);
+        $window = $request->filled('window_id')
+            ? OrgRenewalWindow::query()->findOrFail($request->integer('window_id'))
+            : OrgRenewalWindow::query()->latest('id')->firstOrFail();
+        $doc = collect($window->requiredDocList())->firstWhere('key', $docKey);
+        abort_unless(is_array($doc), 404);
+        $file = $this->resolveRenewalTemplate($doc, $request->boolean('preview') && ! $request->boolean('download'));
+        abort_unless($file, 404, 'No official template is attached to this requirement.');
+        if ($request->boolean('download')) {
+            return response()->download($file['path'], $file['name'], ['Cache-Control' => 'private, no-store'])->setPrivate();
+        }
+        return response()->file($file['path'], ['Cache-Control' => 'private, no-store'])->setPrivate()->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_INLINE, $file['name'],
+            preg_replace('/[^A-Za-z0-9._-]/', '_', Str::ascii($file['name']))
+        );
+    }
+
+    private function lockedRenewalWindow(Request $request): OrgRenewalWindow
+    {
+        $window = OrgRenewalWindow::query()->latest('id')->lockForUpdate()->first();
+        if (! $window || $window->id !== $request->integer('window_id')) {
+            throw ValidationException::withMessages(['renewal' => 'The renewal window changed. Refresh the dashboard before saving.']);
+        }
+        return $window;
+    }
+
+    private function renewalRequirementCode(array $doc): string
+    {
+        $default = collect(OrgRenewalWindow::defaultRequiredDocs())->firstWhere('key', $doc['key']);
+        return $doc['attachment_label'] ?? $default['attachment_label'] ?? $doc['key'];
+    }
+
+    /** @return array{path: string, name: string, extension: string}|null */
+    private function resolveRenewalTemplate(array $doc, bool $preview = false): ?array
+    {
+        $templatePath = $doc['template_path'] ?? null;
+        $pdfPath = $doc['pdf_path'] ?? null;
+        $default = collect(OrgRenewalWindow::defaultRequiredDocs())->firstWhere('key', $doc['key']);
+        // The old replacement endpoint retained the original paired PDF. It is
+        // not a preview of a subsequently uploaded template.
+        if ($pdfPath && $pdfPath === ($default['pdf_path'] ?? null)
+            && $templatePath !== ($default['template_path'] ?? null)) {
+            $pdfPath = null;
+        }
+        if ($preview && ! $pdfPath) {
+            // Recover paired previews stripped by the previous bulk editor, but
+            // never use an original PDF after the official Word file is replaced.
+            if ($templatePath && $templatePath === ($default['template_path'] ?? null)) {
+                $pdfPath = $default['pdf_path'] ?? null;
+            }
+        }
+        $candidates = $preview ? array_filter([$pdfPath, $templatePath]) : array_filter([$templatePath]);
+        foreach ($candidates as $relativePath) {
+            $absolutePath = Storage::disk('public')->path($relativePath);
+            if (! is_file($absolutePath)) {
+                $absolutePath = public_path('templates/renewal/'.basename($relativePath));
+            }
+            if (is_file($absolutePath)) {
+                return [
+                    'path' => $absolutePath,
+                    'name' => $relativePath === $templatePath ? ($doc['template_name'] ?? basename($relativePath)) : basename($relativePath),
+                    'extension' => strtolower(pathinfo($relativePath, PATHINFO_EXTENSION)),
+                ];
+            }
+        }
+        return null;
     }
 
     public function storeRenewalSubmission(Request $request): RedirectResponse
@@ -3304,27 +3454,42 @@ class OfficePortalController extends Controller
         }
 
         $action = $validated['action'] ?? 'draft';
-        $submission = OrgRenewalSubmission::query()->updateOrCreate(
-            [
-                'renewal_window_id' => $window->id,
-                'organization_name' => $validated['organization_name'],
-            ],
-            [
-                'college' => $validated['college'] ?? null,
-                'submitted_by' => $office->id,
-                'adviser_name' => $validated['adviser_name'],
-                'dean_name' => $validated['dean_name'],
-                'notes' => $validated['notes'] ?? null,
-                'status' => $action === 'submit' ? 'submitted' : 'draft',
-                'submitted_at' => $action === 'submit' ? now() : null,
-            ]
-        );
+        $error = DB::connection('mysql')->transaction(function () use ($window, $validated, $office, $action): ?string {
+            $existing = OrgRenewalSubmission::query()
+                ->where('renewal_window_id', $window->id)
+                ->where('organization_name', $validated['organization_name'])
+                ->lockForUpdate()
+                ->first();
+            if ($existing && in_array($existing->status, OrgRenewalSubmission::TERMINAL_STATUSES, true)) {
+                return 'This renewal packet was already '.$existing->status.' by OSO and can no longer be edited.';
+            }
 
-        if ($action === 'submit') {
+            $submission = OrgRenewalSubmission::query()->updateOrCreate(
+                [
+                    'renewal_window_id' => $window->id,
+                    'organization_name' => $validated['organization_name'],
+                ],
+                [
+                    'college' => $validated['college'] ?? null,
+                    'submitted_by' => $office->id,
+                    'adviser_name' => $validated['adviser_name'],
+                    'dean_name' => $validated['dean_name'],
+                    'notes' => $validated['notes'] ?? null,
+                    'status' => $action === 'submit' ? 'submitted' : 'draft',
+                    'submitted_at' => $action === 'submit' ? now() : null,
+                ]
+            );
+
+            if ($action !== 'submit') {
+                return null;
+            }
+
             $orgModel = StudentOrganization::where('name', $validated['organization_name'])->first();
             if ($orgModel && (! $orgModel->is_qualified_for_renewal || ! $orgModel->is_active)) {
+                $submission->update(['status' => 'draft', 'submitted_at' => null]);
                 $reason = $orgModel->disqualification_reason ?: 'This organization is currently flagged as Not Qualified to Renew or Inactive by OSO.';
-                return back()->withInput()->withErrors(['renewal' => 'Renewal submission blocked: '.$reason]);
+
+                return 'Renewal submission blocked: '.$reason;
             }
 
             $required = collect($window->requiredDocList())->pluck('key');
@@ -3333,10 +3498,14 @@ class OfficePortalController extends Controller
             if ($missing->isNotEmpty()) {
                 $submission->update(['status' => 'draft', 'submitted_at' => null]);
 
-                return back()
-                    ->withInput()
-                    ->withErrors(['renewal' => 'Upload all '.$missing->count().' remaining required document(s) before submitting.']);
+                return 'Upload all '.$missing->count().' remaining required document(s) before submitting.';
             }
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return back()->withInput()->withErrors(['renewal' => $error]);
         }
 
         return redirect()
@@ -3362,31 +3531,45 @@ class OfficePortalController extends Controller
             'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
         ]);
 
-        $submission = OrgRenewalSubmission::query()
-            ->where('id', $validated['submission_id'])
-            ->where('renewal_window_id', $window->id)
-            ->where('submitted_by', $office->id)
-            ->firstOrFail();
-
         $docMeta = collect($window->requiredDocList())->firstWhere('key', $validated['doc_key']);
         if (! $docMeta) {
             return back()->withErrors(['document' => 'Unknown document type.']);
         }
 
         $file = $request->file('document');
-        $path = $file->store('renewal-documents', 'public');
+        $error = DB::connection('mysql')->transaction(function () use ($validated, $window, $office, $docMeta, $file): ?string {
+            $submission = OrgRenewalSubmission::query()
+                ->where('id', $validated['submission_id'])
+                ->where('renewal_window_id', $window->id)
+                ->where('submitted_by', $office->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            if (in_array($submission->status, OrgRenewalSubmission::TERMINAL_STATUSES, true)) {
+                return 'This renewal packet was already '.$submission->status.' by OSO and can no longer be edited.';
+            }
 
-        OrgRenewalDocument::query()->updateOrCreate(
-            [
-                'submission_id' => $submission->id,
-                'doc_key' => $validated['doc_key'],
-            ],
-            [
-                'title' => $docMeta['title'],
-                'file_path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-            ]
-        );
+            OrgRenewalDocument::query()->updateOrCreate(
+                [
+                    'submission_id' => $submission->id,
+                    'doc_key' => $validated['doc_key'],
+                ],
+                [
+                    'title' => $docMeta['title'],
+                    'file_path' => $file->store('renewal-documents', 'public'),
+                    'file_name' => $file->getClientOriginalName(),
+                    'review_status' => OrgRenewalDocument::REVIEW_PENDING,
+                    'review_remarks' => null,
+                    'reviewed_at' => null,
+                    'reviewed_by' => null,
+                ]
+            );
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return back()->withErrors(['document' => $error]);
+        }
 
         return redirect()->route('office.renewal')->with('success', $docMeta['title'].' uploaded.');
     }
@@ -5516,25 +5699,165 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * OSO decision on a renewal packet (approve or return with remarks).
+     * OSO detail page for one submitted renewal packet, checked against the
+     * checklist of the packet's own renewal window.
+     */
+    public function showRenewalSubmission(OrgRenewalSubmission $submission): View
+    {
+        abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
+
+        $submission->load(['documents', 'window']);
+        $window = $submission->window;
+        $requiredDocs = $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs();
+        $review = $submission->requiredDocumentReview($requiredDocs);
+
+        return view('org.renewal-submission', array_merge($this->deskContext(), [
+            'activeNav' => 'renewal',
+            'submission' => $submission,
+            'renewalWindow' => $window,
+            'requiredDocs' => $requiredDocs,
+            'organization' => StudentOrganization::query()->where('name', $submission->organization_name)->first(),
+            'verifiedCount' => $review['verified'],
+            'missingCount' => $review['missing'],
+            'canApproveRenewal' => $submission->canBeApproved($requiredDocs),
+            'canReviewDocuments' => $submission->status === 'submitted',
+        ]));
+    }
+
+    /**
+     * OSO verifies, returns (For Revision), or rejects one renewal document.
+     */
+    public function reviewRenewalDocument(Request $request, OrgRenewalDocument $document): RedirectResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless(($office?->office_role ?? '') === 'oso', 403);
+
+        $validated = $request->validate([
+            'decision' => ['required', Rule::in([
+                OrgRenewalDocument::REVIEW_VERIFIED,
+                OrgRenewalDocument::REVIEW_RETURNED,
+                OrgRenewalDocument::REVIEW_REJECTED,
+            ])],
+            'remarks' => [
+                Rule::requiredIf(fn () => in_array($request->input('decision'), [OrgRenewalDocument::REVIEW_RETURNED, OrgRenewalDocument::REVIEW_REJECTED], true)),
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+            'file_version' => ['required', 'string', 'size:64'],
+        ]);
+
+        $error = DB::connection('mysql')->transaction(function () use ($document, $validated, $office): ?string {
+            $submission = OrgRenewalSubmission::query()->lockForUpdate()->findOrFail($document->submission_id);
+            if ($submission->status !== 'submitted') {
+                return 'Documents can only be reviewed while the renewal packet is submitted for OSO review.';
+            }
+
+            $document = OrgRenewalDocument::query()->lockForUpdate()->findOrFail($document->id);
+            if (! hash_equals($document->fileVersion(), $validated['file_version'])) {
+                return 'This document was replaced after you opened it. Reload the page and review the new file.';
+            }
+
+            $remarks = trim((string) ($validated['remarks'] ?? ''));
+            $document->update([
+                'review_status' => $validated['decision'],
+                'review_remarks' => $remarks !== '' ? $remarks : null,
+                'reviewed_at' => now(),
+                'reviewed_by' => $office->id,
+            ]);
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return back()->withErrors(['renewal' => $error]);
+        }
+
+        $label = OrgRenewalDocument::reviewStatusLabels()[$validated['decision']];
+
+        return back()->with('success', "{$document->title} marked {$label}.");
+    }
+
+    /**
+     * Serve an uploaded renewal document to OSO or the owning SO desk.
+     */
+    public function renewalDocumentFile(OrgRenewalDocument $document)
+    {
+        $office = Auth::guard('office')->user();
+        $role = $office?->office_role ?? '';
+        abort_unless(in_array($role, ['so', 'oso'], true), 403);
+
+        $submission = $document->submission;
+        abort_unless($submission instanceof OrgRenewalSubmission, 404);
+        if ($role === 'so') {
+            $assigned = $this->assignedOrganizationName($office);
+            abort_unless(
+                (int) $submission->submitted_by === (int) $office->id
+                    || ($assigned !== null && $assigned === $submission->organization_name),
+                403
+            );
+        }
+
+        $disk = Storage::disk('public');
+        abort_unless(filled($document->file_path) && $disk->exists($document->file_path), 404);
+        $name = $document->file_name ?: basename($document->file_path);
+
+        return request()->boolean('download')
+            ? $disk->download($document->file_path, $name)
+            : $disk->response($document->file_path, $name);
+    }
+
+    /**
+     * OSO final decision on a submitted renewal packet. Approval requires every
+     * required document of the packet's own window to be uploaded and verified.
      */
     public function reviewRenewalSubmission(Request $request, OrgRenewalSubmission $submission): RedirectResponse
     {
         abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
 
         $validated = $request->validate([
-            'decision' => ['required', 'in:approved,returned'],
-            'remarks' => ['nullable', 'string', 'max:2000'],
+            'decision' => ['required', 'in:approved,returned,rejected'],
+            'remarks' => [
+                Rule::requiredIf(fn () => in_array($request->input('decision'), ['returned', 'rejected'], true)),
+                'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
-        $submission->status = $validated['decision'];
-        $submission->review_remarks = $validated['remarks'] ?? null;
-        $submission->reviewed_at = now();
-        $submission->save();
+        $error = DB::connection('mysql')->transaction(function () use ($submission, $validated): ?string {
+            $locked = OrgRenewalSubmission::query()->lockForUpdate()->findOrFail($submission->id);
+            if ($locked->status !== 'submitted') {
+                return 'Only submitted renewal packets can be decided.';
+            }
 
-        return back()->with('success', $validated['decision'] === 'approved'
-            ? "Renewal packet for {$submission->organization_name} approved."
-            : "Renewal packet for {$submission->organization_name} returned for revision.");
+            if ($validated['decision'] === 'approved') {
+                $locked->load(['documents', 'window']);
+                $requiredDocs = $locked->window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs();
+                if (! $locked->canBeApproved($requiredDocs)) {
+                    return 'Verify every required document before approving this renewal packet.';
+                }
+            }
+
+            $remarks = trim((string) ($validated['remarks'] ?? ''));
+            $locked->update([
+                'status' => $validated['decision'],
+                'review_remarks' => $remarks !== '' ? $remarks : null,
+                'reviewed_at' => now(),
+            ]);
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return back()->withErrors(['renewal' => $error]);
+        }
+
+        return back()->with('success', match ($validated['decision']) {
+            'approved' => "Renewal packet for {$submission->organization_name} approved.",
+            'rejected' => "Renewal packet for {$submission->organization_name} rejected.",
+            default => "Renewal packet for {$submission->organization_name} returned for revision.",
+        });
     }
 
     /**

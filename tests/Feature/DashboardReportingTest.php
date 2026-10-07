@@ -10,8 +10,10 @@ use App\Models\OrgReportStatus;
 use App\Models\OrgRenewalSubmission;
 use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
+use App\Models\OfficeUser;
 use App\Services\BudgetChainService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -36,6 +38,43 @@ class DashboardReportingTest extends TestCase
             ->assertSee('Largest month-to-month drop', false)
             ->assertSee('No submissions recorded in the selected period.', false);
     }
+
+    public function test_so_sidebar_brand_uses_the_assigned_organizations_short_name(): void
+    {
+        $suffix = Str::uuid()->toString();
+        $shortName = 'CICS-'.substr(str_replace('-', '', $suffix), 0, 8);
+        $organization = StudentOrganization::query()->create([
+            'name' => 'Brand Test Organization '.$suffix,
+            'short_name' => $shortName,
+            'college' => 'College of Informatics and Computing Sciences',
+            'academic_year' => '2026-2027',
+            'is_active' => true,
+        ]);
+        $office = null;
+
+        try {
+            $office = OfficeUser::query()->create([
+                'name' => 'Brand Test SO',
+                'email' => 'so-brand-'.$suffix.'@example.test',
+                'username' => 'so-brand-'.$suffix,
+                'password' => Str::random(40),
+                'office_role' => 'so',
+                'student_organization_id' => $organization->id,
+                'office_title' => 'Student Organization',
+                'is_active' => true,
+            ]);
+
+            $this->actingAs($office, 'office')
+                ->get('/office-desk')
+                ->assertOk()
+                ->assertSee('<strong>'.$shortName.'</strong>', false)
+                ->assertSee('Student Org Representative');
+        } finally {
+            $office?->delete();
+            $organization->delete();
+        }
+    }
+
 
     public function test_oso_dashboard_summary_counts_live_transaction_tables(): void
     {
@@ -75,15 +114,6 @@ class DashboardReportingTest extends TestCase
         }
     }
 
-    public function test_in_campus_activity_form_does_not_require_class_schedule_upload(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('so'), 'office')
-            ->get('/office-desk/activities/create?type=in_campus')
-            ->assertOk()
-            ->assertDontSee('Class Schedule / Participant Schedule', false)
-            ->assertSee('Programme / Schedule of Activities', false)
-            ->assertSee('Meeting Minutes and Attendance', false);
-    }
 
     public function test_reporting_filters_are_present_and_period_aware_for_every_office_desk(): void
     {

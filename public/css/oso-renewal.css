@@ -1,0 +1,1341 @@
+/* OSO renewal dashboard ------------------------------------------------------
+   Scoped to #osoRenewalDashboard and .or-* so SO renewal and portal UI are untouched. */
+
+#osoRenewalDashboard,
+.or-dialog {
+    --or-burgundy: var(--org-red, #8b1828);
+    --or-burgundy-dark: var(--org-red-dark, #62101c);
+    --or-rose: var(--org-red-muted, #fdf0f2);
+    --or-rose-strong: #f8dfe4;
+    --or-line: var(--org-line, #f0e6e8);
+    --or-line-strong: #e8d3d8;
+    --or-ink: var(--org-ink, #1a1618);
+    --or-muted: var(--org-muted, #7a7074);
+    --or-surface: #ffffff;
+    --or-surface-soft: #fdf8f9;
+    --or-green: #1d6b43;
+    --or-green-bg: #e7f5ec;
+    --or-red: #a3192f;
+    --or-red-bg: #fdecee;
+    --or-amber: #8f5a07;
+    --or-amber-bg: #fdf3e1;
+    --or-purple: #5b3f99;
+    --or-purple-bg: #f1ecfa;
+    --or-blue: #24569b;
+    --or-blue-bg: #eaf1fb;
+    --or-grey: #6f6569;
+    --or-grey-bg: #f3eff0;
+    --or-radius: 16px;
+    --or-radius-sm: 10px;
+    --or-shadow: var(--org-shadow-sm, 0 4px 16px rgba(90, 15, 30, 0.03));
+    --or-ring: 0 0 0 3px rgba(139, 24, 40, 0.14);
+    --or-ease: var(--org-ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* Native hidden always wins over flex/grid display rules. */
+#osoRenewalDashboard[hidden],
+#osoRenewalDashboard [hidden],
+.or-dialog [hidden],
+.or-dialog[hidden] {
+    display: none !important;
+}
+
+/* Wrapper: opacity-only entrance (no transform, so nested native dialogs stay anchored). */
+#osoRenewalDashboard {
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--or-ink);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.org-content > #osoRenewalDashboard {
+    animation: or-fade 0.35s ease both;
+    transform: none;
+}
+
+#osoRenewalDashboard > *,
+#osoRenewalDashboard .or-card,
+#osoRenewalDashboard .or-card > * {
+    min-width: 0;
+}
+
+@keyframes or-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Metrics ------------------------------------------------------------------ */
+.or-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.or-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.85rem 0.95rem;
+    background: var(--or-surface);
+    border: 1px solid var(--or-line);
+    border-radius: var(--or-radius);
+    box-shadow: var(--or-shadow);
+}
+
+.or-metric-icon {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--or-rose);
+    color: var(--or-burgundy);
+    font-size: 1rem;
+}
+
+.or-metric-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.or-metric-icon.is-green { background: var(--or-green-bg); color: var(--or-green); }
+.or-metric-icon.is-red { background: var(--or-red-bg); color: var(--or-red); }
+.or-metric-icon.is-muted { background: var(--or-grey-bg); color: var(--or-grey); }
+
+.or-metric-copy {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.or-metric-label {
+    color: var(--or-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+.or-metric-value {
+    color: var(--or-ink);
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.or-metric-hint {
+    color: var(--or-muted);
+    font-size: 0.7rem;
+    overflow-wrap: anywhere;
+}
+
+/* Cards -------------------------------------------------------------------- */
+.or-card {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+    padding: 1rem 1.1rem;
+    background: var(--or-surface);
+    border: 1px solid var(--or-line);
+    border-radius: var(--or-radius);
+    box-shadow: var(--or-shadow);
+}
+
+.or-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+    min-width: 0;
+}
+
+.or-card-head > :first-child {
+    min-width: 0;
+    flex: 1 1 16rem;
+}
+
+.or-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+    color: var(--or-ink);
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+.or-card-head h2,
+.or-dialog-head h2 {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+
+.or-title-icon {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--or-rose);
+    color: var(--or-burgundy);
+    font-size: 0.9rem;
+}
+
+.or-title-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.or-subtitle {
+    margin: 0.2rem 0 0;
+    color: var(--or-muted);
+    font-size: 0.76rem;
+    overflow-wrap: anywhere;
+}
+
+.or-head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+/* Buttons ------------------------------------------------------------------ */
+.or-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 34px;
+    max-width: 100%;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--or-line-strong);
+    border-radius: var(--or-radius-sm);
+    background: var(--or-surface);
+    color: var(--or-ink);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.or-button svg {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+}
+
+.or-button:hover {
+    border-color: var(--or-burgundy);
+    color: var(--or-burgundy);
+    background: var(--or-surface-soft);
+}
+
+.or-button:focus-visible,
+.or-dialog-close:focus-visible,
+.or-pagination button:focus-visible,
+.or-pagination a:focus-visible {
+    outline: 2px solid var(--or-burgundy);
+    outline-offset: 2px;
+}
+
+.or-button.is-primary {
+    border-color: var(--or-burgundy);
+    background: linear-gradient(135deg, var(--or-burgundy), var(--or-burgundy-dark));
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(139, 24, 40, 0.18);
+}
+
+.or-button.is-primary:hover {
+    background: var(--or-burgundy-dark);
+    color: #fff;
+}
+
+.or-button.is-danger {
+    border-color: #f3c6ce;
+    background: var(--or-red-bg);
+    color: var(--or-red);
+}
+
+.or-button.is-danger:hover {
+    border-color: var(--or-red);
+    background: var(--or-red);
+    color: #fff;
+}
+
+.or-button.is-blue {
+    border-color: #cddcf1;
+    background: var(--or-blue-bg);
+    color: var(--or-blue);
+}
+
+.or-button.is-blue:hover {
+    border-color: var(--or-blue);
+    background: var(--or-blue);
+    color: #fff;
+}
+
+.or-button.is-small {
+    min-height: 28px;
+    padding: 0.28rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+}
+
+.or-button.is-small svg {
+    width: 13px;
+    height: 13px;
+}
+
+.or-button:disabled,
+.or-button[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+/* Pills -------------------------------------------------------------------- */
+.or-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    max-width: 100%;
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    background: var(--or-rose);
+    color: var(--or-burgundy);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+.or-pill::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.75;
+}
+
+.or-pill.is-green { background: var(--or-green-bg); color: var(--or-green); }
+.or-pill.is-red { background: var(--or-red-bg); color: var(--or-red); }
+.or-pill.is-amber { background: var(--or-amber-bg); color: var(--or-amber); }
+.or-pill.is-muted { background: var(--or-grey-bg); color: var(--or-grey); }
+.or-pill.is-purple { background: var(--or-purple-bg); color: var(--or-purple); }
+
+/* Forms -------------------------------------------------------------------- */
+.or-window-form {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.or-fields {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.or-field {
+    display: grid;
+    align-content: start;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.or-field.or-full,
+.or-full {
+    grid-column: 1 / -1;
+}
+
+.or-field > label,
+.or-field > .or-label,
+.or-field > span:first-child {
+    color: var(--or-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.or-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.or-field select,
+.or-field textarea,
+.or-filters select,
+.or-search input,
+input.or-search {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--or-line-strong);
+    border-radius: var(--or-radius-sm);
+    background: var(--or-surface);
+    color: var(--or-ink);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    box-sizing: border-box;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.or-field textarea {
+    min-height: 84px;
+    resize: vertical;
+}
+
+.or-field input:focus,
+.or-field select:focus,
+.or-field textarea:focus,
+.or-filters select:focus,
+.or-search input:focus,
+input.or-search:focus {
+    outline: none;
+    border-color: var(--or-burgundy);
+    box-shadow: var(--or-ring);
+}
+
+.or-field input[readonly],
+.or-field textarea[readonly] {
+    background: var(--or-surface-soft);
+    color: var(--or-muted);
+    cursor: default;
+}
+
+.or-field input:user-invalid,
+.or-field select:user-invalid,
+.or-field textarea:user-invalid,
+.or-field [aria-invalid="true"] {
+    border-color: var(--or-red);
+}
+
+.or-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--or-line);
+    min-width: 0;
+}
+
+.or-form-footer > :last-child {
+    margin-left: auto;
+}
+
+.or-form-footer > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.or-helper {
+    margin: 0;
+    color: var(--or-muted);
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.or-note {
+    margin: 0;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--or-rose-strong);
+    border-left: 3px solid var(--or-burgundy);
+    border-radius: var(--or-radius-sm);
+    background: var(--or-rose);
+    color: var(--or-burgundy-dark);
+    font-size: 0.74rem;
+    overflow-wrap: anywhere;
+}
+
+/* Filters / search --------------------------------------------------------- */
+.or-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.or-filters > .or-search {
+    flex: 1 1 14rem;
+}
+
+.or-filters select {
+    flex: 0 1 12rem;
+    width: auto;
+    cursor: pointer;
+}
+
+.or-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.or-search > svg,
+.or-search > i,
+.or-search > .or-search-icon {
+    position: absolute;
+    left: 0.7rem;
+    width: 14px;
+    height: 14px;
+    color: var(--or-muted);
+    pointer-events: none;
+}
+
+.or-search:has(> svg) input,
+.or-search:has(> i) input,
+.or-search:has(> .or-search-icon) input {
+    padding-left: 2rem;
+}
+
+/* Table -------------------------------------------------------------------- */
+.or-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    border: 1px solid var(--or-line);
+    border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+#osoRenewalDashboard .or-table,
+.or-table {
+    display: table;
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    border-spacing: 0;
+    overflow: visible;
+    font-size: 0.78rem;
+}
+
+.or-table th,
+.or-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--or-line);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.or-table thead th {
+    background: var(--or-surface-soft);
+    color: var(--or-muted);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.or-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.or-table tbody tr:hover {
+    background: #fffafb;
+}
+
+.or-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.or-table td:last-child,
+.or-table th:last-child {
+    text-align: right;
+}
+
+.or-org {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 220px;
+    max-width: 340px;
+}
+
+.or-org-mark {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--or-burgundy), var(--or-burgundy-dark));
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.or-org-copy {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.or-name {
+    color: var(--or-ink);
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.or-college {
+    color: var(--or-muted);
+    font-size: 0.7rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.or-submitted-date {
+    color: var(--or-muted);
+    white-space: nowrap;
+}
+
+.or-row-actions {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.or-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    min-width: 0;
+    color: var(--or-muted);
+    font-size: 0.74rem;
+}
+
+.or-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.or-pagination button,
+.or-pagination a {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 0.55rem;
+    border: 1px solid var(--or-line-strong);
+    border-radius: 8px;
+    background: var(--or-surface);
+    color: var(--or-ink);
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.or-pagination button:hover,
+.or-pagination a:hover {
+    border-color: var(--or-burgundy);
+    color: var(--or-burgundy);
+}
+
+.or-pagination .is-active,
+.or-pagination [aria-current="page"],
+.or-pagination [aria-pressed="true"] {
+    border-color: var(--or-burgundy);
+    background: var(--or-burgundy);
+    color: #fff;
+}
+
+.or-pagination button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.or-pagination span {
+    padding: 0 0.2rem;
+    color: var(--or-muted);
+}
+
+.or-empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    padding: 1.6rem 1rem;
+    border: 1px dashed var(--or-line-strong);
+    border-radius: 12px;
+    background: var(--or-surface-soft);
+    color: var(--or-muted);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.or-table .or-empty,
+td.or-empty {
+    display: table-cell;
+    border: 0;
+    border-radius: 0;
+}
+
+/* Official requirements ---------------------------------------------------- */
+.or-requirements-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.or-requirement {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.7rem;
+    min-width: 0;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--or-line);
+    border-radius: 14px;
+    background: var(--or-surface);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.or-requirement:hover,
+.or-requirement:focus-within {
+    border-color: var(--or-rose-strong);
+    box-shadow: 0 6px 18px rgba(90, 15, 30, 0.06);
+}
+
+.or-requirement-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--or-rose);
+    color: var(--or-burgundy);
+    font-size: 0.95rem;
+}
+
+.or-requirement-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.or-requirement-copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.or-requirement-code {
+    justify-self: start;
+    max-width: 100%;
+    padding: 0.08rem 0.45rem;
+    border-radius: 6px;
+    background: var(--or-rose);
+    color: var(--or-burgundy);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.or-requirement-name {
+    display: -webkit-box;
+    margin: 0;
+    color: var(--or-ink);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.or-requirement-description {
+    display: -webkit-box;
+    margin: 0;
+    color: var(--or-muted);
+    font-size: 0.74rem;
+    line-height: 1.4;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.or-requirement-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-width: 0;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--or-line);
+}
+
+.or-requirement-actions > .or-button,
+.or-requirement-actions form > .or-button {
+    flex: 1 1 5.5rem;
+    min-width: 0;
+}
+
+#osoRenewalDashboard [data-or-replace-form] {
+    display: contents;
+    margin: 0;
+}
+
+#osoRenewalDashboard [data-or-replace-form] input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Dialogs ------------------------------------------------------------------ */
+.or-dialog {
+    box-sizing: border-box;
+    width: min(560px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--or-line);
+    border-radius: 18px;
+    background: var(--or-surface);
+    color: var(--or-ink);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    box-shadow: 0 24px 60px rgba(40, 8, 16, 0.25);
+    overflow: hidden;
+    animation: none;
+    transform: none;
+}
+
+.or-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: or-fade 0.18s ease both;
+}
+
+.or-dialog::backdrop {
+    background: rgba(32, 10, 16, 0.48);
+    backdrop-filter: blur(2px);
+}
+
+.or-dialog > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+}
+
+.or-dialog-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid var(--or-line);
+}
+
+.or-dialog-head > :first-child {
+    min-width: 0;
+}
+
+.or-dialog-title {
+    margin: 0;
+    color: var(--or-ink);
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.or-dialog-close {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--or-line);
+    border-radius: 9px;
+    background: var(--or-surface);
+    color: var(--or-muted);
+    font: inherit;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.or-dialog-close:hover {
+    border-color: var(--or-burgundy);
+    color: var(--or-burgundy);
+    background: var(--or-rose);
+}
+
+.or-dialog-close svg {
+    width: 15px;
+    height: 15px;
+}
+
+.or-dialog-body {
+    flex: 1 1 auto;
+    display: grid;
+    align-content: start;
+    gap: 0.8rem;
+    min-height: 0;
+    padding: 1rem 1.1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.or-dialog-body > p {
+    margin: 0;
+}
+
+.or-dialog .or-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.or-dialog-footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.8rem 1.1rem;
+    border-top: 1px solid var(--or-line);
+    background: var(--or-surface-soft);
+}
+
+.or-current-file {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px dashed var(--or-line-strong);
+    border-radius: var(--or-radius-sm);
+    background: var(--or-surface-soft);
+    color: var(--or-ink);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.or-current-file > *:not(svg):not(i) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.or-current-file small,
+.or-current-file strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.or-field-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.or-field-label small {
+    color: var(--or-burgundy);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+
+.or-current-file svg,
+.or-current-file i {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    color: var(--or-burgundy);
+}
+
+.or-file-picker {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1.5px dashed var(--or-line-strong);
+    border-radius: 12px;
+    background: var(--or-surface-soft);
+    color: var(--or-muted);
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.or-file-picker:hover,
+.or-file-picker:focus-within {
+    border-color: var(--or-burgundy);
+    background: var(--or-rose);
+}
+
+.or-file-picker input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--or-ink);
+    font: inherit;
+    font-size: 0.74rem;
+}
+
+.or-file-picker input[type="file"]:focus-visible {
+    outline: 2px solid var(--or-burgundy);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.or-file-picker input[type="file"]::file-selector-button {
+    margin-right: 0.6rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--or-burgundy);
+    border-radius: 8px;
+    background: var(--or-surface);
+    color: var(--or-burgundy);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.or-file-status {
+    margin: 0;
+    min-width: 0;
+    color: var(--or-muted);
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+}
+
+.or-file-status:empty {
+    display: none;
+}
+
+.or-file-status.is-error,
+.or-file-status[data-state="error"],
+.or-file-status[role="alert"]:not(:empty) {
+    color: var(--or-red);
+    font-weight: 600;
+}
+
+.or-file-status.is-valid,
+.or-file-status.is-success,
+.or-file-status[data-state="valid"],
+.or-file-status[data-state="success"] {
+    color: var(--or-green);
+    font-weight: 600;
+}
+
+/* Preview dialog ----------------------------------------------------------- */
+.or-dialog.or-preview-dialog,
+.or-preview-dialog {
+    width: min(1100px, calc(100vw - 32px));
+    height: calc(100vh - 32px);
+    height: min(900px, calc(100dvh - 32px));
+}
+
+.or-preview-dialog .or-dialog-head {
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.or-preview-dialog .or-dialog-head > :first-child {
+    flex: 1 1 14rem;
+}
+
+.or-preview-dialog .or-dialog-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.or-preview-body {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    background: #f6eef0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.or-preview-frame {
+    flex: 1 1 auto;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 60vh;
+    border: 0;
+    background: #fff;
+}
+
+.or-preview-docx {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.or-preview-docx .docx-wrapper {
+    background: transparent;
+    padding: 1rem;
+    align-items: center;
+}
+
+.or-preview-docx .docx-wrapper > section.docx {
+    max-width: none;
+    margin-bottom: 1rem;
+    box-shadow: 0 6px 20px rgba(40, 8, 16, 0.12);
+}
+
+.or-preview-message {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.6rem;
+    margin: auto;
+    max-width: 30rem;
+    padding: 2rem 1.25rem;
+    color: var(--or-muted);
+    font-size: 0.8rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.or-preview-message.is-error,
+.or-preview-message[data-state="error"] {
+    color: var(--or-red);
+    font-weight: 600;
+}
+
+/* Responsive --------------------------------------------------------------- */
+@media (max-width: 1180px) {
+    .or-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .or-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    #osoRenewalDashboard .or-table {
+        display: table;
+        overflow: visible;
+    }
+
+    .or-card {
+        padding: 0.9rem;
+    }
+}
+
+@media (max-width: 760px) {
+    .or-requirements-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    #osoRenewalDashboard {
+        gap: 0.7rem;
+    }
+
+    .or-fields,
+    .or-dialog .or-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .or-card {
+        padding: 0.8rem;
+        border-radius: 14px;
+    }
+
+    .or-card-head > :first-child {
+        flex-basis: 100%;
+    }
+
+    .or-head-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .or-head-actions > .or-button {
+        flex: 1 1 auto;
+    }
+
+    .or-filters > .or-search,
+    .or-filters select {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .or-form-footer > div:last-child {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .or-form-footer .or-button {
+        flex: 1 1 auto;
+    }
+
+    .or-table-footer {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .or-dialog,
+    .or-dialog.or-preview-dialog {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 14px;
+    }
+
+    .or-dialog.or-preview-dialog {
+        height: calc(100vh - 16px);
+        height: calc(100dvh - 16px);
+    }
+
+    .or-dialog-head,
+    .or-dialog-body,
+    .or-dialog-footer {
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+    }
+
+    .or-dialog-footer > .or-button {
+        flex: 1 1 8rem;
+    }
+
+    .or-preview-dialog .or-dialog-head .or-button {
+        flex: 1 1 auto;
+    }
+
+    .or-preview-docx .docx-wrapper {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .or-metric {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.45rem;
+        padding: 0.7rem;
+    }
+
+    .or-metric-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+    }
+
+    .or-metric-value {
+        font-size: 1.15rem;
+    }
+
+    .or-requirement {
+        padding: 0.7rem;
+        gap: 0.55rem;
+    }
+
+    .or-requirement-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .or-requirement-actions > .or-button,
+    .or-requirement-actions form > .or-button {
+        flex-basis: calc(50% - 0.2rem);
+    }
+
+    .or-button {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 280px) {
+    .or-metrics {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .org-content > #osoRenewalDashboard,
+    .or-dialog[open] {
+        animation: none;
+    }
+
+    #osoRenewalDashboard *,
+    .or-dialog,
+    .or-dialog * {
+        transition: none !important;
+    }
+}

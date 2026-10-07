@@ -1,0 +1,1612 @@
+/* ==========================================================================
+   OrgChain · SO activity proposal form (org/activity-create)
+   Scoped to .ap-form, its page header and the document preview dialog.
+   ========================================================================== */
+
+.ap-form,
+.org-content:has(.ap-form),
+.org-topbar:has(~ .org-content .ap-form),
+.org-doc-preview-dialog {
+    --ap-maroon: #8b1828;
+    --ap-maroon-dark: #6b111f;
+    --ap-maroon-tint: #fdf2f4;
+    --ap-blush: #f3e3e6;
+    --ap-blush-strong: #e7cbd1;
+    --ap-surface: #ffffff;
+    --ap-surface-soft: #fcf8f9;
+    --ap-ink: #1f1a1c;
+    --ap-text: #3d3337;
+    --ap-muted: #675a5e;
+    --ap-success: #166534;
+    --ap-success-tint: #ecfaf1;
+    --ap-success-line: #b7e4c7;
+    --ap-warning: #854804;
+    --ap-warning-tint: #fff7eb;
+    --ap-warning-line: #f3cf96;
+    --ap-danger: #b42318;
+    --ap-danger-tint: #fef3f2;
+    --ap-disabled-bg: #efe9ea;
+    --ap-disabled-line: #d9cfd2;
+    --ap-disabled-text: #5f5357;
+    --ap-ring: 0 0 0 3px rgba(139, 24, 40, 0.2);
+    --ap-radius: 16px;
+    --ap-radius-sm: 10px;
+    --ap-footer-space: 5.5rem;
+}
+
+.ap-form [hidden],
+.org-doc-preview-dialog [hidden] {
+    display: none !important;
+}
+
+/* Page header back link -------------------------------------------------- */
+.org-topbar:has(~ .org-content .ap-form) {
+    margin-bottom: 0.85rem;
+}
+
+.org-topbar:has(~ .org-content .ap-form) .org-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 0.35rem;
+    padding: 0.2rem 0.55rem 0.2rem 0.4rem;
+    border-radius: 999px;
+    color: var(--ap-maroon);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.org-topbar:has(~ .org-content .ap-form) .org-back-link:hover {
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon-dark);
+}
+
+.org-topbar:has(~ .org-content .ap-form) .org-back-link:focus-visible {
+    outline: 2px solid var(--ap-maroon);
+    outline-offset: 2px;
+}
+
+.org-topbar:has(~ .org-content .ap-form) h1 {
+    font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+}
+
+.org-topbar:has(~ .org-content .ap-form) .org-welcome {
+    margin-top: 0.3rem;
+    font-size: 0.86rem;
+}
+
+/* Shell integration ------------------------------------------------------- */
+.org-content:has(.ap-form) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+.org-content:has(.ap-form) > .ap-rule {
+    margin: 0;
+}
+
+.ap-form {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    color: var(--ap-text);
+    font-size: 0.875rem;
+    line-height: 1.45;
+}
+
+.ap-scroll {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+    padding: 0 0.1rem 1rem;
+    scroll-padding-block: 1rem var(--ap-footer-space);
+}
+
+.org-content:has(.ap-form) > .ap-form {
+    animation: none;
+}
+
+/* Desktop: the form fills the remaining viewport; only .ap-scroll scrolls. */
+@media (min-width: 901px) and (min-height: 560px) {
+    .ap-form {
+        box-sizing: border-box;
+        height: var(--ap-height, calc(100dvh - 12.5rem));
+        min-height: 320px;
+        overflow: hidden;
+        border: 1px solid var(--ap-blush);
+        border-radius: 20px;
+        background: var(--ap-surface-soft);
+        box-shadow: 0 10px 30px rgba(90, 15, 30, 0.06);
+    }
+
+    .ap-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0.9rem 0.9rem 1.25rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(139, 24, 40, 0.28) transparent;
+    }
+
+    .ap-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .ap-scroll::-webkit-scrollbar-thumb {
+        background: rgba(139, 24, 40, 0.28);
+        border-radius: 999px;
+    }
+
+    .ap-footer {
+        flex: 0 0 auto;
+    }
+}
+
+/* Short desktop and mobile: the page scrolls and the footer sticks to the bottom. */
+@media (max-width: 900px), (max-height: 559.98px) {
+    .ap-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        margin-top: 0.25rem;
+        border: 1px solid var(--ap-blush);
+        border-radius: 16px 16px 0 0;
+        padding-bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -10px 24px rgba(90, 15, 30, 0.08);
+    }
+
+    .ap-scroll {
+        padding-bottom: 0.75rem;
+    }
+}
+
+.ap-card,
+.ap-field,
+.ap-type-choice,
+.ap-sdg-option,
+.ap-requirement-row,
+.ap-condition-toggle,
+.ap-upload-button {
+    scroll-margin-top: 1rem;
+    scroll-margin-bottom: calc(var(--ap-footer-space) + 1rem);
+}
+
+/* Cards and numbered headers ---------------------------------------------- */
+.ap-card {
+    min-width: 0;
+    padding: 1rem 1.1rem 1.1rem;
+    border: 1px solid var(--ap-blush);
+    border-radius: var(--ap-radius);
+    background: var(--ap-surface);
+    box-shadow: 0 2px 10px rgba(90, 15, 30, 0.035);
+}
+
+.ap-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--ap-blush);
+}
+
+.ap-section-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    min-width: 0;
+    flex: 1 1 16rem;
+}
+
+.ap-section-title > div {
+    min-width: 0;
+}
+
+.ap-section-number {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 10px;
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ap-section-title h2 {
+    margin: 0;
+    color: var(--ap-ink);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+
+.ap-section-title p {
+    margin: 0.15rem 0 0;
+    color: var(--ap-muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.ap-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 1 auto;
+    max-width: 100%;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-radius: 999px;
+    background: var(--ap-surface-soft);
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.ap-status.is-active {
+    border-color: var(--ap-success-line);
+    background: var(--ap-success-tint);
+    color: var(--ap-success);
+}
+
+.ap-status.is-warning {
+    border-color: var(--ap-warning-line);
+    background: var(--ap-warning-tint);
+    color: var(--ap-warning);
+}
+
+/* Field grid --------------------------------------------------------------- */
+.ap-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.8rem 0.9rem;
+    min-width: 0;
+}
+
+.ap-grid > * {
+    grid-column: span 6;
+    min-width: 0;
+}
+
+.ap-grid > .ap-span-2 { grid-column: span 2; }
+.ap-grid > .ap-span-3 { grid-column: span 3; }
+.ap-grid > .ap-span-6 { grid-column: span 6; }
+
+.ap-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.ap-field > span:first-child,
+.ap-field > label,
+.ap-type-field > legend,
+.ap-sdg-field > legend {
+    display: block;
+    padding: 0;
+    color: var(--ap-ink);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.ap-form legend b,
+.ap-field b {
+    color: var(--ap-maroon);
+    font-weight: 800;
+}
+
+.ap-field > small,
+.ap-sdg-field > small {
+    display: block;
+    margin: 0;
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.ap-form em {
+    display: block;
+    color: var(--ap-danger);
+    font-size: 0.72rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.ap-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.ap-field select,
+.ap-field textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    margin: 0;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-radius: var(--ap-radius-sm);
+    background: var(--ap-surface);
+    color: var(--ap-ink);
+    font: inherit;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ap-field textarea {
+    min-height: 5.25rem;
+    resize: vertical;
+}
+
+.ap-field input::placeholder,
+.ap-field textarea::placeholder {
+    color: #85777b;
+}
+
+.ap-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+.ap-field select:hover,
+.ap-field textarea:hover {
+    border-color: #d6b3ba;
+}
+
+.ap-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.ap-field select:focus,
+.ap-field textarea:focus {
+    outline: none;
+    border-color: var(--ap-maroon);
+    box-shadow: var(--ap-ring);
+}
+
+.ap-field:has(> em) input,
+.ap-field:has(> em) textarea,
+.ap-field:has(> em) select {
+    border-color: var(--ap-danger);
+}
+
+.ap-field input:read-only:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.ap-field input:disabled,
+.ap-field textarea:disabled {
+    border-color: var(--ap-disabled-line);
+    background: #f7f3f4;
+    color: var(--ap-text);
+}
+
+.ap-field input:read-only:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+    border-color: var(--ap-disabled-line);
+}
+
+/* Manual plan reference box */
+.ap-plan-reference {
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--ap-warning-line);
+    border-radius: 12px;
+    background: var(--ap-warning-tint);
+}
+
+.ap-plan-reference > label {
+    color: var(--ap-warning);
+}
+
+.ap-plan-reference input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    border-color: #ebc287;
+}
+
+.ap-plan-reference > small {
+    color: #6f430f;
+}
+
+/* Activity type radio cards ------------------------------------------------ */
+.ap-type-field,
+.ap-sdg-field {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.ap-type-field > legend,
+.ap-sdg-field > legend {
+    margin-bottom: 0.4rem;
+}
+
+.ap-type-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    gap: 0.6rem;
+}
+
+.ap-type-field > em {
+    margin-top: 0.35rem;
+}
+
+.ap-type-choice {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    min-width: 0;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-radius: 12px;
+    background: var(--ap-surface);
+    color: var(--ap-text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ap-type-choice:hover {
+    border-color: #d6b3ba;
+    background: var(--ap-surface-soft);
+}
+
+.ap-type-choice input[type="radio"] {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin: 0.12rem 0 0;
+    accent-color: var(--ap-maroon);
+}
+
+.ap-type-choice > span {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.ap-type-choice strong {
+    color: var(--ap-ink);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.ap-type-choice small {
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.ap-type-choice:has(input:checked) {
+    border-color: var(--ap-maroon);
+    background: var(--ap-maroon-tint);
+    box-shadow: inset 0 0 0 1px var(--ap-maroon);
+}
+
+.ap-type-choice:has(input:focus-visible) {
+    box-shadow: inset 0 0 0 1px var(--ap-maroon), var(--ap-ring);
+}
+
+/* Optional rationale --------------------------------------------------------- */
+.ap-rationale {
+    min-width: 0;
+    border: 1px dashed var(--ap-blush-strong);
+    border-radius: 12px;
+    background: var(--ap-surface);
+}
+
+.ap-rationale > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 12px;
+    color: var(--ap-ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.ap-rationale > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ap-rationale > summary::before {
+    content: "+";
+    display: inline-grid;
+    place-items: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 6px;
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon);
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ap-rationale[open] > summary::before {
+    content: "−";
+}
+
+.ap-rationale > summary small {
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.ap-rationale > summary:hover {
+    background: var(--ap-surface-soft);
+}
+
+.ap-rationale > .ap-field {
+    padding: 0 0.8rem 0.8rem;
+}
+
+/* SDG tiles ------------------------------------------------------------------ */
+.ap-sdg-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ap-sdg-field > em {
+    margin-top: 0.35rem;
+}
+
+.ap-sdg-option {
+    position: relative;
+    display: block;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.ap-sdg-option input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.ap-sdg-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-radius: 6px;
+    background: var(--ap-surface);
+}
+
+.ap-sdg-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 4px;
+    background: var(--sdg-color, var(--ap-maroon));
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.ap-sdg-number {
+    color: var(--ap-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+
+.ap-sdg-option:hover .ap-sdg-tile {
+    border-color: var(--ap-maroon);
+}
+
+.ap-sdg-option:has(input:checked) .ap-sdg-tile {
+    border-color: var(--ap-maroon);
+    box-shadow: inset 0 0 0 1px var(--ap-maroon);
+    background: var(--ap-maroon-tint);
+}
+
+.ap-sdg-option:has(input:focus-visible) .ap-sdg-tile {
+    outline: 2px solid var(--ap-ink);
+    outline-offset: 2px;
+}
+
+/* Requirements ----------------------------------------------------------- */
+.ap-progress {
+    display: block;
+    width: 100%;
+    height: 0.4rem;
+    margin: 0 0 0.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ap-blush);
+    color: var(--ap-maroon);
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.ap-progress::-webkit-progress-bar {
+    border-radius: 999px;
+    background: var(--ap-blush);
+}
+
+.ap-progress::-webkit-progress-value {
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ap-maroon), #c43b52);
+    transition: width 0.25s ease;
+}
+
+.ap-progress::-moz-progress-bar {
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ap-maroon), #c43b52);
+}
+
+.ap-rule {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+    margin: 0 0 0.85rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-left: 3px solid var(--ap-maroon);
+    border-radius: var(--ap-radius-sm);
+    background: var(--ap-maroon-tint);
+    color: var(--ap-text);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.ap-rule > i {
+    flex: 0 0 auto;
+    margin-top: 0.1rem;
+    color: var(--ap-maroon);
+}
+
+.ap-rule > span,
+.ap-rule > div {
+    min-width: 0;
+}
+
+.ap-rule strong {
+    color: var(--ap-ink);
+}
+
+.ap-rule ul {
+    margin: 0.3rem 0;
+    padding-left: 1.1rem;
+}
+
+.ap-rule small {
+    color: var(--ap-muted);
+}
+
+.org-content > .ap-rule[role="alert"] {
+    border-color: #f5c2bd;
+    border-left-color: var(--ap-danger);
+    background: var(--ap-danger-tint);
+}
+
+.org-content > .ap-rule[role="alert"] > i {
+    color: var(--ap-danger);
+}
+
+.ap-upload-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0 0 0.85rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--ap-warning-line);
+    border-radius: var(--ap-radius-sm);
+    background: var(--ap-warning-tint);
+    color: var(--ap-warning);
+    font-size: 0.78rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.ap-upload-notice.is-error {
+    border-color: #f5c2bd;
+    background: var(--ap-danger-tint);
+    color: var(--ap-danger);
+}
+
+.ap-upload-notice.is-success {
+    border-color: var(--ap-success-line);
+    background: var(--ap-success-tint);
+    color: var(--ap-success);
+}
+
+.ap-requirement-panel,
+.ap-extra-docs {
+    display: grid;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+/* Compact document card */
+.ap-requirement-row {
+    display: grid;
+    grid-template-columns: 2.4rem minmax(0, 1fr) minmax(10.5rem, 0.6fr);
+    grid-template-areas: "icon copy upload";
+    align-items: center;
+    gap: 0.6rem 0.85rem;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--ap-blush);
+    border-radius: 12px;
+    background: var(--ap-surface);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ap-requirement-row[data-required="1"] {
+    border-left: 3px solid var(--ap-maroon);
+}
+
+.ap-requirement-row.has-file {
+    border-color: var(--ap-success-line);
+    border-left-color: var(--ap-success);
+    background: #fbfefc;
+}
+
+.ap-requirement-row.is-invalid {
+    border-color: var(--ap-danger);
+    background: var(--ap-danger-tint);
+}
+
+.ap-requirement-row.is-invalid .ap-file-icon,
+.ap-file-status.is-error {
+    background: var(--ap-danger-tint);
+    color: var(--ap-danger);
+}
+
+.ap-requirement-row.is-inactive {
+    border-style: dashed;
+    border-left-width: 1px;
+    border-left-color: var(--ap-blush-strong);
+    background: var(--ap-surface-soft);
+}
+
+.ap-file-icon {
+    grid-area: icon;
+    align-self: start;
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 10px;
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon);
+    font-size: 1.1rem;
+}
+
+.ap-requirement-row.has-file .ap-file-icon {
+    background: var(--ap-success-tint);
+    color: var(--ap-success);
+}
+
+.ap-requirement-row.is-inactive .ap-file-icon {
+    background: #f1ecee;
+    color: var(--ap-muted);
+}
+
+.ap-requirement-copy {
+    grid-area: copy;
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.ap-requirement-title {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.ap-requirement-kicker {
+    color: var(--ap-maroon);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ap-requirement-row[data-required="0"] .ap-requirement-kicker,
+.ap-requirement-row.is-inactive .ap-requirement-kicker {
+    color: var(--ap-muted);
+}
+
+.ap-requirement-title strong,
+.ap-requirement-copy > strong {
+    color: var(--ap-ink);
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.ap-requirement-copy > p {
+    margin: 0;
+    color: var(--ap-muted);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.ap-requirement-copy > em {
+    margin-top: 0.1rem;
+}
+
+.ap-document-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.8rem;
+    min-width: 0;
+    margin-top: 0.15rem;
+}
+
+.ap-document-links small {
+    flex-basis: 100%;
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.ap-document-links a,
+.ap-document-links button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.6rem;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ap-maroon);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ap-document-links a:hover,
+.ap-document-links button:hover {
+    color: var(--ap-maroon-dark);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.ap-document-links [data-attachment-delete] {
+    color: var(--ap-danger);
+}
+
+.ap-document-links [data-attachment-delete]:hover {
+    color: #8f1b12;
+}
+
+.ap-document-links a:focus-visible,
+.ap-document-links button:focus-visible {
+    outline: 2px solid var(--ap-maroon);
+    outline-offset: 2px;
+}
+
+.ap-condition-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--ap-blush-strong);
+    border-radius: 999px;
+    background: var(--ap-surface);
+    color: var(--ap-text);
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ap-condition-toggle input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: var(--ap-maroon);
+}
+
+.ap-condition-toggle:has(input:checked) {
+    border-color: var(--ap-maroon);
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon-dark);
+}
+
+.ap-condition-toggle:has(input:focus-visible) {
+    box-shadow: var(--ap-ring);
+}
+
+.ap-condition-toggle:has(input:disabled) {
+    border-color: var(--ap-disabled-line);
+    background: var(--ap-disabled-bg);
+    color: var(--ap-disabled-text);
+    cursor: not-allowed;
+}
+
+.ap-requirement-upload {
+    grid-area: upload;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+
+/* Filename chip */
+.ap-file-status {
+    display: inline-block;
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: #f4eff0;
+    color: var(--ap-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: right;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.ap-file-status:empty {
+    display: none;
+}
+
+.ap-requirement-row.has-file .ap-file-status {
+    background: var(--ap-success-tint);
+    color: var(--ap-success);
+}
+
+.ap-upload-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 2.15rem;
+    padding: 0.4rem 0.95rem;
+    border: 1px solid var(--ap-maroon);
+    border-radius: 999px;
+    background: var(--ap-surface);
+    color: var(--ap-maroon);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ap-upload-button:hover {
+    background: var(--ap-maroon);
+    color: #fff;
+}
+
+.ap-upload-button input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.ap-upload-button:has(input:focus-visible) {
+    outline: 2px solid var(--ap-maroon);
+    outline-offset: 2px;
+}
+
+.ap-requirement-row.has-file .ap-upload-button {
+    border-color: var(--ap-blush-strong);
+    color: var(--ap-text);
+}
+
+.ap-requirement-row.has-file .ap-upload-button:hover {
+    border-color: var(--ap-maroon);
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon-dark);
+}
+
+.ap-upload-button:has(input:disabled),
+.ap-upload-button:has(input:disabled):hover {
+    border-color: var(--ap-disabled-line);
+    background: var(--ap-disabled-bg);
+    color: var(--ap-disabled-text);
+    cursor: not-allowed;
+}
+
+/* Supporting documents ------------------------------------------------------- */
+.ap-supporting {
+    padding: 0;
+}
+
+.ap-supporting > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.6rem;
+    padding: 0.85rem 2.6rem 0.85rem 1.1rem;
+    position: relative;
+    border-radius: var(--ap-radius);
+    color: var(--ap-ink);
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.35;
+    cursor: pointer;
+    list-style: none;
+}
+
+.ap-supporting > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ap-supporting > summary::after {
+    content: "\F282";
+    position: absolute;
+    top: 50%;
+    right: 1.1rem;
+    color: var(--ap-maroon);
+    font-family: "bootstrap-icons";
+    font-size: 0.9rem;
+    font-weight: 400;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease;
+}
+
+.ap-supporting[open] > summary::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.ap-supporting > summary small {
+    color: var(--ap-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.ap-supporting > summary:hover {
+    background: var(--ap-surface-soft);
+}
+
+.ap-supporting > summary:focus-visible {
+    outline: 2px solid var(--ap-maroon);
+    outline-offset: -2px;
+}
+
+.ap-supporting[open] > summary {
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid var(--ap-blush);
+    border-radius: var(--ap-radius) var(--ap-radius) 0 0;
+}
+
+.ap-supporting > :not(summary) {
+    margin-inline: 1.1rem;
+}
+
+.ap-supporting[open] {
+    padding-bottom: 1.1rem;
+}
+
+.ap-supporting > p {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: var(--ap-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.ap-supporting > .ap-footer-actions {
+    justify-content: flex-start;
+    margin-bottom: 0.85rem;
+}
+
+.ap-supporting > .ap-footer-actions .ap-file-status {
+    flex: 1 1 12rem;
+    text-align: left;
+    border-radius: 10px;
+}
+
+/* Extra documents reuse the compact card; links take the action column. */
+.ap-extra-docs .ap-requirement-row > .ap-document-links {
+    grid-area: upload;
+    justify-content: flex-end;
+    margin-top: 0;
+}
+
+/* Footer ------------------------------------------------------------------ */
+.ap-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 0.7rem 1rem;
+    border-top: 1px solid var(--ap-blush);
+    background: var(--ap-surface);
+}
+
+.ap-footer-copy {
+    display: grid;
+    gap: 0.05rem;
+    min-width: 0;
+    flex: 1 1 14rem;
+}
+
+.ap-footer-copy strong {
+    color: var(--ap-ink);
+    font-size: 0.85rem;
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.ap-footer-copy small {
+    color: var(--ap-muted);
+    font-size: 0.73rem;
+    line-height: 1.4;
+}
+
+.ap-footer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.ap-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 2.5rem;
+    padding: 0.55rem 1.15rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ap-button:focus-visible {
+    outline: 2px solid var(--ap-maroon);
+    outline-offset: 2px;
+}
+
+.ap-button-quiet {
+    border-color: var(--ap-blush-strong);
+    background: var(--ap-surface);
+    color: var(--ap-text);
+}
+
+.ap-button-quiet:hover {
+    border-color: #d6b3ba;
+    background: var(--ap-maroon-tint);
+    color: var(--ap-maroon-dark);
+}
+
+.ap-button-outline {
+    border-color: var(--ap-maroon);
+    background: var(--ap-surface);
+    color: var(--ap-maroon);
+}
+
+.ap-button-outline:hover {
+    background: var(--ap-maroon-tint);
+}
+
+.ap-button-primary {
+    background: var(--ap-maroon);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(139, 24, 40, 0.24);
+}
+
+.ap-button-primary:hover {
+    background: var(--ap-maroon-dark);
+}
+
+.ap-button:disabled,
+.ap-button:disabled:hover,
+.ap-button[aria-disabled="true"] {
+    border-color: var(--ap-disabled-line);
+    background: var(--ap-disabled-bg);
+    color: var(--ap-disabled-text);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* Responsive ---------------------------------------------------------------- */
+@media (max-width: 1180px) {
+    .ap-grid > .ap-span-2 { grid-column: span 3; }
+}
+
+@media (max-width: 760px) {
+    .ap-requirement-row {
+        grid-template-columns: 2.25rem minmax(0, 1fr);
+        grid-template-areas:
+            "icon copy"
+            "upload upload";
+    }
+
+    .ap-file-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .ap-requirement-upload,
+    .ap-extra-docs .ap-requirement-row > .ap-document-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 0.55rem;
+        border-top: 1px solid var(--ap-blush);
+    }
+
+    .ap-extra-docs .ap-requirement-row > .ap-document-links {
+        justify-content: flex-start;
+    }
+
+
+    .ap-requirement-upload .ap-file-status {
+        flex: 1 1 8rem;
+        text-align: left;
+    }
+}
+
+@media (max-width: 640px) {
+    .ap-form {
+        --ap-footer-space: 9.5rem;
+    }
+
+    .ap-grid > .ap-span-2,
+    .ap-grid > .ap-span-3 {
+        grid-column: span 6;
+    }
+
+    .ap-card {
+        padding: 0.85rem 0.85rem 0.95rem;
+        border-radius: 14px;
+    }
+
+    .ap-supporting {
+        padding: 0;
+    }
+
+    .ap-supporting[open] {
+        padding-bottom: 0.95rem;
+    }
+
+    .ap-supporting > summary {
+        padding-left: 0.85rem;
+    }
+
+    .ap-supporting > :not(summary) {
+        margin-inline: 0.85rem;
+    }
+
+    .ap-sdg-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+    }
+
+    .ap-sdg-icon {
+        font-size: 1rem;
+    }
+
+    .ap-footer {
+        padding: 0.65rem 0.75rem;
+    }
+
+    .ap-footer .ap-footer-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .ap-footer .ap-footer-actions .ap-button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 0.6rem;
+    }
+
+    .ap-footer .ap-footer-actions .ap-button-primary {
+        grid-column: 1 / -1;
+        order: -1;
+    }
+
+    .ap-supporting > .ap-footer-actions > * {
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 380px) {
+    .ap-requirement-row {
+        gap: 0.5rem 0.6rem;
+        padding: 0.6rem;
+    }
+
+    .ap-requirement-upload .ap-upload-button {
+        flex: 1 1 100%;
+    }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ap-form *,
+    .ap-form *::before,
+    .ap-form *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Document preview dialog ------------------------------------------------ */
+.org-doc-preview-dialog {
+    box-sizing: border-box;
+    width: min(1120px, calc(100vw - 2rem));
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--ap-text);
+    box-shadow: 0 22px 70px rgba(38, 23, 27, 0.28);
+    overflow: hidden;
+}
+
+.org-doc-preview-dialog::backdrop {
+    background: rgba(36, 24, 28, 0.64);
+    backdrop-filter: blur(3px);
+}
+
+.org-doc-preview-box {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
+    border-radius: 18px;
+    background: #fff;
+}
+
+.org-doc-preview-head,
+.org-doc-preview-foot {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.1rem;
+    background: #fff;
+}
+
+.org-doc-preview-head {
+    border-bottom: 1px solid #eee2e5;
+}
+
+.org-doc-preview-head > :first-child {
+    min-width: 0;
+}
+
+.org-doc-preview-head strong {
+    display: block;
+    color: #30272a;
+    font-size: 0.96rem;
+    overflow-wrap: anywhere;
+}
+
+.org-doc-preview-head small {
+    display: block;
+    margin-top: 0.18rem;
+    color: #6a5d61;
+    font-size: 0.72rem;
+}
+
+.org-doc-preview-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #eadde0;
+    border-radius: 50%;
+    background: #fff;
+    color: #5e5155;
+    cursor: pointer;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.org-doc-preview-close:hover {
+    border-color: #d9b7be;
+    background: #fdf5f6;
+    color: #8b1828;
+}
+
+.org-doc-preview-close:focus-visible,
+.org-doc-preview-download:focus-visible,
+.org-doc-preview-dialog .org-btn-cancel-link:focus-visible {
+    outline: 2px solid #8b1828;
+    outline-offset: 2px;
+}
+
+.org-doc-preview-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 1.1rem;
+    background: #e9e6e5;
+    scrollbar-width: thin;
+}
+
+.org-doc-preview-body .docx-wrapper {
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+.org-doc-preview-body .docx {
+    max-width: 100%;
+    margin: 0 auto 1.25rem !important;
+    box-shadow: 0 7px 24px rgba(42, 27, 30, 0.16) !important;
+}
+
+.org-doc-preview-body iframe {
+    display: block;
+    width: 100%;
+    height: calc(100dvh - 12rem);
+    min-height: 260px;
+    border: 0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.org-doc-preview-body img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100dvh - 12rem);
+    height: auto;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.org-doc-preview-loading,
+.org-doc-preview-error {
+    display: grid;
+    min-height: min(330px, calc(100dvh - 12rem));
+    place-items: center;
+    padding: 2rem;
+    color: #665a5e;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.org-doc-preview-loading i,
+.org-doc-preview-error i {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #8b1828;
+    font-size: 1.5rem;
+}
+
+.org-doc-preview-foot {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    border-top: 1px solid #eee2e5;
+}
+
+.org-doc-preview-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: #8b1828;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.org-doc-preview-download:hover {
+    background: #6e101f;
+}
+
+.org-doc-preview-dialog .org-btn-cancel-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid #e2d8da;
+    border-radius: 999px;
+    background: #fff;
+    color: #5e5457;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.org-doc-preview-dialog .org-btn-cancel-link:hover {
+    border-color: #c4b0b4;
+    background: #fdf8f9;
+    color: #1a1618;
+}
+
+@media (max-width: 640px) {
+    .org-doc-preview-dialog {
+        width: calc(100vw - 1rem);
+        max-height: calc(100dvh - 1rem);
+    }
+
+    .org-doc-preview-box {
+        max-height: calc(100dvh - 1rem);
+    }
+
+    .org-doc-preview-head,
+    .org-doc-preview-foot {
+        padding: 0.7rem 0.8rem;
+    }
+
+    .org-doc-preview-body {
+        padding: 0.6rem;
+    }
+
+    .org-doc-preview-body iframe {
+        height: calc(100dvh - 11rem);
+    }
+
+    .org-doc-preview-foot > * {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}

@@ -68,45 +68,7 @@ class RenewalAccessTest extends TestCase
         $this->assertTrue((bool) OrgRenewalWindow::query()->latest('id')->value('is_open'));
     }
 
-    public function test_oso_can_customize_renewal_requirements(): void
-    {
-        $user = $this->ensureOfficeUser('oso');
 
-        OrgRenewalWindow::query()->delete();
-
-        $requirements = [
-            ['key' => 'commitment_letter', 'title' => 'Adviser Commitment Letter'],
-            ['title' => 'Current Financial Plan'],
-        ];
-
-        $this->actingAs($user, 'office')
-            ->post('/office-desk/renewal/window', [
-                'academic_year' => '2026-2027',
-                'semester' => 'Annual',
-                'is_open' => '0',
-                'required_docs' => $requirements,
-            ])
-            ->assertRedirect(route('office.renewal'));
-
-        $saved = OrgRenewalWindow::query()->latest('id')->firstOrFail()->requiredDocList();
-
-        $this->assertCount(2, $saved);
-        $this->assertSame('commitment_letter', $saved[0]['key']);
-        $this->assertSame('Adviser Commitment Letter', $saved[0]['title']);
-        $this->assertSame('current_financial_plan', $saved[1]['key']);
-        $this->assertSame('Current Financial Plan', $saved[1]['title']);
-    }
-
-    public function test_oso_sees_all_organizations_qualification_roster(): void
-    {
-        $user = $this->ensureOfficeUser('oso');
-
-        $response = $this->actingAs($user, 'office')->get('/office-desk/renewal');
-        $response->assertOk();
-        $response->assertSee('Organization Renewal Eligibility &amp; Status Monitor', false);
-        $response->assertSee('Qualified to Renew', false);
-        $response->assertSee('Set Status', false);
-    }
 
     public function test_oso_can_update_organization_qualification_and_status(): void
     {

@@ -2,6 +2,13 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- SO desk branding now shows the assigned organization’s short name, falling back to its full name.
+- SO renewal now shows organization-specific details, the official form, and a progress-tracked A–J upload checklist.
+- SO renewal keeps the submission bar visible while scrolling, improves disabled-button contrast, and preserves space for the final attachment on desktop and mobile.
+- OSO renewal packets now have a submitted-documents review screen with per-attachment verification, revision/rejection remarks, and an all-documents-verified approval gate. SO replacements reset review status; final packet decisions are locked without activating organization records.
+- SO activity creation now uses numbered information/requirement cards, in-campus/off-campus choices, colored SDG tiles, real renewal-status badges, and progress-tracked uploads with conditional requirements. The submission bar remains visible on desktop and mobile; manual plan references, drafts, and supporting-file uploads are retained.
+- OSO renewal now has dashboard totals, scheduled filing-window controls, searchable/status-filtered applications with pagination and CSV export, and official-template cards with Add/Edit/Replace/Remove dialogs. Template changes preserve signed uploads; previews follow the current file instead of stale paired PDFs. Requirement codes remain stable, and new filing periods retain historical windows without inheriting old approvals.
+
 ## [v13.7.0](https://github.com/laravel/laravel/compare/v13.6.0...v13.7.0) - 2026-05-14
 
 **Full Changelog**: https://github.com/laravel/laravel/compare/v13.6.0...v13.7.0
