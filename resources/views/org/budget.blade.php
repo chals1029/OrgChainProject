@@ -24,14 +24,48 @@
     $budgetDefaultForRole = $isSo
         ? ($budgetOptionsForRole->first()['key'] ?? 'all')
         : ($liveBudgetDefault ?? 'all');
+    $osoHasActivityRequest = $isOso && request()->has('activity_id');
+    $osoSelectedActivity = null;
+    $osoSelectedActivityKey = null;
+    $osoNavigationFilters = [
+        'academic_year' => $selectedYear,
+        'semester' => $selectedSemester,
+        'department' => request('department', ''),
+        'organization' => $selectedOrganization ?? '',
+    ];
+    if ($osoHasActivityRequest
+        && ($selectedOrganization ?? '') !== ''
+        && is_scalar(request('activity_id'))
+        && ctype_digit((string) request('activity_id'))
+        && (int) request('activity_id') > 0) {
+        foreach (($liveBudgetEntries ?? []) as $key => $entry) {
+            if ($key === 'all'
+                || (string) ($entry['activityId'] ?? '') !== (string) request('activity_id')
+                || ($entry['orgName'] ?? '') !== $selectedOrganization
+                || ($entry['academic_year'] ?? '') !== $selectedYear
+                || ($selectedSemester !== 'Annual' && ($entry['semester'] ?? '') !== $selectedSemester)) {
+                continue;
+            }
+            $osoSelectedActivity = $entry;
+            $osoSelectedActivityKey = $key;
+            break;
+        }
+    }
+    if ($isOso) {
+        $budgetDefaultForRole = $osoSelectedActivityKey ?? 'all';
+    }
+    $budgetPrintFilters = $isOso ? $osoNavigationFilters : request()->query();
+    if ($osoSelectedActivity !== null) {
+        $budgetPrintFilters['activity_id'] = $osoSelectedActivity['activityId'];
+    }
 @endphp
 
-@section('title', $isSo ? 'Budget Utilization' : 'Budget Utilization & Financial Auditing')
+@section('title', ($isSo || $isOso) ? 'Budget Utilization' : 'Budget Utilization & Financial Auditing')
 
 @section('header')
-    <h1><strong>{{ $isSo ? 'Budget Utilization' : 'Budget Utilization & Financial Intelligence' }}</strong></h1>
+    <h1><strong>{{ ($isSo || $isOso) ? 'Budget Utilization' : 'Budget Utilization & Financial Intelligence' }}</strong></h1>
     @if ($isOso)
-        <p class="org-welcome">Comprehensive monitoring of student organization approved budgets, expense liquidations, audit verification, and ledger histories.</p>
+        <p class="org-welcome">Find an organization, choose an activity, then review its encoded expenses and receipts.</p>
     @elseif ($isSdo)
         <p class="org-welcome">Monitor sustainability budget disbursements, resource utilization rates, and environmental initiative expenditures.</p>
     @elseif ($isOvcaa)
@@ -42,45 +76,12 @@
 @endsection
 
 @section('actions')
-    <a id="budgetPrintLink" href="{{ route('office.budget.print', request()->query()) }}" target="_blank" rel="noopener" class="org-btn org-btn-primary" title="Open the budget utilization report">
+    <a id="budgetPrintLink" href="{{ route('office.budget.print', $budgetPrintFilters) }}" target="_blank" rel="noopener" class="org-btn org-btn-primary" title="Open the budget utilization report">
         <i class="bi bi-file-earmark-arrow-down"></i> Print / Export Report
     </a>
 @endsection
 
 @section('content')
-    @if ($isSo)
-    @include('org.partials.fund-balances')
-    <details class="org-fund-settings">
-        <summary>
-            <span class="org-fund-settings-title">Set organization funds</span>
-            <span class="org-fund-settings-hint">Configure the selected organization’s annual allocation</span>
-        </summary>
-        <form method="post" action="{{ route('office.budget.accounts.store') }}" class="org-fund-form">
-            @csrf
-            <label class="org-fund-field org-fund-field-organization">
-                <span>Organization</span>
-                <select name="organization_name" required>
-                    @foreach ($organizations as $name)
-                        <option @selected($selectedOrganization === $name)>{{ $name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="org-fund-field org-fund-field-year">
-                <span>Academic year</span>
-                <input name="academic_year" value="{{ $selectedYear }}" pattern="[0-9]{4}-[0-9]{4}" placeholder="2026-2027" required>
-            </label>
-            <label class="org-fund-field org-fund-field-total">
-                <span>Total organization funds <small>(PHP)</small></span>
-                <span class="org-fund-amount">
-                    <span class="org-fund-currency" aria-hidden="true">₱</span>
-                    <input type="number" name="total_funds" min="0" step="1" inputmode="decimal" placeholder="0.00" aria-describedby="orgFundHelp" required value="{{ $selectedOrganization ? ($accountBalances->first()['total'] ?? '') : '' }}">
-                </span>
-                <small id="orgFundHelp">Enter the total approved allocation.</small>
-            </label>
-            <button class="org-btn org-btn-primary org-fund-save" type="submit"><i class="bi bi-check2-circle"></i> Save funds</button>
-        </form>
-    </details>
-    @endif
     <style>
         /* ---------------------------------------------------------
            Budget Utilization Theme & Tokens (Unslop / Impeccable Style)
@@ -643,102 +644,6 @@
             color: #ffffff;
         }
 
-        /* 10, 12, 13. Bottom 3-Column Split: Supporting Documents, Verification Details & Activity Log */
-        .org-budget-bottom-3col {
-            display: grid;
-            grid-template-columns: 1.15fr 1fr 1.15fr;
-            gap: 1.25rem;
-        }
-
-        .org-subpanel-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1.5px solid #f0e6e8;
-            padding: 1.35rem 1.5rem;
-            box-shadow: 0 4px 18px rgba(90, 15, 30, 0.03);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .org-subpanel-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #f6eff0;
-        }
-
-        .org-subpanel-head h3 {
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #1a1618;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-        }
-
-        /* Document File List */
-        .org-file-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.65rem;
-        }
-
-        .org-file-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem 0.85rem;
-            border-radius: 12px;
-            background: #faf6f7;
-            border: 1px solid #f0e4e6;
-            transition: all 0.15s ease;
-        }
-
-        .org-file-item:hover {
-            background: #ffffff;
-            border-color: #8b1828;
-            box-shadow: 0 2px 8px rgba(90, 15, 30, 0.05);
-        }
-
-        .org-file-left {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            overflow: hidden;
-        }
-
-        .org-file-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #fee2e2;
-            color: #dc2626;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.05rem;
-            flex-shrink: 0;
-        }
-
-        .org-file-meta strong {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #1a1618;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 170px;
-        }
-
-        .org-file-meta small {
-            display: block;
-            font-size: 0.7rem;
-            color: #786f73;
-        }
 
         .org-file-action-btn {
             background: #ffffff;
@@ -761,111 +666,6 @@
             border-color: #8b1828;
         }
 
-        /* Verification Panel */
-        .org-audit-seal-box {
-            background: #fdfafb;
-            border: 1.5px solid #f2e4e7;
-            border-radius: 16px;
-            padding: 1.15rem 1.25rem;
-            margin-bottom: 1rem;
-        }
-
-        .org-audit-seal-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.85rem;
-        }
-
-        .org-audit-badge-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #dcfce7;
-            color: #16a34a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .org-audit-remarks-quote {
-            font-size: 0.8rem;
-            line-height: 1.45;
-            color: #4b4548;
-            font-style: italic;
-            border-left: 3px solid #16a34a;
-            padding-left: 0.75rem;
-            margin: 0 0 0.85rem;
-        }
-
-        .org-hash-code {
-            font-family: ui-monospace, monospace;
-            font-size: 0.7rem;
-            background: #ffffff;
-            border: 1px solid #ebd8dc;
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            color: #786f73;
-            display: block;
-            word-break: break-all;
-        }
-
-        /* Activity Log Timeline */
-        .org-timeline-list {
-            position: relative;
-            padding-left: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .org-timeline-list::before {
-            content: '';
-            position: absolute;
-            top: 6px;
-            bottom: 6px;
-            left: 5px;
-            width: 2px;
-            background: #f0e0e3;
-        }
-
-        .org-timeline-item {
-            position: relative;
-        }
-
-        .org-timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -1.25rem;
-            top: 4px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #8b1828;
-            border: 2px solid #ffffff;
-            box-shadow: 0 0 0 2px rgba(139, 24, 40, 0.15);
-        }
-
-        .org-timeline-item.is-green::before {
-            background: #16a34a;
-            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
-        }
-
-        .org-timeline-item strong {
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #1a1618;
-            display: block;
-        }
-
-        .org-timeline-item small {
-            font-size: 0.72rem;
-            color: #786f73;
-            display: block;
-            margin-top: 0.15rem;
-        }
 
         .org-report-pagination {
             display: flex;
@@ -914,8 +714,7 @@
         /* Responsive Breakpoints */
         @media (max-width: 1200px) {
             .org-info-panels-grid,
-            .org-budget-charts-grid,
-            .org-budget-bottom-3col {
+            .org-budget-charts-grid {
                 grid-template-columns: 1fr;
             }
             .org-kpi-row {
@@ -1008,6 +807,21 @@
         .so-secondary-details > .org-budget-charts-grid {
             padding: 0 1.1rem 1.1rem;
         }
+
+        .oso-budget-breadcrumbs {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            color: #786f73;
+            font-size: 0.84rem;
+            overflow-wrap: anywhere;
+        }
+
+        .oso-budget-breadcrumbs a {
+            color: #8b1828;
+            font-weight: 700;
+        }
     </style>
 
     <div class="org-budget-container">
@@ -1021,7 +835,7 @@
                 </div>
 
                 {{-- Activity Selection Filter --}}
-                <div class="org-filter-group-pill">
+                <div class="org-filter-group-pill" @if ($isOso) hidden style="display:none;" @endif>
                     <label for="budgetActivitySelector" class="org-filter-label-text"><i class="bi bi-bar-chart-line"></i> {{ $isSo ? 'Approved activity' : 'Portfolio / Activity' }}</label>
                     <div class="org-select-pill-wrap">
                         <select id="budgetActivitySelector" class="org-select-pill" onchange="selectBudgetActivity(this.value)">
@@ -1039,9 +853,10 @@
 
                 {{-- Organization Filter --}}
                 @unless ($isSo)
-                <form method="get" action="{{ route('office.budget') }}" class="org-filter-group-pill" style="margin:0;">
+                <form method="get" action="{{ route('office.budget') }}" class="org-filter-group-pill" style="margin:0;{{ $isOso ? 'display:none;' : '' }}" @if ($isOso) hidden @endif>
                     <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
                     <input type="hidden" name="semester" id="budgetOrgSemester" value="{{ request('semester', 'Annual') }}">
+                    <input type="hidden" name="department" value="{{ request('department', '') }}">
                     <label for="budgetOrgSelector" class="org-filter-label-text"><i class="bi bi-building"></i> Organization</label>
                     <div class="org-select-pill-wrap">
                         <select id="budgetOrgSelector" name="organization" class="org-select-pill" onchange="this.form.submit()">
@@ -1060,10 +875,16 @@
                     <label for="budgetYearSelector" class="org-filter-label-text"><i class="bi bi-calendar2-range"></i> Year</label>
                     <div class="org-select-pill-wrap">
                         <select id="budgetYearSelector" class="org-select-pill" onchange="updateFilterPeriod()">
-                            <option value="2025-2026" selected>A.Y. 2025–2026</option>
-                            <option value="2026-2027">A.Y. 2026–2027</option>
-                            <option value="2024-2025">A.Y. 2024–2025</option>
-                            <option value="2023-2024">A.Y. 2023–2024</option>
+                            @if ($isOso && $osoFinancialOverview !== null)
+                                @foreach ($osoFinancialOverview['years'] as $year)
+                                    <option value="{{ $year }}" @selected($selectedYear === $year)>A.Y. {{ str_replace('-', '–', $year) }}</option>
+                                @endforeach
+                            @else
+                                <option value="2025-2026">A.Y. 2025–2026</option>
+                                <option value="2026-2027">A.Y. 2026–2027</option>
+                                <option value="2024-2025">A.Y. 2024–2025</option>
+                                <option value="2023-2024">A.Y. 2023–2024</option>
+                            @endif
                         </select>
                         <i class="bi bi-chevron-down org-select-pill-arrow"></i>
                     </div>
@@ -1085,6 +906,35 @@
             </div>
 
         </section>
+        @if ($isOso && (($selectedOrganization ?? '') !== '' || $osoHasActivityRequest))
+            <nav class="oso-budget-breadcrumbs" aria-label="Budget navigation">
+                <a href="{{ route('office.budget', array_merge($osoNavigationFilters, ['organization' => ''])) }}">All organizations</a>
+                @if (($selectedOrganization ?? '') !== '')
+                    <span aria-hidden="true">/</span>
+                    <a href="{{ route('office.budget', $osoNavigationFilters) }}">Organization activities — {{ $selectedOrganization }}</a>
+                @endif
+                @if ($osoSelectedActivity !== null)
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page">{{ $osoSelectedActivity['actName'] }}</span>
+                @endif
+            </nav>
+        @endif
+        @if ($osoHasActivityRequest && $osoSelectedActivity === null)
+            <section class="org-info-card" aria-label="Unavailable activity">
+                <h2 class="org-info-card-title">Activity unavailable</h2>
+                <p>This approved activity is not available for the selected organization, academic year, and semester. Select an activity from the organization’s approved activity list.</p>
+                <a class="org-btn org-btn-outline" href="{{ route('office.budget', $osoNavigationFilters) }}">{{ ($selectedOrganization ?? '') !== '' ? 'Return to organization activities' : 'Return to all organizations' }}</a>
+            </section>
+        @endif
+        @if ($isOso && !$osoHasActivityRequest && $osoFinancialOverview !== null)
+            @include('org.budget-financial-overview')
+        @endif
+        @if ($isSo)
+            <p class="org-welcome" style="margin:0;">
+                <a href="{{ route('office.financial', ['academic_year' => $selectedYear]) }}">Manage organization cash in Financial Report</a>.
+                Approved budgets reserve cash; recorded receipt expenses appear there once as cash outflow.
+            </p>
+        @endif
 
         @if ($canRecordExpense)
         {{-- SO only: Record Expense with a receipt photo and manually entered details --}}
@@ -1414,6 +1264,7 @@
             }
         </style>
         <script src="{{ asset('js/receipt-upload.js') }}?v={{ filemtime(public_path('js/receipt-upload.js')) }}"></script>
+        @if (!$isOso || $osoSelectedActivity !== null)
 
         {{-- 1 & 2. Organization Information & Activity / Project Information Panels --}}
         <div class="org-info-panels-grid">
@@ -1530,15 +1381,16 @@
 
 
         {{-- 7 & 8. Expense Breakdown (Donut Chart) & Budget vs. Actual Expenses (Bar Chart) --}}
-        @if ($isSo)
-            <details class="so-secondary-details">
+        @section('budget-chart-details')
+        @if ($isSo || $isOso)
+            <details class="so-secondary-details" @if ($isOso) id="osoBudgetCharts" @endif>
                 <summary>Show budget charts and trend details</summary>
         @endif
         <div class="org-budget-charts-grid">
             {{-- 7. Expense Breakdown (Donut Chart) --}}
             <section class="org-budget-chart-card" aria-label="Expense Breakdown by Scope">
                 <div class="org-budget-chart-head">
-                    <h3><i class="bi bi-pie-chart" style="color: #8b1828;"></i> Expense Breakdown <small style="font-weight:600;color:#786f73;font-size:0.72rem;">by Scope</small></h3>
+                    <h3><i class="bi bi-pie-chart" style="color: #8b1828;"></i> Expense Breakdown <small style="font-weight:600;color:#786f73;font-size:0.72rem;">{{ $isOso ? 'Organization portfolio by scope' : 'by Scope' }}</small></h3>
                     <span class="org-info-pill-badge" id="donutTotalBadge">—</span>
                 </div>
                 <div class="org-chart-canvas-wrap">
@@ -1550,24 +1402,9 @@
                                 <small>Disbursed</small>
                             </div>
                         </div>
-                        <div class="org-legend-list" id="donutCustomLegend">
-                            <div class="org-legend-row">
-                                <div class="org-legend-left">
-                                    <span class="org-legend-color-dot" style="background: #8b1828;"></span>
-                                    <span>In-Campus</span>
-                                </div>
-                                <div class="org-legend-right">₱72,400 (62.9%)</div>
-                            </div>
-                            <div class="org-legend-row">
-                                <div class="org-legend-left">
-                                    <span class="org-legend-color-dot" style="background: #1d4ed8;"></span>
-                                    <span>Off-Campus</span>
-                                </div>
-                                <div class="org-legend-right">₱42,750 (37.1%)</div>
-                            </div>
-                        </div>
+                        <div class="org-legend-list" id="donutCustomLegend"></div>
                     </div>
-                    <p style="margin:0.75rem 0 0;font-size:0.74rem;color:#786f73;">Portfolio-wide scope split — per-activity itemization lives in the Budget vs. Actual chart and the Expense Details table below.</p>
+                    <p style="margin:0.75rem 0 0;font-size:0.74rem;color:#786f73;">{{ $isOso ? 'Organization portfolio-wide scope split for the selected year and semester, not just this activity. The Budget vs. Actual chart and encoded expense table show the selected activity.' : 'Portfolio-wide scope split — per-activity itemization lives in the Budget vs. Actual chart and the Expense Details table.' }}</p>
                 </div>
             </section>
 
@@ -1582,9 +1419,13 @@
                 </div>
             </section>
         </div>
-        @if ($isSo)
+        @if ($isSo || $isOso)
             </details>
         @endif
+        @endsection
+        @unless ($isOso)
+            @yield('budget-chart-details')
+        @endunless
 
         {{-- 9. Expense Details (Data Table) --}}
         <section class="org-expense-table-card" aria-label="Detailed Expense Entries Table">
@@ -1623,75 +1464,28 @@
                 <nav class="org-report-pagination-nav" id="budgetExpensePaginationNav" aria-label="Expense detail pages"></nav>
             </div>
         </section>
+        @if ($isOso)
+            @yield('budget-chart-details')
+        @endif
+        @endif
 
-        {{-- 10, 12, 13. Supporting Documents, Verification Details & Transaction History --}}
-        <div class="org-budget-bottom-3col">
-            {{-- 10. Supporting Documents (File / Document List) --}}
-            <section class="org-subpanel-card" aria-label="Supporting Documents List">
-                <div class="org-subpanel-head">
-                    <h3><i class="bi bi-paperclip" style="color: #8b1828;"></i> Receipt History</h3>
-                    <span class="org-info-pill-badge" id="docsCountBadge">0 Files</span>
-                </div>
-                <a id="receiptPackageLink" class="org-btn org-btn-outline" style="margin-bottom:.75rem;" href="{{ route('office.budget.receipts.package', request()->query()) }}">Download receipt compilation</a>
-                <div class="org-file-list" id="supportingDocsList">
-                    {{-- File items dynamically rendered --}}
-                </div>
-                <div class="org-report-pagination" id="budgetDocumentsPagination" aria-label="Supporting document pagination">
-                    <span id="budgetDocumentsPaginationInfo"></span>
-                    <nav class="org-report-pagination-nav" id="budgetDocumentsPaginationNav" aria-label="Supporting document pages"></nav>
-                </div>
-            </section>
-
-            {{-- 12. Verification Details (Information Panel) --}}
-            <section class="org-subpanel-card" aria-label="Verification and Audit Remarks">
-                <div class="org-subpanel-head">
-                    <h3><i class="bi bi-patch-check-fill" style="color: #16a34a;"></i> Receipt Seal Details</h3>
-                </div>
-                <div class="org-audit-seal-box">
-                    <div class="org-audit-seal-row">
-                        <div class="org-audit-badge-icon">
-                            <i class="bi bi-shield-fill-check"></i>
-                        </div>
-                        <div>
-                            <strong style="font-size: 0.88rem; color: #1a1618; display: block;" id="verifierName">No receipt selected</strong>
-                            <small style="font-size: 0.72rem; color: #786f73; display: block;" id="verifiedDate">—</small>
-                        </div>
-                    </div>
-                    <div class="org-audit-remarks-quote" id="auditRemarksText">
-                        Select an activity to view its live receipt confirmation status.
-                    </div>
-                    <span style="font-size: 0.68rem; font-weight: 700; color: #786f73; text-transform: uppercase; margin-bottom: 0.2rem; display: block;">Ledger Verification Hash:</span>
-                    <span class="org-hash-code" id="auditHashVal">No sealed receipt</span>
-                </div>
-            </section>
-
-            {{-- 13. Transaction History (Timeline / Activity Log) --}}
-            <section class="org-subpanel-card" aria-label="Transaction and Audit History">
-                <div class="org-subpanel-head">
-                    <h3><i class="bi bi-clock-history" style="color: #8b1828;"></i> Transaction History</h3>
-                    <span class="org-info-pill-badge">Audit Trail</span>
-                </div>
-                <div class="org-timeline-list" id="transactionTimeline">
-                    {{-- Timeline items dynamically rendered --}}
-                </div>
-                <div class="org-report-pagination" id="budgetTimelinePagination" aria-label="Transaction history pagination">
-                    <span id="budgetTimelinePaginationInfo"></span>
-                    <nav class="org-report-pagination-nav" id="budgetTimelinePaginationNav" aria-label="Transaction history pages"></nav>
-                </div>
-            </section>
-        </div>
 
     </div>
 
-    {{-- Load Chart.js --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @if (!$isOso || $osoSelectedActivity !== null)
+        @include('org.partials.budget-receipt-preview')
+
+        {{-- Load Chart.js only for pages with activity details. --}}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @endif
     <script>
         // Only final-approved activities are supplied by the controller.
         // Never fall back to demo activities when the approved set is empty.
-        const liveBudgetEntries = @json($liveBudgetEntries ?? null);
-        const liveScopeTotals = @json($liveScopeTotals ?? null);
+        const liveBudgetEntries = @json(($isOso && $osoSelectedActivity === null) ? null : ($liveBudgetEntries ?? null));
+        const liveScopeTotals = @json(($isOso && $osoSelectedActivity === null) ? null : ($liveScopeTotals ?? null));
         const liveBudgetDefault = @json($budgetDefaultForRole);
-        // Data Registry for all 5 Activities & Consolidated Portfolio
+        const isOsoBudget = @json($isOso);
+        const osoSelectedActivityKey = @json($osoSelectedActivityKey);
 
         const budgetDataset = (liveBudgetEntries && Object.keys(liveBudgetEntries).length > 0) ? liveBudgetEntries : {};
 
@@ -1701,15 +1495,9 @@
         let activeBudgetPeriod = { year: @json($selectedYear), term: @json($selectedSemester) };
         let budgetPeriodInitialized = false;
         let currentBudgetExpenseItems = [];
-        let currentBudgetDocuments = [];
-        let currentBudgetTimeline = [];
         let currentBudgetExpenseQuery = '';
         let currentBudgetExpensePage = 1;
-        let currentBudgetDocumentsPage = 1;
-        let currentBudgetTimelinePage = 1;
         const BUDGET_EXPENSE_PAGE_SIZE = 5;
-        const BUDGET_DOCUMENT_PAGE_SIZE = 4;
-        const BUDGET_TIMELINE_PAGE_SIZE = 5;
 
         /* Portfolio-wide scope split: every activity rolls up to exactly
            In-Campus or Off-Campus (the consolidated rollup entry is skipped). */
@@ -1777,13 +1565,7 @@
                 donutColors: [],
                 barAllocated: [],
                 barActual: [],
-                expenses: [],
-                documents: [],
-                verifier: 'No matching records',
-                verifiedDate: 'Not available',
-                remarks: 'Change the academic year or period to view encoded budget records.',
-                hash: 'Pending seal',
-                timeline: []
+                expenses: []
             };
         }
 
@@ -1820,16 +1602,14 @@
                 donutData: Array.from(categories.values()).map((entry) => entry.actual),
                 barAllocated: Array.from(categories.values()).map((entry) => entry.allocated),
                 barActual: Array.from(categories.values()).map((entry) => entry.actual),
-                expenses: rows.flatMap((row) => row.data.expenses || []),
-                documents: rows.flatMap((row) => row.data.documents || []),
-                timeline: rows.flatMap((row) => row.data.timeline || []).sort((a,b) => String(b.sort).localeCompare(String(a.sort))),
-                verifier: 'Activity receipt history', verifiedDate: 'See individual receipts',
-                hash: 'Select an activity for its receipt hashes',
-                remarks: 'Approved activity allocations and recorded spending for this selection. See Receipt History for each original and seal status.'
+                expenses: rows.flatMap((row) => row.data.expenses || [])
             };
         }
 
         function budgetDisplayData(key) {
+            if (isOsoBudget) {
+                return key === osoSelectedActivityKey && key ? budgetDataset[key] : null;
+            }
             const matchingRows = budgetRowsForPeriod();
             if (key === 'all') return consolidateBudgetRows(matchingRows);
             const selected = budgetDataset[key];
@@ -1909,8 +1689,10 @@
         }
 
         function initBudgetCharts() {
+            if (donutChartInstance || barChartInstance || typeof Chart === 'undefined') return;
+            if (isOsoBudget && (!osoSelectedActivityKey || !document.getElementById('osoBudgetCharts')?.open)) return;
             // 1. Donut Chart Initialization (scope split: In-Campus vs Off-Campus)
-            const initKey = budgetDataset.all ? 'all' : Object.keys(budgetDataset)[0];
+            const initKey = isOsoBudget ? osoSelectedActivityKey : (budgetDataset.all ? 'all' : Object.keys(budgetDataset)[0]);
             const initData = budgetDataset[initKey] || { categories: [], donutData: [] };
             const ctxDonut = document.getElementById('expenseDonutChart').getContext('2d');
             donutChartInstance = new Chart(ctxDonut, {
@@ -2100,12 +1882,12 @@
                         <td><strong style="color: #1a1618;">₱${Number(exp.amount || 0).toLocaleString()}</strong></td>
                         <td>
                             ${exp.receiptUrl
-                                ? `<a href="${escBudget(exp.receiptUrl)}" target="_blank" rel="noopener" class="org-receipt-link-pill" style="text-decoration:none;">${escBudget(exp.status)}${(exp.receiptAttachments?.length || 1) > 1 ? ' · ' + exp.receiptAttachments.length + ' photos' : ''}</a>`
+                                ? `<a href="${escBudget(exp.receiptUrl)}" data-budget-receipt-preview="${escBudget(exp.id)}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog" class="org-receipt-link-pill" style="text-decoration:none;">${escBudget(exp.status)}${(exp.receiptAttachments?.length || 1) > 1 ? ' · ' + exp.receiptAttachments.length + ' files' : ''}</a>`
                                 : `<span>${escBudget(exp.status)}</span>`}
                         </td>
                         <td style="text-align: right;">
                             ${exp.receiptUrl
-                                ? `<a href="${escBudget(exp.receiptUrl)}" target="_blank" rel="noopener" class="org-file-action-btn" style="text-decoration:none;"><i class="bi bi-eye"></i> View${(exp.receiptAttachments?.length || 1) > 1 ? ' (' + exp.receiptAttachments.length + ')' : ''}</a>`
+                                ? `<a href="${escBudget(exp.receiptUrl)}" data-budget-receipt-preview="${escBudget(exp.id)}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog" class="org-file-action-btn" style="text-decoration:none;"><i class="bi bi-eye"></i> View${(exp.receiptAttachments?.length || 1) > 1 ? ' (' + exp.receiptAttachments.length + ')' : ''}</a>`
                                 : '<span>Original unavailable</span>'}
                         </td>
                     </tr>
@@ -2128,66 +1910,16 @@
             return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
         }
 
-        function renderBudgetDocuments() {
-            const docsList = document.getElementById('supportingDocsList');
-            if (!docsList) return;
-            const page = budgetPaginate(currentBudgetDocuments, currentBudgetDocumentsPage, BUDGET_DOCUMENT_PAGE_SIZE);
-            currentBudgetDocumentsPage = page.page;
-            const docsCount = document.getElementById('docsCountBadge');
-            if (docsCount) docsCount.textContent = page.total + ' Files';
-
-            docsList.innerHTML = page.items.map(doc => `
-                <article style="padding:.8rem;border:1px solid #eadfe2;border-radius:12px;min-width:0;">
-                    ${doc.isImage ? `<a href="${escBudget(doc.receiptUrl)}" target="_blank" rel="noopener"><img loading="lazy" src="${escBudget(doc.receiptUrl)}" alt="Receipt ${escBudget(doc.name)}" style="width:100%;height:150px;object-fit:contain;background:#f7f5f5;"></a>` : ''}
-                    <strong style="display:block;overflow-wrap:anywhere;">${escBudget(doc.name)}</strong>
-                    <small>${escBudget(doc.uploadedBy)} · ${escBudget(doc.uploadedAt)}<br>${escBudget(doc.match)} · Expense date: ${escBudget(doc.date)}<br>${escBudget(doc.paymentMethod)} · ${escBudget(doc.scanSummary)}</small>
-                    <p style="font-size:.68rem;overflow-wrap:anywhere;">${escBudget(doc.hash || 'Awaiting blockchain confirmation')}</p>
-                    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-                        <a href="${escBudget(doc.receiptUrl)}" target="_blank" rel="noopener" class="org-file-action-btn">View original</a>
-                        <a href="${escBudget(doc.downloadUrl)}" class="org-file-action-btn">Download</a>
-                        ${doc.retryUrl && @json($isSo) ? `<form method="post" action="${escBudget(doc.retryUrl)}"><input type="hidden" name="_token" value="${escBudget(document.querySelector('meta[name=csrf-token]').content)}"><button type="submit" class="org-file-action-btn">Retry seal</button></form>` : ''}
-                    </div>
-                </article>
-            `).join('') || '<p>No receipt history for this selection.</p>';
-
-            renderBudgetPagination({
-                barId: 'budgetDocumentsPagination',
-                infoId: 'budgetDocumentsPaginationInfo',
-                navId: 'budgetDocumentsPaginationNav',
-                total: page.total,
-                page: page.page,
-                pageSize: BUDGET_DOCUMENT_PAGE_SIZE,
-                label: 'supporting documents',
-                handler: 'goToBudgetDocumentsPage'
-            });
-        }
-
-        function renderBudgetTimeline() {
-            const timeline = document.getElementById('transactionTimeline');
-            if (!timeline) return;
-            const page = budgetPaginate(currentBudgetTimeline, currentBudgetTimelinePage, BUDGET_TIMELINE_PAGE_SIZE);
-            currentBudgetTimelinePage = page.page;
-            timeline.innerHTML = page.items.map(t => `
-                <div class="org-timeline-item ${t.green ? 'is-green' : ''}">
-                    <strong>${escBudget(t.title)}</strong>
-                    <small>${escBudget(t.date)}</small>
-                </div>
-            `).join('') || '<p style="margin:0;color:#786f73;font-size:0.84rem;">No transaction history yet.</p>';
-
-            renderBudgetPagination({
-                barId: 'budgetTimelinePagination',
-                infoId: 'budgetTimelinePaginationInfo',
-                navId: 'budgetTimelinePaginationNav',
-                total: page.total,
-                page: page.page,
-                pageSize: BUDGET_TIMELINE_PAGE_SIZE,
-                label: 'transaction events',
-                handler: 'goToBudgetTimelinePage'
-            });
-        }
 
         function selectBudgetActivity(key) {
             const selected = budgetDataset[key];
+            if (isOsoBudget) {
+                if (!selected || key === 'all' || selected.orgName !== @json($selectedOrganization) || !budgetRowMatchesPeriod(selected, activeBudgetPeriod.year, activeBudgetPeriod.term)) return;
+                const url = new URL(@json(route('office.budget', $osoNavigationFilters)));
+                url.searchParams.set('activity_id', selected.activityId);
+                window.location.assign(url);
+                return;
+            }
             if (key !== 'all' && selected) {
                 const period = budgetAcademicPeriod(selected);
                 if (period.year !== activeBudgetPeriod.year) {
@@ -2207,6 +1939,7 @@
         }
 
         function switchActivityData(key) {
+            if (isOsoBudget) key = osoSelectedActivityKey;
             const data = budgetDisplayData(key);
             if (!data) return;
             document.getElementById('budgetActivitySelector').value = key;
@@ -2215,18 +1948,16 @@
             if (selected && receiptSelect) receiptSelect.value = selected.activityId;
             const orgInput = document.getElementById('receiptOrganization');
             if (selected && orgInput) orgInput.value = selected.orgName;
-            const printUrl = new URL(@json(route('office.budget.print')));
-            const packageUrl = new URL(@json(route('office.budget.receipts.package')));
-            [printUrl, packageUrl].forEach(url => {
-                url.searchParams.set('organization', @json($selectedOrganization));
-                if (selected) url.searchParams.set('activity_id', selected.activityId);
-                if (!selected || url === printUrl) {
-                    url.searchParams.set('academic_year', activeBudgetPeriod.year);
-                    url.searchParams.set('semester', activeBudgetPeriod.term);
-                }
-            });
-            document.getElementById('budgetPrintLink').href = printUrl;
-            document.getElementById('receiptPackageLink').href = packageUrl;
+            if (!isOsoBudget) {
+                const printUrl = new URL(@json(route('office.budget.print')));
+                printUrl.searchParams.set('organization', @json($selectedOrganization));
+                if (selected) printUrl.searchParams.set('activity_id', selected.activityId);
+                printUrl.searchParams.set('academic_year', activeBudgetPeriod.year);
+                printUrl.searchParams.set('semester', activeBudgetPeriod.term);
+                const reportDepartment = @json(request('department', ''));
+                if (reportDepartment) printUrl.searchParams.set('department', reportDepartment);
+                document.getElementById('budgetPrintLink').href = printUrl;
+            }
 
             // 1. Organization & Activity Information
             document.getElementById('orgNameVal').textContent = data.orgName;
@@ -2280,25 +2011,13 @@
                 barChartInstance.update();
             }
 
-            // 6. Update paginated expense, document, and transaction cards.
+            // 6. Update the paginated expense table.
             currentBudgetExpenseItems = Array.isArray(data.expenses) ? data.expenses : [];
-            currentBudgetDocuments = Array.isArray(data.documents) ? data.documents : [];
-            currentBudgetTimeline = Array.isArray(data.timeline) ? data.timeline : [];
             currentBudgetExpenseQuery = '';
             currentBudgetExpensePage = 1;
-            currentBudgetDocumentsPage = 1;
-            currentBudgetTimelinePage = 1;
             const expenseSearch = document.getElementById('expenseTableSearch');
             if (expenseSearch) expenseSearch.value = '';
             renderBudgetExpenseTable();
-            renderBudgetDocuments();
-            renderBudgetTimeline();
-
-            // 7. Update Verification Details
-            document.getElementById('verifierName').textContent = data.verifier;
-            document.getElementById('verifiedDate').textContent = data.verifiedDate;
-            document.getElementById('auditRemarksText').textContent = data.remarks;
-            document.getElementById('auditHashVal').textContent = data.hash;
         }
 
         function filterExpenseTable() {
@@ -2312,39 +2031,43 @@
             renderBudgetExpenseTable();
         }
 
-        function goToBudgetDocumentsPage(page) {
-            currentBudgetDocumentsPage = page;
-            renderBudgetDocuments();
-        }
-
-        function goToBudgetTimelinePage(page) {
-            currentBudgetTimelinePage = page;
-            renderBudgetTimeline();
-        }
 
         function updateFilterPeriod() {
             const yr = document.getElementById('budgetYearSelector').value;
             const term = document.getElementById('budgetTermSelector').value;
             const orgSemester = document.getElementById('budgetOrgSemester');
             if (orgSemester) orgSemester.value = term;
-            if (yr !== @json($selectedYear)) {
+            if (yr !== @json($selectedYear) || (@json($isOso) && term !== @json($selectedSemester))) {
                 const url = new URL(window.location.href);
                 url.searchParams.set('academic_year', yr);
                 url.searchParams.set('semester', term);
+                url.searchParams.delete('activity_id');
+                url.searchParams.delete('cash_page');
                 window.location.assign(url);
                 return;
             }
             activeBudgetPeriod = { year: yr, term };
             budgetPeriodInitialized = true;
+            if (isOsoBudget && !osoSelectedActivityKey) return;
             activeBudgetRows = budgetRowsForPeriod();
             document.getElementById('orgAyVal').textContent = yr;
             document.getElementById('orgPeriodVal').textContent = term;
             switchActivityData(document.getElementById('budgetActivitySelector')?.value || liveBudgetDefault);
         }
 
-        function previewReceiptModal(filename, desc, amount) {
-            alert('Receipt Document Viewer\n\nFile: ' + filename + '\nDescription: ' + desc + '\nAmount Liquidated: ' + amount + '\n\nOpen the receipt link to inspect the original file and its live seal status.');
-        }
+        document.getElementById('expenseDetailsTableBody')?.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-budget-receipt-preview]');
+            if (!trigger || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            const expense = currentBudgetExpenseItems.find(item => String(item.id) === trigger.dataset.budgetReceiptPreview);
+            if (!expense || typeof window.openBudgetReceiptPreview !== 'function') return;
+            event.preventDefault();
+            window.openBudgetReceiptPreview(expense, trigger);
+        });
+
+        document.getElementById('osoBudgetCharts')?.addEventListener('toggle', function () {
+            if (!this.open || !osoSelectedActivityKey) return;
+            initBudgetCharts();
+        });
 
         document.addEventListener('DOMContentLoaded', function () {
             const yearSelect = document.getElementById('budgetYearSelector');
@@ -2352,9 +2075,10 @@
             if (!Array.from(yearSelect.options).some(o => o.value === year)) yearSelect.add(new Option('A.Y. '+year, year));
             yearSelect.value = year;
             document.getElementById('budgetTermSelector').value = @json(request('semester', 'Annual'));
+            if (isOsoBudget && !osoSelectedActivityKey) return;
             const requestedId = @json((int) request('activity_id', 0));
-            const requestedKey = requestedId && budgetDataset['activity-'+requestedId] ? 'activity-'+requestedId : null;
-            if (requestedKey) {
+            const requestedKey = isOsoBudget ? osoSelectedActivityKey : (requestedId && budgetDataset['activity-'+requestedId] ? 'activity-'+requestedId : null);
+            if (requestedKey && !isOsoBudget) {
                 const requestedPeriod = budgetAcademicPeriod(budgetDataset[requestedKey]);
                 if (requestedPeriod.year && requestedPeriod.year !== year) {
                     const url = new URL(window.location.href);
@@ -2367,7 +2091,7 @@
             }
             updateFilterPeriod();
             initBudgetCharts();
-            if (requestedKey) selectBudgetActivity(requestedKey);
+            if (requestedKey && !isOsoBudget) selectBudgetActivity(requestedKey);
             else switchActivityData(document.getElementById('budgetActivitySelector')?.value || liveBudgetDefault);
         });
     </script>

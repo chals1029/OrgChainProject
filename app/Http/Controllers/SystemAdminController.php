@@ -58,16 +58,21 @@ class SystemAdminController extends Controller
             'is_active' => ['required', 'boolean'],
         ]);
 
-        $user->update(['is_active' => (bool) $validated['is_active']]);
-        SystemAdminAuditLog::record(
-            'office_account_status_changed',
-            'office_user:'.$user->id,
-            [
-                'email' => $user->email,
-                'role' => $user->office_role,
-                'is_active' => (bool) $user->is_active,
-            ],
-        );
+        $user = DB::transaction(function () use ($user, $validated): OfficeUser {
+            $current = OfficeUser::query()->lockForUpdate()->findOrFail($user->id);
+            $current->update(['is_active' => (bool) $validated['is_active']]);
+            SystemAdminAuditLog::record(
+                'office_account_status_changed',
+                'office_user:'.$current->id,
+                [
+                    'email' => $current->email,
+                    'role' => $current->office_role,
+                    'is_active' => (bool) $current->is_active,
+                ],
+            );
+
+            return $current;
+        }, 3);
 
         return back()->with('success', $user->is_active
             ? "{$user->name}'s office account is active."

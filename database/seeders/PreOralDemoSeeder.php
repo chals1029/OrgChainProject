@@ -210,7 +210,7 @@ class PreOralDemoSeeder extends Seeder
         }
 
         foreach ($colleges as $college => $abbr) {
-            $account = OrgFundAccount::query()->updateOrCreate(
+            $account = OrgFundAccount::query()->firstOrCreate(
                 [
                     'organization_name' => $abbr.' Student Organization',
                     'fiscal_year' => '2025-2026',
@@ -219,6 +219,7 @@ class PreOralDemoSeeder extends Seeder
                     'college' => $college,
                     'beginning_balance' => 25000,
                     'total_funds' => 85000,
+                    'cash_opening_balance' => 85000,
                     'total_funds_received' => 60000,
                 ]
             );

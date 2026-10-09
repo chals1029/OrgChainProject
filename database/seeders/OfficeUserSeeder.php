@@ -9,6 +9,11 @@ class OfficeUserSeeder extends Seeder
 {
     public function run(): void
     {
+        $password = (string) env('OFFICE_SEED_PASSWORD');
+        if ($password === '') {
+            throw new \RuntimeException('Set OFFICE_SEED_PASSWORD privately before seeding office accounts.');
+        }
+
         $accounts = [
             [
                 'username' => 'so.office',
@@ -53,7 +58,7 @@ class OfficeUserSeeder extends Seeder
                 [
                     'name' => $account['name'],
                     'username' => $account['username'],
-                    'password' => 'Office@2026!',
+                    'password' => $password,
                     'office_role' => $account['office_role'],
                     'office_title' => $account['office_title'],
                     'is_active' => true,

@@ -1,179 +1,91 @@
 @php
-    $officeRole = $office->office_role ?? 'so';
-    $officeLabel = $officeRole === 'oso'
-        ? 'Office of Student Organizations (OSO)'
-        : 'Student Organization (SO)';
-    $rows = collect($accomplishmentRows ?? []);
-    $snapshot = $reportSnapshot ?? [];
-    $folders = collect($arFolders ?? []);
-    $organizationLabel = $selectedOrganization ?: 'All recognized organizations';
-    $genderLabel = ($selectedGender ?? 'all') === 'all' ? 'All participants' : ucfirst((string) $selectedGender).' participants';
-    $packageState = data_get($reportBundle ?? [], 'state_label', 'Draft — not submitted');
+    $packet = $accomplishmentPacket ?? [];
+    $reports = $packet['reports'] ?? [];
+    $organization = (string) ($packet['organization'] ?? '');
+    $semester = (string) ($packet['semester'] ?? '');
+    $academicYear = (string) ($packet['academic_year'] ?? '');
+    $signatories = $packet['signatories'] ?? [];
+    $classifications = collect($reports)->pluck('classification')->filter()->unique()->values()->all();
+    $classification = $packet['classification'] ?? implode(' / ', $classifications);
+    $money = fn ($value) => 'PHP '.number_format((float) $value, 2);
+    $sdgNames = [1 => 'No Poverty', 2 => 'Zero Hunger', 3 => 'Good Health and Well-being', 4 => 'Quality Education', 5 => 'Gender Equality', 6 => 'Clean Water and Sanitation', 7 => 'Affordable and Clean Energy', 8 => 'Decent Work and Economic Growth', 9 => 'Industry, Innovation and Infrastructure', 10 => 'Reduced Inequalities', 11 => 'Sustainable Cities and Communities', 12 => 'Responsible Consumption and Production', 13 => 'Climate Action', 14 => 'Life Below Water', 15 => 'Life on Land', 16 => 'Peace, Justice and Strong Institutions', 17 => 'Partnerships for the Goals'];
+    $sdgLabel = function ($goal) use ($sdgNames) {
+        $text = trim((string) $goal);
+        if (preg_match('/^(?:SDG\s*)?(\d{1,2})$/i', $text, $match) && isset($sdgNames[(int) $match[1]])) {
+            return 'SDG '.(int) $match[1].': '.$sdgNames[(int) $match[1]];
+        }
+        return $text;
+    };
+    $roles = ['secretary' => ['Prepared by:', 'Secretary'], 'auditor' => ['Audited by:', 'Auditor'], 'president' => ['Noted:', 'President'], 'adviser' => ['Noted:', 'Adviser'], 'coordinator' => ['Noted:', 'OSO Coordinator'], 'head' => ['Verified True and Correct:', 'Head, Student Organization']];
+    $embedded = request()->boolean('embedded');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Accomplishment Report — {{ $organizationLabel }}</title>
-    <style>
-        @page { size: A4 landscape; margin: 13mm 12mm; }
-        :root { color-scheme: light; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #fff; color: #211b1d; font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.4; }
-        .print-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; margin: 0 auto 20px; max-width: 1180px; border: 1px solid #eadcdf; border-radius: 10px; background: #fff8fa; }
-        .print-toolbar span { color: #6d6266; font-size: 12px; }
-        .print-toolbar button, .print-toolbar a { border: 0; border-radius: 999px; padding: 8px 14px; color: #fff; background: #8b1828; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
-        .print-toolbar a { color: #8b1828; background: #fff; border: 1px solid #e7cdd2; }
-        .print-toolbar-actions { display: flex; gap: 8px; }
-        .report { max-width: 1180px; margin: 0 auto; }
-        .report-header { border-bottom: 3px solid #8b1828; padding-bottom: 14px; }
-        .institution { color: #8b1828; font-size: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-        .unit { margin-top: 2px; color: #63585c; font-size: 11px; font-weight: 700; }
-        .report-kicker { margin: 16px 0 3px; color: #8b1828; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-        h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; color: #211b1d; font-size: 25px; }
-        .report-subtitle { margin: 5px 0 0; color: #63585c; font-size: 11px; }
-        .meta-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
-        .meta-item { padding: 9px 10px; border: 1px solid #e7d9dc; border-radius: 7px; background: #fffafb; }
-        .meta-item span { display: block; margin-bottom: 3px; color: #766b6f; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-        .meta-item strong { display: block; color: #2d2528; font-size: 11px; overflow-wrap: anywhere; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 20px; }
-        .summary-card { padding: 11px 12px; border: 1px solid #d9c2c7; border-top: 3px solid #8b1828; border-radius: 7px; }
-        .summary-card span { display: block; color: #766b6f; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-        .summary-card strong { display: block; margin-top: 3px; color: #8b1828; font-size: 17px; }
-        h2 { margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d9c2c7; color: #8b1828; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin: 0 0 15px; table-layout: fixed; }
-        th, td { padding: 6px 7px; border: 1px solid #dfd1d4; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-        th { background: #f8eff1; color: #5f1824; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; }
-        td { font-size: 10px; }
-        .num { text-align: right; white-space: nowrap; }
-        .muted { color: #766b6f; }
-        .empty { padding: 13px; border: 1px dashed #cdb9be; color: #766b6f; text-align: center; }
-        .status-line { margin: 0 0 9px; color: #5e5458; }
-        .status-line strong { color: #8b1828; }
-        .signature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 35px; margin: 46px 0 12px; break-inside: avoid; }
-        .signature { padding-top: 7px; border-top: 1px solid #332b2e; text-align: center; font-size: 10px; }
-        .footer { margin-top: 18px; padding-top: 7px; border-top: 1px solid #dfd1d4; color: #766b6f; font-size: 9px; }
-        @media print {
-            body { font-size: 10px; }
-            .no-print { display: none !important; }
-            .report { max-width: none; }
-            .report-header { break-after: avoid; }
-            tr { break-inside: avoid; }
-            a { color: inherit; text-decoration: none; }
-        }
-        @media (max-width: 720px) {
-            .print-toolbar { align-items: flex-start; flex-direction: column; }
-            .print-toolbar-actions { width: 100%; }
-            .print-toolbar button, .print-toolbar a { flex: 1; text-align: center; }
-            .meta-grid, .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .report { padding: 0 12px; }
-        }
-    </style>
+    <title>Accomplishment & Financial Report — {{ $organization }} — {{ $semester }} AY {{ $academicYear }}</title>
+    <link rel="stylesheet" href="{{ asset('css/org-accomplishment.css') }}?v={{ filemtime(public_path('css/org-accomplishment.css')) }}">
+    <script src="{{ asset('js/org-accomplishment.js') }}?v={{ filemtime(public_path('js/org-accomplishment.js')) }}" defer></script>
 </head>
-<body>
-    <div class="print-toolbar no-print">
-        <span>This is the official server-rendered report. Only this report document will be printed.</span>
-        <div class="print-toolbar-actions">
-            <button type="button" onclick="window.print()">Print / Save as PDF</button>
-            <a href="{{ route('office.accomplishment', request()->query()) }}">Back</a>
-        </div>
-    </div>
-
-    <main class="report">
-        <header class="report-header">
-            <div class="institution">Batangas State University</div>
-            <div class="unit">The National Engineering University · OrgChain Office Reporting</div>
-            <div class="report-kicker">{{ $officeLabel }}</div>
-            <h1>Semester Accomplishment Report</h1>
-            <p class="report-subtitle">Documented activities, objectives achieved, participant reach, and supporting evidence.</p>
-        </header>
-
-        <section class="meta-grid" aria-label="Report details">
-            <div class="meta-item"><span>Organization scope</span><strong>{{ $organizationLabel }}</strong></div>
-            <div class="meta-item"><span>Reporting period</span><strong>{{ $selectedSemester }} · A.Y. {{ $selectedYear }}</strong></div>
-            <div class="meta-item"><span>Prepared by</span><strong>{{ $office->name ?? $officeLabel }}</strong></div>
-            <div class="meta-item"><span>Generated</span><strong>{{ $generatedAt }}</strong></div>
-        </section>
-
-        <p class="status-line">Report package status: <strong>{{ $packageState }}</strong> · Participant filter: <strong>{{ $genderLabel }}</strong>@if (!empty($selectedSdg)) · SDG: <strong>{{ $selectedSdg }}</strong>@endif @if (!empty($selectedCoreValue)) · Core value: <strong>{{ $selectedCoreValue }}</strong>@endif</p>
-
-        <section class="summary-grid" aria-label="Accomplishment summary">
-            <div class="summary-card"><span>Activities documented</span><strong>{{ number_format((int) ($snapshot['activities'] ?? $rows->count())) }}</strong></div>
-            <div class="summary-card"><span>Participant reach</span><strong>{{ number_format((int) ($snapshot['participants'] ?? $rows->sum('participants'))) }}</strong></div>
-            <div class="summary-card"><span>Narrative records</span><strong>{{ number_format((int) ($snapshot['narratives'] ?? 0)) }}</strong></div>
-            <div class="summary-card"><span>Evidence references</span><strong>{{ number_format((int) ($snapshot['evidence'] ?? $rows->sum('evidenceCount'))) }}</strong></div>
-        </section>
-
-        <h2>Activity Accomplishment Register</h2>
-        @if ($rows->isNotEmpty())
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:16%;">Activity</th>
-                        <th style="width:10%;">Implementation</th>
-                        <th style="width:13%;">Date / Venue</th>
-                        <th style="width:21%;">Objective / Result</th>
-                        <th style="width:9%;" class="num">Participants</th>
-                        <th style="width:10%;" class="num">Approved budget</th>
-                        <th style="width:10%;" class="num">Implemented</th>
-                        <th style="width:6%;" class="num">Evidence</th>
-                        <th style="width:5%;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($rows as $row)
-                        <tr>
-                            <td><strong>{{ $row['title'] ?? 'Untitled activity' }}</strong><br><span class="muted">{{ $row['college'] ?? 'Campus Wide' }}</span></td>
-                            <td>{{ $row['typeLabel'] ?? 'General' }}</td>
-                            <td>{{ $row['dateLabel'] ?? 'TBA' }}<br>{{ $row['venue'] ?? 'TBA' }}</td>
-                            <td>{{ $row['objectives'] ?: 'No post-activity objective/result narrative recorded.' }}</td>
-                            <td class="num">{{ number_format((int) ($row['participants'] ?? 0)) }}<br><span class="muted">M {{ $row['male'] ?? 0 }} / F {{ $row['female'] ?? 0 }}</span></td>
-                            <td class="num">Php {{ number_format((float) ($row['approvedBudget'] ?? 0), 2) }}</td>
-                            <td class="num">Php {{ number_format((float) ($row['implementedBudget'] ?? 0), 2) }}</td>
-                            <td class="num">{{ (int) ($row['evidenceCount'] ?? 0) }}</td>
-                            <td>{{ $row['statusLabel'] ?? 'Recorded' }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+<body class="ar-packet">
+    @if (!$embedded)
+        <header class="ar-print-toolbar"><span>Saved native accomplishment packet · {{ $semester }} · AY {{ $academicYear }}</span><nav aria-label="Report actions"><button type="button" data-ar-print-page>Print / Save as PDF</button>@if (!empty($exportUrl))<a href="{{ $exportUrl }}">Download Word</a>@endif<a href="{{ route('office.accomplishment', ['organization' => $organization, 'semester' => $semester, 'academic_year' => $academicYear]) }}">Back to desk</a></nav></header>
+    @endif
+    <main class="ar-packet-main">
+        @if (empty($reports))
+            <div class="ar-page-shell"><section class="ar-paper" data-ar-paper><h1>Accomplishment Report</h1><p class="ar-print-period">{{ $semester }} · Academic Year {{ $academicYear }}</p><p>{{ $organization }}</p><p>No native activity reports have been saved for this period. There is no accomplishment packet to print.</p></section></div>
         @else
-            <div class="empty">No final-approved activity accomplishment records are available for the selected filters.</div>
-        @endif
+            <div class="ar-page-shell"><section class="ar-paper" data-ar-paper aria-label="Report cover"><div class="ar-cover"><header class="ar-institution">Republic of the Philippines<strong>BATANGAS STATE UNIVERSITY</strong><em>The National Engineering University</em><div>Office of Student Organizations</div></header><div><div class="ar-cover-organization">{{ $organization }}</div><h1>ACCOMPLISHMENT &<br>FINANCIAL REPORT</h1><p class="ar-cover-period">{{ $semester }}<br>Academic Year {{ $academicYear }}</p>@if (!empty($classification))<p>{{ $classification }}</p>@endif</div><div class="ar-cover-note">Native semester accomplishment packet<br>@if (!empty($packet['generated_at']))Generated: {{ $packet['generated_at'] }}@endif<br>Signatory names, where provided, do not constitute signed approval.</div></div></section></div>
 
-        <h2>Evidence Document Register</h2>
-        @if ($folders->isNotEmpty())
-            <table>
-                <thead>
-                    <tr><th style="width:25%;">Folder</th><th style="width:34%;">Document</th><th style="width:12%;">Type</th><th style="width:13%;">Size</th><th style="width:16%;">Uploaded</th></tr>
-                </thead>
-                <tbody>
-                    @foreach ($folders as $folder)
-                        @forelse (($folder['documents'] ?? []) as $document)
-                            <tr>
-                                <td>{{ $folder['name'] ?? 'Evidence folder' }}<br><span class="muted">{{ $folder['semester'] ?? '' }}</span></td>
-                                <td>{{ $document['name'] ?? 'Unnamed document' }}</td>
-                                <td>{{ $document['type'] ?? 'FILE' }}</td>
-                                <td>{{ $document['size'] ?? '—' }}</td>
-                                <td>{{ $document['date'] ?? '—' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td>{{ $folder['name'] ?? 'Evidence folder' }}</td><td colspan="4" class="muted">No documents recorded in this folder.</td></tr>
-                        @endforelse
+            <div class="ar-page-shell"><section class="ar-paper is-landscape" data-ar-paper aria-labelledby="arParticularsTitle">
+                <h1 id="arParticularsTitle">STUDENT ORGANIZATION ACCOMPLISHMENT REPORT</h1><p class="ar-print-period">{{ $semester }}, Academic Year {{ $academicYear }}</p><p><strong>Name of Organization:</strong> {{ $organization }}<br><strong>Classification:</strong> {{ $classification }}</p><h2 style="text-align:center">PARTICULARS OF THE ACCOMPLISHMENTS</h2>
+                <table class="ar-print-table ar-particulars"><colgroup><col style="width:12%"><col style="width:15%"><col style="width:11%"><col style="width:10%"><col style="width:7%"><col style="width:14%"><col style="width:9%"><col style="width:11%"><col style="width:11%"></colgroup><thead><tr><th>Activity</th><th>Brief Description</th><th>Sustainable Development Goals</th><th>Persons Involved/ Participants</th><th>No. of Participants</th><th>Date/Day/ Venue/ Time</th><th>Expenses</th><th>Problems Encountered</th><th>Recommendations</th></tr></thead><tbody>
+                    @foreach ($reports as $report)<tr><td><strong>{{ $report['title'] }}</strong></td><td class="ar-print-text">{{ $report['brief_description'] }}</td><td>@foreach (($report['sdg_goals'] ?? []) as $goal)<div>{{ $sdgLabel($goal) }}</div>@endforeach</td><td class="ar-print-text">{{ $report['people_involved'] }}</td><td>Total: {{ (int) $report['participants'] }}<br>Male: {{ (int) $report['male_participants'] }}<br>Female: {{ (int) $report['female_participants'] }}</td><td>{{ $report['date_label'] ?? '' }}<br>{{ $report['time_label'] ?? '' }}<br>{{ $report['venue'] ?? '' }}</td><td class="ar-number">{{ $money(data_get($report, 'financial.total_expenses', 0)) }}</td><td class="ar-print-text">{{ $report['problems_encountered'] }}</td><td class="ar-print-text">{{ $report['recommendations'] }}</td></tr>@endforeach
+                </tbody></table>
+                <div class="ar-print-signatures is-summary">@foreach (['president' => ['Prepared by:', 'President'], 'adviser' => ['Noted by:', 'Adviser'], 'head' => ['Certified True and Correct:', 'Head, Student Organization']] as $key => $role)<div class="ar-print-signature">{{ $role[0] }}<strong>{{ $signatories[$key] ?? '' }}</strong><small>{{ $role[1] }}@if ($key !== 'head'), {{ $organization }}@endif</small></div>@endforeach</div>
+            </section></div>
+
+            @foreach ($reports as $report)
+                <div class="ar-page-shell"><section class="ar-paper" data-ar-paper aria-label="Activity narrative: {{ $report['title'] }}">
+                    <header class="ar-institution">Republic of the Philippines<strong>BATANGAS STATE UNIVERSITY</strong><em>The National Engineering University</em><div>{{ $organization }}</div></header><p class="ar-print-period">{{ $semester }} · Academic Year {{ $academicYear }}</p><h1>NARRATIVE REPORT</h1>
+                    <h2>I. Background of the Activity</h2>
+                    <table class="ar-background"><tbody>
+                        <tr><th>A. Title of the Activity</th><td>{{ $report['title'] }}</td></tr>
+                        <tr><th>B. Sponsor of the Activity</th><td class="ar-print-text">{{ $report['sponsor'] }}</td></tr>
+                        <tr><th>C. Date / Day / Venue / Time</th><td>{{ $report['date_label'] ?? '' }}<br>{{ $report['venue'] ?? '' }}<br>{{ $report['time_label'] ?? '' }}</td></tr>
+                        <tr><th>D. Objectives</th><td class="ar-print-text">{{ $report['objectives'] }}</td></tr>
+                        <tr><th>E. Sustainable Development Goals</th><td>@foreach (($report['sdg_goals'] ?? []) as $goal)<div>{{ $sdgLabel($goal) }}</div>@endforeach</td></tr>
+                        <tr><th>F. Number of Participants</th><td>Total Number: {{ (int) $report['participants'] }}<br>Male: {{ (int) $report['male_participants'] }}<br>Female: {{ (int) $report['female_participants'] }}</td></tr>
+                        <tr><th>G. Persons Involved / Participants</th><td class="ar-print-text">{{ $report['people_involved'] }}</td></tr>
+                    </tbody></table>
+                    <h2>II. Highlights of the Activity</h2><div class="ar-print-text ar-print-narrative">{{ $report['narrative'] }}</div>
+                    <h3>A. Brief Overview of the Activity</h3><div class="ar-print-text ar-print-narrative">{{ $report['brief_description'] }}</div>
+                    <h3>Problems Encountered</h3><div class="ar-print-text">{{ $report['problems_encountered'] }}</div><h3>Recommendations</h3><div class="ar-print-text">{{ $report['recommendations'] }}</div>
+                </section></div>
+
+                @foreach (($report['evidence'] ?? []) as $image)
+                    <div class="ar-page-shell"><section class="ar-paper" data-ar-paper aria-label="Captioned documentation"><header class="ar-institution"><strong>{{ $organization }}</strong>{{ $semester }} · AY {{ $academicYear }}</header><h2>B. Documentation</h2><p><strong>{{ $report['title'] }}</strong></p><figure class="ar-print-photo"><img src="{{ $image['url'] }}" alt="{{ $image['caption'] }}" loading="eager"><figcaption>{{ $image['caption'] }}</figcaption><a href="{{ $image['url'] }}" target="_blank" rel="noopener">{{ $image['name'] }}</a></figure></section></div>
+                @endforeach
+
+                @php $financial = $report['financial'] ?? []; @endphp
+                <div class="ar-page-shell"><section class="ar-paper" data-ar-paper aria-label="Activity financial report"><header class="ar-institution"><strong>{{ $organization }}</strong>{{ $semester }} · AY {{ $academicYear }}</header><h2>C. Financial Report / Expenses for the Activity</h2><p><strong>{{ $report['title'] }}</strong></p>
+                    @foreach (['collections' => ['Collection', 'total_collection'], 'expenses' => ['Expenses', 'total_expenses']] as $key => $labels)
+                        <h3>{{ $labels[0] }}</h3><table class="ar-print-table"><colgroup><col style="width:35%"><col style="width:12%"><col style="width:17%"><col style="width:18%"><col style="width:18%"></colgroup><thead><tr><th>Particulars</th><th>Quantity</th><th>Unit Cost</th><th>Total Cost</th><th>Receipt No. / Reference</th></tr></thead><tbody>@forelse (($financial[$key] ?? []) as $row)<tr><td>{{ $row['particulars'] }}@if (!empty($row['date']))<br><small>{{ $row['date'] }}</small>@endif</td><td class="ar-number">{{ $row['quantity'] ?? '—' }}</td><td class="ar-number">{{ isset($row['unit_cost']) ? $money($row['unit_cost']) : '—' }}</td><td class="ar-number">{{ $money($row['total']) }}</td><td>{{ $row['reference'] ?: 'No reference recorded' }}</td></tr>@empty<tr><td colspan="5">No activity-linked {{ strtolower($labels[0]) }} recorded in the canonical ledger.</td></tr>@endforelse</tbody><tfoot><tr><td colspan="3">Total {{ $labels[0] }}</td><td class="ar-number">{{ $money($financial[$labels[1]] ?? 0) }}</td><td></td></tr></tfoot></table>
                     @endforeach
-                </tbody>
-            </table>
-        @else
-            <div class="empty">No archived evidence folders are available. Upload the accomplishment evidence package before final archiving.</div>
+                    <p><strong>ACTIVITY NET COLLECTION:</strong> {{ $money($financial['net_collection'] ?? 0) }}<br>Activity collections − activity expenses</p><p class="ar-print-source">This is the net of recorded activity-linked collections and expenses, not the organization’s opening balance or annual remaining fund. Unlinked organization income is excluded. Legacy non-itemized spending, where present, is labeled in the ledger rows; no receipt is invented.@if (!empty($financial['recorded_at']))<br>Financial snapshot recorded: {{ $financial['recorded_at'] }}@endif</p>
+                    @if (!empty($financial['source_note']))<p class="ar-print-source ar-print-text">{{ $financial['source_note'] }}</p>@endif
+                    <h3>Attachment / Receipt References</h3><ul class="ar-receipt-references">@forelse (($financial['expenses'] ?? []) as $row)<li>{{ $row['particulars'] }} — {{ $row['reference'] ?: 'No receipt reference recorded' }}@if (!empty($row['receipt_url'])) · <a href="{{ $row['receipt_url'] }}" target="_blank" rel="noopener">View authorized supporting receipt</a>@endif</li>@empty<li>No expense receipts are recorded for this activity.</li>@endforelse</ul>
+                    @if (!empty($financial['receipt_attachments']))
+                        <table class="ar-print-table ar-receipt-references"><thead><tr><th>Receipt reference</th><th>Posting reference</th><th>Available supporting scan</th></tr></thead><tbody>@foreach ($financial['receipt_attachments'] as $attachment)<tr><td>{{ $attachment['reference'] ?? '' }}</td><td>{{ $attachment['posting_reference'] ?? '' }}</td><td><a href="{{ $attachment['url'] }}" target="_blank" rel="noopener">{{ $attachment['name'] }}</a></td></tr>@endforeach</tbody></table>
+                    @endif
+                    <div class="ar-print-signatures">@foreach ($roles as $key => $role)<div class="ar-print-signature">{{ $role[0] }}<strong>{{ data_get($report, 'signatories.'.$key, '') }}</strong><small>{{ $role[1] }}@if (in_array($key, ['secretary', 'auditor', 'president', 'adviser'])), {{ $organization }}@endif</small></div>@endforeach</div><footer class="ar-print-footer">Names are provided by the organization. Blank signatory lines are intentionally retained; this native printout does not create signed approval.</footer>
+                </section></div>
+                @foreach (($financial['receipt_attachments'] ?? []) as $attachment)
+                    <div class="ar-page-shell"><section class="ar-paper" data-ar-paper aria-label="Supporting receipt scan"><header class="ar-institution"><strong>{{ $organization }}</strong>{{ $semester }} · AY {{ $academicYear }}</header><h2>Attachment: Official Receipt / Supporting Scan</h2><p><strong>{{ $report['title'] }}</strong><br>Receipt reference: {{ $attachment['reference'] ?? '' }}<br>Posting reference: {{ $attachment['posting_reference'] ?? '' }}</p><figure class="ar-print-photo"><img src="{{ $attachment['url'] }}" alt="{{ $attachment['caption'] }}" loading="eager"><figcaption>{{ $attachment['caption'] }}</figcaption><a href="{{ $attachment['url'] }}" target="_blank" rel="noopener">{{ $attachment['name'] }}</a></figure></section></div>
+                @endforeach
+            @endforeach
         @endif
-
-        <div class="signature-grid">
-            <div class="signature">Prepared by<br><strong>{{ $officeRole === 'oso' ? 'OSO Review Desk' : 'SO Authorized Officer' }}</strong></div>
-            <div class="signature">Reviewed by<br><strong>{{ $officeRole === 'oso' ? 'Office of Student Organizations (OSO)' : 'Office of Student Organizations (OSO)' }}</strong></div>
-            <div class="signature">Report status<br><strong>{{ $packageState }}</strong></div>
-        </div>
-
-        <footer class="footer">OrgChain official semester accomplishment report · Generated {{ $generatedAt }} · This document reflects the selected filters and server-side records at generation time.</footer>
     </main>
 </body>
 </html>

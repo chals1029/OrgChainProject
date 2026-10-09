@@ -173,7 +173,6 @@
 .ap-type-choice,
 .ap-sdg-option,
 .ap-requirement-row,
-.ap-condition-toggle,
 .ap-upload-button {
     scroll-margin-top: 1rem;
     scroll-margin-bottom: calc(var(--ap-footer-space) + 1rem);
@@ -780,13 +779,6 @@
     color: var(--ap-danger);
 }
 
-.ap-requirement-row.is-inactive {
-    border-style: dashed;
-    border-left-width: 1px;
-    border-left-color: var(--ap-blush-strong);
-    background: var(--ap-surface-soft);
-}
-
 .ap-file-icon {
     grid-area: icon;
     align-self: start;
@@ -803,11 +795,6 @@
 .ap-requirement-row.has-file .ap-file-icon {
     background: var(--ap-success-tint);
     color: var(--ap-success);
-}
-
-.ap-requirement-row.is-inactive .ap-file-icon {
-    background: #f1ecee;
-    color: var(--ap-muted);
 }
 
 .ap-requirement-copy {
@@ -910,48 +897,6 @@
 .ap-document-links button:focus-visible {
     outline: 2px solid var(--ap-maroon);
     outline-offset: 2px;
-}
-
-.ap-condition-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    width: fit-content;
-    max-width: 100%;
-    margin-top: 0.25rem;
-    padding: 0.3rem 0.7rem;
-    border: 1px solid var(--ap-blush-strong);
-    border-radius: 999px;
-    background: var(--ap-surface);
-    color: var(--ap-text);
-    font-size: 0.74rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.ap-condition-toggle input[type="checkbox"] {
-    flex: 0 0 auto;
-    width: 0.95rem;
-    height: 0.95rem;
-    margin: 0;
-    accent-color: var(--ap-maroon);
-}
-
-.ap-condition-toggle:has(input:checked) {
-    border-color: var(--ap-maroon);
-    background: var(--ap-maroon-tint);
-    color: var(--ap-maroon-dark);
-}
-
-.ap-condition-toggle:has(input:focus-visible) {
-    box-shadow: var(--ap-ring);
-}
-
-.ap-condition-toggle:has(input:disabled) {
-    border-color: var(--ap-disabled-line);
-    background: var(--ap-disabled-bg);
-    color: var(--ap-disabled-text);
-    cursor: not-allowed;
 }
 
 .ap-requirement-upload {
@@ -1131,17 +1076,6 @@
     color: var(--ap-muted);
     font-size: 0.78rem;
     line-height: 1.5;
-}
-
-.ap-supporting > .ap-footer-actions {
-    justify-content: flex-start;
-    margin-bottom: 0.85rem;
-}
-
-.ap-supporting > .ap-footer-actions .ap-file-status {
-    flex: 1 1 12rem;
-    text-align: left;
-    border-radius: 10px;
 }
 
 /* Extra documents reuse the compact card; links take the action column. */
@@ -1487,12 +1421,12 @@
 }
 
 .org-doc-preview-body .docx-wrapper {
+    min-width: fit-content;
     padding: 0 !important;
     background: transparent !important;
 }
 
 .org-doc-preview-body .docx {
-    max-width: 100%;
     margin: 0 auto 1.25rem !important;
     box-shadow: 0 7px 24px rgba(42, 27, 30, 0.16) !important;
 }

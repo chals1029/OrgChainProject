@@ -48,9 +48,12 @@ if (-not $NgrokToken) {
 }
 
 if (-not $NodeSecret) {
-  $defaultSecret = "orgchain-node-auth-secret-2026"
-  $entered = Read-Host "Node shared secret [Enter = use default from main .env]"
-  $NodeSecret = if ($entered) { $entered } else { $defaultSecret }
+  $entered = Read-Host "Node shared secret (must match the main server's private configuration)" -AsSecureString
+  $NodeSecret = [System.Net.NetworkCredential]::new('', $entered).Password
+}
+if (-not $NodeSecret) {
+  Write-Host "A privately configured node shared secret is required." -ForegroundColor Red
+  exit 2
 }
 
 $NodeIdInput = Read-Host "Node ID to run (2 or 3) [Enter = $NodeId]"
@@ -112,7 +115,7 @@ if (-not $publicUrl) {
 } else {
   Write-Host ""
   Write-Host "============================================" -ForegroundColor Green
-  Write-Host " NODE ONLINE — send this to MAIN admin" -ForegroundColor Green
+  Write-Host " NODE ONLINE - send this to MAIN admin" -ForegroundColor Green
   Write-Host "============================================" -ForegroundColor Green
   Write-Host ""
   Write-Host " Public URL : $publicUrl"
@@ -121,7 +124,7 @@ if (-not $publicUrl) {
   Write-Host ""
   Write-Host " On MAIN OrgChain .env set:"
   Write-Host "   BLOCKCHAIN_NODE_${NodeId}_URL=$publicUrl"
-  Write-Host "   BLOCKCHAIN_NODE_SECRET=$NodeSecret"
+  Write-Host "   BLOCKCHAIN_NODE_SECRET=<same privately configured secret>"
   Write-Host ""
   Write-Host " Keep this window/process running. Close = node offline."
   Write-Host "============================================" -ForegroundColor Green
@@ -136,7 +139,7 @@ Generated: $(Get-Date -Format o)
 NODE_ID=$NodeId
 PUBLIC_URL=$publicUrl
 BLOCKCHAIN_NODE_${NodeId}_URL=$publicUrl
-BLOCKCHAIN_NODE_SECRET=$NodeSecret
+BLOCKCHAIN_NODE_SECRET=<same privately configured secret>
 "@ | Set-Content -Path $out -Encoding UTF8
   Write-Host "Saved: $out"
 }

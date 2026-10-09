@@ -124,6 +124,7 @@ class RenewalAccessTest extends TestCase
 
         $response = $this->actingAs($soUser, 'office')
             ->post('/office-desk/renewal/submit', [
+                'window_id' => $window->id,
                 'organization_name' => $targetOrgName,
                 'adviser_name' => 'Dr. Test Adviser',
                 'dean_name' => 'Dr. Test Dean',

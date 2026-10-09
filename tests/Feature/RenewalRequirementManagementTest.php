@@ -489,8 +489,8 @@ class RenewalRequirementManagementTest extends TestCase
         $draft->forceFill(['organization_name' => mb_strtoupper($this->organization->name), 'submitted_at' => null])->save();
 
         [$row, $stats] = $this->rosterStanding();
-        $this->assertSame($draft->id, $row['submission_id']);
-        $this->assertSame('draft', $row['submission_status']);
+        $this->assertNull($row['submission_id']);
+        $this->assertSame('none', $row['submission_status']);
         $this->assertNull($row['submitted_at']);
         $this->assertFalse($row['officially_active']);
         $this->assertTrue($row['can_file_renewal']);

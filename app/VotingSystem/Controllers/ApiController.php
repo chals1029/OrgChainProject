@@ -107,7 +107,7 @@ class ApiController extends Controller
             return;
         }
 
-        $secret = (string) (voting_config('nodes.secret_token', 'orgchain-node-auth-secret-2026') ?? '');
+        $secret = (string) (voting_config('nodes.secret_token', '') ?? '');
         $token = $_SERVER['HTTP_X_NODE_TOKEN'] ?? '';
         if ($token === '' && ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
             if (preg_match('/Bearer\s+(.*)$/i', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
@@ -115,7 +115,7 @@ class ApiController extends Controller
             }
         }
 
-        if ($secret !== '' && ! hash_equals($secret, (string) $token)) {
+        if ($secret === '' || ! hash_equals($secret, (string) $token)) {
             http_response_code(403);
             echo json_encode([
                 'ok' => false,

@@ -14,35 +14,41 @@ class VotingStaffSeeder extends Seeder
             return;
         }
 
+        $adminPassword = (string) env('VOTING_ADMIN_SEED_PASSWORD');
+        $canvassingPassword = (string) env('VOTING_CANVASSING_SEED_PASSWORD');
+        if ($adminPassword === '' || $canvassingPassword === '') {
+            throw new \RuntimeException('Set VOTING_ADMIN_SEED_PASSWORD and VOTING_CANVASSING_SEED_PASSWORD privately before seeding voting staff.');
+        }
+
         $accounts = [
             [
                 'name' => 'SSC Election Admin',
                 'email' => 'admin@ssc.test',
-                'password' => 'Admin@2026!',
+                'password' => $adminPassword,
                 'role' => 'admin',
             ],
             [
                 'name' => 'SSC Election Commission Admin',
                 'email' => 'ssc.admin@g.batstate-u.edu.ph',
-                'password' => 'Admin@2026!',
+                'password' => $adminPassword,
                 'role' => 'admin',
             ],
             [
                 'name' => 'SSC Canvassing Officer',
                 'email' => 'canvass@ssc.test',
-                'password' => 'Canvass@2026!',
+                'password' => $canvassingPassword,
                 'role' => 'canvassing',
             ],
             [
                 'name' => 'SSC Canvassing Officer',
                 'email' => 'canvassing@ssc.test',
-                'password' => 'Canvass@2026!',
+                'password' => $canvassingPassword,
                 'role' => 'canvassing',
             ],
             [
                 'name' => 'SSC Canvassing Desk Officer',
                 'email' => 'ssc.canvass@g.batstate-u.edu.ph',
-                'password' => 'Canvass@2026!',
+                'password' => $canvassingPassword,
                 'role' => 'canvassing',
             ],
         ];

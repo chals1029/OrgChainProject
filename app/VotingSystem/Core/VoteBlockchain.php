@@ -509,7 +509,7 @@ class VoteBlockchain
     {
         $baseUrl = rtrim($nodeUrl, '/');
         $endpoint = (str_contains($baseUrl, '/voting-system') ? $baseUrl : $baseUrl.'/voting-system').'/api/blockchain/node-receive';
-        $secret = (string) (voting_config('nodes.secret_token', 'orgchain-node-auth-secret-2026') ?? '');
+        $secret = (string) (voting_config('nodes.secret_token', '') ?? '');
         $timeout = (int) (voting_config('nodes.timeout_seconds', 3) ?? 3);
 
         $payload = json_encode([
@@ -633,7 +633,7 @@ class VoteBlockchain
             ]);
 
         $timeout = (int) (voting_config('nodes.timeout_seconds', 3) ?? 3);
-        $secret = (string) (voting_config('nodes.secret_token', 'orgchain-node-auth-secret-2026') ?? '');
+        $secret = (string) (voting_config('nodes.secret_token', '') ?? '');
 
         $ch = curl_init($endpoint);
         curl_setopt_array($ch, [

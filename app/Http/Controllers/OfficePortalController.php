@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\SemesterReportRejected;
 use App\Models\ArchiveDocument;
 use App\Models\ArchiveFolder;
 use App\Models\ActivityComplianceDoc;
@@ -25,13 +26,18 @@ use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
 use App\Services\BudgetChainService;
 use App\Services\DocxBuilder;
+use App\Services\FinancialReportPreviewGate;
+use App\Services\FinancialWorkbookService;
 use App\Services\OrgWorkflowService;
 use App\Services\OrgTimeService;
+use App\Services\SemesterReportService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -59,9 +65,7 @@ class OfficePortalController extends Controller
         $isOso = ($office?->office_role ?? '') === 'oso';
         $canAccessSemesterReports = $office instanceof OfficeUser
             && in_array($office->office_role, ['so', 'oso'], true);
-        $canUseSettings = $office instanceof OfficeUser
-            && in_array($office->office_role, ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true);
-        $officeSettings = $isOso ? OfficeSetting::publicValuesFor('oso') : [];
+        $officeSettings = OfficeSetting::publicValuesFor('oso');
         $brand = $this->brandFor($office->office_role);
         if (($office->office_role ?? '') === 'so') {
             $organization = $office->studentOrganization;
@@ -75,9 +79,11 @@ class OfficePortalController extends Controller
             'office' => $office,
             'brand' => $brand,
             'officeSettings' => $officeSettings,
-            'settingsPayload' => $canUseSettings ? $this->settingsForOffice($office) : [],
             'officeUsers' => $isOso
-                ? OfficeUser::query()->whereIn('office_role', ['oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
+                ? OfficeUser::query()->with('studentOrganization')->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
+                : collect(),
+            'accountOrganizations' => $isOso
+                ? StudentOrganization::query()->orderBy('name')->get(['id', 'name', 'short_name'])
                 : collect(),
             'navBadges' => [
                 'fr_attachments' => $canAccessSemesterReports ? count($this->frAttachmentList()) : 0,
@@ -167,166 +173,136 @@ class OfficePortalController extends Controller
         ];
     }
 
+    private function semesterReports(): SemesterReportService
+    {
+        return app(SemesterReportService::class);
+    }
+
     /**
-     * AR and FR are one semester package. Both report rows must move through
-     * the same OSO-only workflow before anything is copied to Archive.
-     *
      * @return list<string>
      */
     private function semesterReportTypes(): array
     {
-        return ['ar', 'fr'];
-    }
-
-    private function reportCollege(string $organization): ?string
-    {
-        return StudentOrganization::query()->where('name', $organization)->value('college')
-            ?: OrgActivity::query()->where('organization_name', $organization)->value('college');
-    }
-
-    private function findSemesterReportStatus(
-        string $reportType,
-        string $organization,
-        string $semester,
-        string $academicYear
-    ): ?OrgReportStatus {
-        return OrgReportStatus::query()
-            ->where('report_type', $reportType)
-            ->where('organization_name', $organization)
-            ->where('semester', $semester)
-            ->where('academic_year', $academicYear)
-            ->latest('id')
-            ->first();
-    }
-
-    private function ensureSemesterReportStatus(
-        string $reportType,
-        string $organization,
-        string $semester,
-        string $academicYear
-    ): OrgReportStatus {
-        return $this->findSemesterReportStatus($reportType, $organization, $semester, $academicYear)
-            ?? OrgReportStatus::query()->create([
-                'report_type' => $reportType,
-                'organization_name' => $organization,
-                'college' => $this->reportCollege($organization),
-                'semester' => $semester,
-                'academic_year' => $academicYear,
-                'status' => 'draft',
-                'batch_key' => (string) Str::uuid(),
-            ]);
+        return $this->semesterReports()->types();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function semesterReportBundle(
-        string $organization,
-        string $semester,
-        string $academicYear
-    ): array {
-        $statusRows = collect();
-        $documentsByType = collect(['ar', 'fr'])->mapWithKeys(fn (string $type): array => [$type => collect()]);
-
-        if ($organization !== '') {
-            $statusRows = OrgReportStatus::query()
-                ->whereIn('report_type', $this->semesterReportTypes())
-                ->where('organization_name', $organization)
-                ->where('semester', $semester)
-                ->where('academic_year', $academicYear)
-                ->latest('id')
-                ->get()
-                ->groupBy('report_type')
-                ->map(fn ($rows) => $rows->first());
-
-            $statusIds = $statusRows->pluck('id')->filter()->values();
-            if ($statusIds->isNotEmpty()) {
-                $loadedDocuments = OrgReportDocument::query()
-                    ->whereIn('org_report_status_id', $statusIds->all())
-                    ->latest('id')
-                    ->get()
-                    ->groupBy('report_type');
-                foreach ($this->semesterReportTypes() as $type) {
-                    $documentsByType->put($type, $loadedDocuments->get($type, collect()));
-                }
-            }
-        }
-
-        $statuses = collect($this->semesterReportTypes())
-            ->mapWithKeys(fn (string $type): array => [$type => $statusRows->get($type)])
-            ->all();
-        $statusValues = collect($statuses)->map(fn (?OrgReportStatus $status): ?string => $status?->status);
-
-        $state = 'draft';
-        if ($statusValues->every(fn (?string $value): bool => $value === 'archived')) {
-            $state = 'archived';
-        } elseif ($statusValues->every(fn (?string $value): bool => $value === 'verified')) {
-            $state = 'verified';
-        } elseif ($statusValues->every(fn (?string $value): bool => $value === 'oso_review')) {
-            $state = 'oso_review';
-        } elseif ($statusValues->every(fn (?string $value): bool => $value === 'returned')) {
-            $state = 'returned';
-        } elseif ($statusValues->filter()->isNotEmpty() && $statusValues->filter()->count() < 2) {
-            $state = 'incomplete';
-        } elseif ($statusValues->filter()->unique()->count() > 1) {
-            $state = 'incomplete';
-        }
-
-        $labels = [
-            'draft' => 'Draft — not submitted',
-            'incomplete' => 'Incomplete package',
-            'oso_review' => 'Submitted to OSO for review',
-            'returned' => 'Returned to SO for revision',
-            'verified' => 'OSO accepted — ready for archive',
-            'archived' => 'Archived and sealed',
-        ];
-
-        $arDocuments = $documentsByType->get('ar', collect());
-        $frDocuments = $documentsByType->get('fr', collect());
+    private function semesterReportBundle(string $organization, string $semester, string $academicYear): array
+    {
+        $statuses = $organization !== '' ? OrgReportStatus::query()
+            ->whereIn('report_type', $this->semesterReportTypes())
+            ->where('organization_name', $organization)->where('semester', $semester)
+            ->where('academic_year', $academicYear)->latest('id')->get() : collect();
+        $documents = $statuses->isNotEmpty() ? OrgReportDocument::query()
+            ->whereIn('org_report_status_id', $statuses->groupBy('report_type')->map->first()->pluck('id'))
+            ->with('reportStatus')->latest('id')->get() : collect();
 
         return [
-            'organization' => $organization,
-            'college' => $this->reportCollege($organization),
-            'semester' => $semester,
-            'academic_year' => $academicYear,
-            'statuses' => $statuses,
-            'documents' => $documentsByType->all(),
-            'state' => $state,
-            'state_label' => $labels[$state] ?? ucfirst(str_replace('_', ' ', $state)),
-            'has_ar_document' => $arDocuments->isNotEmpty(),
-            'has_fr_document' => $frDocuments->isNotEmpty(),
-            'has_both_documents' => $arDocuments->isNotEmpty() && $frDocuments->isNotEmpty(),
-            'submitted_at' => collect($statuses)->filter()->pluck('submitted_at')->filter()->sortDesc()->first(),
-            'oso_opened_at' => collect($statuses)->filter()->pluck('opened_at')->filter()->sortDesc()->first(),
-            'notes' => collect($statuses)->filter()->pluck('notes')->filter()->first(),
+            'organization' => $organization, 'college' => $this->semesterReports()->college($organization),
+            'semester' => $semester, 'academic_year' => $academicYear,
+            'submission_locks' => app(\App\Services\ReportSubmissionWindowService::class)->locks($academicYear, $semester),
+            'reports' => $this->semesterReportRecords($statuses, $documents),
         ];
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function semesterReportQueue(): array
+    private function semesterReportRecords(Collection $statuses, Collection $documents): array
     {
-        $keys = OrgReportStatus::query()
-            ->whereIn('report_type', $this->semesterReportTypes())
-            ->when($this->assignedOrganizationName() !== null, fn ($q) => $q->where('organization_name', $this->assignedOrganizationName()))
-            ->get(['organization_name', 'semester', 'academic_year'])
-            ->unique(fn (OrgReportStatus $row): string => implode('|', [
-                $row->organization_name,
-                $row->semester,
-                $row->academic_year,
-            ]));
+        $labels = [
+            'draft' => 'Not submitted', 'oso_review' => 'Pending review',
+            'returned' => 'Returned for revision', 'rejected' => 'Rejected',
+            'verified' => 'Verified / approved', 'archived' => 'Verified / approved · archived',
+        ];
+        $records = [];
+        $isOso = Auth::guard('office')->user()?->office_role === 'oso';
+        foreach ($this->semesterReportTypes() as $type) {
+            $rows = $statuses->where('report_type', $type)->sortByDesc('id');
+            $status = $rows->first();
+            $state = $status?->status ?: 'draft';
+            $viewable = $status && in_array($state, SemesterReportService::VIEWABLE_STATUSES, true);
+            $files = $documents->where('org_report_status_id', $status?->id)
+                ->where('report_type', $type)->where('organization_name', $status?->organization_name)
+                ->where('semester', $status?->semester)->where('academic_year', $status?->academic_year)
+                ->sortByDesc('id')->take(1)->values();
+            if ($isOso) {
+                $files = $viewable ? $files->filter(fn (OrgReportDocument $document): bool =>
+                    $status->submitted_at ? $document->created_at->lte($status->submitted_at)
+                        : in_array($state, ['verified', 'archived'], true))->values() : collect();
+            }
+            $hasDocument = $files->first()?->hasStoredFile() ?? false;
+            $records[$type] = [
+                'type' => $type, 'title' => $type === 'ar' ? 'Accomplishment Report' : 'Financial Report',
+                'status' => $status, 'state' => $state, 'state_label' => $labels[$state] ?? ucfirst($state),
+                'documents' => $files, 'has_document' => $hasDocument,
+                'submitted_at' => $status?->submitted_at, 'opened_at' => $status?->opened_at,
+                'reviewed_at' => $status?->reviewed_at, 'notes' => $status?->notes,
+                'is_locked' => $this->semesterReports()->isLocked($rows),
+                'can_review' => $state === 'oso_review' && ! $this->semesterReports()->isLocked($rows->filter(fn (OrgReportStatus $row): bool => $row->id !== $status->id)),
+                'can_view' => (bool) $viewable,
+            ];
+        }
+        return $records;
+    }
 
-        return $keys
-            ->map(fn (OrgReportStatus $row): array => $this->semesterReportBundle(
-                (string) $row->organization_name,
-                (string) $row->semester,
-                (string) $row->academic_year
-            ))
-            ->filter(fn (array $bundle): bool => $bundle['state'] === 'oso_review')
-            ->sortByDesc(fn (array $bundle) => optional($bundle['submitted_at'])->timestamp ?? 0)
-            ->values()
-            ->all();
+    public function semesterReportDesk(string $defaultTab = 'ar'): View
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
+        $period = request()->validate([
+            'organization' => ['nullable', 'string', 'max:255'],
+            'academic_year' => ['nullable', 'regex:/^\d{4}-\d{4}$/'],
+            'semester' => ['nullable', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
+            'tab' => ['nullable', Rule::in(['ar', 'fr'])],
+        ]);
+        $current = app(\App\Services\ActivityBudgetService::class)->period();
+        $year = $period['academic_year'] ?? $current['academic_year'];
+        $semester = $period['semester'] ?? $current['semester'];
+        app(\App\Services\ActivityBudgetService::class)->dates($year, $semester);
+        $organization = trim((string) ($period['organization'] ?? ''));
+        $tab = $period['tab'] ?? $defaultTab;
+        $organizations = StudentOrganization::query()->orderBy('name')->get(['name', 'college', 'short_name']);
+        abort_if($organization !== '' && ! $organizations->contains('name', $organization), 404);
+        $statuses = OrgReportStatus::query()->whereIn('report_type', $this->semesterReportTypes())
+            ->where('semester', $semester)->where('academic_year', $year)->latest('id')->get();
+        $currentStatuses = $statuses->unique(fn (OrgReportStatus $status): string => $status->organization_name.'|'.$status->report_type);
+        $documents = OrgReportDocument::query()->whereIn('org_report_status_id', $currentStatuses->pluck('id'))
+            ->with('reportStatus')->latest('id')->get()->groupBy('organization_name');
+        $statusesByOrganization = $statuses->groupBy('organization_name');
+        $directory = $organizations->map(function (StudentOrganization $org) use ($statusesByOrganization, $documents, $semester, $year, $tab): array {
+            $reports = $this->semesterReportRecords($statusesByOrganization->get($org->name, collect()), $documents->get($org->name, collect()));
+            $viewableTypes = array_keys(array_filter($reports, fn (array $report): bool => $report['can_view'] && $report['has_document']));
+            $viewTab = in_array($tab, $viewableTypes, true) ? $tab : ($viewableTypes[0] ?? $tab);
+            return [
+                'organization' => $org->name, 'college' => $org->college, 'short_name' => $org->short_name,
+                'reports' => $reports,
+                'can_view_submitted' => $viewableTypes !== [],
+                'view_url' => route('office.reports.index', ['organization' => $org->name, 'semester' => $semester, 'academic_year' => $year, 'tab' => $viewTab]),
+            ];
+        })->all();
+        $selected = collect($directory)->firstWhere('organization', $organization);
+        $years = OrgReportStatus::query()->whereIn('report_type', $this->semesterReportTypes())
+            ->distinct()->pluck('academic_year')->filter()->all();
+        $start = (int) substr($current['academic_year'], 0, 4);
+        for ($offset = 0; $offset < 5; $offset++) {
+            $years[] = ($start - $offset).'-'.($start - $offset + 1);
+        }
+        $years[] = $year;
+        $years = array_values(array_unique($years));
+        rsort($years);
+        return view('org.semester-reports', array_merge($this->deskContext(), [
+            'activeNav' => 'semester-reports',
+            'organizations' => $organizations->pluck('name'), 'selectedOrganization' => $organization,
+            'selectedSemester' => $semester, 'selectedYear' => $year, 'selectedTab' => $tab,
+            'reportingYears' => $years, 'reportingSemesters' => ['1st Semester', '2nd Semester', 'Midyear'],
+            'submissionLocks' => app(\App\Services\ReportSubmissionWindowService::class)->locks($year, $semester),
+            'reportDirectory' => $directory,
+            'reportBundle' => [
+                'organization' => $organization, 'college' => $selected['college'] ?? null,
+                'semester' => $semester, 'academic_year' => $year,
+                'reports' => $selected['reports'] ?? $this->semesterReportRecords(collect(), collect()),
+            ],
+        ]));
     }
 
     private function reportRedirect(string $reportType, array $period): RedirectResponse
@@ -489,19 +465,15 @@ class OfficePortalController extends Controller
             $kpiOc = $pipe->where('status_key', 'oc_review')->count();
         }
 
-        $fundAccounts = $this->constrainToOfficeOrganization(OrgFundAccount::query())->get();
-        $fundAccount = $fundAccounts->sortByDesc('total_funds')->first();
-        $budgetItems = $this->constrainToOfficeOrganization(BudgetItem::query());
-        $budgetItemCount = (clone $budgetItems)->count();
-        $totalFunds = $isOsoDashboard
-            ? (int) $fundAccounts->sum('total_funds')
-            : (int) ($fundAccount?->total_funds ?? (clone $budgetItems)->sum('allocated'));
-        $utilized = (int) (clone $budgetItems)->sum('utilized');
-        if (! $isOsoDashboard && $fundAccounts->isEmpty() && $budgetItemCount === 0) {
-            $totalFunds = 185000;
-            $utilized = 115150;
-        }
-        $remaining = max(0, $totalFunds - $utilized);
+        $fundYear = app(\App\Services\ActivityBudgetService::class)->period()['academic_year'];
+        $fundAccounts = $this->constrainToOfficeOrganization(OrgFundAccount::query())
+            ->where('fiscal_year', $fundYear)->get();
+        $fundAccount = $fundAccounts->first();
+        $fundBalances = $fundAccounts->map(fn (OrgFundAccount $account) =>
+            app(\App\Services\OrganizationCashLedger::class)->balance($account));
+        $totalFunds = round((float) $fundBalances->sum('total'), 2);
+        $utilized = round((float) $fundBalances->sum('spent'), 2);
+        $remaining = round((float) $fundBalances->sum('cash'), 2);
 
         $urgency = $this->constrainToOfficeOrganization(OrgActivity::query())
             ->whereIn('workflow_status', ['oso_review', 'returned', 'college_review'])
@@ -570,9 +542,7 @@ class OfficePortalController extends Controller
             'transparency' => [
                 'allocated' => $totalFunds,
                 'total_funds' => $totalFunds,
-                'beginning_balance' => $isOsoDashboard
-                    ? (int) $fundAccounts->sum('beginning_balance')
-                    : (int) ($fundAccount?->beginning_balance ?? ($fundAccounts->isEmpty() ? 25000 : 0)),
+                'beginning_balance' => round((float) $fundBalances->sum('opening_balance'), 2),
                 'utilized' => $utilized,
                 'remaining' => $remaining,
                 'percent' => $totalFunds > 0 ? (int) round(($utilized / $totalFunds) * 100) : 0,
@@ -886,9 +856,11 @@ class OfficePortalController extends Controller
                 'green' => $event->to_status === 'oc_approved',
             ]))->sortByDesc('sort')->values()->all();
             $categoryAmounts = $rows->groupBy(fn ($r) => $r->category ?: 'General')->map(fn ($group) => round($group->sum(fn ($r) => $r->quantity * (float) $r->unit_cost), 2));
-            if ((float) $a->opening_spent > 0) $categoryAmounts['Earlier recorded spending'] = (float) $a->opening_spent;
+            $postedSpent = round((float) $categoryAmounts->sum(), 2);
+            $legacySpent = max(0, round((float) $a->implemented_budget - $postedSpent, 2));
+            if ($legacySpent > 0) $categoryAmounts['Earlier recorded spending'] = $legacySpent;
             $approved = (float) $a->approved_budget;
-            $actual = (float) $a->implemented_budget;
+            $actual = round($postedSpent + $legacySpent, 2);
             $entries['activity-'.$a->id] = [
                 'activityId' => $a->id, 'orgName' => $a->organization_name, 'orgCategory' => $a->college ?: 'Campus Wide',
                 'orgUnit' => $a->college ?: 'Campus Wide', 'actName' => $a->title, 'actType' => 'Approved activity',
@@ -1328,7 +1300,6 @@ class OfficePortalController extends Controller
 
         $submission = $existingSubmission ?: new InCampusActivitySubmission([
             'activity_type' => $docType,
-            'status' => 'draft',
         ]);
         if ($submission->exists) {
             $submission->load('activity');
@@ -1342,11 +1313,6 @@ class OfficePortalController extends Controller
             'offCampusRequirements' => $this->localOffCampusRequirements(),
             'recognizedOrgs' => $this->recognizedOrgsForForm(),
             'docType' => $docType,
-            'docRows' => $this->buildActivityDocRows(null, $docType),
-            'docRowsByType' => [
-                'in_campus' => $this->buildActivityDocRows(null, 'in_campus'),
-                'local_off_campus' => $this->buildActivityDocRows(null, 'local_off_campus'),
-            ],
         ]));
     }
 
@@ -1368,35 +1334,11 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * Real document rows for the activity form: official templates on disk
-     * plus files already uploaded to the submission. Kills the old
-     * hardcoded demo rows — every Preview reads a real source document.
+     * Stored activity uploads, including historical files outside the current checklist.
      */
-    private function buildActivityDocRows(?InCampusActivitySubmission $submission, string $type): array
+    private function buildActivityUploadRows(InCampusActivitySubmission $submission): array
     {
-        $type = in_array($type, ['in_campus', 'local_off_campus'], true) ? $type : 'in_campus';
-        $sourceDir = $type === 'local_off_campus'
-            ? (is_dir(base_path('Local Off Campus')) ? base_path('Local Off Campus') : storage_path('Template/Creation Of Activties/Off Campus'))
-            : (is_dir(base_path('In Campus')) ? base_path('In Campus') : storage_path('Template/Creation Of Activties/In Campus Activities'));
-
         $rows = [];
-        if (is_dir($sourceDir)) {
-            $files = collect(scandir($sourceDir) ?: [])
-                ->reject(fn ($name) => in_array($name, ['.', '..'], true))
-                ->filter(fn ($name) => is_file($sourceDir.DIRECTORY_SEPARATOR.$name))
-                ->values();
-            foreach ($files as $file) {
-                $rows[] = [
-                    'kind' => 'template',
-                    'key' => null,
-                    'name' => $file,
-                    'ext' => strtolower(pathinfo($file, PATHINFO_EXTENSION)),
-                    'status' => 'Official template',
-                    'date' => '—',
-                    'url' => route('office.activities.templates.download', ['type' => $type, 'file' => $file]),
-                ];
-            }
-        }
 
         $attachments = $submission?->attachments ?? [];
         foreach ($attachments as $key => $meta) {
@@ -1499,24 +1441,23 @@ class OfficePortalController extends Controller
 
         abort_unless(is_dir($sourceDir), 404, 'Template folder not found.');
 
-        $files = collect(scandir($sourceDir) ?: [])
-            ->reject(fn ($name) => in_array($name, ['.', '..'], true))
-            ->filter(fn ($name) => is_file($sourceDir.DIRECTORY_SEPARATOR.$name))
-            ->values();
-
-        abort_if($files->isEmpty(), 404, 'No template documents available.');
+        $requirements = $type === 'local_off_campus'
+            ? $this->localOffCampusRequirements()
+            : $this->inCampusRequirements();
+        $templateNames = [];
+        foreach ($requirements as $requirement) {
+            $sourceFile = $requirement['source_file'];
+            $templateNames[$sourceFile] = str_replace(['/', '\\'], '-', $requirement['title'])
+                .'.'.pathinfo($sourceFile, PATHINFO_EXTENSION);
+        }
+        $files = array_keys($templateNames);
 
         // Single-file shortcut when only listing is requested
         if ($request->filled('file')) {
             $safe = basename((string) $request->query('file'));
             $path = $sourceDir.DIRECTORY_SEPARATOR.$safe;
-            if (! is_file($path)) {
-                $renewalPath = public_path('templates/renewal/'.$safe);
-                if (is_file($renewalPath)) {
-                    $path = $renewalPath;
-                }
-            }
-            abort_unless(is_file($path), 404);
+            abort_unless(in_array($safe, $files, true) && is_file($path), 404);
+            $displayName = $templateNames[$safe];
 
             if ($request->boolean('preview')) {
                 // The WPCF supplied by SDO is a genuine binary Word 97-2003
@@ -1525,7 +1466,7 @@ class OfficePortalController extends Controller
                 // rendering for the explicit preview request.
                 $previewPath = $this->activityTemplatePreviewPath($type, $safe);
                 if ($previewPath) {
-                    $previewName = pathinfo($safe, PATHINFO_FILENAME).'.pdf';
+                    $previewName = pathinfo($displayName, PATHINFO_FILENAME).'.pdf';
 
                     return response()->file($previewPath, [
                         'Content-Type' => 'application/pdf',
@@ -1535,11 +1476,14 @@ class OfficePortalController extends Controller
 
                 return response()->file($path, [
                     'Content-Type' => mime_content_type($path) ?: 'application/octet-stream',
-                    'Content-Disposition' => 'inline; filename="'.addslashes($safe).'"',
+                    'Content-Disposition' => 'inline; filename="'.addslashes($displayName).'"',
                 ]);
             }
 
-            return response()->download($path, $safe);
+            return response()->download($path, $displayName);
+        }
+        foreach ($files as $file) {
+            abort_unless(is_file($sourceDir.DIRECTORY_SEPARATOR.$file), 404, 'An official template is missing.');
         }
 
         $zipName = $type === 'local_off_campus'
@@ -1559,7 +1503,7 @@ class OfficePortalController extends Controller
             $zip = new ZipArchive();
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
                 foreach ($files as $file) {
-                    $zip->addFile($sourceDir.DIRECTORY_SEPARATOR.$file, $file);
+                    $zip->addFile($sourceDir.DIRECTORY_SEPARATOR.$file, $templateNames[$file]);
                 }
                 $zip->close();
                 $built = is_file($zipPath);
@@ -1567,10 +1511,16 @@ class OfficePortalController extends Controller
         }
 
         if (! $built && strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $psSource = str_replace("'", "''", $sourceDir.'\\*');
-            $psDest = str_replace("'", "''", $zipPath);
-            $cmd = 'powershell -NoProfile -Command "Compress-Archive -Path \''.$psSource.'\' -DestinationPath \''.$psDest.'\' -Force"';
-            @exec($cmd);
+            $psScript = 'Add-Type -AssemblyName System.IO.Compression.FileSystem; '
+                .'$archive = [System.IO.Compression.ZipFile]::Open(\''
+                .str_replace("'", "''", $zipPath).'\', \'Create\'); try { ';
+            foreach ($files as $file) {
+                $psScript .= '[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, \''
+                    .str_replace("'", "''", $sourceDir.DIRECTORY_SEPARATOR.$file).'\', \''
+                    .str_replace("'", "''", $templateNames[$file]).'\') | Out-Null; ';
+            }
+            $psScript .= '} finally { $archive.Dispose() }';
+            @exec('powershell -NoProfile -Command "'.$psScript.'"');
             $built = is_file($zipPath);
         }
 
@@ -1588,7 +1538,7 @@ class OfficePortalController extends Controller
 
         foreach ($files as $file) {
             $url = route('office.activities.templates.download', ['type' => $type, 'file' => $file]);
-            $html .= '<li><a href="'.e($url).'"><i></i> '.e($file).'</a></li>';
+            $html .= '<li><a href="'.e($url).'"><i></i> '.e($templateNames[$file]).'</a></li>';
         }
 
         $html .= '</ul><p><a href="'.e(route('office.activities.create')).'">← Back to Create Activity</a></p></body></html>';
@@ -1605,8 +1555,6 @@ class OfficePortalController extends Controller
         $preview = match ($type.'|'.$file) {
             'in_campus|Waste-Policy-Compliance-Form-2026 (1).doc'
                 => base_path('resources/office-template-previews/waste-policy-compliance-form.pdf'),
-            'in_campus|Attachment I_ Plan of Activities.docx'
-                => public_path('templates/renewal/Attachment I_ Plan of Activities.pdf'),
             default => null,
         };
 
@@ -1625,11 +1573,7 @@ class OfficePortalController extends Controller
             'inCampusRequirements' => $this->inCampusRequirements(),
             'offCampusRequirements' => $this->localOffCampusRequirements(),
             'docType' => $submission->activity_type ?: 'in_campus',
-            'docRows' => $this->buildActivityDocRows($submission, $submission->activity_type ?: 'in_campus'),
-            'docRowsByType' => [
-                'in_campus' => $this->buildActivityDocRows($submission, 'in_campus'),
-                'local_off_campus' => $this->buildActivityDocRows($submission, 'local_off_campus'),
-            ],
+            'docRows' => $this->buildActivityUploadRows($submission),
         ]));
     }
 
@@ -1645,109 +1589,141 @@ class OfficePortalController extends Controller
 
     public function calendar(Request $request): View
     {
-        $scopeKey = static fn (?string $scope): string => str_contains(strtolower((string) $scope), 'off') ? 'off' : 'in';
+        $timezone = config('app.timezone');
+        $now = Carbon::now($timezone);
+        $month = $now->copy()->startOfMonth()->startOfDay();
         $requestedMonth = $request->query('month');
-        try {
-            $month = $requestedMonth
-                ? Carbon::createFromFormat('Y-m', $requestedMonth)->startOfMonth()
-                : Carbon::now()->startOfMonth();
-        } catch (\Throwable) {
-            $month = Carbon::now()->startOfMonth();
-        }
-
-        $cursor = $month->copy()->startOfWeek(Carbon::MONDAY);
-        $end = $month->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
-
-        $pipelineEvents = collect($this->pipelineActivities())
-            ->filter(fn (array $item): bool => ! empty($item['upcoming_at']) || (! empty($item['date']) && $item['date'] !== 'TBA'))
-            ->map(function (array $item) use ($scopeKey): ?array {
-                try {
-                    $startsAt = Carbon::parse($item['upcoming_at'] ?? $item['date']);
-                } catch (\Throwable) {
-                    return null;
+        if (is_string($requestedMonth) && preg_match('/^\d{4}-\d{2}$/', $requestedMonth)) {
+            try {
+                $parsed = Carbon::createFromFormat('!Y-m', $requestedMonth, $timezone);
+                if ($parsed && $parsed->format('Y-m') === $requestedMonth) {
+                    $month = $parsed;
                 }
-
-                return [
-                    'title' => $item['title'],
-                    'starts_at' => $startsAt->toIso8601String(),
-                    'date_key' => $startsAt->toDateString(),
-                    'date_label' => $startsAt->format('M j, Y'),
-                    'time_label' => ! empty($item['upcoming_at']) ? $startsAt->format('g:i A') : 'Time to be announced',
-                    'location' => $item['location'] ?? 'Venue to be announced',
-                    'status' => $item['status'] ?? 'Scheduled',
-                    'status_key' => $item['status_key'] ?? 'created',
-                    'scope_key' => $scopeKey($item['activity_scope'] ?? $item['scope'] ?? null),
-                    'note' => $item['note'] ?? null,
-                ];
-            })
-            ->filter()
-            ->values();
-
-        $savedEvents = $this->constrainToOfficeOrganization(OrgActivity::query())
-            ->whereNotNull('starts_at')
-            ->get()
-            ->map(function (OrgActivity $activity) use ($scopeKey): array {
-                $startsAt = $activity->starts_at;
-
-                return [
-                    'title' => $activity->title,
-                    'starts_at' => $startsAt->toIso8601String(),
-                    'date_key' => $startsAt->toDateString(),
-                    'date_label' => $startsAt->format('M j, Y'),
-                    'time_label' => $startsAt->format('g:i A'),
-                    'location' => $activity->location ?: 'Venue to be announced',
-                    'status' => ucfirst($activity->status),
-                    'status_key' => $activity->status === 'draft' ? 'created' : 'verification',
-                    'scope_key' => $scopeKey($activity->activity_scope),
-                    'note' => $activity->description,
-                ];
-            });
-
-        $events = $pipelineEvents
-            ->merge($savedEvents)
-            ->unique(fn (array $event): string => $event['title'].'|'.$event['starts_at'])
-            ->sortBy('starts_at')
-            ->values();
-        $eventsByDate = $events->groupBy('date_key');
-
-        // If the current month has no events, jump to the month of the latest
-        // event so the calendar never looks dead on first open.
-        if (! $requestedMonth && $events->isNotEmpty()) {
-            $inMonth = $events->contains(fn (array $e): bool => str_starts_with($e['date_key'], $month->format('Y-m')));
-            if (! $inMonth) {
-                $month = Carbon::parse($events->last()['date_key'])->startOfMonth();
-                $cursor = $month->copy()->startOfWeek(Carbon::MONDAY);
-                $end = $month->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
+            } catch (\Throwable) {
+                // Invalid month links keep the calendar on the current month.
             }
         }
 
-        $days = [];
-        while ($cursor <= $end) {
-            $date = $cursor->copy();
-            $days[] = [
-                'date' => $date,
-                'inMonth' => $date->month === $month->month,
-                'events' => $eventsByDate->get($date->toDateString(), collect())->values()->all(),
-            ];
-            $cursor->addDay();
-        }
+        $choice = static function (string $key, array $choices, string $default) use ($request): string {
+            $value = $request->query($key, $default);
+            return in_array($value, $choices, true) ? $value : $default;
+        };
+        $search = $request->query('q', '');
+        $filters = [
+            'q' => is_string($search) ? trim($search) : '',
+            'scope' => $choice('scope', ['all', 'in', 'off'], 'all'),
+            'status' => $choice('status', ['all', 'pending', 'approved', 'completed', 'returned'], 'all'),
+            'timing' => $choice('timing', ['all', 'upcoming', 'ongoing', 'past'], 'all'),
+            'view' => $choice('view', ['auto', 'month', 'agenda'], 'auto'),
+        ];
+        $workflow = app(OrgWorkflowService::class);
+        $role = Auth::guard('office')->user()?->office_role ?? '';
 
-        // Keep the compact upcoming list, but always include off-campus events
-        // so switching to that scope never hides them behind the first eight
-        // mixed-scope records.
-        $upcomingEvents = $events
-            ->take(8)
-            ->merge($events->where('scope_key', 'off'))
-            ->unique(fn (array $event): string => $event['title'].'|'.$event['starts_at'])
-            ->sortBy('starts_at')
+        // Persisted activities are the sole calendar source. Titles are not
+        // identities, and a proposal's display status is not its approval.
+        $events = $this->constrainToOfficeOrganization(OrgActivity::query())
+            ->whereNotNull('starts_at')
+            ->orderBy('starts_at')->orderBy('id')->get()
+            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails(
+                $role, $activity->workflow_status ?: 'created'
+            ))
+            ->map(function (OrgActivity $activity) use ($timezone, $now, $workflow): array {
+                $start = $activity->starts_at->copy()->setTimezone($timezone);
+                $end = $activity->ends_at?->copy()->setTimezone($timezone);
+                $effectiveEnd = $end && $end->greaterThanOrEqualTo($start) ? $end : $start;
+                $workflowStatus = $activity->workflow_status ?: 'created';
+                $statusKey = match (true) {
+                    $workflowStatus === 'completed',
+                    $workflowStatus === 'oc_approved' && $activity->status === 'completed' => 'completed',
+                    $workflowStatus === 'oc_approved' => 'approved',
+                    $workflowStatus === 'returned' => 'returned',
+                    default => 'pending',
+                };
+                $timing = match (true) {
+                    $statusKey === 'completed' => 'past',
+                    $start->greaterThan($now) => 'upcoming',
+                    $effectiveEnd->greaterThan($now) => 'ongoing',
+                    default => 'past',
+                };
+                // Half-open intervals: an activity ending at midnight does
+                // not occupy the following day. A missing end is a point.
+                $lastDay = $effectiveEnd->greaterThan($start)
+                    ? $effectiveEnd->copy()->subMicrosecond()->toDateString()
+                    : $start->toDateString();
+                $dateLabel = $start->format('M j, Y');
+                if ($end && ! $end->isSameDay($start)) {
+                    $dateLabel .= ' – '.$end->format('M j, Y');
+                }
+
+                return [
+                    'id' => (int) $activity->id,
+                    'title' => $activity->title,
+                    'starts_at' => $start->toIso8601String(),
+                    'ends_at' => $end?->toIso8601String(),
+                    'date_key' => $start->toDateString(),
+                    'last_date_key' => $lastDay,
+                    'date_label' => $dateLabel,
+                    'time_label' => $start->format('g:i A').($end
+                        ? ' – '.$end->format('g:i A')
+                        : ' · End time not set'),
+                    'location' => $activity->location ?: 'Venue to be announced',
+                    'status' => $statusKey === 'completed' ? 'Completed' : $workflow->label($workflowStatus),
+                    'status_key' => $statusKey,
+                    'workflow_status' => $workflowStatus,
+                    'timing_key' => $timing,
+                    'timing_label' => ucfirst($timing),
+                    'scope_key' => str_contains(strtolower((string) $activity->activity_scope), 'off') ? 'off' : 'in',
+                    'note' => $activity->description,
+                    'detail_url' => route('office.activities', ['activity' => $activity->id]),
+                ];
+            })
+            ->filter(static function (array $event) use ($filters): bool {
+                return ($filters['scope'] === 'all' || $event['scope_key'] === $filters['scope'])
+                    && ($filters['status'] === 'all' || $event['status_key'] === $filters['status'])
+                    && ($filters['timing'] === 'all' || $event['timing_key'] === $filters['timing'])
+                    && ($filters['q'] === ''
+                        || mb_stripos($event['title'], $filters['q']) !== false
+                        || mb_stripos($event['location'], $filters['q']) !== false);
+            })
             ->values();
+
+        $firstDay = $month->copy()->startOfWeek(Carbon::MONDAY);
+        $lastDay = $month->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY)->startOfDay();
+        $eventsByDate = [];
+        foreach ($events as $event) {
+            $from = max($firstDay->toDateString(), $event['date_key']);
+            $to = min($lastDay->toDateString(), $event['last_date_key']);
+            if ($from > $to) {
+                continue;
+            }
+            $date = Carbon::parse($from, $timezone)->startOfDay();
+            while ($date->toDateString() <= $to) {
+                $eventsByDate[$date->toDateString()][] = $event;
+                $date->addDay();
+            }
+        }
+        $days = [];
+        for ($date = $firstDay->copy(); $date <= $lastDay; $date->addDay()) {
+            $days[] = [
+                'date' => $date->copy(),
+                'inMonth' => $date->format('Y-m') === $month->format('Y-m'),
+                'events' => $eventsByDate[$date->toDateString()] ?? [],
+            ];
+        }
 
         return view('org.calendar', array_merge($this->deskContext(), [
             'activeNav' => 'calendar',
+            'calendarFilters' => $filters,
+            'monthKey' => $month->format('Y-m'),
             'monthLabel' => $month->format('F Y'),
+            'todayKey' => $now->toDateString(),
+            'todayMonth' => $now->format('Y-m'),
             'days' => $days,
+            'agendaDays' => collect($days)->filter(fn (array $day): bool => $day['inMonth'] && count($day['events']))->values(),
             'events' => $events,
-            'upcomingEvents' => $upcomingEvents,
+            'eventsByDate' => $eventsByDate,
+            'upcomingEvents' => $events->where('timing_key', 'upcoming')->values(),
+            'ongoingEvents' => $events->where('timing_key', 'ongoing')->values(),
             'previousMonth' => $month->copy()->subMonth()->format('Y-m'),
             'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
         ]));
@@ -1757,10 +1733,25 @@ class OfficePortalController extends Controller
     {
         $budgetService = app(\App\Services\ActivityBudgetService::class);
         $selectedYear = (string) request('academic_year', $budgetService->period()['academic_year']);
-        $budgetService->dates($selectedYear, (string) request('semester', 'Annual'));
+        $selectedSemester = (string) request('semester', 'Annual');
+        $budgetService->dates($selectedYear, $selectedSemester);
         $orgFilter = $this->organizationFilterForOffice(request('organization', ''));
         $department = trim((string) request('department', ''));
         $departmentValues = $department !== '' ? $this->departmentValues($department) : null;
+        $osoFinancialOverview = Auth::guard('office')->user()?->office_role === 'oso'
+            ? app(\App\Services\OsoFinancialOverviewService::class)->overview(
+                $selectedYear, $selectedSemester, $orgFilter, $departmentValues
+            )
+            : null;
+        $financialTransactions = null;
+        if ($osoFinancialOverview !== null && $orgFilter !== '') {
+            $transactions = collect($osoFinancialOverview['transactions']);
+            $page = min(max(1, request()->integer('cash_page', 1)), max(1, (int) ceil($transactions->count() / 10)));
+            $financialTransactions = new LengthAwarePaginator(
+                $transactions->slice(($page - 1) * 10, 10)->values(), $transactions->count(), 10, $page,
+                ['path' => route('office.budget'), 'pageName' => 'cash_page', 'query' => request()->query()]
+            );
+        }
         $budget = $this->budgetUtilizationData($departmentValues, $orgFilter);
         $items = BudgetItem::query()
             ->when($orgFilter !== '', fn ($q) => $q->where('organization_name', $orgFilter))
@@ -1769,9 +1760,6 @@ class OfficePortalController extends Controller
             ->get();
 
         $liveBudget = $this->buildLiveBudgetDataset($orgFilter, $departmentValues);
-        $accountBalances = OrgFundAccount::query()->where('fiscal_year', $selectedYear)
-            ->when($orgFilter !== '', fn ($q) => $q->where('organization_name', $orgFilter))
-            ->get()->map(fn ($account) => $budgetService->balance($account));
         $approvedBudgetActivities = collect($liveBudget['order'] ?? [])
             ->reject(fn ($key) => $key === 'all')
             ->map(fn ($key) => data_get($liveBudget['entries'] ?? [], $key.'.actName'))
@@ -1785,12 +1773,13 @@ class OfficePortalController extends Controller
 
         return view('org.budget', array_merge($this->deskContext(), [
             'selectedYear' => $selectedYear,
-            'accountBalances' => $accountBalances,
+            'osoFinancialOverview' => $osoFinancialOverview,
+            'financialTransactions' => $financialTransactions,
             'approvedActivityChoices' => collect($liveBudget['entries'])->except('all')->values(),
             'activeNav' => 'budget',
             'budget' => $budget,
             'budgetItems' => $items,
-            'organizations' => $this->recognizedOrgNames(),
+            'organizations' => $osoFinancialOverview['organizations'] ?? $this->recognizedOrgNames(),
             'selectedOrganization' => $orgFilter,
             'liveBudgetEntries' => $liveBudget['entries'],
             'liveScopeTotals' => $liveBudget['scopeTotals'],
@@ -1920,7 +1909,23 @@ class OfficePortalController extends Controller
         ]));
     }
 
+    /**
+     * Organization-assigned SO desks get the workbook-based Financial Report
+     * page; OSO and unassigned SO accounts keep the semester receipt ledger.
+     */
     public function financial(): View
+    {
+        if (Auth::guard('office')->user()?->office_role === 'oso') {
+            return $this->semesterReportDesk('fr');
+        }
+        if ($this->assignedOrganizationName() !== null) {
+            return app(SoFinancialReportController::class)->index($this->deskContext());
+        }
+
+        return $this->financialLedger();
+    }
+
+    private function financialLedger(): View
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && in_array($office->office_role, ['so', 'oso'], true), 403);
@@ -1949,9 +1954,9 @@ class OfficePortalController extends Controller
             'actVenue' => 'See activity records', 'actScope' => 'Approved activities',
             'revenue' => 0, 'expenses' => $data['periodExpenseTotal'], 'balance' => -$data['periodExpenseTotal'],
             'ledger' => $ledger, 'documents' => $docs,
-            'verifiedBy' => !empty($bundle['statuses']['fr']?->reviewed_by) ? (OfficeUser::find($bundle['statuses']['fr']->reviewed_by)?->name ?? 'OSO reviewer') : 'Not reviewed',
+            'verifiedBy' => !empty($bundle['reports']['fr']['status']?->reviewed_by) ? (OfficeUser::find($bundle['reports']['fr']['status']->reviewed_by)?->name ?? 'OSO reviewer') : 'Not reviewed',
             'verifiedOffice' => 'Office of Student Organizations (OSO)',
-            'verifiedDate' => OrgTimeService::format($bundle['statuses']['fr']?->reviewed_at) ?: 'Not reviewed',
+            'verifiedDate' => OrgTimeService::format($bundle['reports']['fr']['status']?->reviewed_at) ?: 'Not reviewed',
             'remarks' => 'The expense register includes receipts dated within this semester. Annual organization balances appear separately. Receipt sealing does not mean OSO has accepted the semester report.',
             'history' => $rows->map(fn ($r) => [
                 'title' => 'Receipt #'.$r->id.' · '.$r->item_name.' · '.$r->verification_status,
@@ -1961,15 +1966,15 @@ class OfficePortalController extends Controller
         return view('org.financial', array_merge($this->deskContext(), $data, [
             'activeNav' => 'financial', 'organizations' => $this->recognizedOrgNames(),
             'selectedOrganization' => $organization, 'selectedSemester' => $semester, 'selectedYear' => $year,
-            'reportBundle' => $bundle, 'reportQueue' => $this->semesterReportQueue(), 'reportType' => 'fr',
-            'reportStatus' => $bundle['statuses']['fr'] ?? null, 'financialDataset' => $dataset,
+            'reportBundle' => $bundle, 'reportType' => 'fr',
+            'reportStatus' => $bundle['reports']['fr']['status'], 'financialDataset' => $dataset,
             'generatedAt' => now()->format('M j, Y g:i A'),
         ]));
     }
 
     public function printFinancial(): View
     {
-        $data = $this->financial()->getData();
+        $data = $this->financialLedger()->getData();
 
         return view('org.financial-print', $data);
     }
@@ -1977,6 +1982,9 @@ class OfficePortalController extends Controller
     public function printAccomplishment(): View
     {
         $data = $this->accomplishment()->getData();
+        if (Auth::guard('office')->user()?->office_role === 'oso') {
+            $data = app(AccomplishmentReportController::class)->index($data)->getData();
+        }
 
         return view('org.accomplishment-print', array_merge($data, [
             'generatedAt' => now()->format('M j, Y g:i A'),
@@ -1987,128 +1995,29 @@ class OfficePortalController extends Controller
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && in_array($office->office_role, ['so', 'oso'], true), 403);
+        if ($office->office_role === 'oso') {
+            return $this->semesterReportDesk('ar');
+        }
 
-        $gender = request('gender'); // male | female | all
-        $sdg = trim((string) request('sdg', ''));
-        $coreValue = trim((string) request('core_value', ''));
-        $organization = $this->organizationFilterForOffice(request('organization', ''));
-        $selectedSemester = request('semester', '1st Semester');
-        $selectedYear = request('academic_year', '2025-2026');
-        $reportBundle = $this->semesterReportBundle($organization, $selectedSemester, $selectedYear);
-        $reportQueue = $this->semesterReportQueue();
+        $currentPeriod = app(\App\Services\ActivityBudgetService::class)->period();
+        $period = request()->validate([
+            'semester' => ['nullable', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
+            'academic_year' => ['nullable', 'regex:/^\d{4}-\d{4}$/'],
+            'organization' => ['nullable', 'string', 'max:255'],
+        ]);
+        $organization = $this->organizationFilterForOffice($period['organization'] ?? '');
+        $semester = $period['semester'] ?? $currentPeriod['semester'];
+        $year = $period['academic_year'] ?? $currentPeriod['academic_year'];
+        app(\App\Services\ActivityBudgetService::class)->dates($year, $semester);
 
-        $activities = OrgActivity::query()
-            ->where(function ($query) {
-                $query->whereIn('workflow_status', ['oc_approved', 'completed'])
-                    ->orWhere('status', 'completed');
-            })
-            ->when($sdg !== '', fn ($q) => $q->whereJsonContains('sdg_goals', $sdg))
-            ->when($coreValue !== '', fn ($q) => $q->whereJsonContains('core_values', $coreValue))
-            ->when($organization !== '', fn ($q) => $q->where('organization_name', $organization))
-            ->orderByDesc('starts_at')
-            ->get();
-        $activityIds = $activities->pluck('id');
-        $submissionsByActivity = InCampusActivitySubmission::query()
-            ->whereIn('org_activity_id', $activityIds)
-            ->latest('id')
-            ->get()
-            ->unique('org_activity_id')
-            ->keyBy('org_activity_id');
-        $evidenceByActivity = ActivityComplianceDoc::query()
-            ->whereIn('org_activity_id', $activityIds)
-            ->get()
-            ->groupBy('org_activity_id');
-
-        $rows = $activities->map(function (OrgActivity $a) use ($gender, $submissionsByActivity, $evidenceByActivity) {
-            $male = (int) $a->male_participants;
-            $female = (int) $a->female_participants;
-            $participants = match ($gender) {
-                'male' => $male,
-                'female' => $female,
-                default => $male + $female,
-            };
-            $submission = $submissionsByActivity->get($a->id);
-            $evidence = $evidenceByActivity->get($a->id, collect());
-            $attachments = is_array($submission?->attachments) ? $submission->attachments : [];
-            $uploadedEvidenceCount = $evidence->filter(function (ActivityComplianceDoc $doc) use ($attachments): bool {
-                $file = $attachments[$doc->doc_key] ?? null;
-
-                return is_array($file) && ! empty($file['path']);
-            })->count();
-
-            return [
-                'title' => $a->title,
-                'slug' => (string) $a->id,
-                    'college' => $a->college,
-                    'sdg_goals' => $a->sdg_goals ?: [],
-                    'core_values' => $a->core_values ?: [],
-                    'male' => $male,
-                    'female' => $female,
-                    'participants' => $participants,
-                'status' => $a->workflow_status,
-                'dateLabel' => optional($a->starts_at)->format('M j, Y') ?? 'TBA',
-                ...$this->academicPeriod($a->starts_at instanceof Carbon
-                    ? $a->starts_at
-                    : ($a->starts_at ? Carbon::parse($a->starts_at) : null)),
-                'venue' => $a->location ?: 'TBA',
-                // The activity description is proposal context, not an accomplishment narrative.
-                // Keep this empty until a post-activity report is submitted and persisted.
-                'narrative' => '',
-                'objectives' => trim((string) ($submission?->objectives ?? '')),
-                'evidenceCount' => $uploadedEvidenceCount,
-                'approvedBudget' => (int) $a->approved_budget,
-                'implementedBudget' => (int) $a->implemented_budget,
-                'remainingBudget' => max(0, (int) $a->approved_budget - (int) $a->implemented_budget),
-                'typeLabel' => match ($a->activity_scope) {
-                    'in_campus' => 'In-Campus',
-                    'local_off_campus' => 'Off-Campus (Local)',
-                        'national_off_campus' => 'Off-Campus (National)',
-                        'international_off_campus' => 'Off-Campus (Intl)',
-                        default => 'General',
-                    },
-                'statusLabel' => $a->workflow_status === 'oc_approved' ? 'Completed' : 'In Progress',
-            ];
-        })->values();
-
-        $reportSnapshot = [
-            'activities' => $rows->count(),
-            'participants' => (int) $rows->sum('participants'),
-            'narratives' => $rows->filter(fn (array $row): bool => $row['narrative'] !== '')->count(),
-            'evidence' => (int) $rows->sum('evidenceCount'),
-        ];
-
-        return view('org.accomplishment', array_merge($this->deskContext(), [
+        return app(\App\Http\Controllers\AccomplishmentReportController::class)->index(array_merge($this->deskContext(), [
             'activeNav' => 'accomplishment',
-            'selectedGender' => $gender ?: 'all',
-            'selectedSdg' => $sdg,
-            'selectedCoreValue' => $coreValue,
             'organizations' => $this->recognizedOrgNames(),
             'selectedOrganization' => $organization,
-            'selectedSemester' => $selectedSemester,
-            'selectedYear' => $selectedYear,
-            'reportBundle' => $reportBundle,
-            'reportQueue' => $reportQueue,
+            'selectedSemester' => $semester,
+            'selectedYear' => $year,
+            'reportBundle' => $this->semesterReportBundle($organization, $semester, $year),
             'reportType' => 'ar',
-            'sdgOptions' => ['SDG 3', 'SDG 4', 'SDG 5', 'SDG 8', 'SDG 9', 'SDG 11', 'SDG 16'],
-            'coreValueOptions' => ['Excellence', 'Integrity', 'Service', 'Innovation', 'Leadership', 'Compassion', 'Teamwork', 'Justice'],
-            'accomplishmentRows' => $rows,
-            'reportSnapshot' => $reportSnapshot,
-            'arFolders' => ArchiveFolder::query()
-                ->with('documents')
-                ->latest()
-                ->get()
-                ->map(fn (ArchiveFolder $folder): array => [
-                    'id' => $folder->id,
-                    'name' => $folder->name,
-                    'semester' => $folder->semester,
-                    'documents' => $folder->documents->map(fn (ArchiveDocument $document): array => [
-                        'name' => $document->name ?: $document->original_name,
-                        'type' => strtoupper(pathinfo($document->original_name, PATHINFO_EXTENSION) ?: 'FILE'),
-                        'size' => $this->formatFileSize($document->file_size),
-                        'date' => optional($document->created_at)->format('M j, Y') ?? '',
-                        'url' => asset('storage/'.$document->file_path),
-                    ])->all(),
-                ])->all(),
         ]));
     }
 
@@ -2540,6 +2449,12 @@ class OfficePortalController extends Controller
      */
     public function storeTemplate(Request $request): RedirectResponse
     {
+        $this->osoOfficer();
+        $category = $request->input('category');
+        if (is_string($category) && strcasecmp(trim($category), 'TOSA') === 0) {
+            $this->requireTosaUnlock($request, 3);
+            $request->merge(['category' => 'TOSA']);
+        }
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:64'],
@@ -2590,36 +2505,80 @@ class OfficePortalController extends Controller
         return $office;
     }
 
-    private function personalSettingsScope(OfficeUser $office): string
-    {
-        return 'office-user-'.$office->id;
-    }
-
-    private function settingsForOffice(OfficeUser $office): array
-    {
-        if ($office->office_role === 'oso') {
-            return OfficeSetting::publicValuesFor('oso');
-        }
-
-        $personal = OfficeSetting::publicValuesFor($this->personalSettingsScope($office));
-        $institutional = OfficeSetting::publicValuesFor('oso');
-
-        // Non-OSO users only edit personal panels. Keep institutional values
-        // available for shared display data, while TOSA governance remains OSO-owned.
-        $personal['general'] = $institutional['general'];
-        $personal['records'] = $institutional['records'];
-        $personal['security']['tosa_gate'] = $institutional['security']['tosa_gate'];
-        $personal['security']['tosa_evaluation_mode'] = $institutional['security']['tosa_evaluation_mode'];
-
-        return $personal;
-    }
-
     private function osoOfficer(): OfficeUser
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
 
         return $office;
+    }
+
+    private function officialOfficeEmailRules(?OfficeUser $office = null): array
+    {
+        return [
+            'required', 'email', 'max:255',
+            Rule::unique('office_users', 'email')->ignore($office?->id),
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                $domain = Str::afterLast(strtolower((string) $value), '@');
+                if (! in_array($domain, ['g.batstate-u.edu.ph', 'batstate-u.edu.ph'], true)) {
+                    $fail('Use your official BatStateU email address.');
+                }
+            },
+        ];
+    }
+
+    private function tosaOfficer(int $minimumLevel = 1): OfficeUser
+    {
+        $office = $this->settingsOfficer();
+        abort_unless($office->tosaClearanceLevel() >= $minimumLevel, 403, 'This account does not have the required TOSA clearance.');
+
+        return $office;
+    }
+
+    private function tosaUnlockState(Request $request): array
+    {
+        $security = OfficeSetting::valuesFor('oso')['security'];
+        if (! $security['tosa_gate']) {
+            return ['unlocked' => true, 'remaining' => 0];
+        }
+
+        $unlock = $request->session()->get('tosa_unlock', []);
+        $signature = hash('sha256', json_encode($security));
+        $duration = max(0, (int) $security['session_timeout']) * 60;
+        $elapsed = now()->timestamp - (int) ($unlock['at'] ?? 0);
+        $valid = filled($security['tosa_pin_hash'])
+            && ($unlock['user_id'] ?? null) === Auth::guard('office')->id()
+            && ($unlock['signature'] ?? null) === $signature
+            && $elapsed >= 0
+            && ($duration === 0 || $elapsed < $duration);
+
+        if (! $valid) {
+            $request->session()->forget('tosa_unlock');
+        }
+
+        return [
+            'unlocked' => $valid,
+            'remaining' => $valid && $duration > 0 ? $duration - $elapsed : 0,
+        ];
+    }
+
+    private function requireTosaUnlock(Request $request, int $minimumLevel = 1): OfficeUser
+    {
+        $office = $this->tosaOfficer($minimumLevel);
+        abort_unless($this->tosaUnlockState($request)['unlocked'], 403, 'Unlock TOSA with the security PIN before continuing.');
+
+        return $office;
+    }
+
+    public function lockOsoTosa(Request $request): JsonResponse
+    {
+        $this->tosaOfficer();
+        if (! data_get(OfficeSetting::valuesFor('oso'), 'security.tosa_gate')) {
+            return response()->json(['ok' => false, 'message' => 'Enable the TOSA PIN gate before locking the session.'], 422);
+        }
+        $request->session()->forget('tosa_unlock');
+
+        return response()->json(['ok' => true]);
     }
 
     /**
@@ -2642,18 +2601,15 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * Save one settings panel. Personal panels are scoped to the signed-in
-     * office user; institutional panels remain OSO-only.
+     * Save institutional settings. Personal account and password changes use
+     * their own endpoints and do not create office settings records.
      */
     public function updateOsoSettings(Request $request): JsonResponse
     {
-        $office = $this->settingsOfficer();
+        $office = $this->osoOfficer();
         $sections = [
             'general' => ['system_name', 'office_name', 'university_name', 'campus_unit', 'contact_email', 'contact_phone', 'contact_location'],
-            'security' => ['session_timeout', 'auto_lock_interval', 'tosa_gate', 'tosa_evaluation_mode'],
-            'notifications' => ['new_proposal_alert', 'tosa_applicant_alert', 'sound_effects', 'approval_dispatches', 'revision_alerts', 'broadcast_banner', 'email_digest_frequency', 'digest_email'],
-            'preferences' => ['timezone', 'date_format', 'time_format', 'language', 'theme', 'high_contrast', 'micro_animations', 'default_landing_module', 'table_page_size'],
-            'records' => ['auto_archive', 'retention_schedule', 'cloud_backup'],
+            'security' => ['session_timeout', 'tosa_gate'],
         ];
 
         $validated = $this->validateOsoJson($request, [
@@ -2665,10 +2621,6 @@ class OfficePortalController extends Controller
         }
 
         $section = $request->string('section')->toString();
-        abort_unless(
-            $office->office_role === 'oso' || ! in_array($section, ['general', 'records'], true),
-            403
-        );
 
         $rules = match ($section) {
             'general' => [
@@ -2682,37 +2634,7 @@ class OfficePortalController extends Controller
             ],
             'security' => [
                 'values.session_timeout' => ['required', 'integer', 'min:0', 'max:1440'],
-                'values.auto_lock_interval' => ['required', 'integer', 'min:0', 'max:1440'],
-                'values.tosa_gate' => $office->office_role === 'oso' ? ['required', 'boolean'] : ['sometimes', 'boolean'],
-                'values.tosa_evaluation_mode' => $office->office_role === 'oso'
-                    ? ['required', Rule::in(['strict', 'standard', 'committee'])]
-                    : ['sometimes', Rule::in(['strict', 'standard', 'committee'])],
-            ],
-            'notifications' => [
-                'values.new_proposal_alert' => ['required', 'boolean'],
-                'values.tosa_applicant_alert' => ['required', 'boolean'],
-                'values.sound_effects' => ['required', 'boolean'],
-                'values.approval_dispatches' => ['required', 'boolean'],
-                'values.revision_alerts' => ['required', 'boolean'],
-                'values.broadcast_banner' => ['required', 'boolean'],
-                'values.email_digest_frequency' => ['required', Rule::in(['instant', 'daily', 'weekly', 'disabled'])],
-                'values.digest_email' => ['nullable', 'email', 'max:255'],
-            ],
-            'preferences' => [
-                'values.timezone' => ['required', Rule::in(['Asia/Manila', 'UTC'])],
-                'values.date_format' => ['required', Rule::in(['MMM D, YYYY', 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'])],
-                'values.time_format' => ['required', Rule::in(['12h', '24h'])],
-                'values.language' => ['required', Rule::in(['en', 'fil'])],
-                'values.theme' => ['required', Rule::in(['red-spartan', 'liquid-glass', 'modern-light'])],
-                'values.high_contrast' => ['required', 'boolean'],
-                'values.micro_animations' => ['required', 'boolean'],
-                'values.default_landing_module' => ['required', Rule::in(['dashboard', 'activities', 'analytics', 'tosa'])],
-                'values.table_page_size' => ['required', Rule::in([7, 10, 25, 50, '7', '10', '25', '50'])],
-            ],
-            'records' => [
-                'values.auto_archive' => ['required', 'boolean'],
-                'values.retention_schedule' => ['required', Rule::in(['1', '3', '5', 'permanent'])],
-                'values.cloud_backup' => ['required', 'boolean'],
+                'values.tosa_gate' => ['required', 'boolean'],
             ],
         };
 
@@ -2721,14 +2643,7 @@ class OfficePortalController extends Controller
             return $validated;
         }
         $clean = collect($validated['values'])->only($sections[$section])->all();
-        if ($section === 'security' && $office->office_role !== 'oso') {
-            $clean = collect($clean)->only(['session_timeout', 'auto_lock_interval'])->all();
-        }
-
-        $scope = $office->office_role === 'oso'
-            ? 'oso'
-            : $this->personalSettingsScope($office);
-        $setting = OfficeSetting::forScope($scope);
+        $setting = OfficeSetting::forScope('oso');
         $values = array_replace_recursive($setting->values ?? [], [$section => $clean]);
         $setting->update([
             'values' => $values,
@@ -2738,16 +2653,17 @@ class OfficePortalController extends Controller
         return response()->json([
             'ok' => true,
             'message' => ucfirst($section).' settings saved.',
-            'settings' => $this->settingsForOffice($office),
+            'settings' => OfficeSetting::publicValuesFor('oso'),
         ]);
     }
 
     public function updateOsoAccount(Request $request): JsonResponse
     {
         $office = $this->settingsOfficer();
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
         $validated = $this->validateOsoJson($request, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('office_users', 'email')->ignore($office->id)],
+            'email' => $this->officialOfficeEmailRules($office),
             'office_title' => ['required', 'string', 'max:160'],
             'employee_id' => ['nullable', 'string', 'max:80'],
         ]);
@@ -2755,10 +2671,20 @@ class OfficePortalController extends Controller
             return $validated;
         }
 
-        $office->update($validated);
-        Auth::guard('office')->setUser($office->fresh());
+        $office = DB::transaction(function () use ($office, $validated): OfficeUser {
+            $current = OfficeUser::query()->lockForUpdate()->findOrFail($office->id);
+            abort_unless($current->is_active && (int) $current->auth_version === (int) $office->auth_version, 401);
+            $current->update($validated);
 
-        return response()->json(['ok' => true, 'message' => 'Account profile saved.']);
+            return $current;
+        });
+        $office->bindCurrentSession($request);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Account profile saved.',
+            'user' => $office->accountMetadata(),
+        ]);
     }
 
     public function updateOsoPassword(Request $request): JsonResponse
@@ -2772,24 +2698,37 @@ class OfficePortalController extends Controller
             return $validated;
         }
 
-        if (! Hash::check($validated['current_password'], (string) $office->password)) {
+        try {
+            $office = DB::transaction(function () use ($office, $validated): OfficeUser {
+                $current = OfficeUser::query()->lockForUpdate()->findOrFail($office->id);
+                abort_unless($current->is_active && (int) $current->auth_version === (int) $office->auth_version, 401);
+                if (! Hash::check($validated['current_password'], (string) $current->password)) {
+                    throw ValidationException::withMessages(['current_password' => 'The current password is incorrect.']);
+                }
+                if (Hash::check($validated['new_password'], (string) $current->password)) {
+                    throw ValidationException::withMessages(['new_password' => 'Choose a password different from your current password.']);
+                }
+                $current->password = $validated['new_password'];
+                $current->save();
+
+                return $current;
+            });
+        } catch (ValidationException $exception) {
             return response()->json([
                 'ok' => false,
-                'message' => 'The current password is incorrect.',
-                'errors' => ['current_password' => ['The current password is incorrect.']],
+                'message' => 'Please correct the highlighted settings and try again.',
+                'errors' => $exception->errors(),
             ], 422);
         }
-
-        $office->password = $validated['new_password'];
-        $office->save();
+        $office->bindCurrentSession($request);
 
         return response()->json(['ok' => true, 'message' => 'Account password updated.']);
     }
 
-    public function updateOsoPin(Request $request, string $type = 'master'): JsonResponse
+    public function updateOsoPin(Request $request, string $type = 'tosa'): JsonResponse
     {
         $office = $this->osoOfficer();
-        abort_unless(in_array($type, ['master', 'tosa'], true), 404);
+        abort_unless($type === 'tosa', 404);
 
         $validated = $this->validateOsoJson($request, ['pin' => ['required', 'digits:4']]);
         if ($validated instanceof JsonResponse) {
@@ -2797,33 +2736,39 @@ class OfficePortalController extends Controller
         }
         $setting = OfficeSetting::forScope('oso');
         $values = $setting->values ?? [];
-        $field = $type === 'tosa' ? 'tosa_pin_hash' : 'master_pin_hash';
-        $values['security'][$field] = Hash::make($validated['pin']);
+        $values['security']['tosa_pin_hash'] = Hash::make($validated['pin']);
         $setting->update([
             'values' => $values,
             'updated_by' => $office->id,
         ]);
 
-        return response()->json(['ok' => true, 'message' => strtoupper($type).' PIN updated and encrypted.']);
+        return response()->json(['ok' => true, 'message' => 'TOSA PIN updated and stored as a one-way hash.']);
     }
 
     public function verifyOsoTosaPin(Request $request): JsonResponse
     {
-        $office = Auth::guard('office')->user();
-        abort_unless($office instanceof OfficeUser && in_array($office->office_role, ['oso', 'ovcaa'], true), 403);
+        $this->tosaOfficer();
         $validated = $this->validateOsoJson($request, ['pin' => ['required', 'digits:4']]);
         if ($validated instanceof JsonResponse) {
             return $validated;
         }
 
-        $configuredHash = data_get(OfficeSetting::valuesFor('oso'), 'security.tosa_pin_hash');
-        $valid = $configuredHash
-            ? Hash::check($validated['pin'], $configuredHash)
-            : in_array($validated['pin'], ['1234', '2026'], true);
+        $security = OfficeSetting::valuesFor('oso')['security'];
+        $configuredHash = $security['tosa_pin_hash'];
+        $valid = filled($configuredHash) && Hash::check($validated['pin'], $configuredHash);
+        if ($valid) {
+            $request->session()->put('tosa_unlock', [
+                'user_id' => Auth::guard('office')->id(),
+                'at' => now()->timestamp,
+                'signature' => hash('sha256', json_encode($security)),
+            ]);
+        } else {
+            $request->session()->forget('tosa_unlock');
+        }
 
         return response()->json([
             'ok' => $valid,
-            'message' => $valid ? 'TOSA PIN accepted.' : 'Invalid security PIN.',
+            'message' => $valid ? 'TOSA PIN accepted.' : ($configuredHash ? 'Invalid security PIN.' : 'The OSO must configure a TOSA PIN or disable the PIN gate.'),
         ], $valid ? 200 : 422);
     }
 
@@ -2831,7 +2776,7 @@ class OfficePortalController extends Controller
     {
         $office = $this->osoOfficer();
         $validated = $this->validateOsoJson($request, [
-            'logo' => ['required', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
+            'logo' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
         if ($validated instanceof JsonResponse) {
             return $validated;
@@ -2877,86 +2822,16 @@ class OfficePortalController extends Controller
         return response()->json(['ok' => true, 'message' => 'Institutional logo reset to the default.']);
     }
 
-    public function storeOsoUser(Request $request): JsonResponse
-    {
-        $office = $this->osoOfficer();
-        $validated = $this->validateOsoJson($request, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('office_users', 'email')],
-            'office_role' => ['required', Rule::in(['oso', 'sdo', 'ovcaa', 'oc'])],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'tosa_clearance' => ['required', Rule::in(['No Access', 'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master'])],
-        ]);
-        if ($validated instanceof JsonResponse) {
-            return $validated;
-        }
-
-        $baseUsername = Str::slug(Str::before($validated['email'], '@'), '_') ?: 'office-user';
-        $username = $baseUsername;
-        $suffix = 2;
-        while (OfficeUser::query()->where('username', $username)->exists()) {
-            $username = $baseUsername.'_'.$suffix++;
-        }
-
-        $roleTitles = [
-            'oso' => 'OSO Review Officer',
-            'sdo' => 'SDO Document Reviewer',
-            'ovcaa' => 'OVCAA Final Endorser',
-            'oc' => 'OC Final Approval Officer',
-        ];
-        $user = OfficeUser::query()->create([
-            'name' => $validated['name'],
-            'email' => strtolower($validated['email']),
-            'username' => $username,
-            'password' => $validated['password'],
-            'office_role' => $validated['office_role'],
-            'office_title' => $roleTitles[$validated['office_role']],
-            'tosa_clearance' => $validated['tosa_clearance'],
-            'is_active' => true,
-        ]);
-
-        return response()->json([
-            'ok' => true,
-            'message' => "Officer account for {$user->name} created.",
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->roleLabel(),
-                'tosa_clearance' => $user->tosa_clearance ?: 'No Access',
-                'is_active' => (bool) $user->is_active,
-            ],
-        ], 201);
-    }
-
-    public function updateOsoUserStatus(Request $request, OfficeUser $user): JsonResponse
-    {
-        $office = $this->osoOfficer();
-        abort_unless(in_array($user->office_role, ['oso', 'sdo', 'ovcaa', 'oc'], true), 404);
-
-        $validated = $this->validateOsoJson($request, ['is_active' => ['required', 'boolean']]);
-        if ($validated instanceof JsonResponse) {
-            return $validated;
-        }
-        if ((int) $user->id === (int) $office->id && ! $validated['is_active']) {
-            return response()->json(['ok' => false, 'message' => 'You cannot deactivate the account you are currently using.'], 422);
-        }
-
-        $user->update(['is_active' => $validated['is_active']]);
-
-        return response()->json([
-            'ok' => true,
-            'message' => $user->is_active ? 'Officer account activated.' : 'Officer account deactivated.',
-            'is_active' => (bool) $user->is_active,
-        ]);
-    }
 
     public function downloadOsoDataPackage(string $type): StreamedResponse
     {
         $this->osoOfficer();
         $type = Str::lower($type);
+        if ($type === 'tosa-manifest') {
+            $this->requireTosaUnlock(request());
+        }
 
-        $definitions = [
+        $definition = match ($type) {
             'organization-roster' => [
                 'filename' => 'orgchain-organization-roster-'.now()->format('Ymd-His').'.csv',
                 'headers' => ['Name', 'Short Name', 'College', 'Academic Year', 'Status'],
@@ -2976,8 +2851,8 @@ class OfficePortalController extends Controller
                     $activity->organization_name,
                     $activity->college,
                     optional($activity->starts_at)->format('Y-m-d H:i'),
-                    (int) $activity->approved_budget,
-                    (int) $activity->implemented_budget,
+                    number_format((float) $activity->approved_budget, 2, '.', ''),
+                    number_format((float) $activity->implemented_budget, 2, '.', ''),
                     $activity->workflow_status,
                 ])->all(),
             ],
@@ -2995,35 +2870,23 @@ class OfficePortalController extends Controller
                         $applicant->organization_name,
                         $applicant->subsection,
                         $submitted,
-                        max(count($requirements), 1),
+                        count($requirements),
                     ];
                 })->all(),
             ],
-        ];
-
-        if ($type !== 'audit-logs' && ! isset($definitions[$type])) {
-            abort(404);
-        }
-
-        if ($type === 'audit-logs') {
-            $snapshot = $this->osoSnapshotPayload();
-
-            return response()->streamDownload(
-                static function () use ($snapshot): void {
-                    echo json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                },
-                'orgchain-oso-audit-snapshot-'.now()->format('Ymd-His').'.json',
-                ['Content-Type' => 'application/json; charset=utf-8']
-            );
-        }
-
-        $definition = $definitions[$type];
+            default => abort(404),
+        };
 
         return response()->streamDownload(function () use ($definition): void {
             $out = fopen('php://output', 'w');
             fputcsv($out, $definition['headers']);
             foreach ($definition['rows'] as $row) {
-                fputcsv($out, $row);
+                $safeRow = array_map(static function ($value) {
+                    return is_string($value) && preg_match('/^[\s]*[=+\-@]/u', $value)
+                        ? "'".$value
+                        : $value;
+                }, $row);
+                fputcsv($out, $safeRow);
             }
             fclose($out);
         }, $definition['filename'], ['Content-Type' => 'text/csv; charset=utf-8']);
@@ -3050,10 +2913,12 @@ class OfficePortalController extends Controller
             'scope' => 'oso',
             'settings' => OfficeSetting::publicValuesFor('oso'),
             'office_users' => OfficeUser::query()
-                ->whereIn('office_role', ['oso', 'sdo', 'ovcaa', 'oc'])
+                ->with('studentOrganization')
+                ->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])
                 ->orderBy('id')
-                ->get(['id', 'name', 'email', 'username', 'office_role', 'office_title', 'employee_id', 'tosa_clearance', 'is_active', 'updated_at'])
-                ->toArray(),
+                ->get()
+                ->map(fn (OfficeUser $user) => $user->accountMetadata())
+                ->all(),
             'counts' => [
                 'organizations' => StudentOrganization::query()->count(),
                 'activities' => OrgActivity::query()->count(),
@@ -3083,7 +2948,10 @@ class OfficePortalController extends Controller
         if ($role === 'oso') {
             $submissions = $window
                 ? OrgRenewalSubmission::query()->with('documents')
-                    ->where('renewal_window_id', $window->id)->latest('id')->get()
+                    ->where('renewal_window_id', $window->id)
+                    ->whereIn('status', ['submitted', 'returned', 'approved', 'rejected'])
+                    ->whereNotNull('submitted_at')
+                    ->latest('id')->get()
                 : collect();
             $submissionsByOrganization = $submissions->keyBy(fn (OrgRenewalSubmission $sub) => mb_strtolower($sub->organization_name));
 
@@ -3137,6 +3005,8 @@ class OfficePortalController extends Controller
                 $mySubmission = OrgRenewalSubmission::query()
                     ->with('documents')
                     ->where('renewal_window_id', $window->id)
+                    ->whereIn('status', ['submitted', 'returned', 'approved', 'rejected'])
+                    ->whereNotNull('submitted_at')
                     ->where(function ($q) use ($office, $orgName) {
                         $q->where('submitted_by', $office?->id)
                             ->orWhere('organization_name', $orgName);
@@ -3438,387 +3308,398 @@ class OfficePortalController extends Controller
         if (! $window || ! $window->isAcceptingSubmissions()) {
             return back()->withErrors(['renewal' => 'Renewal is locked. Wait for OSO to open the filing window.']);
         }
-
+        $requiredDocs = $window->requiredDocList();
         $validated = $request->validate([
+            'action' => ['required', 'in:submit'],
+            'window_id' => ['required', 'integer'],
             'organization_name' => ['required', 'string', 'max:255'],
             'college' => ['nullable', 'string', 'max:255'],
             'adviser_name' => ['required', 'string', 'max:255'],
             'dean_name' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'action' => ['nullable', 'in:draft,submit'],
+            'documents' => ['nullable', 'array:'.implode(',', array_column($requiredDocs, 'key'))],
+            'documents.*' => [
+                'bail', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
 
         $assignedOrganization = $this->assignedOrganizationName();
         if ($assignedOrganization !== null) {
             $validated['organization_name'] = $assignedOrganization;
         }
+        $files = $request->file('documents', []);
+        $storedPaths = [];
+        try {
+            DB::connection('mysql')->transaction(function () use ($window, $validated, $office, $files, $assignedOrganization, &$storedPaths): void {
+                $lockedWindow = OrgRenewalWindow::query()->lockForUpdate()->findOrFail($window->id);
+                if ((int) $validated['window_id'] !== (int) $lockedWindow->id
+                    || (int) OrgRenewalWindow::query()->latest('id')->value('id') !== (int) $lockedWindow->id
+                    || ! $lockedWindow->isAcceptingSubmissions()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'The renewal window changed or closed. Reload the page before submitting.']);
+                }
+                $requiredDocs = $lockedWindow->requiredDocList();
+                $existing = OrgRenewalSubmission::query()
+                    ->where('renewal_window_id', $lockedWindow->id)
+                    ->where('organization_name', $validated['organization_name'])
+                    ->lockForUpdate()
+                    ->first();
+                if ($existing) {
+                    abort_unless((int) $existing->submitted_by === (int) $office->id || $assignedOrganization === $existing->organization_name, 403);
+                    if (in_array($existing->status, OrgRenewalSubmission::TERMINAL_STATUSES, true)) {
+                        throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'This renewal packet was already '.$existing->status.' by OSO and can no longer be edited.']);
+                    }
+                }
+                $orgModel = StudentOrganization::where('name', $validated['organization_name'])->first();
+                if ($orgModel && (! ($orgModel->is_qualified_for_renewal ?? true) || ! $orgModel->is_active)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'Renewal submission blocked: '.($orgModel->disqualification_reason ?: 'This organization is Not Qualified to Renew or Inactive by OSO.')]);
+                }
+                $documents = $existing?->documents()->get()->keyBy('doc_key') ?? collect();
+                $unlisted = array_diff(array_keys($files), array_column($requiredDocs, 'key'));
+                if ($unlisted) {
+                    throw ValidationException::withMessages(['renewal' => 'The required document list changed. Reload the page before submitting.']);
+                }
+                $missing = [];
+                foreach ($requiredDocs as $doc) {
+                    $saved = $documents->get($doc['key']);
+                    if (! isset($files[$doc['key']]) && (! $saved || ! $saved->hasStoredFile())) {
+                        $missing[] = $doc['title'];
+                    }
+                }
+                if ($missing) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'Select all required documents before submitting: '.implode(', ', $missing).'.']);
+                }
 
-        $action = $validated['action'] ?? 'draft';
-        $error = DB::connection('mysql')->transaction(function () use ($window, $validated, $office, $action): ?string {
-            $existing = OrgRenewalSubmission::query()
-                ->where('renewal_window_id', $window->id)
-                ->where('organization_name', $validated['organization_name'])
-                ->lockForUpdate()
-                ->first();
-            if ($existing && in_array($existing->status, OrgRenewalSubmission::TERMINAL_STATUSES, true)) {
-                return 'This renewal packet was already '.$existing->status.' by OSO and can no longer be edited.';
-            }
-
-            $submission = OrgRenewalSubmission::query()->updateOrCreate(
-                [
-                    'renewal_window_id' => $window->id,
+                $submission = $existing ?? new OrgRenewalSubmission([
+                    'renewal_window_id' => $lockedWindow->id,
                     'organization_name' => $validated['organization_name'],
-                ],
-                [
+                ]);
+                $submission->fill([
                     'college' => $validated['college'] ?? null,
                     'submitted_by' => $office->id,
                     'adviser_name' => $validated['adviser_name'],
                     'dean_name' => $validated['dean_name'],
                     'notes' => $validated['notes'] ?? null,
-                    'status' => $action === 'submit' ? 'submitted' : 'draft',
-                    'submitted_at' => $action === 'submit' ? now() : null,
-                ]
-            );
-
-            if ($action !== 'submit') {
-                return null;
-            }
-
-            $orgModel = StudentOrganization::where('name', $validated['organization_name'])->first();
-            if ($orgModel && (! $orgModel->is_qualified_for_renewal || ! $orgModel->is_active)) {
-                $submission->update(['status' => 'draft', 'submitted_at' => null]);
-                $reason = $orgModel->disqualification_reason ?: 'This organization is currently flagged as Not Qualified to Renew or Inactive by OSO.';
-
-                return 'Renewal submission blocked: '.$reason;
-            }
-
-            $required = collect($window->requiredDocList())->pluck('key');
-            $uploaded = $submission->documents()->pluck('doc_key');
-            $missing = $required->diff($uploaded);
-            if ($missing->isNotEmpty()) {
-                $submission->update(['status' => 'draft', 'submitted_at' => null]);
-
-                return 'Upload all '.$missing->count().' remaining required document(s) before submitting.';
-            }
-
-            return null;
-        });
-
-        if ($error !== null) {
-            return back()->withInput()->withErrors(['renewal' => $error]);
-        }
-
-        return redirect()
-            ->route('office.renewal')
-            ->with('success', $action === 'submit'
-                ? 'Renewal packet submitted for Adviser → Dean → OSO review.'
-                : 'Renewal draft saved.');
-    }
-
-    public function storeRenewalDocument(Request $request): RedirectResponse
-    {
-        $office = Auth::guard('office')->user();
-        abort_unless(($office?->office_role ?? '') === 'so', 403);
-
-        $window = OrgRenewalWindow::query()->latest('id')->first();
-        if (! $window || ! $window->isAcceptingSubmissions()) {
-            return back()->withErrors(['renewal' => 'Renewal is locked by OSO.']);
-        }
-
-        $validated = $request->validate([
-            'submission_id' => ['required', 'integer', 'exists:org_renewal_submissions,id'],
-            'doc_key' => ['required', 'string', 'max:80'],
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
-        ]);
-
-        $docMeta = collect($window->requiredDocList())->firstWhere('key', $validated['doc_key']);
-        if (! $docMeta) {
-            return back()->withErrors(['document' => 'Unknown document type.']);
-        }
-
-        $file = $request->file('document');
-        $error = DB::connection('mysql')->transaction(function () use ($validated, $window, $office, $docMeta, $file): ?string {
-            $submission = OrgRenewalSubmission::query()
-                ->where('id', $validated['submission_id'])
-                ->where('renewal_window_id', $window->id)
-                ->where('submitted_by', $office->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-            if (in_array($submission->status, OrgRenewalSubmission::TERMINAL_STATUSES, true)) {
-                return 'This renewal packet was already '.$submission->status.' by OSO and can no longer be edited.';
-            }
-
-            OrgRenewalDocument::query()->updateOrCreate(
-                [
-                    'submission_id' => $submission->id,
-                    'doc_key' => $validated['doc_key'],
-                ],
-                [
-                    'title' => $docMeta['title'],
-                    'file_path' => $file->store('renewal-documents', 'public'),
-                    'file_name' => $file->getClientOriginalName(),
-                    'review_status' => OrgRenewalDocument::REVIEW_PENDING,
+                    'status' => 'submitted',
+                    'submitted_at' => now(),
                     'review_remarks' => null,
                     'reviewed_at' => null,
-                    'reviewed_by' => null,
-                ]
-            );
-
-            return null;
-        });
-
-        if ($error !== null) {
-            return back()->withErrors(['document' => $error]);
+                ])->save();
+                foreach ($requiredDocs as $doc) {
+                    if (! isset($files[$doc['key']])) {
+                        continue;
+                    }
+                    $file = $files[$doc['key']];
+                    $path = $file->store('renewal-documents', 'public');
+                    if (! is_string($path) || $path === '') {
+                        throw new \RuntimeException('The renewal document could not be stored.');
+                    }
+                    $storedPaths[] = $path;
+                    $submission->documents()->updateOrCreate(['doc_key' => $doc['key']], [
+                        'title' => $doc['title'],
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'review_status' => OrgRenewalDocument::REVIEW_PENDING,
+                        'review_remarks' => null,
+                        'reviewed_at' => null,
+                        'reviewed_by' => null,
+                    ]);
+                }
+            });
+        } catch (\Throwable $error) {
+            Storage::disk('public')->delete($storedPaths);
+            throw $error;
         }
 
-        return redirect()->route('office.renewal')->with('success', $docMeta['title'].' uploaded.');
+        return redirect()->route('office.renewal')->with('success', 'Renewal packet submitted for review.');
     }
 
     public function archive(Request $request): View
     {
+        $organization = $this->archiveOrganization();
+        $savedFolders = $this->accessibleArchiveFolders($organization);
+        $folderIds = $savedFolders->modelKeys();
+        $folderIndex = $savedFolders->keyBy('id');
+        $activities = OrgActivity::query()
+            ->when($organization !== null, fn ($query) => $query->where('organization_name', $organization))
+            ->with(['complianceDocs.submission'])
+            ->orderBy('title')->get();
+        $activityDocuments = $activities->mapWithKeys(fn (OrgActivity $activity) => [
+            $activity->id => $activity->complianceDocs->map(function (ActivityComplianceDoc $document) use ($activity) {
+                $file = $this->archivedActivityFile($document, $activity);
+                if ($file === null) {
+                    return null;
+                }
+
+                return [
+                    'id' => 'act-doc-'.$document->id,
+                    'name' => $document->title ?: pathinfo($file['name'], PATHINFO_FILENAME),
+                    'original_name' => $file['name'],
+                    'size' => $this->formatFileSize($file['size']),
+                    'date' => $document->updated_at?->format('M j, Y'),
+                    'author' => $activity->organization_name ?: 'Student Organization',
+                    'type' => strtoupper(pathinfo($file['name'], PATHINFO_EXTENSION)),
+                    'url' => route('office.archive.activity-documents.view', $document),
+                    'download_url' => route('office.archive.activity-documents.download', $document),
+                    'folder_id' => 'activity-'.$activity->id,
+                    'folder_name' => $activity->title,
+                    'file_size' => $file['size'],
+                ];
+            })->filter()->values(),
+        ]);
         $folderId = $request->query('folder_id');
         $currentFolder = null;
         $parentFolderId = null;
         $breadcrumbs = [['id' => null, 'name' => 'Archive Vault']];
         $isActivityFolder = false;
 
-        if (!empty($folderId)) {
-            if (is_string($folderId) && str_starts_with($folderId, 'activity-')) {
-                $activityId = (int) str_replace('activity-', '', $folderId);
-                $activity = $this->constrainToOfficeOrganization(OrgActivity::query())->find($activityId);
-                if ($activity) {
-                    $isActivityFolder = true;
-                    $breadcrumbs[] = ['id' => 'activity-'.$activity->id, 'name' => $activity->title];
-                    $currentFolder = (object) [
-                        'id' => 'activity-'.$activity->id,
-                        'name' => $activity->title,
-                        'organization_name' => $activity->organization_name ?: ($activity->college ?: 'Student Organization'),
-                        'semester' => 'AY 2025-2026',
-                        'color' => match ($activity->workflow_status) {
-                            'oc_approved' => 'green',
-                            'returned' => 'gold',
-                            default => 'red',
-                        },
-                        'is_activity' => true,
-                        'is_saved' => false,
-                        'parent_id' => null,
-                    ];
-                }
+        if ($folderId !== null && $folderId !== '') {
+            abort_unless(is_scalar($folderId), 404);
+            if (preg_match('/^activity-([1-9][0-9]*)$/', (string) $folderId, $matches)) {
+                $activity = $activities->firstWhere('id', (int) $matches[1]);
+                abort_unless($activity instanceof OrgActivity, 404);
+                $isActivityFolder = true;
+                $currentFolder = (object) [
+                    'id' => 'activity-'.$activity->id, 'name' => $activity->title,
+                    'organization_name' => $activity->organization_name,
+                    'semester' => null, 'color' => 'blue', 'is_activity' => true,
+                    'is_saved' => false, 'parent_id' => null,
+                ];
+                $breadcrumbs[] = ['id' => $currentFolder->id, 'name' => $currentFolder->name];
             } else {
-                $currentFolder = ArchiveFolder::with(['parent', 'documents'])->find($folderId);
-                if ($currentFolder) {
-                    $parentFolderId = $currentFolder->parent_id;
-                    $breadcrumbs = array_merge(
-                        [['id' => null, 'name' => 'Archive Vault']],
-                        $currentFolder->getBreadcrumbs()
-                    );
-                }
+                abort_unless(ctype_digit((string) $folderId), 404);
+                $currentFolder = $folderIndex->get((int) $folderId);
+                abort_unless($currentFolder instanceof ArchiveFolder, 404);
+                $parentFolderId = $currentFolder->parent_id;
+                $breadcrumbs = array_merge($breadcrumbs, $this->archiveBreadcrumbs($currentFolder, $folderIndex));
             }
         }
 
-        if ($currentFolder && !($currentFolder->is_activity ?? false)) {
-            // Folders inside this subfolder
-            $folders = $currentFolder->children()
-                ->withCount(['children', 'documents'])
-                ->orderBy('name')
-                ->get()
-                ->map(fn (ArchiveFolder $folder): array => [
-                    'id' => $folder->id,
-                    'name' => $folder->name,
-                    'org' => $folder->organization_name,
-                    'semester' => $folder->semester,
-                    'documents' => $folder->documents_count,
-                    'subfolders' => $folder->children_count,
-                    'icon' => 'folder-fill',
-                    'color' => $folder->color ?: 'blue',
-                    'is_saved' => true,
-                    'parent_id' => $folder->parent_id,
-                ]);
-
-            // Documents directly in this folder
-            $documents = $currentFolder->documents()
-                ->latest()
-                ->get()
-                ->map(fn (ArchiveDocument $document): array => [
-                    'id' => $document->id,
-                    'name' => $document->name,
-                    'original_name' => $document->original_name,
-                    'size' => $this->formatFileSize($document->file_size),
-                    'date' => $document->created_at->format('M j, Y'),
-                    'author' => $document->uploaded_by ?: 'Student Organization',
-                    'type' => strtoupper(pathinfo($document->original_name, PATHINFO_EXTENSION) ?: 'DOC'),
-                    'url' => asset('storage/'.$document->file_path),
-                    'folder_id' => $document->archive_folder_id,
-                    'folder_name' => $currentFolder->name,
-                ]);
-        } elseif ($isActivityFolder && isset($activity)) {
+        $childCounts = $savedFolders->countBy(fn (ArchiveFolder $folder) => $folder->parent_id ?? 'root');
+        $mapFolder = fn (ArchiveFolder $folder): array => [
+            'id' => $folder->id, 'name' => $folder->name,
+            'org' => $folder->organization_name, 'semester' => $folder->semester,
+            'documents' => $folder->documents_count,
+            'subfolders' => $childCounts->get($folder->id, 0),
+            'icon' => 'folder-fill', 'color' => $folder->color ?: 'blue',
+            'is_saved' => true, 'parent_id' => $folder->parent_id,
+        ];
+        $documentQuery = ArchiveDocument::query()->whereIn('archive_folder_id', $folderIds);
+        if ($isActivityFolder) {
             $folders = collect();
-            $documents = ActivityComplianceDoc::query()
-                ->where('org_activity_id', $activity->id)
-                ->get()
-                ->map(fn ($doc) => [
-                    'id' => 'act-doc-'.$doc->id,
-                    'name' => $doc->title ?: 'Compliance Document',
-                    'original_name' => $doc->title ?: 'Document.pdf',
-                    'size' => '1.5 MB',
-                    'date' => optional($doc->updated_at)->format('M j, Y') ?? 'Recent',
-                    'author' => $activity->organization_name ?: 'Student Org',
-                    'type' => strtoupper(pathinfo($doc->file_path ?: 'doc.pdf', PATHINFO_EXTENSION) ?: 'PDF'),
-                    'url' => $doc->file_path ? asset('storage/'.$doc->file_path) : '#',
-                    'folder_id' => 'activity-'.$activity->id,
-                    'folder_name' => $activity->title,
-                ]);
-
-            if ($documents->isEmpty()) {
-                $documents = collect([
-                    [
-                        'id' => 'act-doc-prop',
-                        'name' => $activity->title.' - Activity Proposal.pdf',
-                        'original_name' => $activity->title.' - Activity Proposal.pdf',
-                        'size' => '1.8 MB',
-                        'date' => optional($activity->created_at)->format('M j, Y') ?? 'Recent',
-                        'author' => $activity->organization_name ?: 'Student Org',
-                        'type' => 'PDF',
-                        'url' => '#',
-                        'folder_id' => 'activity-'.$activity->id,
-                        'folder_name' => $activity->title,
-                    ],
-                ]);
-            }
+            $documents = $activityDocuments->get($activity->id);
         } else {
-            // At Archive Vault Root (parent_id is null)
-            $savedFolders = $this->constrainToOfficeOrganization(ArchiveFolder::query())
-                ->whereNull('parent_id')
-                ->withCount(['children', 'documents'])
-                ->latest()
-                ->get()
-                ->map(fn (ArchiveFolder $folder): array => [
-                    'id' => $folder->id,
-                    'name' => $folder->name,
-                    'org' => $folder->organization_name,
-                    'semester' => $folder->semester,
-                    'documents' => $folder->documents_count,
-                    'subfolders' => $folder->children_count,
-                    'icon' => 'folder-fill',
-                    'color' => $folder->color,
-                    'is_saved' => true,
-                    'parent_id' => null,
-                ]);
-
-            $activityFolders = $this->constrainToOfficeOrganization(OrgActivity::query())
-                ->orderBy('title')
-                ->get()
-                ->map(function (OrgActivity $activity) {
-                    $docs = max(2, (int) ActivityComplianceDoc::query()->where('org_activity_id', $activity->id)->count() + 2);
-
-                    return [
-                        'id' => 'activity-'.$activity->id,
-                        'name' => $activity->title,
-                        'org' => $activity->organization_name ?: ($activity->college ?: 'Student Organization'),
-                        'semester' => 'AY 2025-2026',
-                        'documents' => $docs,
-                        'subfolders' => 0,
-                        'icon' => 'folder-fill',
-                        'color' => match ($activity->workflow_status) {
-                            'oc_approved' => 'green',
-                            'returned' => 'gold',
-                            default => 'red',
-                        },
-                        'is_saved' => false,
-                        'is_activity' => true,
-                        'parent_id' => null,
-                    ];
-                });
-
-            $demoFolders = collect([
-                ['id' => 'demo-1', 'name' => 'BSIT Society', 'org' => 'BSIT Society', 'semester' => '2nd Semester', 'documents' => 5, 'subfolders' => 2, 'icon' => 'folder-fill', 'color' => 'violet', 'is_saved' => false, 'parent_id' => null],
-                ['id' => 'demo-2', 'name' => 'Student Government', 'org' => 'Student Government', 'semester' => '2nd Semester', 'documents' => 3, 'subfolders' => 1, 'icon' => 'folder-fill', 'color' => 'blue', 'is_saved' => false, 'parent_id' => null],
-                ['id' => 'demo-3', 'name' => 'Red Cross Youth', 'org' => 'Red Cross Youth', 'semester' => '2nd Semester', 'documents' => 4, 'subfolders' => 0, 'icon' => 'folder-fill', 'color' => 'red', 'is_saved' => false, 'parent_id' => null],
-                ['id' => 'demo-4', 'name' => 'Peer Counselors', 'org' => 'Peer Counselors', 'semester' => '2nd Semester', 'documents' => 2, 'subfolders' => 0, 'icon' => 'folder-fill', 'color' => 'green', 'is_saved' => false, 'parent_id' => null],
-            ]);
-
-            $folders = $savedFolders->concat($activityFolders);
-            if ($folders->isEmpty()) {
-                $folders = $demoFolders;
-            }
-
-            // Quick access / recent vault documents
-            $savedDocuments = ArchiveDocument::query()
-                ->with('folder')
-                ->latest()
-                ->take(24)
-                ->get()
-                ->map(fn (ArchiveDocument $document): array => [
-                    'id' => $document->id,
-                    'name' => $document->name,
+            $folders = $savedFolders->where('parent_id', $currentFolder?->id)->map($mapFolder)->values();
+            $documents = (clone $documentQuery)
+                ->when($currentFolder !== null, fn ($query) => $query->where('archive_folder_id', $currentFolder->id))
+                ->latest()->when($currentFolder === null, fn ($query) => $query->limit(24))
+                ->get()->map(fn (ArchiveDocument $document): array => [
+                    'id' => $document->id, 'name' => $document->name,
                     'original_name' => $document->original_name,
                     'size' => $this->formatFileSize($document->file_size),
                     'date' => $document->created_at->format('M j, Y'),
                     'author' => $document->uploaded_by ?: 'Student Organization',
                     'type' => strtoupper(pathinfo($document->original_name, PATHINFO_EXTENSION) ?: 'DOC'),
-                    'url' => asset('storage/'.$document->file_path),
+                    'url' => route('office.archive.documents.view', $document),
+                    'download_url' => route('office.archive.documents.download', $document),
                     'folder_id' => $document->archive_folder_id,
-                    'folder_name' => $document->folder?->name ?: 'General Archive',
+                    'folder_name' => $folderIndex->get($document->archive_folder_id)->name,
                 ]);
-
-            $demoDocuments = collect([
-                ['name' => 'Innovation Fair - Activity Proposal.pdf', 'size' => '2.4 MB', 'date' => 'Apr 6, 2026', 'author' => 'Maria Santos', 'type' => 'PDF', 'folder_name' => 'Student Government', 'url' => '#'],
-                ['name' => 'Innovation Fair - Budget Allocation.xlsx', 'size' => '890 KB', 'date' => 'Apr 6, 2026', 'author' => 'Maria Santos', 'type' => 'XLSX', 'folder_name' => 'Student Government', 'url' => '#'],
-                ['name' => 'Innovation Fair - Attendance Report.pdf', 'size' => '1.2 MB', 'date' => 'Apr 5, 2026', 'author' => 'Ana Gonzales', 'type' => 'PDF', 'folder_name' => 'Student Government', 'url' => '#'],
-                ['name' => 'BSIT CodeFest - Event Guidelines.pdf', 'size' => '1.8 MB', 'date' => 'Apr 3, 2026', 'author' => 'Juan Dela Cruz', 'type' => 'PDF', 'folder_name' => 'BSIT Society', 'url' => '#'],
-                ['name' => 'BSIT CodeFest - Financial Report.xlsx', 'size' => '720 KB', 'date' => 'Apr 3, 2026', 'author' => 'Juan Dela Cruz', 'type' => 'XLSX', 'folder_name' => 'BSIT Society', 'url' => '#'],
-                ['name' => 'BSIT Seminar - Certificate Template.pdf', 'size' => '3.1 MB', 'date' => 'Apr 1, 2026', 'author' => 'Mark Ramos', 'type' => 'PDF', 'folder_name' => 'BSIT Society', 'url' => '#'],
-                ['name' => 'BSIT General Assembly - Minutes.pdf', 'size' => '950 KB', 'date' => 'Mar 28, 2026', 'author' => 'Sarah Lim', 'type' => 'PDF', 'folder_name' => 'BSIT Society', 'url' => '#'],
-                ['name' => 'BSIT Membership Roster 2026.xlsx', 'size' => '540 KB', 'date' => 'Mar 25, 2026', 'author' => 'Juan Dela Cruz', 'type' => 'XLSX', 'folder_name' => 'BSIT Society', 'url' => '#'],
-                ['name' => 'Blood Donation Drive - Activity Permit.pdf', 'size' => '1.5 MB', 'date' => 'Mar 20, 2026', 'author' => 'Elena Cruz', 'type' => 'PDF', 'folder_name' => 'Red Cross Youth', 'url' => '#'],
-                ['name' => 'First Aid Workshop - Program Flow.pdf', 'size' => '820 KB', 'date' => 'Mar 18, 2026', 'author' => 'Elena Cruz', 'type' => 'PDF', 'folder_name' => 'Red Cross Youth', 'url' => '#'],
-                ['name' => 'Youth Leadership Summit - Budget.xlsx', 'size' => '610 KB', 'date' => 'Mar 15, 2026', 'author' => 'Carlos Reyes', 'type' => 'XLSX', 'folder_name' => 'Red Cross Youth', 'url' => '#'],
-                ['name' => 'Red Cross Youth - Annual Accomplishment Report.pdf', 'size' => '4.2 MB', 'date' => 'Mar 10, 2026', 'author' => 'Elena Cruz', 'type' => 'PDF', 'folder_name' => 'Red Cross Youth', 'url' => '#'],
-                ['name' => 'Mental Health Awareness - Proposal.pdf', 'size' => '2.1 MB', 'date' => 'Mar 5, 2026', 'author' => 'Grace Tan', 'type' => 'PDF', 'folder_name' => 'Peer Counselors', 'url' => '#'],
-                ['name' => 'Peer Counseling Session Log.xlsx', 'size' => '430 KB', 'date' => 'Mar 1, 2026', 'author' => 'Grace Tan', 'type' => 'XLSX', 'folder_name' => 'Peer Counselors', 'url' => '#'],
-            ]);
-
-            $documents = $savedDocuments->isNotEmpty() ? $savedDocuments : $demoDocuments;
+            if ($currentFolder === null) {
+                $folders = $folders->concat($activities->map(fn (OrgActivity $activity): array => [
+                    'id' => 'activity-'.$activity->id, 'name' => $activity->title,
+                    'org' => $activity->organization_name ?: $activity->college,
+                    'semester' => null, 'documents' => $activityDocuments->get($activity->id)->count(),
+                    'subfolders' => 0, 'icon' => 'folder-fill',
+                    'color' => match ($activity->workflow_status) {
+                        'oc_approved' => 'green', 'returned' => 'gold', default => 'red',
+                    },
+                    'is_saved' => false, 'is_activity' => true, 'parent_id' => null,
+                ]));
+            }
         }
 
-        // All saved folders for modal picker
-        $allSavedFolders = ArchiveFolder::query()
-            ->orderBy('name')
-            ->get()
-            ->map(fn (ArchiveFolder $f) => [
-                'id' => $f->id,
-                'name' => $f->name,
-                'parent_id' => $f->parent_id,
-                'path' => implode(' / ', array_column($f->getBreadcrumbs(), 'name')),
-            ]);
-
-        $totalVaultDocs = ArchiveDocument::query()->count() + 28;
-        $totalVaultFolders = ArchiveFolder::query()->count() + ($activityFolders ?? collect())->count();
-        $totalStorageBytes = (int) (ArchiveDocument::query()->sum('file_size') ?: 50855936);
+        $allSavedFolders = $savedFolders->map(fn (ArchiveFolder $folder): array => [
+            'id' => $folder->id, 'name' => $folder->name, 'parent_id' => $folder->parent_id,
+            'path' => implode(' / ', array_column($this->archiveBreadcrumbs($folder, $folderIndex), 'name')),
+        ])->values();
+        $activityFiles = $activityDocuments->flatten(1);
 
         return view('org.archive', array_merge($this->deskContext(), [
-            'activeNav' => 'archive',
-            'currentFolder' => $currentFolder,
-            'currentFolderId' => $currentFolder?->id ?? null,
-            'parentFolderId' => $parentFolderId,
-            'breadcrumbs' => $breadcrumbs,
-            'folders' => $folders,
-            'documents' => $documents,
-            'allSavedFolders' => $allSavedFolders,
-            'totalDocuments' => $totalVaultDocs,
-            'totalFolders' => $totalVaultFolders,
-            'storageUsedFormatted' => $this->formatFileSize($totalStorageBytes),
+            'activeNav' => 'archive', 'assignedArchiveOrganization' => $organization,
+            'currentFolder' => $currentFolder, 'currentFolderId' => $currentFolder?->id,
+            'parentFolderId' => $parentFolderId, 'breadcrumbs' => $breadcrumbs,
+            'folders' => $folders, 'documents' => $documents, 'allSavedFolders' => $allSavedFolders,
+            'totalDocuments' => (clone $documentQuery)->count() + $activityFiles->count(),
+            'totalFolders' => $savedFolders->count() + $activities->count(),
+            'storageUsedFormatted' => $this->formatFileSize((int) (clone $documentQuery)->sum('file_size') + (int) $activityFiles->sum('file_size')),
             'currentSemester' => '2nd Semester',
         ]));
     }
 
+    private function archiveOrganization(): ?string
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless($office instanceof OfficeUser && in_array($office->office_role, ['so', 'oso'], true), 403);
+        if ($office->office_role === 'oso') {
+            return null;
+        }
+
+        $organization = $office->studentOrganization;
+        abort_unless($organization instanceof StudentOrganization && trim($organization->name) !== '', 403);
+
+        return $organization->name;
+    }
+
+    private function accessibleArchiveFolders(?string $organization): Collection
+    {
+        $folders = ArchiveFolder::query()
+            ->when($organization !== null, fn ($query) => $query->where('organization_name', $organization))
+            ->withCount('documents')->orderBy('name')->get();
+        $index = $folders->keyBy('id');
+
+        // Do not expose descendants whose ancestry escapes the assigned organization.
+        return $folders->filter(function (ArchiveFolder $folder) use ($index, $organization) {
+            $visited = [];
+            while ($folder->parent_id !== null) {
+                if (isset($visited[$folder->id])) {
+                    return false;
+                }
+                $visited[$folder->id] = true;
+                $parent = $index->get($folder->parent_id);
+                if (! $parent instanceof ArchiveFolder
+                    || ($organization !== null && $parent->organization_name !== $folder->organization_name)) {
+                    return false;
+                }
+                $folder = $parent;
+            }
+
+            return true;
+        })->values();
+    }
+
+    private function archiveBreadcrumbs(ArchiveFolder $folder, Collection $index): array
+    {
+        $breadcrumbs = [];
+        do {
+            array_unshift($breadcrumbs, ['id' => $folder->id, 'name' => $folder->name]);
+            $folder = $folder->parent_id === null ? null : $index->get($folder->parent_id);
+        } while ($folder instanceof ArchiveFolder);
+
+        return $breadcrumbs;
+    }
+
+    public function viewArchiveDocument(Request $request, ArchiveDocument $document): BinaryFileResponse
+    {
+        return $this->archiveDocumentResponse($document, false);
+    }
+
+    public function downloadArchiveDocument(Request $request, ArchiveDocument $document): BinaryFileResponse
+    {
+        return $this->archiveDocumentResponse($document, true);
+    }
+
+    private function archiveDocumentResponse(ArchiveDocument $document, bool $download): BinaryFileResponse
+    {
+        $folders = $this->accessibleArchiveFolders($this->archiveOrganization());
+        abort_unless($folders->contains('id', $document->archive_folder_id), 404);
+        $disk = $document->file_disk ?: 'public';
+        abort_unless(in_array($disk, ['public', 'local'], true), 404);
+        $path = $this->archiveFilePath($disk, $document->file_path);
+        abort_if($path === null, 404);
+
+        return $this->archiveFileResponse($path, $document->original_name, $document->mime_type, $download);
+    }
+
+    public function viewArchivedActivityDocument(Request $request, ActivityComplianceDoc $document): BinaryFileResponse
+    {
+        return $this->archivedActivityResponse($document, false);
+    }
+
+    public function downloadArchivedActivityDocument(Request $request, ActivityComplianceDoc $document): BinaryFileResponse
+    {
+        return $this->archivedActivityResponse($document, true);
+    }
+
+    private function archivedActivityResponse(ActivityComplianceDoc $document, bool $download): BinaryFileResponse
+    {
+        $organization = $this->archiveOrganization();
+        $activity = $document->activity;
+        abort_unless($activity instanceof OrgActivity
+            && ($organization === null || $activity->organization_name === $organization), 404);
+        $file = $this->archivedActivityFile($document, $activity);
+        abort_if($file === null, 404);
+
+        return $this->archiveFileResponse($file['path'], $file['name'], mime_content_type($file['path']) ?: 'application/octet-stream', $download);
+    }
+
+    private function archivedActivityFile(ActivityComplianceDoc $document, OrgActivity $activity): ?array
+    {
+        $submission = $document->submission;
+        if (! $submission instanceof InCampusActivitySubmission || $submission->org_activity_id !== $document->org_activity_id
+            || ($submission->organization_name !== null && $submission->organization_name !== $activity->organization_name)) {
+            return null;
+        }
+        $metadata = $submission->attachments[$document->doc_key] ?? null;
+        if (! is_array($metadata) || empty($metadata['path'])) {
+            return null;
+        }
+        $path = $this->archiveFilePath('public', (string) $metadata['path']);
+        if ($path === null) {
+            return null;
+        }
+
+        return ['path' => $path, 'name' => $metadata['name'] ?? basename($path), 'size' => filesize($path)];
+    }
+
+    private function archiveFilePath(string $disk, string $storedPath): ?string
+    {
+        $relativePath = str_replace('\\', '/', $storedPath);
+        if ($relativePath === '' || str_starts_with($relativePath, '/') || preg_match('/^[a-z]:/i', $relativePath)
+            || preg_match('~(^|/)\.\.(/|$)~', $relativePath)) {
+            return null;
+        }
+        $storage = Storage::disk($disk);
+        if ($storedPath === '' || ! $storage->exists($storedPath)) {
+            return null;
+        }
+        $path = realpath($storage->path($storedPath));
+        $root = realpath($storage->path(''));
+        if ($path === false || $root === false || ! is_file($path)
+            || ! str_starts_with(str_replace('\\', '/', $path), rtrim(str_replace('\\', '/', $root), '/').'/')) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    private function archiveFileResponse(string $path, string $name, string $mime, bool $download): BinaryFileResponse
+    {
+        $name = str_replace(["\r", "\n", '"', '/', '\\'], '_', $name);
+        $name = $name !== '' ? $name : basename($path);
+        $response = response()->file($path, ['Content-Type' => $mime, 'X-Content-Type-Options' => 'nosniff']);
+        $response->setContentDisposition($download ? ResponseHeaderBag::DISPOSITION_ATTACHMENT : ResponseHeaderBag::DISPOSITION_INLINE, $name);
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
+    }
+
     public function tosa(): View
     {
+        $office = $this->tosaOfficer();
+        $unlock = $this->tosaUnlockState(request());
         $subsection = request('subsection', 'all');
-        $applicants = TosaApplicant::query()
-            ->when($subsection !== 'all', fn ($q) => $q->where('subsection', $subsection))
-            ->orderByRaw('CASE WHEN gwa IS NULL THEN 1 ELSE 0 END, gwa ASC, full_name ASC')
-            ->get();
+        $applicants = $unlock['unlocked']
+            ? TosaApplicant::query()
+                ->when($subsection !== 'all', fn ($q) => $q->where('subsection', $subsection))
+                ->orderByRaw('CASE WHEN gwa IS NULL THEN 1 ELSE 0 END, gwa ASC, full_name ASC')
+                ->get()
+            : collect();
         $tosaTemplates = OfficeTemplate::query()
             ->where('category', 'TOSA')
             ->latest()
@@ -3835,6 +3716,12 @@ class OfficePortalController extends Controller
 
         return view('org.tosa', array_merge($this->deskContext(), [
             'activeNav' => 'tosa',
+            'tosaUnlocked' => $unlock['unlocked'],
+            'tosaPinGateEnabled' => (bool) data_get(OfficeSetting::valuesFor('oso'), 'security.tosa_gate'),
+            'tosaUnlockSecondsRemaining' => $unlock['remaining'],
+            'tosaClearanceLevel' => $office->tosaClearanceLevel(),
+            'tosaCanReview' => $office->tosaClearanceLevel() >= 2,
+            'tosaCanManageTemplates' => $office->office_role === 'oso' && $office->tosaClearanceLevel() >= 3,
             'tosaApplicants' => $applicants,
             'tosaTemplates' => $tosaTemplates,
             'tosaSubsections' => [
@@ -3847,21 +3734,23 @@ class OfficePortalController extends Controller
                 'returned' => 'Returned',
             ],
             'selectedSubsection' => $subsection,
-            'subsectionCounts' => TosaApplicant::query()
-                ->selectRaw('subsection, COUNT(*) as total')
-                ->groupBy('subsection')
-                ->pluck('total', 'subsection'),
+            'subsectionCounts' => $unlock['unlocked']
+                ? TosaApplicant::query()
+                    ->selectRaw('subsection, COUNT(*) as total')
+                    ->groupBy('subsection')
+                    ->pluck('total', 'subsection')
+                : collect(),
         ]));
     }
 
     /**
      * Persist the official sample/template attached to a TOSA requirement.
-     * TOSA is an OSO-only desk, so this uses the same durable OfficeTemplate
-     * storage as the Updates page instead of changing only browser memory.
+     * Master clearance is required for OSO template management.
      */
     public function storeTosaRequirementTemplate(Request $request): RedirectResponse
     {
-        $office = $this->osoOfficer();
+        $office = $this->requireTosaUnlock($request, 3);
+        abort_unless($office->office_role === 'oso', 403);
         $validated = $request->validate([
             'requirement_id' => ['required', 'integer', 'min:1'],
             'requirement_title' => ['required', 'string', 'max:255'],
@@ -3901,27 +3790,25 @@ class OfficePortalController extends Controller
 
     public function storeArchiveFolder(Request $request): RedirectResponse
     {
-        $office = Auth::guard('office')->user();
-        abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
+        $organization = $this->archiveOrganization();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'parent_id' => ['nullable', 'exists:archive_folders,id'],
+            'parent_id' => ['nullable', 'integer'],
             'organization_name' => ['nullable', 'string', 'max:255'],
             'semester' => ['nullable', 'in:1st Semester,2nd Semester,Midyear'],
             'color' => ['nullable', 'in:red,green,blue,violet,gold'],
         ]);
 
-        if (!empty($validated['parent_id'])) {
-            $parent = ArchiveFolder::find($validated['parent_id']);
-            if ($parent) {
-                $validated['organization_name'] = !empty($validated['organization_name']) ? $validated['organization_name'] : $parent->organization_name;
-                $validated['semester'] = !empty($validated['semester']) ? $validated['semester'] : $parent->semester;
-                $validated['color'] = !empty($validated['color']) ? $validated['color'] : $parent->color;
-            }
+        if (($validated['parent_id'] ?? null) !== null) {
+            $parent = $this->accessibleArchiveFolders($organization)->firstWhere('id', (int) $validated['parent_id']);
+            abort_unless($parent instanceof ArchiveFolder, 404);
+            $validated['organization_name'] = $parent->organization_name;
+            $validated['semester'] = $validated['semester'] ?? $parent->semester;
+            $validated['color'] = $validated['color'] ?? $parent->color;
+        } else {
+            $validated['organization_name'] = $organization ?? $validated['organization_name'] ?? 'General Organization';
         }
-
-        $validated['organization_name'] = $validated['organization_name'] ?? 'General Organization';
         $validated['semester'] = $validated['semester'] ?? '2nd Semester';
         $validated['color'] = $validated['color'] ?? 'blue';
 
@@ -3941,26 +3828,40 @@ class OfficePortalController extends Controller
 
     public function storeArchiveDocument(Request $request): RedirectResponse
     {
-        $office = Auth::guard('office')->user();
-        abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
+        $organization = $this->archiveOrganization();
 
         $validated = $request->validate([
-            'archive_folder_id' => ['required', 'exists:archive_folders,id'],
+            'archive_folder_id' => ['required', 'integer'],
             'name' => ['nullable', 'string', 'max:255'],
             'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
         ]);
+        $folder = $this->accessibleArchiveFolders($organization)->firstWhere('id', (int) $validated['archive_folder_id']);
+        abort_unless($folder instanceof ArchiveFolder, 404);
         $file = $request->file('document');
-        $path = $file->store("archive/{$validated['archive_folder_id']}", 'public');
-
-        $doc = ArchiveDocument::query()->create([
-            'archive_folder_id' => $validated['archive_folder_id'],
-            'name' => ($validated['name'] ?? null) ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-            'original_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
-            'file_size' => $file->getSize(),
-            'uploaded_by' => Auth::guard('office')->user()?->name,
-        ]);
+        if (strtolower($file->getClientOriginalExtension()) === 'docx') {
+            $this->validateArchiveDocx($file);
+        }
+        $path = $file->store("archive/{$folder->id}", 'local');
+        if (! is_string($path) || $path === '') {
+            throw new \RuntimeException('The archive document could not be stored.');
+        }
+        try {
+            $doc = ArchiveDocument::query()->create([
+                'archive_folder_id' => $folder->id,
+                'name' => ($validated['name'] ?? null) ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                'original_name' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'file_disk' => 'local',
+                'mime_type' => strtolower($file->getClientOriginalExtension()) === 'docx'
+                    ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    : ($file->getMimeType() ?: 'application/octet-stream'),
+                'file_size' => $file->getSize(),
+                'uploaded_by' => Auth::guard('office')->user()?->name,
+            ]);
+        } catch (\Throwable $error) {
+            Storage::disk('local')->delete($path);
+            throw $error;
+        }
 
         $defaultRoute = route('office.archive', ['folder_id' => $validated['archive_folder_id']]);
         $back = $this->officeReturnPath($request, 'office.archive');
@@ -3971,8 +3872,57 @@ class OfficePortalController extends Controller
         return redirect()->to($back)->with('success', 'Document "'.$doc->name.'" uploaded to the archive.');
     }
 
+    private function validateArchiveDocx(\Illuminate\Http\UploadedFile $file): void
+    {
+        $reject = static function (): never {
+            throw ValidationException::withMessages(['document' => 'Upload a genuine, readable Word DOCX document.']);
+        };
+        if (! class_exists(ZipArchive::class)) {
+            $reject();
+        }
+        $zip = new ZipArchive();
+        if ($zip->open($file->getRealPath()) !== true) {
+            $reject();
+        }
+        try {
+            $uncompressed = 0;
+            for ($index = 0; $index < $zip->numFiles; $index++) {
+                $stat = $zip->statIndex($index);
+                $name = (string) ($stat['name'] ?? '');
+                $size = (int) ($stat['size'] ?? 0);
+                if (str_contains($name, '..') || str_starts_with($name, '/')
+                    || $size > 20 * 1024 * 1024 || ($uncompressed += $size) > 50 * 1024 * 1024) {
+                    $reject();
+                }
+            }
+            $xml = $zip->getFromName('word/document.xml');
+            $types = $zip->getFromName('[Content_Types].xml');
+            if (! is_string($xml) || ! is_string($types)
+                || ! str_contains($types, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml')) {
+                $reject();
+            }
+            $document = new \DOMDocument();
+            $previous = libxml_use_internal_errors(true);
+            try {
+                $loaded = $document->loadXML($xml, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+            } finally {
+                libxml_clear_errors();
+                libxml_use_internal_errors($previous);
+            }
+            if (! $loaded || $document->doctype !== null || $document->documentElement?->localName !== 'document'
+                || ! in_array($document->documentElement?->namespaceURI, [
+                    'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+                    'http://purl.oclc.org/ooxml/wordprocessingml/main',
+                ], true)) {
+                $reject();
+            }
+        } finally {
+            $zip->close();
+        }
+    }
+
     /**
-     * Keep archive uploads on the OSO page that initiated them. The explicit
+     * Keep archive uploads on the office page that initiated them. The explicit
      * path is preferred; same-site office referrers cover older forms or
      * clients that omit the hidden return field.
      */
@@ -4132,15 +4082,13 @@ class OfficePortalController extends Controller
         if ($submission && ! in_array($submission->activity?->workflow_status, ['created', 'returned'], true)) {
             return back()->withErrors(['activity' => 'This activity is already under review or approved. It must be returned to SO before editing.']);
         }
-        $isSubmitting = $request->input('submission_action') === 'submit';
         $activityType = $request->input('activity_type', 'in_campus');
         $requirementSet = $activityType === 'local_off_campus'
             ? $this->localOffCampusRequirements()
             : $this->inCampusRequirements();
-
-        $rules = [
+        $validated = $request->validate([
             'activity_type' => ['required', 'in:in_campus,local_off_campus'],
-            'submission_action' => ['nullable', 'in:draft,submit'],
+            'submission_action' => ['required', 'in:submit'],
             'organization_name' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
@@ -4154,169 +4102,121 @@ class OfficePortalController extends Controller
             'participants' => ['nullable', 'string', 'max:10000'],
             'safety_plan' => ['nullable', 'string', 'max:10000'],
             'plan_reference' => ['nullable', 'string', 'max:500'],
-            'conditions' => ['nullable', 'array'],
-            'conditions.*' => ['boolean'],
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
-            'supporting_documents' => ['nullable', 'array'],
-            'supporting_documents.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
-        ];
-
-        $validated = $request->validate($rules, [
-            'approved_budget.required' => 'Set the allocated budget before saving the activity.',
+            'attachments' => ['nullable', 'array:'.implode(',', array_column($requirementSet, 'key'))],
+            'attachments.*' => [
+                'bail', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480',
+            ],
+            'supporting_documents' => ['prohibited'],
+        ], [
+            'approved_budget.required' => 'Set the allocated budget before submitting the activity.',
             'approved_budget.integer' => 'The allocated budget must be a whole number.',
             'approved_budget.min' => 'The allocated budget must be greater than zero.',
         ]);
-
         $assignedOrganization = $this->assignedOrganizationName();
         if ($assignedOrganization !== null) {
             $validated['organization_name'] = $assignedOrganization;
         }
-
-        $requirementsByKey = collect($requirementSet)->keyBy('key');
-        $requiredUploads = collect($requirementSet)
-            ->filter(fn (array $requirement): bool => ! empty($requirement['required_on_submit']) && empty($requirement['condition']))
-            ->pluck('key')
-            ->values()
-            ->all();
-        $conditionalUploads = collect($requirementSet)
-            ->filter(fn (array $requirement): bool => ! empty($requirement['required_on_submit']) && filled($requirement['condition']))
-            ->mapWithKeys(fn (array $requirement): array => [$requirement['key'] => $requirement['condition']])
-            ->all();
-
-        if ($isSubmitting) {
-            if (Carbon::parse($validated['ends_at'] ?? $validated['starts_at'])->isPast()) {
-                return back()->withInput()->withErrors(['ends_at' => 'You cannot submit an activity that has already ended. Correct the activity schedule first.']);
-            }
-            if (empty(trim($validated['organization_name'] ?? ''))) {
-                return back()->withInput()->withErrors(['organization_name' => 'Select the organization responsible for this activity.']);
-            }
-            $existing = $submission?->attachments ?? [];
-            $files = $request->file('attachments', []);
-            $hasDoc = function (string $key) use ($files, $existing): bool {
-                return isset($files[$key]) || (! empty($existing[$key]['path']) && Storage::disk('public')->exists($existing[$key]['path']));
-            };
-            $missing = collect($requiredUploads)->filter(fn (string $key): bool => ! $hasDoc($key));
-
-            foreach ($conditionalUploads as $key => $condition) {
-                if ($request->boolean("conditions.{$condition}") && ! $hasDoc($key)) {
-                    $missing->push($key);
-                }
-            }
-
-            if ($missing->isNotEmpty()) {
-                $missingTitles = $missing->map(fn (string $key): string => $requirementsByKey->get($key)['title'] ?? str($key)->replace('_', ' ')->title())->all();
-
-                return back()
-                    ->withInput()
-                    ->withErrors(['attachments' => 'Upload the required checklist items: '.implode(', ', $missingTitles).'.']);
-            }
+        if (Carbon::parse($validated['ends_at'] ?? $validated['starts_at'])->isPast()) {
+            return back()->withInput()->withErrors(['ends_at' => 'You cannot submit an activity that has already ended. Correct the activity schedule first.']);
         }
-
-        $submission = DB::transaction(function () use ($request, $validated, $submission, $isSubmitting, $activityType, $requirementSet): InCampusActivitySubmission {
-            $activity = $submission ? OrgActivity::query()->lockForUpdate()->findOrFail($submission->org_activity_id) : new OrgActivity();
-            if ($activity->exists && ! in_array($activity->workflow_status, ['created', 'returned'], true)) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['activity' => 'Activity is locked while under review or approved.']);
-            }
-            $orgName = $validated['organization_name'] ?? $submission?->organization_name ?? null;
-            $college = $orgName
-                ? StudentOrganization::query()->where('name', $orgName)->value('college')
-                : null;
-            $activity->fill([
-                'title' => $validated['title'],
-                'description' => $validated['rationale'] ?? null,
-                'location' => $validated['location'],
-                'starts_at' => $validated['starts_at'],
-                'ends_at' => $validated['ends_at'] ?? null,
-                'approved_budget' => $validated['approved_budget'],
-                'status' => $isSubmitting ? 'upcoming' : 'draft',
-                'organization_name' => $orgName,
-                'college' => $college ?? $activity->college,
-                'activity_scope' => $activityType,
-                'sdg_goals' => array_values($validated['sdg_goals'] ?? []),
-                'workflow_status' => $isSubmitting
-                    ? (in_array($activity->workflow_status, [null, '', 'created', 'returned'], true)
-                        ? 'oso_review'
-                        : $activity->workflow_status)
-                    : ($activity->workflow_status ?: 'created'),
-            ]);
-            $activity->save();
-
-            $submission ??= new InCampusActivitySubmission();
-            $attachments = $submission->attachments ?? [];
-            if ($request->has('plan_reference')) {
-                $attachments['plan_reference'] = trim((string) $request->input('plan_reference'));
-            }
-            $newUploadKeys = [];
-            $attachments['conditions'] = collect($validated['conditions'] ?? [])
-                ->map(fn (mixed $value): bool => (bool) $value)
-                ->all();
-
-            $folder = $activityType === 'local_off_campus' ? 'off-campus-activities' : 'in-campus-activities';
-            foreach ($request->file('attachments', []) as $key => $file) {
-                $newUploadKeys[] = (string) $key;
-                $attachments[$key] = [
-                    'path' => $file->store("{$folder}/{$activity->id}", 'public'),
-                    'name' => $file->getClientOriginalName(),
-                    'uploaded_at' => now()->toIso8601String(),
-                ];
-            }
-            foreach ($request->file('supporting_documents', []) as $file) {
-                $base = \Illuminate\Support\Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file';
-                $key = 'supporting_'.$base;
-                for ($n = 1; isset($attachments[$key]); $n++) {
-                    $key = 'supporting_'.$base.'_'.$n;
+        if (empty(trim($validated['organization_name'] ?? ''))) {
+            return back()->withInput()->withErrors(['organization_name' => 'Select the organization responsible for this activity.']);
+        }
+        $files = $request->file('attachments', []);
+        $storedPaths = [];
+        try {
+            DB::connection('mysql')->transaction(function () use ($request, $validated, $submission, $activityType, $requirementSet, $files, &$storedPaths): void {
+                $activity = $submission ? OrgActivity::query()->lockForUpdate()->findOrFail($submission->org_activity_id) : new OrgActivity();
+                if ($activity->exists && ! in_array($activity->workflow_status, ['created', 'returned'], true)) {
+                    throw ValidationException::withMessages(['activity' => 'Activity is locked while under review or approved.']);
                 }
-                $newUploadKeys[] = $key;
-                $attachments[$key] = [
-                    'path' => $file->store("{$folder}/{$activity->id}", 'public'),
-                    'name' => $file->getClientOriginalName(),
-                    'uploaded_at' => now()->toIso8601String(),
-                ];
-            }
-
-            $submission->fill([
-                'org_activity_id' => $activity->id,
-                'status' => $isSubmitting ? 'submitted' : 'draft',
-                'activity_type' => $activityType,
-                'organization_name' => $validated['organization_name'] ?? null,
-                'rationale' => $validated['rationale'] ?? null,
-                'objectives' => $validated['objectives'] ?? null,
-                'participants' => $validated['participants'] ?? null,
-                'safety_plan' => $validated['safety_plan'] ?? null,
-                'attachments' => $attachments,
-                'submitted_at' => $isSubmitting ? now() : null,
-            ]);
-            $submission->save();
-
-            app(OrgWorkflowService::class)->syncSubmission($activity);
-            app(OrgWorkflowService::class)->event($activity, 'so', $isSubmitting ? 'draft' : 'created', $activity->workflow_status, $isSubmitting ? 'Activity package submitted.' : 'Draft saved.');
-
-            $this->syncActivityComplianceDocs(
-                $activity,
-                $submission,
-                $requirementSet,
-                $attachments,
-                $newUploadKeys,
-                $isSubmitting,
-            );
-
-            return $submission;
-        });
-
+                $submission = $submission
+                    ? InCampusActivitySubmission::query()->lockForUpdate()->findOrFail($submission->id)
+                    : new InCampusActivitySubmission();
+                $attachments = $submission->attachments ?? [];
+                $disk = Storage::disk('public');
+                $missing = [];
+                foreach ($requirementSet as $requirement) {
+                    $key = $requirement['key'];
+                    $savedPath = $attachments[$key]['path'] ?? null;
+                    if (! empty($requirement['required_on_submit']) && ! isset($files[$key])
+                        && (! filled($savedPath) || ! $disk->fileExists($savedPath) || $disk->size($savedPath) === 0)) {
+                        $missing[] = $requirement['title'];
+                    }
+                }
+                if ($missing) {
+                    throw ValidationException::withMessages(['attachments' => 'Upload the required checklist items: '.implode(', ', $missing).'.']);
+                }
+                $from = $activity->workflow_status ?: 'created';
+                $orgName = $validated['organization_name'];
+                $college = StudentOrganization::query()->where('name', $orgName)->value('college');
+                $activity->fill([
+                    'title' => $validated['title'],
+                    'description' => $validated['rationale'] ?? null,
+                    'location' => $validated['location'],
+                    'starts_at' => $validated['starts_at'],
+                    'ends_at' => $validated['ends_at'] ?? null,
+                    'approved_budget' => $validated['approved_budget'],
+                    'status' => 'upcoming',
+                    'organization_name' => $orgName,
+                    'college' => $college ?? $activity->college,
+                    'activity_scope' => $activityType,
+                    'sdg_goals' => array_values($validated['sdg_goals'] ?? []),
+                    'workflow_status' => 'oso_review',
+                    'returned_to' => null,
+                ])->save();
+                if ($request->has('plan_reference')) {
+                    $attachments['plan_reference'] = trim((string) $request->input('plan_reference'));
+                }
+                unset($attachments['conditions']);
+                $newUploadKeys = [];
+                $folder = $activityType === 'local_off_campus' ? 'off-campus-activities' : 'in-campus-activities';
+                foreach ($files as $key => $file) {
+                    $path = $file->store("{$folder}/{$activity->id}", 'public');
+                    if (! is_string($path) || $path === '') {
+                        throw new \RuntimeException('The activity document could not be stored.');
+                    }
+                    $storedPaths[] = $path;
+                    $newUploadKeys[] = (string) $key;
+                    $attachments[$key] = [
+                        'path' => $path,
+                        'name' => $file->getClientOriginalName(),
+                        'uploaded_at' => now()->toIso8601String(),
+                    ];
+                }
+                $submission->fill([
+                    'org_activity_id' => $activity->id,
+                    'status' => 'submitted',
+                    'activity_type' => $activityType,
+                    'organization_name' => $orgName,
+                    'rationale' => $validated['rationale'] ?? null,
+                    'objectives' => $validated['objectives'] ?? null,
+                    'participants' => $validated['participants'] ?? null,
+                    'safety_plan' => $validated['safety_plan'] ?? null,
+                    'attachments' => $attachments,
+                    'submitted_at' => now(),
+                ])->save();
+                app(OrgWorkflowService::class)->syncSubmission($activity);
+                app(OrgWorkflowService::class)->event($activity, 'so', $from, 'oso_review', 'Activity package submitted.');
+                $this->syncActivityComplianceDocs($activity, $submission, $requirementSet, $attachments, $newUploadKeys);
+            });
+        } catch (\Throwable $error) {
+            Storage::disk('public')->delete($storedPaths);
+            throw $error;
+        }
         $typeLabel = $activityType === 'local_off_campus' ? 'local off-campus' : 'in-campus';
 
-        return redirect()
-            ->route('office.activities')
-            ->with('success', $isSubmitting
-                ? "Your {$typeLabel} activity was submitted for review."
-                : "Your {$typeLabel} activity changes have been saved.");
+        return redirect()->route('office.activities')->with('success', "Your {$typeLabel} activity was submitted for review.");
     }
 
     /**
-     * Keep the review table synchronized with the files saved on the
-     * submission. Draft uploads are visible to OSO immediately; submitting
-     * also creates the pending rows for all required pre-activity documents.
+     * Keep review rows synchronized with the submitted required documents.
      * A replacement upload returns that document to pending review.
      *
      * @param list<array<string, mixed>> $requirements
@@ -4329,10 +4229,7 @@ class OfficePortalController extends Controller
         array $requirements,
         array $attachments,
         array $newUploadKeys,
-        bool $isSubmitting,
     ): void {
-        $conditions = is_array($attachments['conditions'] ?? null) ? $attachments['conditions'] : [];
-
         foreach ($requirements as $requirement) {
             $key = (string) ($requirement['key'] ?? '');
             if ($key === '') {
@@ -4340,11 +4237,7 @@ class OfficePortalController extends Controller
             }
 
             $hasFile = is_array($attachments[$key] ?? null) && ! empty($attachments[$key]['path']);
-            $conditionActive = empty($requirement['condition'])
-                || ! empty($conditions[$requirement['condition']])
-                || $hasFile;
-            $shouldSync = $hasFile
-                || ($isSubmitting && ! empty($requirement['required_on_submit']) && $conditionActive);
+            $shouldSync = $hasFile || ! empty($requirement['required_on_submit']);
 
             if (! $shouldSync) {
                 continue;
@@ -4368,45 +4261,12 @@ class OfficePortalController extends Controller
             }
             $compliance->save();
         }
-
-        // Bulk uploads have no checklist key, so give each one a review row
-        // as well. This prevents files uploaded through Upload / Import from
-        // disappearing from the OSO desk.
-        $requirementKeys = collect($requirements)->pluck('key')->filter()->all();
-        foreach ($attachments as $key => $file) {
-            if ($key === 'conditions'
-                || in_array($key, $requirementKeys, true)
-                || ! is_array($file)
-                || empty($file['path'])) {
-                continue;
-            }
-
-            $compliance = ActivityComplianceDoc::query()->firstOrNew([
-                'org_activity_id' => $activity->id,
-                'doc_key' => (string) $key,
-            ]);
-            $isNew = ! $compliance->exists;
-            $compliance->submission_id = $submission->id;
-            $compliance->title = $file['name'] ?? basename((string) $file['path']);
-            if ($isNew || in_array((string) $key, $newUploadKeys, true)) {
-                $compliance->status = 'pending';
-                $compliance->returned_to = null;
-                if (in_array((string) $key, $newUploadKeys, true)) {
-                    $compliance->remarks = null;
-                }
-            } else {
-                $compliance->status = $compliance->status ?: 'pending';
-            }
-            $compliance->save();
-        }
     }
 
     /**
-     * These requirement rows mirror the official files and checklists stored
-     * in the project ZIPs. `required_on_submit` applies only to the initial
-     * filing; during/after-activity records remain available for later upload.
+     * Exact official activity document checklists for initial filing.
      *
-     * @return list<array{key: string, title: string, description: string, group: string, phase: string, condition: ?string, required_on_submit: bool, tokens: list<string>, source_file?: string}>
+     * @return list<array{key: string, title: string, description: string, group: string, phase: string, required_on_submit: bool, tokens: list<string>, source_file: string}>
      */
     private function inCampusRequirements(): array
     {
@@ -4414,7 +4274,7 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * @return list<array{key: string, title: string, description: string, group: string, phase: string, condition: ?string, required_on_submit: bool, tokens: list<string>, source_file?: string}>
+     * @return list<array{key: string, title: string, description: string, group: string, phase: string, required_on_submit: bool, tokens: list<string>, source_file: string}>
      */
     private function localOffCampusRequirements(): array
     {
@@ -4767,11 +4627,8 @@ class OfficePortalController extends Controller
                 ->values()
                 ->all();
 
-            // Keep the OSO desk synchronized even when a student saved a
-            // draft or uploaded through the bulk field before a compliance
-            // row was created. The attachment JSON is the source of truth for
-            // the file itself; this projection makes every persisted upload
-            // visible in the review table immediately.
+            // Preserve review access to historical uploads without a compliance
+            // row. The attachment JSON remains the source of truth for the file.
             $projectedKeys = [];
             foreach ($activitySubmissions as $sourceSubmission) {
                 $sourceAttachments = is_array($sourceSubmission->attachments) ? $sourceSubmission->attachments : [];
@@ -5003,56 +4860,7 @@ class OfficePortalController extends Controller
         return back()->with('success', 'Compliance document status updated.');
     }
 
-    public function updateFunds(Request $request, OrgFundAccount $account): RedirectResponse
-    {
-        abort_unless(Auth::guard('office')->user()?->office_role === 'so', 403);
-        $this->assertOfficeOrganizationName($account->organization_name);
-        $validated = $request->validate([
-            'total_funds' => ['required', 'integer', 'min:0'],
-            'beginning_balance' => ['required', 'integer', 'min:0'],
-            'total_funds_received' => ['required', 'integer', 'min:0'],
-        ]);
 
-        DB::connection('mysql')->transaction(function () use ($account, $validated) {
-            $locked = OrgFundAccount::query()->lockForUpdate()->findOrFail($account->id);
-            $balance = app(\App\Services\ActivityBudgetService::class)->balance($locked);
-            if ($validated['total_funds'] < max($balance['allocated'], $balance['spent'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['total_funds' => 'Total funds cannot be reduced below approved allocations or recorded spending.']);
-            }
-            $locked->update($validated);
-        });
-
-        return back()->with('success', 'Total funds and balances updated.');
-    }
-
-    public function storeFundAccount(Request $request): RedirectResponse
-    {
-        abort_unless(Auth::guard('office')->user()?->office_role === 'so', 403);
-        $data = $request->validate([
-            'organization_name' => ['required', 'string', 'exists:mysql.student_organizations,name'],
-            'academic_year' => ['required', 'string'], 'total_funds' => ['required', 'integer', 'min:0', 'max:999999999'],
-        ]);
-        $assignedOrganization = $this->assignedOrganizationName();
-        if ($assignedOrganization !== null) {
-            $data['organization_name'] = $assignedOrganization;
-        }
-        $service = app(\App\Services\ActivityBudgetService::class);
-        $service->dates($data['academic_year']);
-        DB::connection('mysql')->transaction(function () use ($data, $service) {
-            $org = StudentOrganization::query()->where('name', $data['organization_name'])->lockForUpdate()->firstOrFail();
-            $account = OrgFundAccount::query()->where('organization_name', $org->name)->where('fiscal_year', $data['academic_year'])->lockForUpdate()->first();
-            if ($account) {
-                $balance = $service->balance($account);
-                if ($data['total_funds'] < max($balance['allocated'], $balance['spent'])) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['total_funds' => 'Funds cannot be lower than approved allocations or recorded spending.']);
-                }
-                $account->update(['total_funds' => $data['total_funds']]);
-            } else {
-                OrgFundAccount::query()->create(['organization_name' => $org->name, 'college' => $org->college, 'fiscal_year' => $data['academic_year'], 'total_funds' => $data['total_funds']]);
-            }
-        });
-        return redirect()->route('office.budget', ['organization' => $data['organization_name'], 'academic_year' => $data['academic_year']])->with('success', 'Organization fund account saved.');
-    }
 
     public function storeReportDocument(Request $request, string $reportType): RedirectResponse
     {
@@ -5067,284 +4875,285 @@ class OfficePortalController extends Controller
             'semester' => ['required', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
             'academic_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
             'name' => ['nullable', 'string', 'max:255'],
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
+            'document' => ['required', 'file', $reportType === 'ar' ? 'mimes:pdf,doc,docx' : 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
         ]);
         $this->assertOfficeOrganizationName($validated['organization_name']);
 
-        $status = $this->ensureSemesterReportStatus(
-            $reportType,
-            $validated['organization_name'],
-            $validated['semester'],
-            $validated['academic_year']
-        );
-
-        if (in_array($status->status, ['oso_review', 'verified', 'archived'], true)) {
-            return $this->reportRedirect($reportType, [
-                'organization' => $validated['organization_name'],
-                'semester' => $validated['semester'],
-                'academic_year' => $validated['academic_year'],
-            ])->withErrors([
-                'report' => 'This report package is already submitted to OSO. Wait for OSO to return it before replacing documents.',
-            ]);
-        }
-
-        $file = $request->file('document');
-        $folder = 'semester-reports/'.$reportType.'/'.Str::slug($validated['organization_name']).'/'.str_replace('-', '_', $validated['academic_year']).'/'.Str::slug($validated['semester']);
-        $path = $file->store($folder, 'public');
-
-        OrgReportDocument::query()->create([
-            'org_report_status_id' => $status->id,
-            'report_type' => $reportType,
-            'organization_name' => $validated['organization_name'],
-            'semester' => $validated['semester'],
-            'academic_year' => $validated['academic_year'],
-            'name' => ($validated['name'] ?? null) ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-            'original_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
-            'file_size' => $file->getSize(),
-            'uploaded_by' => $office->name,
-        ]);
-
-        if ($status->status === 'returned') {
-            $status->update([
-                'status' => 'draft',
-                'returned_to' => null,
-                'notes' => null,
-            ]);
-        }
-
-        return $this->reportRedirect($reportType, [
+        $period = [
             'organization' => $validated['organization_name'],
-            'semester' => $validated['semester'],
-            'academic_year' => $validated['academic_year'],
-        ])->with('success', strtoupper($reportType).' document staged for the semester report package.');
+            'semester' => $validated['semester'], 'academic_year' => $validated['academic_year'],
+        ];
+        $file = $request->file('document');
+        $financialSummary = null;
+        if ($reportType === 'fr' && strtolower($file->getClientOriginalExtension()) === 'xlsx') {
+            try {
+                $financialSummary = app(FinancialWorkbookService::class)->summarize((string) $file->getRealPath());
+            } catch (\Throwable) {
+                $financialSummary = null;
+            }
+        }
+        $path = null;
+        try {
+            DB::connection('mysql')->transaction(function () use ($validated, $reportType, $file, $financialSummary, $office, &$path): void {
+                StudentOrganization::on('mysql')->where('name', $validated['organization_name'])->lockForUpdate()->first();
+                $statuses = OrgReportStatus::query()->where('report_type', $reportType)
+                    ->where('organization_name', $validated['organization_name'])
+                    ->where('semester', $validated['semester'])->where('academic_year', $validated['academic_year'])
+                    ->orderBy('id')->lockForUpdate()->get();
+                if ($this->semesterReports()->isLocked($statuses)) {
+                    throw new SemesterReportRejected(SemesterReportRejected::LOCKED);
+                }
+                $status = $statuses->last() ?? $this->semesterReports()->ensure(
+                    $reportType, $validated['organization_name'], $validated['semester'], $validated['academic_year']
+                );
+                $folder = 'semester-reports/'.$reportType.'/'.Str::slug($validated['organization_name']).'/'.str_replace('-', '_', $validated['academic_year']).'/'.Str::slug($validated['semester']);
+                $path = $file->store($folder, 'public');
+                if (! $path) {
+                    throw new \RuntimeException('The report file could not be stored.');
+                }
+                OrgReportDocument::query()->create([
+                    'org_report_status_id' => $status->id, 'report_type' => $reportType,
+                    'organization_name' => $validated['organization_name'],
+                    'semester' => $validated['semester'], 'academic_year' => $validated['academic_year'],
+                    'name' => ($validated['name'] ?? null) ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                    'original_name' => $file->getClientOriginalName(), 'file_path' => $path,
+                    'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
+                    'file_size' => $file->getSize(), 'financial_summary' => $financialSummary, 'uploaded_by' => $office->name,
+                ]);
+            });
+        } catch (SemesterReportRejected $rejected) {
+            return $this->reportRedirect($reportType, $period)->withErrors([
+                'report' => 'This '.strtoupper($reportType).' is under review or has a final decision. Only a report returned for revision can be changed.',
+            ]);
+        } catch (\Throwable $exception) {
+            if ($path) {
+                Storage::disk('public')->delete($path);
+            }
+            throw $exception;
+        }
+        return $this->reportRedirect($reportType, $period)
+            ->with('success', strtoupper($reportType).' document saved. Submit it when it is ready for OSO review.');
     }
 
-    public function submitSemesterReports(Request $request): RedirectResponse
+    public function submitSemesterReport(Request $request, string $reportType): RedirectResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->office_role === 'so', 403);
-
+        abort_unless(in_array($reportType, $this->semesterReportTypes(), true), 404);
         $validated = $request->validate([
             'organization_name' => ['required', 'string', 'max:255'],
             'semester' => ['required', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
             'academic_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
-            'return_type' => ['nullable', Rule::in(['ar', 'fr'])],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
-
-        $statuses = collect($this->semesterReportTypes())
-            ->mapWithKeys(fn (string $type): array => [$type => $this->ensureSemesterReportStatus(
-                $type,
-                $validated['organization_name'],
-                $validated['semester'],
-                $validated['academic_year']
-            )]);
-        $missing = $statuses
-            ->filter(fn (OrgReportStatus $status, string $type): bool => ! OrgReportDocument::query()
-                ->where('org_report_status_id', $status->id)
-                ->exists())
-            ->keys()
-            ->map(fn (string $type): string => strtoupper($type))
-            ->values();
-
+        $this->assertOfficeOrganizationName($validated['organization_name']);
         $period = [
             'organization' => $validated['organization_name'],
-            'semester' => $validated['semester'],
-            'academic_year' => $validated['academic_year'],
+            'semester' => $validated['semester'], 'academic_year' => $validated['academic_year'],
         ];
-        $reportType = $validated['return_type'] ?? 'ar';
-
-        $lockedStatus = $statuses->first(
-            fn (OrgReportStatus $status): bool => in_array($status->status, ['oso_review', 'verified', 'archived'], true)
-        );
-        if ($lockedStatus) {
-            return $this->reportRedirect($reportType, $period)->withErrors([
-                'report' => 'This AR + FR package is already submitted to OSO or completed. Wait for OSO to return it before resubmitting.',
-            ]);
+        try {
+            $this->semesterReports()->submitReport(
+                $reportType, $validated['organization_name'], $validated['semester'], $validated['academic_year'],
+                $validated['notes'] ?? null,
+                function (OrgReportStatus $status, OrgReportDocument $document) use ($office, $reportType): void {
+                    if ($reportType !== 'fr') {
+                        return;
+                    }
+                    $gate = app(FinancialReportPreviewGate::class);
+                    if ((! $document->isWorkbook() && ! $gate->isInlineViewable($document))
+                        || ! $gate->wasViewed($office, $document)) {
+                        throw new SemesterReportRejected(SemesterReportRejected::GUARD, 'View the latest Financial Report file for this period before submitting it to OSO.');
+                    }
+                },
+            );
+        } catch (SemesterReportRejected $rejected) {
+            $message = match ($rejected->reason) {
+                SemesterReportRejected::LOCKED => strtoupper($reportType).' is already under review or has a final decision. Only a report returned for revision can be changed; rejected reports cannot be resubmitted.',
+                SemesterReportRejected::MISSING => 'Save a readable current '.strtoupper($reportType).' document before submitting it to OSO.',
+                default => $rejected->getMessage(),
+            };
+            return $this->reportRedirect($reportType, $period)->withInput()->withErrors(['report' => $message]);
         }
-
-        if ($missing->isNotEmpty()) {
-            return $this->reportRedirect($reportType, $period)
-                ->withInput()
-                ->withErrors([
-                    'report' => 'Upload at least one '.$missing->implode(' and one ').' document before submitting the combined AR + FR package.',
-                ]);
-        }
-
-        $batchKey = (string) Str::uuid();
-        DB::transaction(function () use ($statuses, $batchKey, $validated): void {
-            foreach ($statuses as $status) {
-                $status->update([
-                    'status' => 'oso_review',
-                    'batch_key' => $batchKey,
-                    'returned_to' => null,
-                    'notes' => $validated['notes'] ?? null,
-                    'submitted_at' => now(),
-                    'opened_at' => null,
-                    'opened_by' => null,
-                    'reviewed_at' => null,
-                    'reviewed_by' => null,
-                    'archived_at' => null,
-                    'archive_folder_id' => null,
-                ]);
-            }
-        });
-
         return $this->reportRedirect($reportType, $period)
-            ->with('success', 'AR + FR semester report package submitted to OSO for review.');
+            ->with('success', strtoupper($reportType).' submitted to OSO for review.');
     }
 
-    public function reviewSemesterReports(Request $request): RedirectResponse
+    public function reviewSemesterReport(Request $request, string $reportType): RedirectResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
-
+        abort_unless(in_array($reportType, $this->semesterReportTypes(), true), 404);
         $validated = $request->validate([
             'organization_name' => ['required', 'string', 'max:255'],
             'semester' => ['required', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
             'academic_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
-            'decision' => ['required', Rule::in(['accept', 'return'])],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'decision' => ['required', Rule::in(['accept', 'return', 'reject'])],
+            'notes' => ['required_if:decision,return,reject', 'nullable', 'string', 'max:1000'],
         ]);
-
         $period = [
-            'organization' => $validated['organization_name'],
-            'semester' => $validated['semester'],
-            'academic_year' => $validated['academic_year'],
+            'organization' => $validated['organization_name'], 'semester' => $validated['semester'],
+            'academic_year' => $validated['academic_year'], 'tab' => $reportType,
         ];
-        $bundle = $this->semesterReportBundle(
-            $validated['organization_name'],
-            $validated['semester'],
-            $validated['academic_year']
-        );
-        $statuses = collect($bundle['statuses'])->filter()->values();
-
-        if ($statuses->count() !== 2 || $bundle['state'] !== 'oso_review') {
-            return redirect()->route('office.accomplishment', $period)->withErrors([
-                'report' => 'Only a complete AR + FR package currently waiting for OSO review can be decided.',
-            ]);
-        }
-
-        if ($validated['decision'] === 'return') {
-            DB::transaction(function () use ($statuses, $validated): void {
-                foreach ($statuses as $status) {
-                    $status->update([
-                        'status' => 'returned',
-                        'returned_to' => 'so',
-                        'notes' => $validated['notes'] ?? 'Please revise and resubmit the AR + FR package.',
-                        'reviewed_at' => now(),
-                        'reviewed_by' => Auth::guard('office')->id(),
-                    ]);
+        try {
+            DB::connection('mysql')->transaction(function () use ($validated, $office, $reportType): void {
+                StudentOrganization::on('mysql')->where('name', $validated['organization_name'])->lockForUpdate()->first();
+                $statuses = OrgReportStatus::query()->where('report_type', $reportType)
+                    ->where('organization_name', $validated['organization_name'])
+                    ->where('semester', $validated['semester'])->where('academic_year', $validated['academic_year'])
+                    ->orderBy('id')->lockForUpdate()->get();
+                $status = $statuses->last();
+                if (! $status || $status->status !== 'oso_review'
+                    || $this->semesterReports()->isLocked($statuses->filter(fn (OrgReportStatus $row): bool => $row->id !== $status->id))) {
+                    throw new SemesterReportRejected(SemesterReportRejected::GUARD, 'Only the current '.strtoupper($reportType).' waiting for OSO review can be decided.');
                 }
-            });
-
-            return redirect()->route('office.accomplishment', $period)
-                ->with('success', 'AR + FR package returned to SO for revision.');
-        }
-
-        $documents = collect($bundle['documents'])
-            ->flatMap(fn ($rows) => $rows)
-            ->values();
-        if ($documents->isEmpty()) {
-            return redirect()->route('office.accomplishment', $period)->withErrors([
-                'report' => 'The package has no staged documents to archive.',
-            ]);
-        }
-
-        DB::transaction(function () use ($statuses, $documents, $validated, $office): void {
-            $folder = ArchiveFolder::query()->firstOrCreate(
-                [
-                    'name' => $validated['organization_name'].' — '.$validated['academic_year'].' '.$validated['semester'].' AR + FR',
-                    'organization_name' => $validated['organization_name'],
-                    'semester' => $validated['semester'],
-                ],
-                ['color' => 'green']
-            );
-
-            foreach ($documents as $document) {
-                ArchiveDocument::query()->firstOrCreate(
-                    [
-                        'archive_folder_id' => $folder->id,
-                        'file_path' => $document->file_path,
-                    ],
-                    [
-                        'name' => $document->name,
-                        'original_name' => $document->original_name,
-                        'mime_type' => $document->mime_type,
-                        'file_size' => $document->file_size,
-                        'uploaded_by' => $document->uploaded_by ?: $office->name,
-                    ]
-                );
-            }
-
-            foreach ($statuses as $status) {
-                $status->update([
-                    'status' => 'archived',
-                    'returned_to' => null,
-                    'notes' => $validated['notes'] ?? 'Accepted by OSO and archived.',
-                    'reviewed_at' => now(),
-                    'reviewed_by' => $office->id,
-                    'archived_at' => now(),
-                    'archive_folder_id' => $folder->id,
+                if ($validated['decision'] !== 'accept') {
+                    $status->update([
+                        'status' => $validated['decision'] === 'return' ? 'returned' : 'rejected',
+                        'returned_to' => $validated['decision'] === 'return' ? 'so' : null,
+                        'notes' => $validated['notes'], 'reviewed_at' => now(), 'reviewed_by' => $office->id,
+                    ]);
+                    return;
+                }
+                $document = OrgReportDocument::query()->where('org_report_status_id', $status->id)
+                    ->where('report_type', $reportType)->where('organization_name', $status->organization_name)
+                    ->where('semester', $status->semester)->where('academic_year', $status->academic_year)
+                    ->latest('id')->lockForUpdate()->first();
+                if (! $document || ! $document->hasStoredFile() || ! $status->submitted_at
+                    || $document->created_at->gt($status->submitted_at)) {
+                    throw new SemesterReportRejected(SemesterReportRejected::MISSING, 'The submitted '.strtoupper($reportType).' has no readable current file to verify and archive.');
+                }
+                $folder = ArchiveFolder::query()->firstOrCreate([
+                    'name' => $status->organization_name.' — '.$status->academic_year.' '.$status->semester.' '.strtoupper($reportType),
+                    'organization_name' => $status->organization_name, 'semester' => $status->semester,
+                ], ['color' => 'green']);
+                ArchiveDocument::query()->firstOrCreate([
+                    'archive_folder_id' => $folder->id, 'file_path' => $document->file_path,
+                ], [
+                    'name' => $document->name, 'original_name' => $document->original_name,
+                    'mime_type' => $document->mime_type, 'file_size' => $document->file_size,
+                    'uploaded_by' => $document->uploaded_by ?: $office->name,
                 ]);
-            }
-        });
-
-        return redirect()->route('office.archive')->with(
-            'success',
-            'AR + FR package accepted by OSO and moved to Archive.'
-        );
+                $status->update([
+                    'status' => 'archived', 'returned_to' => null,
+                    'notes' => $validated['notes'] ?? 'Verified by OSO and archived.',
+                    'reviewed_at' => now(), 'reviewed_by' => $office->id,
+                    'archived_at' => now(), 'archive_folder_id' => $folder->id,
+                ]);
+            });
+        } catch (SemesterReportRejected $rejected) {
+            return redirect()->route('office.reports.index', $period)->withErrors(['report' => $rejected->getMessage()]);
+        }
+        $decision = match ($validated['decision']) {
+            'return' => 'returned to SO for revision', 'reject' => 'rejected',
+            default => 'verified by OSO and archived',
+        };
+        return redirect()->route('office.reports.index', $period)
+            ->with('success', strtoupper($reportType).' '.$decision.'.');
     }
 
     public function viewReportDocument(Request $request, OrgReportDocument $document): Response|BinaryFileResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && in_array($office->office_role, ['so', 'oso'], true), 403);
+        if ($office->office_role === 'so') {
+            $this->assertOfficeOrganizationName($document->organization_name);
+        }
+        if ($office->office_role === 'oso') {
+            $this->authorizePublishedReportDocument($document);
+        }
 
+        abort_unless($document->hasStoredFile(), 404);
         $path = Storage::disk('public')->path($document->file_path);
-        abort_unless(is_file($path), 404);
+        $nativeReport = $document->accomplishment_summary !== null
+            ? app(\App\Http\Controllers\AccomplishmentReportController::class)
+            : null;
+        $nativeReport?->authorizeDocument($document);
 
         if ($office->office_role === 'oso') {
-            $this->markSemesterReportPackageOpened($document, $office);
+            $this->markReportOpened($document, $office);
         }
 
         if ($request->boolean('download')) {
             return response()->download($path, $document->original_name);
         }
+        if ($nativeReport !== null) {
+            return response($nativeReport->document($document));
+        }
 
-        return response()->file($path, ['Content-Type' => $document->mime_type]);
+
+        $response = response()->file($path, ['Content-Type' => $document->mime_type]);
+        $previews = app(FinancialReportPreviewGate::class);
+        if ($office->office_role === 'so'
+            && $document->report_type === 'fr'
+            && ! $document->isWorkbook()
+            && $previews->isInlineViewable($document)) {
+            $previews->mark($office, $document);
+        }
+
+        return $response;
     }
 
-    private function markSemesterReportPackageOpened(OrgReportDocument $document, OfficeUser $office): void
+    private function authorizePublishedReportDocument(OrgReportDocument $document): OrgReportStatus
     {
-        $statuses = OrgReportStatus::query()
-            ->whereIn('report_type', $this->semesterReportTypes())
-            ->where('organization_name', $document->organization_name)
-            ->where('semester', $document->semester)
-            ->where('academic_year', $document->academic_year)
-            ->where('status', 'oso_review')
-            ->get();
+        $status = $document->reportStatus;
+        abort_unless($status && $status->report_type === $document->report_type
+            && $status->organization_name === $document->organization_name
+            && $status->semester === $document->semester && $status->academic_year === $document->academic_year
+            && in_array($status->status, SemesterReportService::VIEWABLE_STATUSES, true), 403);
+        $latestId = OrgReportDocument::query()->where('org_report_status_id', $status->id)
+            ->where('report_type', $document->report_type)->where('organization_name', $document->organization_name)
+            ->where('semester', $document->semester)->where('academic_year', $document->academic_year)
+            ->latest('id')->value('id');
+        $historicalArchive = in_array($status->status, ['verified', 'archived'], true) && $status->archive_folder_id
+            && ArchiveDocument::query()->where('archive_folder_id', $status->archive_folder_id)
+                ->where('file_path', $document->file_path)->exists();
+        abort_unless((int) $latestId === $document->id || $historicalArchive, 403);
+        abort_unless($status->submitted_at ? $document->created_at->lte($status->submitted_at)
+            : in_array($status->status, ['verified', 'archived'], true), 403);
+        return $status;
+    }
 
-        if ($statuses->count() !== count($this->semesterReportTypes())) {
-            return;
-        }
+    private function markReportOpened(OrgReportDocument $document, OfficeUser $office): void
+    {
+        OrgReportStatus::query()->whereKey($document->org_report_status_id)
+            ->where('report_type', $document->report_type)->where('status', 'oso_review')
+            ->whereNull('opened_at')->update(['opened_at' => now(), 'opened_by' => $office->id]);
+    }
 
-        $openedAt = now();
-        foreach ($statuses as $status) {
-            $status->update([
-                'opened_at' => $status->opened_at ?? $openedAt,
-                'opened_by' => $status->opened_by ?? $office->id,
-            ]);
+    public function previewReportWorkbook(OrgReportDocument $document): JsonResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
+        $this->authorizePublishedReportDocument($document);
+        abort_unless($document->report_type === 'fr' && $document->isWorkbook(), 422);
+        abort_unless($document->hasStoredFile(), 404);
+        try {
+            $preview = app(FinancialWorkbookService::class)->preview(
+                Storage::disk('public')->path($document->file_path),
+                is_array($document->financial_summary) ? $document->financial_summary : null,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        } catch (\Throwable $exception) {
+            report($exception);
+            return response()->json(['message' => 'The workbook could not be read. Download the original file instead.'], 422);
         }
+        $this->markReportOpened($document, $office);
+        return response()->json([
+            'title' => $document->name, 'original_name' => $document->original_name,
+            'academic_year' => $document->academic_year, 'semester' => $document->semester,
+            'sheets' => $preview['sheets'], 'cash_inflow' => (float) ($preview['summary']['cash_inflow'] ?? 0),
+            'cash_outflow' => (float) ($preview['summary']['cash_outflow'] ?? 0),
+            'balance' => (float) ($preview['summary']['ending_balance'] ?? 0),
+            'download_url' => route('office.reports.documents.view', ['document' => $document, 'download' => 1]),
+        ]);
     }
 
     public function updateReportStatus(Request $request, OrgReportStatus $report): RedirectResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
-        abort_if(in_array($report->report_type, $this->semesterReportTypes(), true), 422, 'AR and FR must be reviewed as one semester package.');
+        abort_if(in_array($report->report_type, $this->semesterReportTypes(), true), 422, 'Use the report-specific OSO review workflow for AR and FR.');
 
         $validated = $request->validate([
             'status' => ['required', 'in:draft,ready_for_review,oso_review,verified,returned,archived'],
@@ -5377,6 +5186,7 @@ class OfficePortalController extends Controller
 
     public function updateTosaSubsection(Request $request, TosaApplicant $applicant): RedirectResponse|JsonResponse
     {
+        $this->requireTosaUnlock($request, 2);
         $validated = $request->validate([
             'subsection' => ['required', 'in:pending,screening,interview,accepted,rejected,returned'],
             'remarks' => ['nullable', 'string', 'max:1000'],
@@ -5520,17 +5330,10 @@ class OfficePortalController extends Controller
         $reportRows = OrgReportStatus::query()
             ->whereIn('report_type', $this->semesterReportTypes())
             ->get();
-        $reportPackages = $reportRows->groupBy(fn (OrgReportStatus $row): string => implode('|', [
-            $row->organization_name,
-            $row->semester,
-            $row->academic_year,
+        $currentReports = $reportRows->sortByDesc('id')->unique(fn (OrgReportStatus $row): string => implode('|', [
+            $row->organization_name, $row->semester, $row->academic_year, $row->report_type,
         ]));
-        $pendingReportPackages = $reportPackages->filter(function ($package): bool {
-            $latestByType = $package->sortByDesc('id')->groupBy('report_type')->map(fn ($rows) => $rows->first());
-
-            return $latestByType->count() === count($this->semesterReportTypes())
-                && $latestByType->every(fn (OrgReportStatus $row): bool => $row->status === 'oso_review');
-        })->count();
+        $pendingReports = $currentReports->where('status', 'oso_review')->count();
 
         $tosaRows = TosaApplicant::query()->get();
         $renewalPending = (int) $renewalPending;
@@ -5594,7 +5397,7 @@ class OfficePortalController extends Controller
         $tosaAvg = $averageDays($tosaReviewed, 'created_at', 'updated_at');
 
         $pendingSubmissions = $pending + $revision;
-        $pendingTrx = $pendingSubmissions + $renewalPending + $pendingReportPackages + $tosaPending;
+        $pendingTrx = $pendingSubmissions + $renewalPending + $pendingReports + $tosaPending;
         $currentAcademicYear = $this->academicPeriod(now())['academic_year'];
 
         // Real average turnaround: decided activities (created -> last update)
@@ -5683,7 +5486,7 @@ class OfficePortalController extends Controller
             'kpis' => [
                 'totalOrgs' => StudentOrganization::active()->count(),
                 'pendingTrx' => $pendingTrx,
-                'pendingSub' => $pendingSubmissions.' Proposals · '.$renewalPending.' Renewal · '.$pendingReportPackages.' AR/FR Packages · '.$tosaPending.' TOSA',
+                'pendingSub' => $pendingSubmissions.' Proposals · '.$renewalPending.' Renewal · '.$pendingReports.' AR/FR Reports · '.$tosaPending.' TOSA',
                 'totalSubmissions' => $total,
                 'revisionRate' => $total > 0 ? round(($revision / $total) * 100, 1).'%' : '0%',
             ],
@@ -5705,6 +5508,8 @@ class OfficePortalController extends Controller
     public function showRenewalSubmission(OrgRenewalSubmission $submission): View
     {
         abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
+        abort_unless(in_array($submission->status, ['submitted', 'returned', 'approved', 'rejected'], true)
+            && $submission->submitted_at !== null, 404);
 
         $submission->load(['documents', 'window']);
         $window = $submission->window;
@@ -5754,6 +5559,9 @@ class OfficePortalController extends Controller
             }
 
             $document = OrgRenewalDocument::query()->lockForUpdate()->findOrFail($document->id);
+            if (! $document->hasStoredFile()) {
+                return 'This document is missing its stored file. Ask the organization to upload it before review.';
+            }
             if (! hash_equals($document->fileVersion(), $validated['file_version'])) {
                 return 'This document was replaced after you opened it. Reload the page and review the new file.';
             }
@@ -5799,7 +5607,7 @@ class OfficePortalController extends Controller
         }
 
         $disk = Storage::disk('public');
-        abort_unless(filled($document->file_path) && $disk->exists($document->file_path), 404);
+        abort_unless($document->hasStoredFile(), 404);
         $name = $document->file_name ?: basename($document->file_path);
 
         return request()->boolean('download')

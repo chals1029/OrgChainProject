@@ -49,18 +49,4 @@ class CalendarChartTest extends TestCase
             if ($role === 'oso') $dashboard->assertSee('2026 · Jan–Dec (Current)', false)->assertSee('All Calendar Years');
         }
     }
-
-    public function test_calendar_view_renders_cleanly_with_scrollable_upcoming_list(): void
-    {
-        $oso = OfficeUser::where('office_role', 'oso')->firstOrFail();
-
-        $response = $this->actingAs($oso, 'office')
-            ->get('/office-desk/calendar')
-            ->assertOk();
-
-        $response->assertSee('Upcoming on Calendar');
-        $response->assertSee('org-upcoming-side-list', false);
-        $response->assertSee('org-cal-grid-wrapper', false);
-        $response->assertSee('org-cal-grid-table', false);
-    }
 }

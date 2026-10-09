@@ -48,7 +48,7 @@
         @endforelse
         </tbody>
     </table>
-    <p>Package review: {{ $reportBundle['state_label'] ?? 'Draft — not submitted' }}. Receipt confirmation and OSO acceptance of the semester report are separate records.</p>
+    <p>FR review: {{ $reportBundle['reports']['fr']['state_label'] ?? 'Not submitted' }}. Receipt confirmation and OSO acceptance of the Financial Report are separate records.</p>
     <div class="sign"><div>Prepared by: SO authorized officer</div><div>Reviewed by: Office of Student Organizations</div></div>
 </body>
 </html>

@@ -39,7 +39,7 @@ class ReceiptScannerTest extends TestCase
             'is_active' => true,
         ]);
         $org = 'Scanner Test '.Str::uuid();
-        OrgFundAccount::create(['organization_name' => $org, 'fiscal_year' => '2026-2027', 'total_funds' => 5000]);
+        OrgFundAccount::create(['organization_name' => $org, 'fiscal_year' => '2026-2027', 'cash_opening_balance' => 5000]);
         $this->activity = OrgActivity::create([
             'title' => 'ACTIVITY RECEIPT QA',
             'organization_name' => $org,

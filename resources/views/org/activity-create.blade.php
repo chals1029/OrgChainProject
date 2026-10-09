@@ -51,21 +51,19 @@
         }
 
         $activityDocs = $docRows ?? [];
-        $activityDocsByType = $docRowsByType ?? [$currentType => $activityDocs];
         $requirementSets = [
             'in_campus' => $inCampusRequirements ?? [],
             'local_off_campus' => $offCampusRequirements ?? [],
         ];
         $storedAttachments = is_array($submission->attachments ?? null) ? $submission->attachments : [];
-        $storedConditions = is_array($storedAttachments['conditions'] ?? null) ? $storedAttachments['conditions'] : [];
-        $activeConditions = old('conditions', $storedConditions);
+        $checklistKeys = array_column($requirementSets[$currentType] ?? [], 'key');
+        $previousUploads = array_filter($activityDocs, fn ($doc) => ($doc['kind'] ?? '') === 'upload' && !in_array($doc['key'], $checklistKeys, true));
         $typeLabel = $currentType === 'local_off_campus' ? 'Local Off-Campus' : 'In-Campus';
         $renewalLabel = match ($activityRenewalStatus) {
             'approved' => 'Renewal approved',
             'submitted' => 'Renewal under review',
             'returned' => 'Renewal for revision',
             'rejected' => 'Renewal rejected',
-            'draft' => 'Renewal draft',
             default => 'Renewal not submitted',
         };
         $sdgDefinitions = [
@@ -77,19 +75,21 @@
             6 => ['Clean Water and Sanitation', 'droplet-fill', '#26bde2'],
             7 => ['Affordable and Clean Energy', 'sun-fill', '#fcc30b'],
             8 => ['Decent Work and Economic Growth', 'bar-chart-fill', '#a21942'],
-            9 => ['Industry, Innovation and Infrastructure', 'gear-fill', '#fd6925'],
+            9 => ['Industry, Innovation and Infrastructure', 'boxes', '#fd6925'],
             10 => ['Reduced Inequalities', 'arrows-expand', '#dd1367'],
             11 => ['Sustainable Cities and Communities', 'houses-fill', '#fd9d24'],
             12 => ['Responsible Consumption and Production', 'recycle', '#bf8b2e'],
             13 => ['Climate Action', 'globe-americas', '#3f7e44'],
             14 => ['Life Below Water', 'water', '#0a97d9'],
             15 => ['Life on Land', 'tree-fill', '#56c02b'],
-            16 => ['Peace, Justice and Strong Institutions', 'bank2', '#00689d'],
+            16 => ['Peace, Justice and Strong Institutions', null, '#00689d'],
             17 => ['Partnerships for the Goals', 'link-45deg', '#19486a'],
         ];
+        $documentDisk = \Illuminate\Support\Facades\Storage::disk('public');
         $hasStoredFile = static fn ($file): bool => is_array($file)
             && !empty($file['path'])
-            && \Illuminate\Support\Facades\Storage::disk('public')->exists($file['path']);
+            && $documentDisk->fileExists($file['path'])
+            && $documentDisk->size($file['path']) > 0;
     @endphp
 
     <link rel="stylesheet" href="{{ asset('css/activity-create.css') }}?v={{ filemtime(public_path('css/activity-create.css')) }}">
@@ -110,6 +110,7 @@
           enctype="multipart/form-data" data-template-url="{{ route('office.activities.templates.download') }}">
         @csrf
         @if ($submission->exists) @method('PUT') @endif
+        <input type="hidden" name="submission_action" value="submit">
         <div class="ap-scroll">
             <section class="ap-card" aria-labelledby="activityInformationHeading">
                 <div class="ap-card-head">
@@ -226,7 +227,22 @@
                                     <input type="checkbox" name="sdg_goals[]" value="SDG {{ $number }}"
                                            aria-label="SDG {{ $number }}: {{ $goalName }}" @checked(in_array('SDG '.$number, $editSdgGoals, true))>
                                     <span class="ap-sdg-tile">
-                                        <span class="ap-sdg-icon" style="--sdg-color: {{ $goalColor }}" aria-hidden="true"><i class="bi bi-{{ $goalIcon }}"></i></span>
+                                        <span class="ap-sdg-icon" style="--sdg-color: {{ $goalColor }}" aria-hidden="true">
+                                            @if ($number === 16)
+                                                <svg width="20" height="20" viewBox="0 0 72 72" fill="currentColor" focusable="false">
+                                                    <path d="M8 17C24 13 29 35 43 23C48 18 51 18 54 24L59 28L54 29C46 29 47 36 46 43C44 53 33 58 20 56C13 56 9 51 6 49C16 53 18 48 24 45C12 43 16 23 8 17Z"/>
+                                                    <path d="M54 34C51 27 53 23 62 13M26 54V61M31 54V61" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                                                    <path d="M62 13C59 9 60 6 64 4C65 9 65 12 62 13ZM58 18C54 16 53 13 54 10C58 11 60 14 58 18ZM61 18C63 14 66 14 68 15C66 19 64 20 61 18ZM55 23C51 21 50 18 51 15C55 17 57 20 55 23ZM57 24C60 21 63 21 65 24C61 27 59 27 57 24Z"/>
+                                                    <path d="M4 60L42 61V64L4 65Z"/>
+                                                    <rect x="0" y="59" width="3" height="7" rx="1.5"/>
+                                                    <rect x="42" y="57" width="14" height="11" rx="1"/>
+                                                    <rect x="41" y="53" width="16" height="3" rx="1.5"/>
+                                                    <rect x="41" y="69" width="16" height="3" rx="1.5"/>
+                                                </svg>
+                                            @else
+                                                <i class="bi bi-{{ $goalIcon }}"></i>
+                                            @endif
+                                        </span>
                                         <span class="ap-sdg-number">{{ str_pad($number, 2, '0', STR_PAD_LEFT) }}</span>
                                     </span>
                                 </label>
@@ -249,51 +265,40 @@
                     <span class="ap-status" id="requirementsCount">Checking requirements…</span>
                 </div>
                 <progress class="ap-progress" id="requirementsProgress" value="0" max="1" aria-label="Required documents complete"></progress>
+                <div class="ap-footer-actions">
+                    <a id="downloadTemplatesBtn" href="{{ route('office.activities.templates.download', ['type' => $currentType]) }}" class="ap-button ap-button-outline"><i class="bi bi-download"></i> Download template pack</a>
+                </div>
                 <div class="ap-rule">
                     <i class="bi bi-info-circle"></i>
-                    <span><strong>Submission rule:</strong> Complete all required pre-activity documents. Enable each condition that applies; other documents remain available for later upload.</span>
+                    <span><strong>Submission rule:</strong> Upload all documents in the selected checklist before submitting. No additional documents are required.</span>
                 </div>
                 <div id="activityUploadNotice" class="ap-upload-notice" role="status" aria-live="polite" hidden></div>
                 @foreach ($requirementSets as $typeKey => $requirements)
                     <div class="ap-requirement-panel" data-requirement-type="{{ $typeKey }}" @if ($currentType !== $typeKey) hidden @endif>
                         @foreach ($requirements as $requirement)
                             @php
-                                $condition = $requirement['condition'] ?? null;
                                 $storedFile = $storedAttachments[$requirement['key']] ?? null;
                                 $hasFile = $hasStoredFile($storedFile);
-                                $conditionIsActive = !$condition || (bool) data_get($activeConditions, $condition, false) || $hasFile;
                                 $isRequired = !empty($requirement['required_on_submit']);
-                                $sourceFile = $requirement['source_file'] ?? null;
+                                $sourceFile = $requirement['source_file'];
                                 $fileId = 'activity-file-'.$typeKey.'-'.$requirement['key'];
                             @endphp
-                            <div class="ap-requirement-row {{ $condition && !$conditionIsActive ? 'is-inactive' : '' }} {{ $hasFile ? 'has-file' : '' }}"
-                                 data-requirement-row data-condition="{{ $condition ?? '' }}" data-required="{{ $isRequired ? '1' : '0' }}" data-existing-file="{{ $hasFile ? '1' : '0' }}">
+                            <div class="ap-requirement-row {{ $hasFile ? 'has-file' : '' }}"
+                                 data-requirement-row data-required="{{ $isRequired ? '1' : '0' }}" data-existing-file="{{ $hasFile ? '1' : '0' }}">
                                 <span class="ap-file-icon" aria-hidden="true"><i class="bi {{ $hasFile ? 'bi-check-lg' : 'bi-file-earmark-text' }}" data-file-icon></i></span>
                                 <div class="ap-requirement-copy">
                                     <div class="ap-requirement-title">
-                                        <span class="ap-requirement-kicker">Requirement {{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}{{ $isRequired && !$condition ? ' *' : '' }}</span>
+                                        <span class="ap-requirement-kicker">Requirement {{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}{{ $isRequired ? ' *' : '' }}</span>
                                         <strong>{{ $requirement['title'] }}</strong>
                                     </div>
                                     <p>{{ $requirement['description'] }}</p>
                                     <div class="ap-document-links">
-                                        @if ($sourceFile)
-                                            <button type="button" data-doc-preview
-                                                    data-doc-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"
-                                                    data-doc-preview-title="{{ $requirement['title'] }} — Official template"
-                                                    data-doc-preview-download-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-eye"></i> View</button>
-                                            <a href="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-download"></i> Download</a>
-                                        @else
-                                            <small>No official template supplied; attach your organization's completed document.</small>
-                                        @endif
-                                        @if (!$isRequired)<small>{{ $requirement['phase'] ?? 'Later upload' }} · Not required for initial filing</small>@endif
+                                        <button type="button" data-doc-preview
+                                                data-doc-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"
+                                                data-doc-preview-title="{{ $requirement['title'] }} — Official template"
+                                                data-doc-preview-download-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-eye"></i> View</button>
+                                        <a href="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-download"></i> Download</a>
                                     </div>
-                                    @if ($condition)
-                                        <label class="ap-condition-toggle">
-                                            <input type="checkbox" name="conditions[{{ $condition }}]" value="1" data-condition-toggle="{{ $condition }}"
-                                                   @checked($conditionIsActive) @disabled($currentType !== $typeKey)>
-                                            Applicable to this activity
-                                        </label>
-                                    @endif
                                     @error('attachments.'.$requirement['key']) <em>{{ $message }}</em> @enderror
                                     @if ($hasFile && $submission->exists)
                                         <div class="ap-document-links">
@@ -314,8 +319,8 @@
                                         <span data-upload-label>{{ $hasFile ? 'Replace file' : 'Upload' }}</span>
                                         <input id="{{ $fileId }}" type="file" name="attachments[{{ $requirement['key'] }}]"
                                                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg"
-                                               aria-label="Upload {{ $requirement['title'] }}" data-requirement-file data-condition-file="{{ $condition ?? '' }}"
-                                               @disabled($currentType !== $typeKey || !$conditionIsActive)>
+                                               aria-label="Upload {{ $requirement['title'] }}" data-requirement-file
+                                               @disabled($currentType !== $typeKey)>
                                     </label>
                                 </div>
                             </div>
@@ -324,41 +329,28 @@
                 @endforeach
             </section>
 
-            <details class="ap-card ap-supporting">
-                <summary>Official checklist and supporting documents <small>Optional extras</small></summary>
-                <p>Download the full template pack or attach supporting files. Extra files do not replace the required checklist uploads.</p>
-                <div class="ap-footer-actions">
-                    <a id="downloadTemplatesBtn" href="{{ route('office.activities.templates.download', ['type' => $currentType]) }}" class="ap-button ap-button-outline"><i class="bi bi-download"></i> Download template pack</a>
-                    <label class="ap-upload-button" for="bulkDocUpload">
-                        <i class="bi bi-upload"></i> Add supporting files
-                        <input id="bulkDocUpload" type="file" name="supporting_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg">
-                    </label>
-                    <span id="bulkDocUploadStatus" class="ap-file-status" aria-live="polite">No supporting files selected.</span>
-                </div>
-                @foreach ($activityDocsByType as $docsType => $docs)
-                    @php $checklistSources = array_column($requirementSets[$docsType] ?? [], 'source_file'); $checklistKeys = array_column($requirementSets[$docsType] ?? [], 'key'); @endphp
-                    <div class="ap-extra-docs" data-document-type="{{ $docsType }}" @if ($docsType !== $currentType) hidden @endif>
-                        @foreach ($docs as $doc)
-                            @if ((($doc['kind'] ?? '') === 'template' && !in_array($doc['name'], $checklistSources, true)) || (($doc['kind'] ?? '') === 'upload' && !in_array($doc['key'], $checklistKeys, true)))
-                                <div class="ap-requirement-row">
-                                    <span class="ap-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
-                                    <div class="ap-requirement-copy">
-                                        <strong>{{ $doc['name'] }}</strong>
-                                        <p>{{ $doc['status'] }}{{ filled($doc['date'] ?? '') && $doc['date'] !== '—' ? ' · '.$doc['date'] : '' }}</p>
-                                    </div>
-                                    <div class="ap-document-links">
-                                        <button type="button" data-doc-preview data-doc-preview-url="{{ $doc['url'] }}" data-doc-preview-title="{{ $doc['name'] }}" data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
-                                        <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
-                                        @if (($doc['kind'] ?? '') === 'upload' && $submission->exists)
-                                            <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
-                                        @endif
-                                    </div>
+            @if ($previousUploads)
+                <details class="ap-card ap-supporting">
+                    <summary>Previous uploads <small>Not part of this checklist</small></summary>
+                    <p>Files saved under an earlier checklist are retained for reference. They are not required for this application.</p>
+                    <div class="ap-extra-docs">
+                        @foreach ($previousUploads as $doc)
+                            <div class="ap-requirement-row">
+                                <span class="ap-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                                <div class="ap-requirement-copy">
+                                    <strong>{{ $doc['name'] }}</strong>
+                                    <p>{{ $doc['status'] }}{{ filled($doc['date'] ?? '') && $doc['date'] !== '—' ? ' · '.$doc['date'] : '' }}</p>
                                 </div>
-                            @endif
+                                <div class="ap-document-links">
+                                    <button type="button" data-doc-preview data-doc-preview-url="{{ $doc['url'] }}" data-doc-preview-title="{{ $doc['name'] }}" data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
+                                    <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
+                                    <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
+                                </div>
+                            </div>
                         @endforeach
                     </div>
-                @endforeach
-            </details>
+                </details>
+            @endif
         </div>
 
         {{-- Real DOCX/PDF/image preview modal. Preview never navigates directly to a download response. --}}
@@ -386,12 +378,11 @@
         <div class="ap-footer">
             <div class="ap-footer-copy" aria-live="polite">
                 <strong id="activityRemainingCount">Preparing the required-document checklist…</strong>
-                <small id="activityRemainingHelp">Files are uploaded when you save or submit. Maximum 20 MB per file.</small>
+                <small id="activityRemainingHelp">Files upload when you submit for review. Maximum 20 MB per file.</small>
             </div>
             <div class="ap-footer-actions">
                 <a href="{{ route('office.activities') }}" class="ap-button ap-button-quiet">Cancel</a>
-                <button type="submit" name="submission_action" value="draft" class="ap-button ap-button-outline"><i class="bi bi-save2"></i> Save draft</button>
-                <button type="submit" name="submission_action" value="submit" id="activitySubmitButton" class="ap-button ap-button-primary" disabled><i class="bi bi-arrow-right"></i> Submit for Review</button>
+                <button type="submit" id="activitySubmitButton" class="ap-button ap-button-primary" disabled><i class="bi bi-arrow-right"></i> Submit for Review</button>
             </div>
         </div>
     </form>
@@ -504,7 +495,7 @@
                 if (!window.confirm(`Remove ${name}?`)) return;
 
                 // Submit a standalone form so the activity edit form remains a
-                // PUT request when the user saves or submits the activity.
+                // PUT request when the user submits the activity.
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = button.dataset.attachmentDeleteUrl;

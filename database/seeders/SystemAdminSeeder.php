@@ -12,6 +12,10 @@ class SystemAdminSeeder extends Seeder
         $email = strtolower(trim((string) config('orgchain.system_admin_seed_email')));
         $password = (string) config('orgchain.system_admin_seed_password');
 
+        if ($password === '') {
+            throw new \RuntimeException('Set SYSTEM_ADMIN_PASSWORD privately before seeding the system administrator.');
+        }
+
         SystemAdminUser::query()->updateOrCreate(
             ['email' => $email],
             [

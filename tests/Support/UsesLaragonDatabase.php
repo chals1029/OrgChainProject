@@ -80,7 +80,7 @@ trait UsesLaragonDatabase
             [
                 'name' => strtoupper($role).' Office',
                 'username' => $role.'_office',
-                'password' => Hash::make('Office@2026!'),
+                'password' => Hash::make('FixtureOfficeOnly@2026!'),
                 'office_role' => $role,
                 'office_title' => strtoupper($role).' Desk',
                 'student_organization_id' => null,
@@ -88,8 +88,8 @@ trait UsesLaragonDatabase
             ]
         );
 
-        if (! Hash::check('Office@2026!', $user->password)) {
-            $user->forceFill(['password' => 'Office@2026!'])->save();
+        if (! Hash::check('FixtureOfficeOnly@2026!', $user->password)) {
+            $user->forceFill(['password' => 'FixtureOfficeOnly@2026!'])->save();
             $user->refresh();
         }
 
@@ -103,7 +103,7 @@ trait UsesLaragonDatabase
             [
                 'name' => 'OrgChain System Administrator',
                 'username' => 'system_admin',
-                'password' => 'SystemAdmin@2026!',
+                'password' => 'FixtureSystemAdminOnly@2026!',
                 'role' => 'system_admin',
                 'is_active' => true,
             ]
@@ -122,7 +122,7 @@ trait UsesLaragonDatabase
                 'year_level' => '4th Year',
                 'role' => 'student',
                 'account_status' => 'active',
-                'password_hash' => Hash::make('Student@2026!'),
+                'password_hash' => Hash::make('FixtureStudentOnly@2026!'),
                 'created_at' => now(),
             ]
         );

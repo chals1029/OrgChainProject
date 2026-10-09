@@ -1,16 +1,27 @@
 @extends('org.layout')
 
+@php
+    $canCreateSubfolder = $currentFolder && !($currentFolder->is_activity ?? false);
+    $hasUploadFolders = $allSavedFolders->isNotEmpty();
+@endphp
+
 @section('title', $currentFolder ? $currentFolder->name . ' — Archive Vault' : 'Archive Vault')
 
 @section('header')
-    <h1><strong>Archive Vault &amp; Depository</strong></h1>
-    <p class="org-welcome">Official permanent institutional repository for student organization proposals, financial liquidations, accomplishment reports, and compliance archives.</p>
+    <h1><strong>{{ $assignedArchiveOrganization ? 'Organization Archive' : 'Archive Vault' }}</strong></h1>
+    <p class="org-welcome">
+        @if ($assignedArchiveOrganization)
+            Store and reopen documents for {{ $assignedArchiveOrganization }}. Archiving a file does not submit it for report review.
+        @else
+            Browse archived organization documents and verified semester records, or organize uploaded files in archive folders.
+        @endif
+    </p>
 @endsection
 
 @section('actions')
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="openNewFolderModal()">
-            <i class="bi bi-folder-plus"></i> {{ $currentFolder ? 'New Subfolder' : 'New Folder' }}
+            <i class="bi bi-folder-plus"></i> {{ $canCreateSubfolder ? 'New Subfolder' : 'New Folder' }}
         </button>
         <button type="button" class="org-btn org-btn-primary org-btn-sm" onclick="openUploadDocumentModal()">
             <i class="bi bi-cloud-upload-fill"></i> Upload Document
@@ -689,7 +700,9 @@
             padding: 0;
             background: transparent;
             max-width: 560px;
-            width: 92%;
+            width: calc(100vw - 2rem);
+            max-height: calc(100dvh - 2rem);
+            height: fit-content;
             margin: auto;
             position: fixed;
             inset: 0;
@@ -699,9 +712,7 @@
         }
 
         .arc-modal[open] {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: block;
         }
 
         .arc-modal::backdrop {
@@ -716,10 +727,35 @@
             padding: 1.85rem;
             box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.25);
             width: 100%;
-            max-height: 88vh;
-            overflow-y: auto;
+            max-height: calc(100dvh - 2rem);
+            overflow: auto;
             box-sizing: border-box;
             animation: arcModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #archiveDocPreviewModal { max-width: 1160px; }
+        #archiveDocPreviewModal .arc-modal-box { padding: 1.25rem; }
+        #prevDocTitle, #prevDocOriginalName { overflow-wrap: anywhere; }
+        .arc-preview-body {
+            height: min(58dvh, 720px);
+            min-height: 200px;
+            overflow: auto;
+            background: #e9edf2;
+            border: 1px solid var(--g-border);
+            border-radius: 12px;
+        }
+        .arc-preview-body:focus-visible { outline: 2px solid var(--g-maroon); outline-offset: 2px; }
+        .arc-preview-message { margin: 0; padding: 2rem; text-align: center; color: var(--g-ink-body); }
+        .arc-preview-body iframe { display: block; width: 100%; height: 100%; min-height: 200px; border: 0; background: white; }
+        .arc-preview-body img { display: block; max-width: 100%; height: auto; margin: auto; }
+        .arc-preview-word { width: max-content; min-width: 100%; }
+        .arc-preview-word .docx-wrapper { width: max-content; min-width: 100%; box-sizing: border-box; padding: 20px; }
+        .arc-preview-word .docx-wrapper > section.docx { flex-shrink: 0; margin: 0 auto 20px; }
+        @media (max-width: 600px) {
+            .arc-modal { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }
+            .arc-modal-box { padding: 1rem; max-height: calc(100dvh - 1rem); }
+            #archiveDocPreviewModal .arc-modal-box { padding: 0.85rem; }
+            .arc-preview-word .docx-wrapper { padding: 12px; }
         }
 
         @keyframes arcModalPop {
@@ -837,41 +873,6 @@
             font-size: 1.1rem;
         }
 
-        /* Toast Container */
-        .arc-toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            pointer-events: none;
-        }
-
-        .arc-toast {
-            pointer-events: auto;
-            background: #0f172a;
-            color: #ffffff;
-            padding: 0.75rem 1.25rem;
-            border-radius: 12px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-            animation: arcSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .arc-toast.is-success { border-left: 4px solid #10b981; }
-        .arc-toast.is-info { border-left: 4px solid #3b82f6; }
-
-        @keyframes arcSlideUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 
     {{-- 1. Vault Overview KPI Cards --}}
@@ -986,13 +987,17 @@
             {{-- Google Drive Style Empty Folder State --}}
             <div class="gdrive-empty-dropzone">
                 <i class="bi bi-folder2-open gdrive-empty-icon"></i>
-                <h3 class="gdrive-empty-title">This folder is empty</h3>
+                <h3 class="gdrive-empty-title">{{ !$hasUploadFolders ? 'Create your first archive folder' : 'This folder is empty' }}</h3>
                 <p class="gdrive-empty-desc">
-                    There are no subfolders or archived documents filed under <strong>{{ $currentFolder?->name ?? 'this folder' }}</strong> yet. Create a subfolder or upload your first document below.
+                    @if (!$hasUploadFolders)
+                        Create a folder{{ $assignedArchiveOrganization ? ' for ' . $assignedArchiveOrganization : '' }} first, then choose a document and select <strong>Upload &amp; Archive</strong>.
+                    @else
+                        No subfolders or documents are filed here yet. {{ $canCreateSubfolder ? 'Create a subfolder or upload a document below.' : 'Create an archive folder or choose an existing destination folder to upload a document.' }}
+                    @endif
                 </p>
                 <div class="gdrive-empty-actions">
                     <button type="button" class="org-btn org-btn-ghost" onclick="openNewFolderModal()">
-                        <i class="bi bi-folder-plus"></i> Create Subfolder
+                        <i class="bi bi-folder-plus"></i> {{ $canCreateSubfolder ? 'Create Subfolder' : 'Create Folder' }}
                     </button>
                     <button type="button" class="org-btn org-btn-primary" onclick="openUploadDocumentModal()">
                         <i class="bi bi-cloud-upload-fill"></i> Upload Document
@@ -1068,9 +1073,9 @@
                                     default => 'bi-file-earmark-fill',
                                 };
                                 $folderName = $doc['folder_name'] ?? 'Archive Vault';
-                                $docUrl = $doc['url'] ?? '#';
+                                $originalName = $doc['original_name'];
                             @endphp
-                            <article class="gdrive-file-card" data-name="{{ strtolower($doc['name']) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
+                            <article class="gdrive-file-card" data-name="{{ strtolower($doc['name'] . ' ' . $originalName) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
                                 <div class="gdrive-file-top">
                                     <div class="gdrive-file-icon {{ $iconClass }}">
                                         <i class="bi {{ $iconBi }}"></i>
@@ -1080,20 +1085,21 @@
                                             <span class="gdrive-file-format-badge">{{ $type }}</span>
                                         </div>
                                         <h3 class="gdrive-file-name" title="{{ $doc['name'] }}">{{ $doc['name'] }}</h3>
+                                        <small style="display: block; overflow-wrap: anywhere; color: var(--g-ink-muted);">{{ $originalName }}</small>
                                     </div>
                                 </div>
 
                                 <div>
                                     <div class="gdrive-file-meta-row">
-                                        <span><i class="bi bi-person-fill"></i> {{ $doc['author'] ?? 'Student Org' }}</span>
-                                        <span><i class="bi bi-hdd"></i> {{ $doc['size'] ?? '1.2 MB' }}</span>
-                                        <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? 'Apr 2026' }}</span>
+                                        <span><i class="bi bi-person-fill"></i> {{ $doc['author'] ?? '—' }}</span>
+                                        <span><i class="bi bi-hdd"></i> {{ $doc['size'] ?? '—' }}</span>
+                                        <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? '—' }}</span>
                                     </div>
                                     <div class="gdrive-file-actions">
-                                        <button type="button" class="gdrive-btn-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $docUrl }}')">
+                                        <button type="button" class="gdrive-btn-preview" data-archive-preview data-preview-title="{{ $doc['name'] }}" data-preview-original-name="{{ $originalName }}" data-preview-folder="{{ $folderName }}" data-preview-type="{{ $type }}" data-preview-size="{{ $doc['size'] ?? '—' }}" data-preview-date="{{ $doc['date'] ?? '—' }}" data-preview-author="{{ $doc['author'] ?? '—' }}" data-preview-url="{{ $doc['url'] }}" data-preview-download="{{ $doc['download_url'] }}">
                                             <i class="bi bi-eye"></i> Preview
                                         </button>
-                                        <a href="{{ $docUrl }}" class="gdrive-btn-download" download="{{ $doc['name'] }}" onclick="handleDownloadToast('{{ addslashes($doc['name']) }}')">
+                                        <a href="{{ $doc['download_url'] }}" class="gdrive-btn-download" download="{{ $originalName }}">
                                             <i class="bi bi-download"></i> Download
                                         </a>
                                     </div>
@@ -1132,9 +1138,9 @@
                                             default => 'bi-file-earmark-fill',
                                         };
                                         $folderName = $doc['folder_name'] ?? 'Archive Vault';
-                                        $docUrl = $doc['url'] ?? '#';
+                                        $originalName = $doc['original_name'];
                                     @endphp
-                                    <tr data-name="{{ strtolower($doc['name']) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
+                                    <tr data-name="{{ strtolower($doc['name'] . ' ' . $originalName) }}" data-type="{{ $type }}" data-author="{{ strtolower($doc['author'] ?? '') }}">
                                         <td>
                                             <div class="gdrive-tbl-row-doc">
                                                 <div class="gdrive-file-icon {{ $iconClass }}" style="width: 34px; height: 34px; font-size: 1.1rem; border-radius: 8px;">
@@ -1142,6 +1148,7 @@
                                                 </div>
                                                 <div>
                                                     <div class="gdrive-tbl-doc-name">{{ $doc['name'] }}</div>
+                                                    <small style="display: block; overflow-wrap: anywhere; color: var(--g-ink-muted);">{{ $originalName }}</small>
                                                     <span class="gdrive-file-format-badge" style="font-size: 0.65rem; padding: 0.1rem 0.35rem;">{{ $type }}</span>
                                                 </div>
                                             </div>
@@ -1149,15 +1156,15 @@
                                         <td>
                                             <span style="font-size: 0.8rem; font-weight: 600; color: var(--g-maroon);">{{ $folderName }}</span>
                                         </td>
-                                        <td style="font-weight: 600;">{{ $doc['size'] ?? '1.2 MB' }}</td>
-                                        <td style="font-size: 0.82rem; color: var(--g-ink-muted);">{{ $doc['date'] ?? 'Apr 2026' }}</td>
-                                        <td style="font-size: 0.84rem; font-weight: 600;">{{ $doc['author'] ?? 'Student Org' }}</td>
+                                        <td style="font-weight: 600;">{{ $doc['size'] ?? '—' }}</td>
+                                        <td style="font-size: 0.82rem; color: var(--g-ink-muted);">{{ $doc['date'] ?? '—' }}</td>
+                                        <td style="font-size: 0.84rem; font-weight: 600;">{{ $doc['author'] ?? '—' }}</td>
                                         <td style="text-align: right; white-space: nowrap;">
                                             <div class="gdrive-tbl-actions">
-                                                <button type="button" class="gdrive-tbl-btn is-preview" onclick="openArchivePreviewModal('{{ addslashes($doc['name']) }}', '{{ addslashes($folderName) }}', '{{ $type }}', '{{ $doc['size'] ?? '1.2 MB' }}', '{{ $doc['date'] ?? 'Recent' }}', '{{ addslashes($doc['author'] ?? 'Student Org') }}', '{{ $docUrl }}')">
+                                                <button type="button" class="gdrive-tbl-btn is-preview" data-archive-preview data-preview-title="{{ $doc['name'] }}" data-preview-original-name="{{ $originalName }}" data-preview-folder="{{ $folderName }}" data-preview-type="{{ $type }}" data-preview-size="{{ $doc['size'] ?? '—' }}" data-preview-date="{{ $doc['date'] ?? '—' }}" data-preview-author="{{ $doc['author'] ?? '—' }}" data-preview-url="{{ $doc['url'] }}" data-preview-download="{{ $doc['download_url'] }}">
                                                     <i class="bi bi-eye"></i> Preview
                                                 </button>
-                                                <a href="{{ $docUrl }}" class="gdrive-tbl-btn is-download" download="{{ $doc['name'] }}" onclick="handleDownloadToast('{{ addslashes($doc['name']) }}')">
+                                                <a href="{{ $doc['download_url'] }}" class="gdrive-tbl-btn is-download" download="{{ $originalName }}">
                                                     <i class="bi bi-download"></i> Download
                                                 </a>
                                             </div>
@@ -1183,20 +1190,23 @@
     <dialog class="arc-modal" id="newFolderModal">
         <div class="arc-modal-box">
             <div class="arc-modal-header">
-                <h3><i class="bi bi-folder-plus" style="color: var(--g-maroon);"></i> {{ $currentFolder ? 'Create Subfolder' : 'Create Archive Folder' }}</h3>
-                <button type="button" class="arc-modal-close" onclick="closeNewFolderModal()">&times;</button>
+                <h3><i class="bi bi-folder-plus" style="color: var(--g-maroon);"></i> {{ $canCreateSubfolder ? 'Create Subfolder' : 'Create Archive Folder' }}</h3>
+                <button type="button" class="arc-modal-close" onclick="closeNewFolderModal()" aria-label="Close folder dialog">&times;</button>
             </div>
             <form method="post" action="{{ route('office.archive.folders.store') }}">
                 @csrf
                 <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
                 
-                @if ($currentFolder && !($currentFolder->is_activity ?? false))
+                @if ($canCreateSubfolder)
                     <input type="hidden" name="parent_id" value="{{ $currentFolder->id }}">
                     <div class="arc-parent-indicator">
                         <i class="bi bi-diagram-3-fill"></i>
                         <span>Creating subfolder inside: <strong>{{ $currentFolder->name }}</strong></span>
                     </div>
                 @else
+                    @if ($currentFolder?->is_activity)
+                        <p style="font-size: 0.82rem; color: var(--g-ink-muted);">Verified activity folders are read-only. Create a separate archive folder at the root or inside an existing archive folder.</p>
+                    @endif
                     <div class="arc-form-group">
                         <label for="folderParentSelect">Parent Destination Folder</label>
                         <select id="folderParentSelect" name="parent_id" class="arc-select" style="width: 100%;">
@@ -1217,7 +1227,10 @@
 
                 <div class="arc-form-group">
                     <label for="folderOrgInput">Organization Name</label>
-                    <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" placeholder="{{ $currentFolder->organization_name ?? 'e.g., BSIT Society' }}" value="{{ $currentFolder->organization_name ?? '' }}" maxlength="255">
+                    <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" placeholder="e.g., BSIT Society" value="{{ $assignedArchiveOrganization ?? ($currentFolder->organization_name ?? '') }}" maxlength="255" @readonly($assignedArchiveOrganization !== null)>
+                    @if ($assignedArchiveOrganization)
+                        <small style="display: block; color: var(--g-ink-muted); margin-top: 0.35rem;">Folders belong to your assigned organization.</small>
+                    @endif
                 </div>
 
                 <div class="arc-form-row-2">
@@ -1256,15 +1269,23 @@
         <div class="arc-modal-box">
             <div class="arc-modal-header">
                 <h3><i class="bi bi-cloud-upload-fill" style="color: var(--g-maroon);"></i> Upload Document</h3>
-                <button type="button" class="arc-modal-close" onclick="closeUploadDocumentModal()">&times;</button>
+                <button type="button" class="arc-modal-close" onclick="closeUploadDocumentModal()" aria-label="Close upload dialog">&times;</button>
             </div>
             <form method="post" action="{{ route('office.archive.documents.store') }}" enctype="multipart/form-data" data-org-upload-form>
                 @csrf
                 <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                @if (!$hasUploadFolders)
+                    <div class="arc-parent-indicator">
+                        <i class="bi bi-folder-plus"></i>
+                        <span>Create an archive folder first before uploading documents.</span>
+                    </div>
+                    <button type="button" class="org-btn org-btn-ghost" onclick="closeUploadDocumentModal(); openNewFolderModal();">Create Folder</button>
+                @endif
+                <p style="font-size: 0.82rem; color: var(--g-ink-muted);">Choosing a file does not upload it. Select <strong>Upload &amp; Archive</strong> to save it; this does not submit an accomplishment or financial report for review.</p>
                 
                 <div class="arc-form-group">
                     <label for="uploadFolderSelect">Target Destination Folder *</label>
-                    <select id="uploadFolderSelect" name="archive_folder_id" class="arc-select" style="width: 100%;" required @disabled($allSavedFolders->isEmpty())>
+                    <select id="uploadFolderSelect" name="archive_folder_id" class="arc-select" style="width: 100%;" required @disabled(!$hasUploadFolders)>
                         @forelse ($allSavedFolders as $f)
                             <option value="{{ $f['id'] }}" {{ ($currentFolderId == $f['id']) ? 'selected' : '' }}>
                                 📁 {{ $f['path'] ?? $f['name'] }}
@@ -1277,21 +1298,21 @@
 
                 <div class="arc-form-group">
                     <label for="uploadDocTitleInput">Document Title / Subject *</label>
-                    <input type="text" id="uploadDocTitleInput" name="name" class="arc-form-input" placeholder="e.g., Annual Accomplishment Report 2026" maxlength="255" required>
+                    <input type="text" id="uploadDocTitleInput" name="name" class="arc-form-input" placeholder="e.g., Annual Accomplishment Report 2026" maxlength="255" required @disabled(!$hasUploadFolders)>
                 </div>
 
                 <div class="arc-form-group">
-                    <label for="uploadFileInput">Choose Document File (.pdf, .docx, .xlsx, .zip) *</label>
-                    <input type="file" id="uploadFileInput" name="document" class="arc-form-input" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg" data-org-upload data-max-size="20480" data-upload-status-id="gdriveUploadStatus">
+                    <label for="uploadFileInput">Choose Document File *</label>
+                    <input type="file" id="uploadFileInput" name="document" class="arc-form-input" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg" data-org-upload data-max-size="20480" data-upload-status-id="gdriveUploadStatus" @disabled(!$hasUploadFolders)>
                     <span id="gdriveUploadStatus" class="org-upload-status" aria-live="polite">No file selected.</span>
                     <small style="font-size: 0.74rem; color: var(--g-ink-muted); display: block; margin-top: 0.35rem;">
-                        Max file size: 20MB. Accepted formats: PDF, Word, Excel, PowerPoint, ZIP.
+                        Max file size: 20MB. Accepted formats: PDF, Word (.doc, .docx), Excel, PowerPoint, ZIP, PNG, JPG.
                     </small>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
                     <button type="button" class="org-btn org-btn-ghost" onclick="closeUploadDocumentModal()">Cancel</button>
-                    <button type="submit" class="org-btn org-btn-primary">
+                    <button type="submit" class="org-btn org-btn-primary" @disabled(!$hasUploadFolders)>
                         <i class="bi bi-cloud-arrow-up-fill"></i> Upload &amp; Archive
                     </button>
                 </div>
@@ -1300,62 +1321,53 @@
     </dialog>
 
     {{-- Modal 3: Document Preview & Details --}}
-    <dialog class="arc-modal" id="archiveDocPreviewModal">
+    <dialog class="arc-modal" id="archiveDocPreviewModal" aria-labelledby="prevDocTitle">
         <div class="arc-modal-box">
             <div class="arc-modal-header">
-                <h3><i class="bi bi-file-earmark-check-fill" style="color: var(--g-maroon);"></i> Document Details</h3>
-                <button type="button" class="arc-modal-close" onclick="closeArchivePreviewModal()">&times;</button>
+                <h3><i class="bi bi-file-earmark-text-fill" style="color: var(--g-maroon);"></i> Document Preview</h3>
+                <button type="button" class="arc-modal-close" onclick="closeArchivePreviewModal()" aria-label="Close document preview">&times;</button>
             </div>
 
             <div style="margin-bottom: 1.25rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--g-maroon); background: var(--g-maroon-light); padding: 0.15rem 0.6rem; border-radius: 9999px; border: 1px solid var(--g-maroon-border);" id="prevDocFolder">Organization Folder</span>
-                    <span class="gdrive-file-format-badge" id="prevDocFormat">PDF</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--g-maroon); background: var(--g-maroon-light); padding: 0.15rem 0.6rem; border-radius: 9999px; border: 1px solid var(--g-maroon-border);" id="prevDocFolder"></span>
+                    <span class="gdrive-file-format-badge" id="prevDocFormat"></span>
                 </div>
-                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--g-ink-dark); line-height: 1.35; margin: 0 0 0.85rem;" id="prevDocTitle">
-                    Document Filename
-                </h2>
+                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--g-ink-dark); line-height: 1.35; margin: 0 0 0.35rem;" id="prevDocTitle"></h2>
+                <p style="font-size: 0.8rem; color: var(--g-ink-muted); margin: 0 0 0.85rem;" id="prevDocOriginalName"></p>
 
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.84rem;">
                         <div>
                             <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">File Size</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocSize">2.4 MB</strong>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocSize"></strong>
                         </div>
                         <div>
                             <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded On</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocDate">Apr 6, 2026</strong>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocDate"></strong>
                         </div>
                         <div>
                             <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded By</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocAuthor">Officer Name</strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Vault Status</span>
-                            <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="bi bi-patch-check-fill"></i> Verified Permanent</span>
+                            <strong style="color: var(--g-ink-dark);" id="prevDocAuthor"></strong>
                         </div>
                     </div>
                 </div>
 
-                <div style="background: #ffffff; border: 1.5px dashed var(--g-border); border-radius: 12px; padding: 1.5rem; text-align: center; color: var(--g-ink-muted);">
-                    <i class="bi bi-file-earmark-pdf" style="font-size: 2.2rem; color: var(--g-maroon); display: block; margin-bottom: 0.5rem;"></i>
-                    <span style="font-size: 0.86rem; font-weight: 600; display: block; color: var(--g-ink-dark);">Permanent Institutional Record</span>
-                    <small style="font-size: 0.75rem; color: var(--g-ink-muted);">Encrypted &amp; logged in the official institutional depository.</small>
-                </div>
+                <div id="archiveDocPreviewBody" class="arc-preview-body" tabindex="0" aria-label="Document contents; scroll to read"></div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 0.65rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
                 <button type="button" class="org-btn org-btn-ghost" onclick="closeArchivePreviewModal()">Close</button>
-                <a href="#" class="org-btn org-btn-primary" id="prevDocDownloadLink" download>
+                <a class="org-btn org-btn-primary" id="prevDocDownloadLink" download>
                     <i class="bi bi-download"></i> Download Document
                 </a>
             </div>
         </div>
     </dialog>
 
-    {{-- Toast Container --}}
-    <div class="arc-toast-container" id="arcToastContainer"></div>
 
+    <script src="{{ asset('js/vendor/jszip.min.js') }}"></script>
+    <script src="{{ asset('js/vendor/docx-preview.min.js') }}"></script>
     <script>
         let currentGdriveView = localStorage.getItem('gdrive_archive_view') || 'grid';
 
@@ -1457,63 +1469,115 @@
             if (dialog) dialog.close();
         }
 
-        function openArchivePreviewModal(title, folder, format, size, date, author, url) {
-            document.getElementById('prevDocTitle').textContent = title;
-            document.getElementById('prevDocFolder').textContent = folder;
-            document.getElementById('prevDocFormat').textContent = format;
-            document.getElementById('prevDocSize').textContent = size;
-            document.getElementById('prevDocDate').textContent = date;
-            document.getElementById('prevDocAuthor').textContent = author;
+        const archivePreviewDialog = document.getElementById('archiveDocPreviewModal');
+        const archivePreviewBody = document.getElementById('archiveDocPreviewBody');
+        let archivePreviewRevision = 0;
+        let archivePreviewRequest = null;
+        let archivePreviewMediaUrl = null;
 
-            const dlLink = document.getElementById('prevDocDownloadLink');
-            if (dlLink) {
-                dlLink.href = url;
-                dlLink.download = title;
-                dlLink.onclick = function() {
-                    handleDownloadToast(title);
-                    closeArchivePreviewModal();
-                };
+        function clearArchivePreview() {
+            archivePreviewRevision++;
+            if (archivePreviewRequest) archivePreviewRequest.abort();
+            archivePreviewRequest = null;
+            if (archivePreviewMediaUrl) URL.revokeObjectURL(archivePreviewMediaUrl);
+            archivePreviewMediaUrl = null;
+            archivePreviewBody.replaceChildren();
+            const download = document.getElementById('prevDocDownloadLink');
+            download.removeAttribute('href');
+            download.removeAttribute('download');
+        }
+
+        function archivePreviewMessage(text, isError = false) {
+            const message = document.createElement('p');
+            message.className = 'arc-preview-message';
+            message.setAttribute('role', isError ? 'alert' : 'status');
+            message.textContent = text;
+            archivePreviewBody.replaceChildren(message);
+        }
+
+        async function openArchivePreviewModal(trigger) {
+            clearArchivePreview();
+            const token = archivePreviewRevision;
+            const data = trigger.dataset;
+            document.getElementById('prevDocTitle').textContent = data.previewTitle;
+            document.getElementById('prevDocOriginalName').textContent = data.previewOriginalName;
+            document.getElementById('prevDocFolder').textContent = data.previewFolder;
+            document.getElementById('prevDocFormat').textContent = data.previewType;
+            document.getElementById('prevDocSize').textContent = data.previewSize;
+            document.getElementById('prevDocDate').textContent = data.previewDate;
+            document.getElementById('prevDocAuthor').textContent = data.previewAuthor;
+            const download = document.getElementById('prevDocDownloadLink');
+            download.href = data.previewDownload;
+            download.download = data.previewOriginalName;
+            archivePreviewMessage('Loading document…');
+            if (!archivePreviewDialog.open) archivePreviewDialog.showModal();
+            archivePreviewDialog.querySelector('.arc-modal-box').scrollTop = 0;
+            const controller = new AbortController();
+            archivePreviewRequest = controller;
+            try {
+                const response = await fetch(data.previewUrl, { credentials: 'same-origin', signal: controller.signal });
+                if (!response.ok) throw new Error(`The document could not be loaded (HTTP ${response.status}).`);
+                const blob = await response.blob();
+                if (token !== archivePreviewRevision) return;
+                const mime = blob.type.toLowerCase().split(';')[0];
+                const type = data.previewType.toLowerCase();
+                if (mime === 'text/html') throw new Error('The server did not return the document. Your session may have expired.');
+                if (mime === 'application/pdf' || type === 'pdf') {
+                    archivePreviewMediaUrl = URL.createObjectURL(blob);
+                    const frame = document.createElement('iframe');
+                    frame.title = data.previewOriginalName;
+                    frame.src = archivePreviewMediaUrl + '#view=FitH';
+                    archivePreviewBody.replaceChildren(frame);
+                } else if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg'].includes(type)) {
+                    archivePreviewMediaUrl = URL.createObjectURL(blob);
+                    const image = document.createElement('img');
+                    image.alt = data.previewOriginalName;
+                    image.src = archivePreviewMediaUrl;
+                    image.addEventListener('error', () => {
+                        if (token === archivePreviewRevision) archivePreviewMessage('The image could not be displayed. Use Download to open the original file.', true);
+                    });
+                    archivePreviewBody.replaceChildren(image);
+                } else if (mime.includes('wordprocessingml') || type === 'docx') {
+                    if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+                        throw new Error('The Word preview library could not be loaded.');
+                    }
+                    const container = document.createElement('div');
+                    container.className = 'arc-preview-word';
+                    await window.docx.renderAsync(blob, container, null, {
+                        breakPages: true,
+                        ignoreWidth: false,
+                        ignoreHeight: false,
+                        renderHeaders: true,
+                        renderFooters: true,
+                        renderFootnotes: true,
+                        useBase64URL: true,
+                    });
+                    if (token !== archivePreviewRevision) return;
+                    archivePreviewBody.replaceChildren(container);
+                } else {
+                    archivePreviewMessage('This file type cannot be previewed in the browser. Use Download to open the original file.');
+                }
+                archivePreviewBody.scrollTop = 0;
+                archivePreviewBody.scrollLeft = 0;
+            } catch (error) {
+                if (token !== archivePreviewRevision || error.name === 'AbortError') return;
+                archivePreviewMessage(`${error.message} Use Download to open the original file.`, true);
+            } finally {
+                if (archivePreviewRequest === controller) archivePreviewRequest = null;
             }
-
-            const dialog = document.getElementById('archiveDocPreviewModal');
-            if (dialog) dialog.showModal();
         }
 
         function closeArchivePreviewModal() {
-            const dialog = document.getElementById('archiveDocPreviewModal');
-            if (dialog) dialog.close();
+            archivePreviewDialog.close();
         }
 
-        function handleDownloadToast(name) {
-            showArchiveToast(`Downloading "${name}"...`, 'success');
-        }
 
-        function showArchiveToast(message, type = 'info') {
-            const container = document.getElementById('arcToastContainer');
-            if (!container) return;
-
-            const toast = document.createElement('div');
-            toast.className = `arc-toast is-${type}`;
-            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill';
-            toast.innerHTML = `<i class="bi ${icon}"></i> <span>${escapeHtml(message)}</span>`;
-
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(12px)';
-                setTimeout(() => toast.remove(), 300);
-            }, 3200);
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
+        document.addEventListener('click', (event) => {
+            const trigger = event.target.closest('[data-archive-preview]');
+            if (trigger) openArchivePreviewModal(trigger);
+        });
+        archivePreviewDialog.addEventListener('close', clearArchivePreview);
+        archivePreviewDialog.addEventListener('cancel', clearArchivePreview);
         document.addEventListener('DOMContentLoaded', () => {
             setGdriveView(currentGdriveView);
         });

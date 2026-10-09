@@ -4,6 +4,9 @@
 .env.backup
 .env.production
 .env.*.local
+.env.*
+!.env.example
+!.env.*.example
 .phpactor.json
 .phpunit.result.cache
 /.codex
@@ -36,6 +39,19 @@ database/*.sqlite
 # Local DB dumps / exports (may contain student PII)
 *.sql
 votingsystem*.sql
+
+# Private reports, credentials and local session artifacts
+/storage/Template/1st Semester Accomplishment Report.pdf
+/database/seeders/TosaApplicantRealDataSeeder.php
+/public/templates/renewal/CARS RENEWAL APPLICATION.pdf
+/public/templates/renewal/CARS RENEWAL APPLICATION.docx
+/storage/Template/Student Organizations Renewal/CARS RENEWAL APPLICATION.docx
+*.pem
+*.key
+*.p12
+*.pfx
+storage/app/*-smoke*
+storage/app/*-sandbox*
 
 # Local tunnel / smoke artifacts
 storage/app/*-report.json

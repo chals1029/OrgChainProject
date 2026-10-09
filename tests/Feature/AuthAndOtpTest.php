@@ -32,7 +32,7 @@ class AuthAndOtpTest extends TestCase
         $this->from($path)
             ->post($path, [
                 'email' => 'someone@gmail.com',
-                'password' => 'Office@2026!',
+                'password' => 'FixtureOfficeOnly@2026!',
             ])
             ->assertSessionHasErrors('email');
     }
@@ -59,7 +59,7 @@ class AuthAndOtpTest extends TestCase
 
         $this->post($path, [
             'email' => $user->email,
-            'password' => 'Office@2026!',
+            'password' => 'FixtureOfficeOnly@2026!',
         ])->assertRedirect(route('office.home'));
 
         $this->assertAuthenticatedAs($user, 'office');

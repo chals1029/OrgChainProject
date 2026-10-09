@@ -1,11 +1,8 @@
 @php
     $isOso = ($office->office_role ?? '') === 'oso';
-    $settings = $settingsPayload ?? $officeSettings ?? \App\Models\OfficeSetting::publicValuesFor('oso');
+    $settings = $officeSettings ?? [];
     $general = $settings['general'] ?? [];
     $security = $settings['security'] ?? [];
-    $notifications = $settings['notifications'] ?? [];
-    $preferences = $settings['preferences'] ?? [];
-    $records = $settings['records'] ?? [];
     $settingsUsers = $officeUsers ?? collect();
     $settingsLogoUrl = !empty($general['logo_path'])
         ? asset('storage/'.$general['logo_path'])
@@ -16,7 +13,7 @@
      Impeccable & Unslop Design System · Batangas State University
      ========================================================================= --}}
 <div id="orgSettingsModal" class="org-settings-backdrop" style="display: none;" aria-hidden="true">
-    <div class="org-settings-dialog">
+    <div class="org-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" tabindex="-1">
         {{-- Settings Header --}}
         <div class="org-settings-header">
             <div class="org-settings-header-left">
@@ -25,16 +22,15 @@
                 </div>
                 <div class="org-settings-title-block">
                     <div class="org-settings-title-line">
-                        <h2 class="org-settings-title">{{ $isOso ? 'System & Office Settings' : 'My Office Settings' }}</h2>
-                        <span class="org-settings-version-tag"><i class="bi bi-shield-check"></i> v2.4 Stable</span>
+                        <h2 class="org-settings-title" id="settingsModalTitle">{{ $isOso ? 'System & Office Settings' : 'My Office Settings' }}</h2>
                     </div>
-                    <p class="org-settings-subtitle">Manage your office profile, session security, notifications, and personal workspace preferences.</p>
+                    <p class="org-settings-subtitle">{{ $isOso ? 'Manage office accounts, institutional details, TOSA access, and data exports.' : 'Manage your office profile and account password.' }}</p>
                 </div>
             </div>
             <div class="org-settings-header-right">
                 <div class="org-settings-search-wrap">
                     <i class="bi bi-search"></i>
-                    <input type="text" id="settingsGlobalSearch" placeholder="Search settings (e.g. password, timeout)..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="filterSettingsSearch(this.value)">
+                    <input type="search" id="settingsGlobalSearch" aria-label="Search settings" placeholder="Search settings (e.g. profile, password)..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="filterSettingsSearch(this.value)">
                 </div>
                 <button type="button" class="org-settings-close-btn" onclick="closeSettingsModal()" title="Close Settings (Esc)" aria-label="Close Settings">
                     <i class="bi bi-x-lg"></i>
@@ -45,9 +41,9 @@
         {{-- Settings Main Layout (Sidebar Navigation + Content Panels) --}}
         <div class="org-settings-body">
             {{-- Left Navigation Sidebar --}}
+            @if ($isOso)
             <aside class="org-settings-nav">
                 <div class="org-settings-nav-group-label">CONFIGURATION</div>
-                @if ($isOso)
                 <button type="button" class="org-settings-nav-item is-active" id="setNavBtn-general" onclick="switchSettingsTab('general')">
                     <div class="org-settings-nav-icon"><i class="bi bi-sliders"></i></div>
                     <div class="org-settings-nav-text">
@@ -55,13 +51,12 @@
                         <small>System, Office, Logo, Contact</small>
                     </div>
                 </button>
-                @endif
 
                 <button type="button" class="org-settings-nav-item" id="setNavBtn-account" onclick="switchSettingsTab('account')">
                     <div class="org-settings-nav-icon"><i class="bi bi-person-badge-fill"></i></div>
                     <div class="org-settings-nav-text">
                         <strong>Account</strong>
-                        <small>{{ $isOso ? 'Profile, Password, PIN' : 'Profile, Password' }}</small>
+                        <small>Profile, Password</small>
                     </div>
                 </button>
 
@@ -69,19 +64,10 @@
                     <div class="org-settings-nav-icon"><i class="bi bi-shield-lock-fill"></i></div>
                     <div class="org-settings-nav-text">
                         <strong>Security</strong>
-                        <small>{{ $isOso ? 'Timeout, TOSA access' : 'Session timeout' }}</small>
+                        <small>TOSA PIN access</small>
                     </div>
                 </button>
 
-                <button type="button" class="org-settings-nav-item" id="setNavBtn-notifications" onclick="switchSettingsTab('notifications')">
-                    <div class="org-settings-nav-icon"><i class="bi bi-bell-fill"></i></div>
-                    <div class="org-settings-nav-text">
-                        <strong>Notifications</strong>
-                        <small>Alerts, Email, Dispatches</small>
-                    </div>
-                </button>
-
-                @if ($isOso)
                 <div class="org-settings-nav-group-label" style="margin-top: 0.85rem;">MANAGEMENT</div>
                 <button type="button" class="org-settings-nav-item" id="setNavBtn-users" onclick="switchSettingsTab('users')">
                     <div class="org-settings-nav-icon"><i class="bi bi-people-fill"></i></div>
@@ -90,25 +76,14 @@
                         <small>Accounts, Permissions, TOSA</small>
                     </div>
                 </button>
-                @endif
 
-                <button type="button" class="org-settings-nav-item" id="setNavBtn-preferences" onclick="switchSettingsTab('preferences')">
-                    <div class="org-settings-nav-icon"><i class="bi bi-palette-fill"></i></div>
-                    <div class="org-settings-nav-text">
-                        <strong>System Preferences</strong>
-                        <small>Date, Language, Appearance</small>
-                    </div>
-                </button>
-
-                @if ($isOso)
                 <button type="button" class="org-settings-nav-item" id="setNavBtn-records" onclick="switchSettingsTab('records')">
                     <div class="org-settings-nav-icon"><i class="bi bi-database-fill-gear"></i></div>
                     <div class="org-settings-nav-text">
                         <strong>Data &amp; Records</strong>
-                        <small>Archive, Backup, Logs</small>
+                        <small>Snapshots, Record Exports</small>
                     </div>
                 </button>
-                @endif
 
                 {{-- Sidebar Footer Meta --}}
                 <div class="org-settings-nav-footer">
@@ -117,9 +92,11 @@
                     <div style="font-size: 0.7rem; color: #8b1828; font-weight: 700;">{{ $brand['role'] ?? 'Office User' }}</div>
                 </div>
             </aside>
+            @endif
 
             {{-- Right Content Panels --}}
             <main class="org-settings-content" id="settingsContentContainer">
+                <p id="settingsSearchEmpty" role="status" hidden>No settings match your search.</p>
                 
                 @if ($isOso)
                 {{-- =============================================================
@@ -129,7 +106,7 @@
                     <div class="org-settings-panel-header">
                         <div>
                             <h3 class="org-settings-panel-title">General Settings</h3>
-                            <p class="org-settings-panel-desc">Manage institutional system identifiers, office branding, university logos, and primary contact routing.</p>
+                            <p class="org-settings-panel-desc">Manage saved institutional identifiers, office branding, and contact information.</p>
                         </div>
                         <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('General')">
                             <i class="bi bi-floppy2-fill"></i> Save Changes
@@ -142,7 +119,7 @@
                             <div class="org-settings-card-icon"><i class="bi bi-building-gear"></i></div>
                             <div>
                                 <h4 class="org-settings-card-title">System &amp; Office Identification</h4>
-                                <p class="org-settings-card-desc">Institutional branding displayed across navigation headers, official PDF exports, and blockchain seals.</p>
+                                <p class="org-settings-card-desc">Office identification and institutional details included in configuration snapshots.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
@@ -153,7 +130,7 @@
                                         <span class="org-settings-required">*</span>
                                     </label>
                                     <input type="text" id="setSysName" class="org-settings-input" value="{{ $general['system_name'] ?? 'OrgChain Student Organizations Portal' }}" placeholder="e.g. OrgChain Student Portal">
-                                    <small class="org-settings-help">Displayed in the top navigation title bar and system header.</small>
+                                    <small class="org-settings-help">Saved as the system identifier in configuration snapshots.</small>
                                 </div>
 
                                 <div class="org-settings-field">
@@ -169,7 +146,7 @@
                             <div class="org-settings-grid-2" style="margin-top: 1rem;">
                                 <div class="org-settings-field">
                                     <label for="setUniversityName" class="org-settings-label">University / Institution</label>
-                                    <input type="text" id="setUniversityName" class="org-settings-input" value="{{ $general['university_name'] ?? 'Batangas State University - The National Engineering University' }}" readonly style="background: #f8fafc; color: #475569;">
+                                    <input type="text" id="setUniversityName" class="org-settings-input" value="{{ $general['university_name'] ?? 'Batangas State University - The National Engineering University' }}">
                                 </div>
                                 <div class="org-settings-field">
                                     <label for="setCampusUnit" class="org-settings-label">Campus / Department Jurisdiction</label>
@@ -185,7 +162,7 @@
                             <div class="org-settings-card-icon"><i class="bi bi-image-alt"></i></div>
                             <div>
                                 <h4 class="org-settings-card-title">Institutional Logo &amp; Insignia</h4>
-                                <p class="org-settings-card-desc">Uploaded logos are automatically stamped on official certificates, endorsements, and PDF dossiers.</p>
+                                <p class="org-settings-card-desc">The saved logo is used as the office portal favicon.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
@@ -195,12 +172,12 @@
                                 </div>
                                 <div style="flex: 1;">
                                     <strong style="font-size: 0.95rem; color: #1a1618; display: block; margin-bottom: 0.2rem;">Official OrgChain Emblem &amp; Seal</strong>
-                                    <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.75rem;">PNG, SVG or WEBP transparent format recommended (Max 2MB, 512x512px).</p>
+                                    <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.75rem;">PNG or JPEG, up to 2 MB. Uploads and resets are saved immediately.</p>
                                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                         <button type="button" class="org-settings-btn-outline" onclick="triggerLogoUpload()">
                                             <i class="bi bi-upload"></i> Upload New Logo
                                         </button>
-                                        <input type="file" id="settingsLogoFileInput" style="display: none;" accept="image/png, image/jpeg, image/svg+xml" onchange="handleLogoChange(this)">
+                                        <input type="file" id="settingsLogoFileInput" style="display: none;" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="handleLogoChange(this)">
                                         <button type="button" class="org-settings-btn-subtle" onclick="resetLogoToDefault()">
                                             <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
                                         </button>
@@ -216,7 +193,7 @@
                             <div class="org-settings-card-icon"><i class="bi bi-envelope-at"></i></div>
                             <div>
                                 <h4 class="org-settings-card-title">Contact Information &amp; Support Channels</h4>
-                                <p class="org-settings-card-desc">Public-facing communication channels for student organization inquiries and evaluation feedback.</p>
+                                <p class="org-settings-card-desc">Office contact details saved in institutional configuration snapshots.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
@@ -258,7 +235,7 @@
                             <p class="org-settings-panel-desc">Manage your authorized office profile, password, and personal account credentials.</p>
                         </div>
                         <button type="button" class="org-settings-save-btn" onclick="saveOsoAccount()">
-                            <i class="bi bi-floppy2-fill"></i> Save Changes
+                            <i class="bi bi-floppy2-fill"></i> Save Profile
                         </button>
                     </div>
 
@@ -268,18 +245,18 @@
                             <div class="org-settings-card-icon"><i class="bi bi-person-bounding-box"></i></div>
                             <div>
                                 <h4 class="org-settings-card-title">Profile Information</h4>
-                                <p class="org-settings-card-desc">Officer identity and institutional designation displayed on audit logs and blockchain signatures.</p>
+                                <p class="org-settings-card-desc">Your office account identity and institutional designation.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
                             <div class="org-settings-profile-head">
                                 <div class="org-settings-avatar-big">
-                                    <span>{{ $office->initials() ?? 'OSO' }}</span>
+                                    <span id="settingsProfileInitials">{{ $office->initials() ?? 'OSO' }}</span>
                                 </div>
                                 <div>
-                                    <h4 style="margin: 0 0 0.15rem; font-size: 1.1rem; color: #1a1618;">{{ $office->name ?? 'Office Review Officer' }}</h4>
+                                    <h4 id="settingsProfileName" style="margin: 0 0 0.15rem; font-size: 1.1rem; color: #1a1618;">{{ $office->name ?? 'Office Review Officer' }}</h4>
                                     <span style="font-size: 0.8rem; color: #8b1828; font-weight: 700; background: #fdf0f2; padding: 0.2rem 0.55rem; border-radius: 6px; display: inline-block;">
-                                        <i class="bi bi-patch-check-fill"></i> Certified Directorate Officer
+                                        <i class="bi bi-patch-check-fill"></i> Office Account
                                     </span>
                                     <div style="margin-top: 0.5rem; font-size: 0.76rem; color: #64748b;">
                                         User ID: <strong>BSU-OFFICE-{{ $office->id ?? '—' }}</strong> • Authorized Role: <strong>{{ $brand['role'] ?? 'Head Administrator' }}</strong>
@@ -297,7 +274,7 @@
                                     <input type="text" id="setOfficerDesignation" class="org-settings-input" value="{{ $office->office_title ?? 'Head, Office of Student Organizations' }}">
                                 </div>
                                 <div class="org-settings-field">
-                                    <label for="setOfficerEmail" class="org-settings-label">Primary Account Email</label>
+                                    <label for="setOfficerEmail" class="org-settings-label">Official Account Email</label>
                                     <input type="email" id="setOfficerEmail" class="org-settings-input" value="{{ $office->email ?? 'oso.lead@g.batstate-u.edu.ph' }}">
                                 </div>
                                 <div class="org-settings-field">
@@ -354,92 +331,21 @@
                         </div>
                     </div>
 
-                    @if ($isOso)
-                    {{-- Card: Change Master PIN --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-123"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Change Master Security PIN</h4>
-                                <p class="org-settings-card-desc">Master 4-digit PIN used for sensitive actions, executive evaluations, and gateway access.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-                                <div>
-                                    <div style="font-size: 0.88rem; font-weight: 700; color: #1a1618;">Current Master PIN Status</div>
-                                    <div style="font-size: 0.78rem; color: {{ !empty($security['master_pin_configured']) ? '#16a34a' : '#b45309' }}; font-weight: 600; margin-top: 0.2rem;">
-                                        @if (!empty($security['master_pin_configured']))
-                                            <i class="bi bi-check-circle-fill"></i> Active &amp; Encrypted
-                                        @else
-                                            <i class="bi bi-exclamation-circle-fill"></i> Not configured — set a new PIN
-                                        @endif
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <input type="password" id="setNewPinInput" maxlength="4" class="org-settings-input" style="width: 110px; text-align: center; letter-spacing: 4px; font-weight: 800; font-size: 1.1rem;" placeholder="••••">
-                                    <button type="button" class="org-settings-save-btn" onclick="updateMasterPin()">
-                                        <i class="bi bi-check2"></i> Save New PIN
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
                 </section>
 
-                {{-- =============================================================
-                     TAB 3: SECURITY SETTINGS
-                     ============================================================= --}}
+                @if ($isOso)
+                {{-- TOSA access controls --}}
                 <section class="org-settings-panel" id="setPanel-security">
                     <div class="org-settings-panel-header">
                         <div>
-                            <h3 class="org-settings-panel-title">Security &amp; Access Controls</h3>
-                            <p class="org-settings-panel-desc">Configure session inactivity protection. OSO administrators can also manage TOSA access controls.</p>
+                            <h3 class="org-settings-panel-title">TOSA Access Controls</h3>
+                            <p class="org-settings-panel-desc">Manage the TOSA PIN gateway and its timed re-lock.</p>
                         </div>
                         <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('Security')">
                             <i class="bi bi-floppy2-fill"></i> Save Changes
                         </button>
                     </div>
 
-                    {{-- Card: Session Timeout & Auto-lock --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-hourglass-bottom"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Session Inactivity &amp; Auto-Lock</h4>
-                                <p class="org-settings-card-desc">Automatically secure active dashboards when idle to prevent unauthorized campus access.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-grid-2">
-                                <div class="org-settings-field">
-                                    <label for="setSessionTimeout" class="org-settings-label">Portal Session Inactivity Timeout</label>
-                                    <select id="setSessionTimeout" class="org-settings-select">
-                                        <option value="15" @selected((int) ($security['session_timeout'] ?? 15) === 15)>15 Minutes (Recommended)</option>
-                                        <option value="30" @selected((int) ($security['session_timeout'] ?? 15) === 30)>30 Minutes</option>
-                                        <option value="60" @selected((int) ($security['session_timeout'] ?? 15) === 60)>1 Hour</option>
-                                        <option value="120" @selected((int) ($security['session_timeout'] ?? 15) === 120)>2 Hours</option>
-                                        <option value="0" @selected((int) ($security['session_timeout'] ?? 15) === 0)>Never (Shift Mode)</option>
-                                    </select>
-                                    <small class="org-settings-help">Signs out officer session after prolonged inactivity.</small>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setAutoLockInterval" class="org-settings-label">Auto-Lock Timer Threshold</label>
-                                    <select id="setAutoLockInterval" class="org-settings-select">
-                                        <option value="5" @selected((int) ($security['auto_lock_interval'] ?? 15) === 5)>5 Minutes</option>
-                                        <option value="10" @selected((int) ($security['auto_lock_interval'] ?? 15) === 10)>10 Minutes</option>
-                                        <option value="15" @selected((int) ($security['auto_lock_interval'] ?? 15) === 15)>15 Minutes (Default)</option>
-                                        <option value="30" @selected((int) ($security['auto_lock_interval'] ?? 15) === 30)>30 Minutes</option>
-                                    </select>
-                                    <small class="org-settings-help">Locks executive desks requiring PIN re-entry.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if ($isOso)
                     {{-- Card: TOSA Module Access & TOSA PIN --}}
                     <div class="org-settings-card">
                         <div class="org-settings-card-header">
@@ -452,179 +358,48 @@
                         <div class="org-settings-card-body">
                             <div class="org-settings-toggle-row">
                                 <div>
-                                    <strong class="org-settings-toggle-title">TOSA Module PIN Gateway Clearance</strong>
+                                    <strong class="org-settings-toggle-title">Require a TOSA PIN</strong>
                                     <p class="org-settings-toggle-desc">Require 4-digit security PIN unlock before displaying TOSA candidate dossiers.</p>
                                 </div>
                                 <label class="org-settings-switch">
-                                    <input type="checkbox" id="setTosaGateToggle" @checked($security['tosa_gate'] ?? true) onchange="toggleSettingState('TOSA Gatekeeper', this.checked)">
+                                    <input type="checkbox" id="setTosaGateToggle" aria-label="Require a TOSA PIN" @checked($security['tosa_gate'] ?? true) onchange="toggleSettingState('TOSA PIN requirement', this.checked)">
                                     <span class="org-settings-slider"></span>
                                 </label>
                             </div>
 
                             <div class="org-settings-grid-2" style="margin-top: 1rem;">
                                 <div class="org-settings-field">
-                                    <label for="setTosaPinField" class="org-settings-label">Current TOSA Access PIN</label>
+                                    <label for="setTosaPinField" class="org-settings-label">New TOSA Access PIN</label>
                                     <div class="org-settings-input-group">
                                         <input type="password" id="setTosaPinField" class="org-settings-input" value="" inputmode="numeric" maxlength="4" placeholder="Enter new PIN" style="letter-spacing: 3px; font-weight: 800;">
                                         <button type="button" class="org-settings-pw-toggle" onclick="togglePwVisibility('setTosaPinField', this)"><i class="bi bi-eye"></i></button>
                                     </div>
-                                    <small class="org-settings-help">
+                                    <small class="org-settings-help" id="settingsTosaPinStatus">
                                         @if (!empty($security['tosa_pin_configured']))
                                             Current PIN is configured and stored as a one-way hash. Enter a new 4-digit PIN to replace it.
                                         @else
-                                            No custom PIN is configured yet. Enter a new 4-digit PIN; it will be stored as a one-way hash.
+                                            No PIN is configured yet. Configure one before enabling PIN-protected TOSA access.
                                         @endif
                                     </small>
                                     <button type="button" class="org-settings-btn-outline" style="margin-top: 0.6rem;" onclick="saveOsoPin('tosa')"><i class="bi bi-shield-lock"></i> Save TOSA PIN</button>
                                 </div>
 
                                 <div class="org-settings-field">
-                                    <label for="setTosaEvaluationMode" class="org-settings-label">TOSA Evaluation Mode</label>
-                                    <select id="setTosaEvaluationMode" class="org-settings-select">
-                                        <option value="strict" @selected(($security['tosa_evaluation_mode'] ?? 'strict') === 'strict')>Strict Dual-Review Verification</option>
-                                        <option value="standard" @selected(($security['tosa_evaluation_mode'] ?? 'strict') === 'standard')>Standard Single Officer Review</option>
-                                        <option value="committee" @selected(($security['tosa_evaluation_mode'] ?? 'strict') === 'committee')>Full Committee Consensus Protocol</option>
+                                    <label for="setSessionTimeout" class="org-settings-label">TOSA PIN Unlock Duration</label>
+                                    <select id="setSessionTimeout" class="org-settings-select">
+                                        <option value="15" @selected((int) ($security['session_timeout'] ?? 15) === 15)>15 Minutes</option>
+                                        <option value="30" @selected((int) ($security['session_timeout'] ?? 15) === 30)>30 Minutes</option>
+                                        <option value="60" @selected((int) ($security['session_timeout'] ?? 15) === 60)>1 Hour</option>
+                                        <option value="120" @selected((int) ($security['session_timeout'] ?? 15) === 120)>2 Hours</option>
+                                        <option value="0" @selected((int) ($security['session_timeout'] ?? 15) === 0)>No timed re-lock</option>
                                     </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-                </section>
-
-                {{-- =============================================================
-                     TAB 4: NOTIFICATIONS
-                     ============================================================= --}}
-                <section class="org-settings-panel" id="setPanel-notifications">
-                    <div class="org-settings-panel-header">
-                        <div>
-                            <h3 class="org-settings-panel-title">Notification Settings</h3>
-                            <p class="org-settings-panel-desc">Configure real-time event dispatchers, proposal alerts, announcements, and automated email notifications.</p>
-                        </div>
-                        <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('Notifications')">
-                            <i class="bi bi-floppy2-fill"></i> Save Changes
-                        </button>
-                    </div>
-
-                    {{-- Application Notifications --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-bell-badge"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Application &amp; Submission Notifications</h4>
-                                <p class="org-settings-card-desc">Receive immediate push alerts when new proposals or candidate submissions arrive.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">New Activity Proposal Submissions</strong>
-                                    <p class="org-settings-toggle-desc">Trigger notification when student orgs submit new project proposals.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setNewProposalToggle" @checked($notifications['new_proposal_alert'] ?? true) onchange="toggleSettingState('New Proposal Alert', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">TOSA Applicant Dossier Alerts</strong>
-                                    <p class="org-settings-toggle-desc">Notify review desk when candidate requirement files are uploaded.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setTosaApplicantToggle" @checked($notifications['tosa_applicant_alert'] ?? true) onchange="toggleSettingState('TOSA Applicant Alert', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Interactive Sound &amp; Audio Cues</strong>
-                                    <p class="org-settings-toggle-desc">Play subtle institutional chime on high-priority incoming items.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setSoundEffectsToggle" @checked($notifications['sound_effects'] ?? false) onchange="toggleSettingState('Sound Effects', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Approval & Revision Notifications --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-arrow-repeat"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Approval &amp; Revision Notifications</h4>
-                                <p class="org-settings-card-desc">Track status transitions across OSO, SDO document review, and OVCAA desks.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Proposal Endorsement Dispatches</strong>
-                                    <p class="org-settings-toggle-desc">Receive confirmation receipt when proposals advance to the next approval tier.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setApprovalDispatchesToggle" @checked($notifications['approval_dispatches'] ?? true) onchange="toggleSettingState('Approval Dispatches', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Document Revision &amp; Return Alerts</strong>
-                                    <p class="org-settings-toggle-desc">Alert reviewers when resubmitted documents are re-uploaded by students.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setRevisionAlertsToggle" @checked($notifications['revision_alerts'] ?? true) onchange="toggleSettingState('Revision Alerts', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- System Announcements & Email Notifications --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-megaphone-fill"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">System Announcements &amp; Email Notifications</h4>
-                                <p class="org-settings-card-desc">Manage broadcast banners and automated email summary digests.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Executive Directorate Broadcast Banner</strong>
-                                    <p class="org-settings-toggle-desc">Display active university memos and deadline countdown banners on student portals.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setBroadcastBannerToggle" @checked($notifications['broadcast_banner'] ?? true) onchange="toggleSettingState('Broadcast Banner', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-grid-2" style="margin-top: 1rem;">
-                                <div class="org-settings-field">
-                                    <label for="setEmailDigestFreq" class="org-settings-label">Email Digest Frequency</label>
-                                    <select id="setEmailDigestFreq" class="org-settings-select">
-                                        <option value="instant" @selected(($notifications['email_digest_frequency'] ?? 'daily') === 'instant')>Instant on Critical Event</option>
-                                        <option value="daily" @selected(($notifications['email_digest_frequency'] ?? 'daily') === 'daily')>Daily Morning Summary (08:00 AM)</option>
-                                        <option value="weekly" @selected(($notifications['email_digest_frequency'] ?? 'daily') === 'weekly')>Weekly Executive Digest</option>
-                                        <option value="disabled" @selected(($notifications['email_digest_frequency'] ?? 'daily') === 'disabled')>Disabled (In-app only)</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setDigestEmail" class="org-settings-label">Destination Digest Email</label>
-                                    <input type="email" id="setDigestEmail" class="org-settings-input" value="{{ $notifications['digest_email'] ?? 'oso.directorate@g.batstate-u.edu.ph' }}">
+                                    <small class="org-settings-help">Re-locks the TOSA view when the duration expires. This does not sign you out.</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
+                @endif
 
                 {{-- =============================================================
                      TAB 5: USERS & ROLES
@@ -634,7 +409,7 @@
                     <div class="org-settings-panel-header">
                         <div>
                             <h3 class="org-settings-panel-title">Users &amp; Role Permissions</h3>
-                            <p class="org-settings-panel-desc">Manage authorized office personnel, permission boundaries, and certified TOSA evaluators.</p>
+                            <p class="org-settings-panel-desc">Manage office and student organization accounts, credentials, and secure officer turnover.</p>
                         </div>
                         <button type="button" class="org-settings-save-btn" onclick="openAddUserModal()">
                             <i class="bi bi-person-plus-fill"></i> Add Officer Account
@@ -647,10 +422,15 @@
                             <div class="org-settings-card-icon"><i class="bi bi-person-lines-fill"></i></div>
                             <div>
                                 <h4 class="org-settings-card-title">Authorized Office Accounts</h4>
-                                <p class="org-settings-card-desc">Active personnel with cryptographic signing access to the OrgChain office desk.</p>
+                                <p class="org-settings-card-desc">Disabled accounts remain visible. Use My Account for your own profile and password.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body" style="padding: 0;">
+                            <div style="padding: 1rem;">
+                                <label for="settingsAccountSearch" class="org-settings-label">Search accounts</label>
+                                <input type="search" id="settingsAccountSearch" class="org-settings-input" placeholder="Name, university email, organization, or role" autocomplete="off" oninput="filterSettingsAccounts(this.value)">
+                                <p id="settingsAccountSearchEmpty" class="org-settings-help" role="status" hidden>No accounts match your search.</p>
+                            </div>
                             <div class="org-settings-table-wrap">
                                 <table class="org-settings-table">
                                     <thead>
@@ -659,46 +439,65 @@
                                             <th>Role / Office</th>
                                             <th>TOSA Clearance</th>
                                             <th>Account Status</th>
-                                            <th>Last Active</th>
+                                            <th>Last Updated</th>
                                             <th style="text-align: center;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="settingsUserListTbody">
                                         @forelse ($settingsUsers as $user)
                                             @php
-                                                $roleClass = $user->office_role === 'oso' ? 'is-admin' : ($user->office_role === 'sdo' ? 'is-sdo' : ($user->office_role === 'oc' ? 'is-oc' : 'is-ovcaa'));
-                                                $initials = $user->initials();
+                                                $userData = [
+                                                    'id' => $user->id,
+                                                    'name' => $user->name,
+                                                    'email' => $user->email,
+                                                    'office_role' => $user->office_role,
+                                                    'role' => $user->roleLabel(),
+                                                    'office_title' => $user->office_title,
+                                                    'employee_id' => $user->employee_id,
+                                                    'student_organization_id' => $user->student_organization_id,
+                                                    'organization_name' => $user->studentOrganization?->name,
+                                                    'initials' => $user->initials(),
+                                                    'updated_at' => $user->updated_at?->toIso8601String(),
+                                                    'tosa_clearance' => $user->effectiveTosaClearance(),
+                                                    'is_active' => (bool) $user->is_active,
+                                                    'must_change_password' => (bool) $user->must_change_password,
+                                                ];
+                                                $isCurrentAccount = (int) $user->id === (int) $office->id;
                                             @endphp
-                                            <tr>
+                                            <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}">
                                                 <td>
-                                                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                                        <div class="org-settings-avatar-sm">{{ $initials }}</div>
+                                                    <div class="org-settings-user-identity">
+                                                        <div class="org-settings-avatar-sm">{{ $userData['initials'] }}</div>
                                                         <div>
-                                                            <strong style="display: block; font-size: 0.85rem; color: #1a1618;">{{ $user->name }}</strong>
-                                                            <small style="font-size: 0.72rem; color: #64748b;">{{ $user->email }}</small>
+                                                            <strong data-user-name>{{ $user->name }}</strong>
+                                                            <small data-user-email>{{ $user->email }}</small>
+                                                            <small data-user-title>{{ $user->office_title }}</small>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td><span class="org-settings-role-badge {{ $roleClass }}">{{ $user->roleLabel() }}</span></td>
                                                 <td>
-                                                    @if ($user->tosa_clearance && $user->tosa_clearance !== 'No Access')
-                                                        <span class="org-settings-pill-green"><i class="bi bi-shield-check"></i> {{ $user->tosa_clearance }}</span>
-                                                    @else
-                                                        <span class="org-settings-pill-gray">No Access</span>
-                                                    @endif
+                                                    <span class="org-settings-role-badge">{{ $userData['role'] }}</span>
+                                                    <small data-user-organization>{{ $userData['organization_name'] ?? ($user->office_role === 'so' ? 'No organization assigned' : '') }}</small>
                                                 </td>
+                                                <td><span data-user-clearance class="{{ $userData['tosa_clearance'] === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green' }}">{{ $userData['tosa_clearance'] }}</span></td>
                                                 <td>
-                                                    @if ($user->is_active)
-                                                        <span class="org-settings-status-active"><i class="bi bi-check2"></i> Enabled</span>
-                                                    @else
-                                                        <span class="org-settings-pill-gray"><i class="bi bi-slash-circle"></i> Disabled</span>
-                                                    @endif
+                                                    <span data-user-status class="{{ $user->is_active ? 'org-settings-status-active' : 'org-settings-pill-gray' }}">{{ $user->is_active ? 'Enabled' : 'Disabled' }}</span>
+                                                    <small data-user-password-state>{{ $userData['must_change_password'] ? 'Password change required' : '' }}</small>
                                                 </td>
-                                                <td style="font-size: 0.78rem; color: #64748b;">{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
-                                                <td style="text-align: center;">
-                                                    <button type="button" class="org-settings-icon-btn" onclick="toggleOsoUserStatus({{ $user->id }}, {{ $user->is_active ? 'false' : 'true' }})" title="{{ $user->is_active ? 'Deactivate account' : 'Activate account' }}">
-                                                        <i class="bi {{ $user->is_active ? 'bi-person-dash' : 'bi-person-check' }}"></i>
-                                                    </button>
+                                                <td data-user-updated>{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
+                                                <td>
+                                                    <div class="org-settings-user-actions">
+                                                        @if ($isCurrentAccount)
+                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="own">My Account</button>
+                                                        @else
+                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="edit">Edit profile</button>
+                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="reset">Reset temporary password</button>
+                                                            @if ($user->office_role === 'so')
+                                                                <button type="button" class="org-settings-btn-subtle" data-account-action="turnover" @disabled(!$user->is_active || !$user->student_organization_id) title="{{ !$user->is_active || !$user->student_organization_id ? 'Turnover requires an enabled account with an assigned organization' : 'Replace this officer with a separate account' }}">Turn over SO officer</button>
+                                                            @endif
+                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="status">{{ $user->is_active ? 'Disable' : 'Enable' }}</button>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @empty
@@ -717,28 +516,28 @@
                         <div class="org-settings-card-header">
                             <div class="org-settings-card-icon"><i class="bi bi-shield-shaded"></i></div>
                             <div>
-                                <h4 class="org-settings-card-title">Roles &amp; Permissions Matrix</h4>
-                                <p class="org-settings-card-desc">Enforce principle of least privilege across institutional modules and budget approvals.</p>
+                                <h4 class="org-settings-card-title">Role &amp; TOSA Access Guide</h4>
+                                <p class="org-settings-card-desc">Account roles determine office access. TOSA clearance does not grant additional proposal or budget permissions.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
                             <div class="org-settings-perm-grid">
                                 <div class="org-settings-perm-card">
-                                    <strong>OSO Lead Administrator</strong>
+                                    <strong>OSO Office Accounts</strong>
                                     <ul>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Full Proposal Approval &amp; Return</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Full TOSA Candidate Clearance</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Budget &amp; Financial Governance</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> System Configuration &amp; PIN Reset</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> Office settings and account management</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> TOSA access depends on assigned clearance</li>
+                                        <li><i class="bi bi-info-circle"></i> No Access blocks TOSA access</li>
                                     </ul>
                                 </div>
                                 <div class="org-settings-perm-card">
-                                    <strong>TOSA Authorized Evaluator</strong>
+                                    <strong>TOSA Clearance</strong>
                                     <ul>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> TOSA Dossier Verification</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Criteria Scoring &amp; Triage</li>
-                                        <li><i class="bi bi-dash-circle-fill text-muted"></i> Proposal Budget Override</li>
-                                        <li><i class="bi bi-dash-circle-fill text-muted"></i> Master System Settings</li>
+                                        <li><i class="bi bi-eye"></i> Level 1: read-only TOSA access</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> Level 2: applicant evaluation</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> Level 3: OSO evaluation and template management</li>
+                                        <li><i class="bi bi-info-circle"></i> OVCAA supports levels 1–2; SO, SDO, and OC have no TOSA access</li>
+                                        <li><i class="bi bi-info-circle"></i> SO officers access only their assigned student organization. Turnover preserves its records and the outgoing officer's identity.</li>
                                     </ul>
                                 </div>
                             </div>
@@ -748,199 +547,14 @@
                 @endif
 
                 {{-- =============================================================
-                     TAB 6: SYSTEM PREFERENCES
-                     ============================================================= --}}
-                <section class="org-settings-panel" id="setPanel-preferences">
-                    <div class="org-settings-panel-header">
-                        <div>
-                            <h3 class="org-settings-panel-title">System Preferences</h3>
-                            <p class="org-settings-panel-desc">Customize interface appearance, language localizations, date-time formats, and display densities.</p>
-                        </div>
-                        <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('Preferences')">
-                            <i class="bi bi-floppy2-fill"></i> Save Changes
-                        </button>
-                    </div>
-
-                    {{-- Date & Time Preferences --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-clock-history"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Date &amp; Time Localization</h4>
-                                <p class="org-settings-card-desc">Standardizes timestamp formatting on ledger transactions and calendar schedules.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-grid-3">
-                                <div class="org-settings-field">
-                                    <label for="setTimezoneSelect" class="org-settings-label">System Timezone</label>
-                                    <select id="setTimezoneSelect" class="org-settings-select">
-                                        <option value="Asia/Manila" @selected(($preferences['timezone'] ?? 'Asia/Manila') === 'Asia/Manila')>Philippine Standard Time (PHT, GMT+8)</option>
-                                        <option value="UTC" @selected(($preferences['timezone'] ?? 'Asia/Manila') === 'UTC')>Coordinated Universal Time (UTC)</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setDateFormatSelect" class="org-settings-label">Display Date Format</label>
-                                    <select id="setDateFormatSelect" class="org-settings-select">
-                                        <option value="MMM D, YYYY" @selected(($preferences['date_format'] ?? 'MMM D, YYYY') === 'MMM D, YYYY')>May 20, 2025 (Standard)</option>
-                                        <option value="MM/DD/YYYY" @selected(($preferences['date_format'] ?? 'MMM D, YYYY') === 'MM/DD/YYYY')>05/20/2025 (US)</option>
-                                        <option value="DD/MM/YYYY" @selected(($preferences['date_format'] ?? 'MMM D, YYYY') === 'DD/MM/YYYY')>20/05/2025 (PH/UK)</option>
-                                        <option value="YYYY-MM-DD" @selected(($preferences['date_format'] ?? 'MMM D, YYYY') === 'YYYY-MM-DD')>2025-05-20 (ISO)</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setTimeFormatSelect" class="org-settings-label">Clock Display</label>
-                                    <select id="setTimeFormatSelect" class="org-settings-select">
-                                        <option value="12h" @selected(($preferences['time_format'] ?? '12h') === '12h')>12-Hour (02:45 PM)</option>
-                                        <option value="24h" @selected(($preferences['time_format'] ?? '12h') === '24h')>24-Hour (14:45)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Language & Appearance --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-palette2"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Language, Theme &amp; Visual Appearance</h4>
-                                <p class="org-settings-card-desc">Select visual themes inspired by BatStateU Red Spartan aesthetics and liquid glassmorphism.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-grid-2">
-                                <div class="org-settings-field">
-                                    <label for="setLangSelect" class="org-settings-label">Primary Portal Language</label>
-                                    <select id="setLangSelect" class="org-settings-select">
-                                        <option value="en" @selected(($preferences['language'] ?? 'en') === 'en')>English (Philippines / Institutional)</option>
-                                        <option value="fil" @selected(($preferences['language'] ?? 'en') === 'fil')>Filipino / Tagalog</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setThemeSelect" class="org-settings-label">Visual Theme &amp; Styling Palette</label>
-                                    <select id="setThemeSelect" class="org-settings-select" onchange="applyLiveTheme(this.value)">
-                                        <option value="red-spartan" @selected(($preferences['theme'] ?? 'red-spartan') === 'red-spartan')>Red Spartan Crimson (Official BSU)</option>
-                                        <option value="liquid-glass" @selected(($preferences['theme'] ?? 'red-spartan') === 'liquid-glass')>Liquid Glassmorphism Ambient</option>
-                                        <option value="modern-light" @selected(($preferences['theme'] ?? 'red-spartan') === 'modern-light')>Crisp Editorial Minimal</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="org-settings-toggle-row" style="margin-top: 1rem;">
-                                <div>
-                                    <strong class="org-settings-toggle-title">High-Contrast &amp; Accessibility Mode</strong>
-                                    <p class="org-settings-toggle-desc">Enhances text contrast ratios and outlines for WCAG AAA compliance.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setHighContrastToggle" @checked($preferences['high_contrast'] ?? false) onchange="toggleSettingState('High Contrast', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Smooth Micro-Animations &amp; Transitions</strong>
-                                    <p class="org-settings-toggle-desc">Enable dynamic fluid transitions and hover elevations.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setMicroAnimationsToggle" @checked($preferences['micro_animations'] ?? true) onchange="toggleSettingState('Micro Animations', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Default Display Settings --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-display"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Default Display Settings &amp; Table Density</h4>
-                                <p class="org-settings-card-desc">Configure default pagination limits and landing module upon officer login.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-grid-2">
-                                <div class="org-settings-field">
-                                    <label for="setDefaultLandingModule" class="org-settings-label">Default Module on Login</label>
-                                    <select id="setDefaultLandingModule" class="org-settings-select">
-                                        <option value="dashboard" @selected(($preferences['default_landing_module'] ?? 'dashboard') === 'dashboard')>Dashboard Executive Hub</option>
-                                        <option value="activities" @selected(($preferences['default_landing_module'] ?? 'dashboard') === 'activities')>Activities &amp; Proposals Review</option>
-                                        <option value="analytics" @selected(($preferences['default_landing_module'] ?? 'dashboard') === 'analytics')>Analytics &amp; Intelligence</option>
-                                        <option value="tosa" @selected(($preferences['default_landing_module'] ?? 'dashboard') === 'tosa')>TOSA Awards Module</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setTablePageSize" class="org-settings-label">Default Table Rows per Page</label>
-                                    <select id="setTablePageSize" class="org-settings-select">
-                                        <option value="7" @selected((int) ($preferences['table_page_size'] ?? 7) === 7)>7 Rows (Comfortable)</option>
-                                        <option value="10" @selected((int) ($preferences['table_page_size'] ?? 7) === 10)>10 Rows</option>
-                                        <option value="25" @selected((int) ($preferences['table_page_size'] ?? 7) === 25)>25 Rows (Compact)</option>
-                                        <option value="50" @selected((int) ($preferences['table_page_size'] ?? 7) === 50)>50 Rows</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {{-- =============================================================
                      TAB 7: DATA & RECORDS
                      ============================================================= --}}
                 @if ($isOso)
                 <section class="org-settings-panel" id="setPanel-records">
                     <div class="org-settings-panel-header">
                         <div>
-                            <h3 class="org-settings-panel-title">Data &amp; Records Governance</h3>
-                            <p class="org-settings-panel-desc">Manage institutional archives, cryptographic backups, data export manifests, and activity ledger audits.</p>
-                        </div>
-                        <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('Data & Records')">
-                            <i class="bi bi-floppy2-fill"></i> Save Changes
-                        </button>
-                    </div>
-
-                    {{-- Archive Settings --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-archive-fill"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Archive Settings &amp; Retention Policy</h4>
-                                <p class="org-settings-card-desc">Configure automatic rollover for completed Academic Year cycles and permanent preservation.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Auto-Archive Completed Academic Year Cycles</strong>
-                                    <p class="org-settings-toggle-desc">Automatically move concluded AY activity dossiers and financial sheets to the secure vault.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setAutoArchiveToggle" @checked($records['auto_archive'] ?? true) onchange="toggleSettingState('Auto Archive', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-grid-2" style="margin-top: 1rem;">
-                                <div class="org-settings-field">
-                                    <label for="setRetentionSchedule" class="org-settings-label">Document Retention Schedule</label>
-                                    <select id="setRetentionSchedule" class="org-settings-select">
-                                        <option value="1" @selected(($records['retention_schedule'] ?? '5') === '1')>1 Year Active</option>
-                                        <option value="3" @selected(($records['retention_schedule'] ?? '5') === '3')>3 Years (Standard)</option>
-                                        <option value="5" @selected(($records['retention_schedule'] ?? '5') === '5')>5 Years Institutional Audit Requirement</option>
-                                        <option value="permanent" @selected(($records['retention_schedule'] ?? '5') === 'permanent')>Permanent / Immutable Blockchain Archive</option>
-                                    </select>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setArchiveStorageLocation" class="org-settings-label">Archive Storage Partition</label>
-                                    <input type="text" id="setArchiveStorageLocation" class="org-settings-input" value="{{ $records['archive_storage_location'] ?? 'BSU-VAULT-AY2627-NODE01' }}" readonly style="background: #f8fafc; color: #475569;">
-                                </div>
-                            </div>
+                            <h3 class="org-settings-panel-title">Data &amp; Records</h3>
+                            <p class="org-settings-panel-desc">Download configuration snapshots, organization records, and activity logs.</p>
                         </div>
                     </div>
 
@@ -949,32 +563,21 @@
                         <div class="org-settings-card-header">
                             <div class="org-settings-card-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                             <div>
-                                <h4 class="org-settings-card-title">Institutional Backup &amp; Disaster Recovery</h4>
-                                <p class="org-settings-card-desc">Generate point-in-time database snapshots and configure automated cloud replication.</p>
+                                <h4 class="org-settings-card-title">Configuration Snapshot</h4>
+                                <p class="org-settings-card-desc">Download a JSON snapshot with a SHA-256 checksum of OSO configuration, office accounts, and record counts. It is not a digital signature or audit event log.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
                             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: #fdfafb; border: 1.5px solid #f2dfe2; border-radius: 12px; padding: 1rem 1.25rem;">
                                 <div>
-                                    <strong style="font-size: 0.92rem; color: #1a1618; display: block;">Latest Verified Backup Snapshot</strong>
-                                    <span style="font-size: 0.78rem; color: #64748b;">Created Today at 04:00 AM PHT • Size: <strong>14.8 MB</strong> • Cryptographic Hash: <code>f8a29b...41e0</code></span>
+                                    <strong style="font-size: 0.92rem; color: #1a1618; display: block;">Create a Current Snapshot</strong>
+                                    <span style="font-size: 0.78rem; color: #64748b;">Generated on request; this is not a full database or file backup.</span>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button type="button" class="org-settings-save-btn" onclick="triggerManualBackup()">
                                         <i class="bi bi-database-fill-up"></i> Create Snapshot Now
                                     </button>
                                 </div>
-                            </div>
-
-                            <div class="org-settings-toggle-row" style="margin-top: 1rem;">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Automated Daily Cloud Sync (00:00 PHT)</strong>
-                                    <p class="org-settings-toggle-desc">Replicate encrypted ledger state to redundant institutional offsite storage.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setCloudBackupToggle" @checked($records['cloud_backup'] ?? true) onchange="toggleSettingState('Cloud Backup', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
                             </div>
                         </div>
                     </div>
@@ -984,8 +587,8 @@
                         <div class="org-settings-card-header">
                             <div class="org-settings-card-icon"><i class="bi bi-file-earmark-spreadsheet-fill"></i></div>
                             <div>
-                                <h4 class="org-settings-card-title">Export Data &amp; Activity Ledger</h4>
-                                <p class="org-settings-card-desc">Download comprehensive data packages and tamper-evident audit trails.</p>
+                                <h4 class="org-settings-card-title">Export Records</h4>
+                                <p class="org-settings-card-desc">Download the available organization, activity, and TOSA records.</p>
                             </div>
                         </div>
                         <div class="org-settings-card-body">
@@ -993,17 +596,17 @@
                                 <div class="org-settings-export-box">
                                     <i class="bi bi-file-earmark-excel text-success" style="font-size: 1.75rem;"></i>
                                     <div>
-                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Master Organization Registry</strong>
-                                    <span style="font-size: 0.74rem; color: #64748b;">Complete roster of accredited student organizations (.CSV)</span>
+                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Organization Registry</strong>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Student organization roster and active status (.CSV)</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Organization Roster')">Export</button>
                                 </div>
 
                                 <div class="org-settings-export-box">
-                                    <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 1.75rem;"></i>
+                                    <i class="bi bi-file-earmark-spreadsheet text-danger" style="font-size: 1.75rem;"></i>
                                     <div>
-                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Annual Accomplishment Dossier</strong>
-                                    <span style="font-size: 0.74rem; color: #64748b;">Activity completion and budget summary (.CSV)</span>
+                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Activity &amp; Budget Summary</strong>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Activity dates, budgets, and workflow status (.CSV)</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Accomplishment Dossier')">Export</button>
                                 </div>
@@ -1011,19 +614,19 @@
                                 <div class="org-settings-export-box">
                                     <i class="bi bi-award text-primary" style="font-size: 1.75rem;"></i>
                                     <div>
-                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">TOSA Matrix &amp; Criteria Manifest</strong>
-                                    <span style="font-size: 0.74rem; color: #64748b;">Requirements and applicant evaluation manifest (.CSV)</span>
+                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">TOSA Applicant Manifest</strong>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Applicants, stage, and requirement counts (.CSV). Requires TOSA clearance; unlock TOSA first when PIN protection is enabled.</span>
                                     </div>
-                                    <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('TOSA Manifest')">Export</button>
+                                    <button type="button" class="org-settings-btn-subtle" title="Requires TOSA clearance and an unlocked TOSA session when PIN protection is enabled" onclick="exportDataPackage('TOSA Manifest')">Export</button>
                                 </div>
 
                                 <div class="org-settings-export-box">
                                     <i class="bi bi-journal-code" style="font-size: 1.75rem; color: #8b1828;"></i>
                                     <div>
-                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Cryptographic Audit Trail (Activity Logs)</strong>
-                                    <span style="font-size: 0.74rem; color: #64748b;">Signed OSO configuration and audit snapshot (.JSON)</span>
+                                        <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Office Account &amp; Configuration Snapshot</strong>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Same configuration snapshot with checksum (.JSON), not event logs</span>
                                     </div>
-                                    <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Audit Logs')">Export</button>
+                                    <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Office Snapshot')">Export</button>
                                 </div>
                             </div>
                         </div>
@@ -1038,66 +641,90 @@
         <div class="org-settings-footer">
             <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b;">
                 <i class="bi bi-info-circle"></i>
-                <span>Changes made here take effect immediately across your active session.</span>
+                <span>{{ $isOso ? 'Save All saves General, Profile, and TOSA controls only. Passwords, PINs, logos, and user actions save separately.' : 'Profile changes and passwords use their own save buttons.' }}</span>
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <button type="button" class="org-settings-btn-subtle" onclick="closeSettingsModal()">Close</button>
+                @if ($isOso)
                 <button type="button" class="org-settings-save-btn" onclick="saveAllSettings()">
                     <i class="bi bi-check-circle-fill"></i> Save All Settings
                 </button>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
 {{-- Add User Sub-Modal --}}
-<dialog id="settingsAddUserModal" class="org-settings-submodal" style="max-width: 480px;">
+<dialog id="settingsAddUserModal" class="org-settings-submodal" aria-labelledby="settingsAddUserTitle" style="max-width: 480px;">
     <div style="padding: 1.5rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <div style="width: 36px; height: 36px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: 1.1rem;">
                     <i class="bi bi-person-plus-fill"></i>
                 </div>
-                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1a1618;">Invite Officer Account</h4>
+                <h4 id="settingsAddUserTitle" style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1a1618;">Create Officer Account</h4>
             </div>
-            <button type="button" onclick="document.getElementById('settingsAddUserModal').close()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            <button type="button" aria-label="Close account form" onclick="document.getElementById('settingsAddUserModal').close()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
-        <form onsubmit="handleAddUserSubmit(event)" style="display: grid; gap: 0.85rem;">
+        <form id="settingsAddUserForm" onsubmit="handleAddUserSubmit(event)" class="org-settings-account-form" autocomplete="off">
+            <p id="settingsAddUserError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
+            <p class="org-settings-help">Choose a temporary password and share it securely with the officer. No invitation email is sent. The officer must change it on first login before accessing any system actions.</p>
             <div class="org-settings-field">
-                <label class="org-settings-label">Officer Full Name</label>
-                <input type="text" id="newOfficerName" class="org-settings-input" required placeholder="e.g. Prof. Juan Dela Cruz">
+                <label for="newOfficerName" class="org-settings-label">Officer Full Name</label>
+                <input type="text" id="newOfficerName" class="org-settings-input" required maxlength="255" autocomplete="name" placeholder="Officer's full name">
             </div>
             <div class="org-settings-field">
-                <label class="org-settings-label">Official G-Suite Email</label>
-                <input type="email" id="newOfficerEmail" class="org-settings-input" required placeholder="e.g. juan.delacruz@g.batstate-u.edu.ph">
+                <label for="newOfficerEmail" class="org-settings-label">Official University Email</label>
+                <input type="email" id="newOfficerEmail" class="org-settings-input" required maxlength="255" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. juan.delacruz@g.batstate-u.edu.ph">
             </div>
             <div class="org-settings-field">
-                <label class="org-settings-label">Temporary Password</label>
-                <input type="password" id="newOfficerPassword" class="org-settings-input" required minlength="8" placeholder="At least 8 characters">
+                <label for="newOfficerPassword" class="org-settings-label">Temporary Password</label>
+                <input type="password" id="newOfficerPassword" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="At least 8 characters">
             </div>
             <div class="org-settings-field">
-                <label class="org-settings-label">Confirm Temporary Password</label>
-                <input type="password" id="newOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" placeholder="Repeat the temporary password">
+                <label for="newOfficerPasswordConfirmation" class="org-settings-label">Confirm Temporary Password</label>
+                <input type="password" id="newOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="Repeat the temporary password">
             </div>
             <div class="org-settings-field">
-                <label class="org-settings-label">Assigned Desk / Role</label>
-                <select id="newOfficerRole" class="org-settings-select">
+                <label for="newOfficerRole" class="org-settings-label">Assigned Desk / Role</label>
+                <select id="newOfficerRole" class="org-settings-select" onchange="updateNewOfficerClearance()">
+                    <option value="so">SO Student Organization Officer</option>
                     <option value="oso">OSO Review Officer (Triage)</option>
                     <option value="sdo">SDO Document Reviewer</option>
                     <option value="ovcaa">OVCAA Final Endorser</option>
                     <option value="oc">OC Final Approval Officer</option>
                 </select>
             </div>
+            <div id="newOfficerOrganizationField" class="org-settings-field" hidden>
+                <label for="newOfficerOrganization" class="org-settings-label">Registered Student Organization</label>
+                <select id="newOfficerOrganization" class="org-settings-select" disabled>
+                    <option value="">Select an organization</option>
+                    @foreach (($accountOrganizations ?? collect()) as $organization)
+                        <option value="{{ $organization->id }}">{{ $organization->name }}{{ $organization->short_name ? ' ('.$organization->short_name.')' : '' }}</option>
+                    @endforeach
+                </select>
+                <small class="org-settings-help">Required for SO officers. This account receives access only to this organization, with no TOSA access.</small>
+            </div>
             <div class="org-settings-field">
-                <label class="org-settings-label">TOSA Module Clearance</label>
+                <label for="newOfficerTitle" class="org-settings-label">Office / Officer Title (optional)</label>
+                <input type="text" id="newOfficerTitle" class="org-settings-input" maxlength="255">
+            </div>
+            <div class="org-settings-field">
+                <label for="newOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
+                <input type="text" id="newOfficerEmployeeId" class="org-settings-input" maxlength="255">
+            </div>
+            <div id="newOfficerClearanceField" class="org-settings-field">
+                <label for="newOfficerTosaClearance" class="org-settings-label">TOSA Module Clearance</label>
                 <select id="newOfficerTosaClearance" class="org-settings-select">
                     <option value="No Access">No Access</option>
                     <option value="Level 1 Read-only">Level 1 Read-only</option>
                     <option value="Level 2 Evaluator">Level 2 Evaluator</option>
                     <option value="Level 3 Master">Level 3 Master</option>
                 </select>
+                <small class="org-settings-help">TOSA access is limited to OSO and OVCAA accounts. No invitation email is sent.</small>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+            <div class="org-settings-dialog-actions">
                 <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAddUserModal').close()">Cancel</button>
                 <button type="submit" class="org-settings-save-btn">Create Officer Account</button>
             </div>
@@ -1105,8 +732,57 @@
     </div>
 </dialog>
 
+<dialog id="settingsAccountModal" class="org-settings-submodal" aria-labelledby="settingsAccountTitle" aria-describedby="settingsAccountDescription" style="max-width: 480px;">
+    <div style="padding: 1.5rem;">
+        <div class="org-settings-submodal-header">
+            <h4 id="settingsAccountTitle">Manage Officer Account</h4>
+            <button type="button" class="org-settings-btn-subtle" aria-label="Close account form" onclick="document.getElementById('settingsAccountModal').close()">&times;</button>
+        </div>
+        <p id="settingsAccountSubject" class="org-settings-account-subject"></p>
+        <p id="settingsAccountDescription" class="org-settings-help"></p>
+        <form id="settingsAccountForm" class="org-settings-account-form" autocomplete="off" onsubmit="handleAccountManagementSubmit(event)">
+            <p id="settingsAccountError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
+            <div id="settingsAccountImmutable" class="org-settings-field">
+                <strong class="org-settings-label">Assigned role and organization</strong>
+                <p id="settingsAccountAssignment" class="org-settings-help"></p>
+                <small class="org-settings-help">Role and organization cannot be changed. Turnover creates a separate incoming account linked to the same organization.</small>
+            </div>
+            <div class="org-settings-field" data-account-profile-field>
+                <label for="accountOfficerName" class="org-settings-label">Officer Full Name</label>
+                <input type="text" id="accountOfficerName" class="org-settings-input" maxlength="255" required autocomplete="name">
+            </div>
+            <div class="org-settings-field" data-account-profile-field>
+                <label for="accountOfficerEmail" class="org-settings-label">Official University Email</label>
+                <input type="email" id="accountOfficerEmail" class="org-settings-input" maxlength="255" required autocomplete="off" autocapitalize="none" spellcheck="false">
+                <small id="settingsTurnoverEmailHelp" class="org-settings-help" hidden>Use the incoming officer's own institutional email. It must be distinct from the outgoing account and not already registered.</small>
+            </div>
+            <div class="org-settings-field" data-account-profile-field>
+                <label for="accountOfficerTitle" class="org-settings-label">Office / Officer Title (optional)</label>
+                <input type="text" id="accountOfficerTitle" class="org-settings-input" maxlength="255">
+            </div>
+            <div class="org-settings-field" data-account-profile-field>
+                <label for="accountOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
+                <input type="text" id="accountOfficerEmployeeId" class="org-settings-input" maxlength="255">
+            </div>
+            <div class="org-settings-field" data-account-password-field>
+                <label for="accountOfficerPassword" class="org-settings-label">Temporary Password</label>
+                <input type="password" id="accountOfficerPassword" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+            </div>
+            <div class="org-settings-field" data-account-password-field>
+                <label for="accountOfficerPasswordConfirmation" class="org-settings-label">Confirm Temporary Password</label>
+                <input type="password" id="accountOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+                <small class="org-settings-help">Share this temporary password securely. The officer must choose a different password at first login. No invitation email is sent.</small>
+            </div>
+            <div class="org-settings-dialog-actions">
+                <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAccountModal').close()">Cancel</button>
+                <button type="submit" id="settingsAccountSubmit" class="org-settings-save-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
 {{-- Settings Toast Notification Container --}}
-<div id="settingsToastContainer" class="org-settings-toast-container"></div>
+<div id="settingsToastContainer" class="org-settings-toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
 
 {{-- =========================================================================
      CSS Styling for Settings Component (Impeccable Design System)
@@ -1124,6 +800,7 @@
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
+    box-sizing: border-box;
     animation: settingsBackdropFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1140,8 +817,11 @@
     box-shadow: 0 24px 64px rgba(90, 15, 30, 0.18), 0 4px 16px rgba(0, 0, 0, 0.04);
     width: 100%;
     max-width: 1080px;
+    min-width: 0;
+    box-sizing: border-box;
     height: 88vh;
     max-height: 820px;
+    max-height: min(820px, calc(100dvh - 3rem));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1207,18 +887,6 @@
     line-height: 1.2;
 }
 
-.org-settings-version-tag {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #16a34a;
-    background: #dcfce7;
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
 .org-settings-subtitle {
     margin: 0.2rem 0 0;
     font-size: 0.8rem;
@@ -1236,6 +904,7 @@
 .org-settings-search-wrap {
     position: relative;
     width: 260px;
+    min-width: 0;
 }
 
 .org-settings-search-wrap i {
@@ -1290,6 +959,9 @@
 .org-settings-body {
     display: flex;
     flex: 1;
+    min-height: 0;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
 }
 
@@ -1390,12 +1062,18 @@
 /* Content Area */
 .org-settings-content {
     flex: 1;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 1.75rem 2rem;
     overflow-y: auto;
     background: #ffffff;
 }
 
 .org-settings-panel {
+    min-width: 0;
+    max-width: 100%;
     display: none;
     flex-direction: column;
     gap: 1.25rem;
@@ -1436,6 +1114,9 @@
 
 /* Card */
 .org-settings-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: #ffffff;
     border-radius: 16px;
     border: 1.5px solid #f0e6e8;
@@ -1478,6 +1159,9 @@
 }
 
 .org-settings-card-body {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 1.25rem;
 }
 
@@ -1781,6 +1465,9 @@
 /* Table */
 .org-settings-table-wrap {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    contain: inline-size;
     overflow-x: auto;
 }
 
@@ -1822,6 +1509,7 @@
 .org-settings-role-badge.is-sdo { background: #fef3c7; color: #b45309; }
 .org-settings-role-badge.is-ovcaa { background: #f3e8ff; color: #7e22ce; }
 .org-settings-role-badge.is-oc { background: #ede9fe; color: #6d28d9; }
+.org-settings-role-badge.is-so { background: #e0f2fe; color: #075985; }
 
 .org-settings-pill-green {
     font-size: 0.72rem;
@@ -1871,6 +1559,17 @@
     background: #fdf0f2;
     color: #8b1828;
     border-color: #f2dfe2;
+}
+
+.org-settings-icon-btn:disabled,
+.org-settings-dialog button:disabled,
+.org-settings-submodal button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.org-settings-card[hidden], #settingsSearchEmpty[hidden] {
+    display: none !important;
 }
 
 /* Perm grid */
@@ -1986,6 +1685,11 @@
     background: #ffffff;
     box-shadow: 0 20px 48px rgba(90, 15, 30, 0.2);
     padding: 0;
+    margin: auto;
+    overflow-y: auto;
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-height: calc(100dvh - 2rem);
 }
 
 .org-settings-submodal::backdrop {
@@ -1993,7 +1697,39 @@
     backdrop-filter: blur(4px);
 }
 
+.org-settings-account-form { display: grid; gap: 0.85rem; }
+.org-settings-account-form [hidden] { display: none !important; }
+.org-settings-submodal-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+.org-settings-submodal-header h4 { margin: 0; font-size: 1.05rem; color: #1a1618; }
+.org-settings-account-subject { font-weight: 700; overflow-wrap: anywhere; }
+.org-settings-dialog-actions, .org-settings-user-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.org-settings-dialog-actions { justify-content: flex-end; margin-top: 0.5rem; }
+.org-settings-user-actions { min-width: 190px; max-width: 260px; }
+.org-settings-user-actions button { font-size: 0.72rem; padding: 0.45rem 0.6rem; }
+.org-settings-user-identity { display: flex; align-items: center; gap: 0.6rem; }
+.org-settings-user-identity .org-settings-avatar-sm { flex-shrink: 0; }
+.org-settings-user-identity strong { display: block; font-size: 0.85rem; color: #1a1618; }
+.org-settings-user-identity small, [data-user-organization], [data-user-password-state], [data-user-updated] { font-size: 0.72rem; color: #64748b; overflow-wrap: anywhere; }
+.org-settings-user-identity small, [data-user-organization], [data-user-password-state] { display: block; margin-top: 0.2rem; }
+.org-settings-form-error { margin: 0; padding: 0.75rem; border: 1px solid #e7a8b2; border-radius: 8px; background: #fff1f3; color: #8b1828; font-size: 0.82rem; overflow-wrap: anywhere; }
+.org-settings-submodal :focus-visible, .org-settings-user-actions button:focus-visible { outline: 3px solid #8b1828; outline-offset: 3px; }
+
 @media (max-width: 768px) {
+    .org-settings-backdrop {
+        padding: 0.5rem;
+    }
+    .org-settings-dialog {
+        height: calc(100dvh - 1rem);
+        max-height: calc(100dvh - 1rem);
+        border-radius: 16px;
+    }
+    .org-settings-header, .org-settings-footer {
+        padding: 0.85rem;
+        flex-shrink: 0;
+    }
+    .org-settings-content {
+        padding: 1rem;
+    }
     .org-settings-header {
         flex-wrap: wrap;
         gap: 0.75rem;
@@ -2011,6 +1747,26 @@
         overflow-x: auto;
         border-right: none;
         border-bottom: 1.5px solid #f0e6e8;
+        box-sizing: border-box;
+        padding: 0.5rem;
+        flex-shrink: 0;
+    }
+    .org-settings-nav-item {
+        width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    .org-settings-nav-group-label, .org-settings-nav-footer, .org-settings-nav-text small {
+        display: none;
+    }
+    .org-settings-toast-container {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+    }
+    .org-settings-toast {
+        padding: 0.75rem;
+        overflow-wrap: anywhere;
     }
     .org-settings-grid-2, .org-settings-grid-3, .org-settings-perm-grid {
         grid-template-columns: 1fr;
@@ -2026,85 +1782,98 @@
      ========================================================================= --}}
 <script>
     const settingsIsOso = @json($isOso);
+    const settingsOfficerId = @json($office->id);
+    const settingsAccounts = new Map();
+    let settingsAccountAction = null;
+    let settingsAccountTargetId = null;
+    let settingsAccountReturnFocus = null;
+    let settingsReturnFocus = null;
+    let settingsBodyOverflow = '';
+    let settingsMutationPending = false;
 
     function availableSettingsTabs() {
-        return settingsIsOso
-            ? ['general', 'account', 'security', 'notifications', 'users', 'preferences', 'records']
-            : ['account', 'security', 'notifications', 'preferences'];
+        return settingsIsOso ? ['general', 'account', 'security', 'users', 'records'] : ['account'];
     }
 
-    // Tab Switching
-    function switchSettingsTab(tabKey) {
+    function switchSettingsTab(tabKey, keepSearch = false) {
+        if (!keepSearch) {
+            document.getElementById('settingsGlobalSearch').value = '';
+            document.querySelectorAll('#orgSettingsModal .org-settings-card').forEach(card => card.hidden = false);
+            document.getElementById('settingsSearchEmpty').hidden = true;
+        }
         const tabs = availableSettingsTabs();
-        const activeTab = tabs.includes(tabKey) ? tabKey : (settingsIsOso ? 'general' : 'account');
-        tabs.forEach(t => {
-            const panel = document.getElementById(`setPanel-${t}`);
-            const btn = document.getElementById(`setNavBtn-${t}`);
-            if (panel) panel.classList.toggle('is-active', t === activeTab);
-            if (btn) btn.classList.toggle('is-active', t === activeTab);
+        const activeTab = tabs.includes(tabKey) ? tabKey : tabs[0];
+        tabs.forEach(tab => {
+            const active = tab === activeTab;
+            document.getElementById(`setPanel-${tab}`)?.classList.toggle('is-active', active);
+            const button = document.getElementById(`setNavBtn-${tab}`);
+            button?.classList.toggle('is-active', active);
+            button?.setAttribute('aria-current', active ? 'page' : 'false');
         });
+        document.getElementById('settingsContentContainer').scrollTop = 0;
     }
 
-    // Open and Close Modal
     function openSettingsModal(defaultTab = 'general') {
-        closeOrgUserDropdown();
         const modal = document.getElementById('orgSettingsModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            modal.setAttribute('aria-hidden', 'false');
-            switchSettingsTab(defaultTab);
-            document.body.style.overflow = 'hidden';
+        if (modal.getAttribute('aria-hidden') === 'false') return;
+        settingsReturnFocus = document.activeElement;
+        if (typeof closeOrgUserDropdown === 'function') closeOrgUserDropdown();
+        settingsBodyOverflow = document.body.style.overflow;
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        switchSettingsTab(defaultTab);
+        document.body.style.overflow = 'hidden';
+        modal.querySelector('.org-settings-dialog').focus();
+    }
+
+    function clearSettingsCredential(id) {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.value = '';
+        input.type = 'password';
+        const button = input.parentElement.querySelector('.org-settings-pw-toggle');
+        if (button) {
+            button.innerHTML = '<i class="bi bi-eye"></i>';
+            button.setAttribute('aria-label', 'Show password or PIN');
+            button.setAttribute('aria-pressed', 'false');
         }
     }
 
     function closeSettingsModal() {
         const modal = document.getElementById('orgSettingsModal');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = '';
-        }
+        if (modal.getAttribute('aria-hidden') === 'true') return;
+        document.querySelectorAll('.org-settings-submodal[open]').forEach(dialog => dialog.close());
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = settingsBodyOverflow;
+        ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword', 'setTosaPinField'].forEach(clearSettingsCredential);
+        checkPasswordStrength('');
+        if (settingsReturnFocus?.isConnected) settingsReturnFocus.focus();
+        window.dispatchEvent(new CustomEvent('oso-settings-closed'));
     }
 
-    // Global Search across settings
     function filterSettingsSearch(query) {
         const q = query.toLowerCase().trim();
-        if (!q) {
-            document.querySelectorAll('.org-settings-card').forEach(c => c.style.display = 'block');
-            return;
-        }
-
-        const tabs = availableSettingsTabs();
-        let matchedTab = null;
-
-        tabs.forEach(t => {
-            const panel = document.getElementById(`setPanel-${t}`);
-            if (!panel) return;
-            const cards = panel.querySelectorAll('.org-settings-card');
-            let panelHasMatch = false;
-
-            cards.forEach(card => {
-                const text = card.textContent.toLowerCase();
-                if (text.includes(q)) {
-                    card.style.display = 'block';
-                    panelHasMatch = true;
-                } else {
-                    card.style.display = 'none';
-                }
+        const matches = [];
+        availableSettingsTabs().forEach(tab => {
+            const panel = document.getElementById(`setPanel-${tab}`);
+            let matched = false;
+            panel.querySelectorAll('.org-settings-card').forEach(card => {
+                const text = `${panel.querySelector('.org-settings-panel-title').textContent} ${card.textContent}`.toLowerCase();
+                card.hidden = Boolean(q) && !text.includes(q);
+                if (!card.hidden) matched = true;
             });
-
-            if (panelHasMatch && !matchedTab) {
-                matchedTab = t;
-            }
+            if (matched) matches.push(tab);
         });
-
-        if (matchedTab) {
-            switchSettingsTab(matchedTab);
+        document.getElementById('settingsSearchEmpty').hidden = !q || matches.length > 0;
+        if (q && matches.length) {
+            const active = document.querySelector('#orgSettingsModal .org-settings-panel.is-active')?.id.replace('setPanel-', '');
+            switchSettingsTab(matches.includes(active) ? active : matches[0], true);
         }
     }
 
-    // Office-user settings API bindings. Personal panels are scoped to the
-    // signed-in user; institutional management panels remain OSO-only.
+    // Profile and password changes belong to the signed-in user.
+    // Institutional settings and management actions remain OSO-only.
     const osoSettingsRoutes = {
         update: @json(route('office.settings.update')),
         account: @json(route('office.settings.account')),
@@ -2122,25 +1891,63 @@
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     }
 
-    async function osoSettingsRequest(url, options = {}) {
-        const headers = {
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': osoSettingsCsrf(),
-            ...(options.headers || {}),
-        };
-        const response = await fetch(url, { ...options, headers });
-        const contentType = response.headers.get('content-type') || '';
-        const data = contentType.includes('application/json')
-            ? await response.json()
-            : { message: await response.text() };
-
-        if (!response.ok) {
-            const validationMessage = Object.values(data.errors || {}).flat().join(' ');
-            throw new Error(validationMessage || data.message || 'The settings request could not be completed.');
+    async function osoSettingsError(response) {
+        if ((response.headers.get('content-type') || '').includes('application/json')) {
+            const data = await response.json();
+            return Object.values(data.errors || {}).flat().join(' ') || data.message || 'The settings request could not be completed.';
         }
+        if (response.status === 419) return 'Your session expired. Reload the page and sign in again.';
+        if (response.status === 401 || response.redirected) return 'Please sign in again before changing settings.';
+        if (response.status === 403) return 'You do not have permission to perform this action.';
+        return `The settings request could not be completed (HTTP ${response.status}).`;
+    }
 
+    async function osoSettingsRequest(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': osoSettingsCsrf(),
+                ...(options.headers || {}),
+            },
+        });
+        if (!response.ok) throw new Error(await osoSettingsError(response));
+        if (response.redirected || !(response.headers.get('content-type') || '').includes('application/json')) {
+            throw new Error('The server did not confirm the change. Your session may have expired; reload and sign in again.');
+        }
+        const data = await response.json();
+        if (data.ok !== true) throw new Error(data.message || 'The server did not confirm the change.');
         return data;
+    }
+
+    async function runSettingsMutation(action) {
+        if (settingsMutationPending) {
+            showSettingsToast('Please wait for the current settings change to finish.', 'info');
+            return;
+        }
+        settingsMutationPending = true;
+        const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #orgSettingsModal [data-account-action], #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
+            .filter(button => !button.disabled);
+        controls.forEach(button => button.disabled = true);
+        try {
+            return await action();
+        } catch (error) {
+            const dialog = document.querySelector('.org-settings-submodal[open]');
+            if (dialog) showSettingsAccountError(dialog, error.message || 'The settings request could not be completed.');
+            showSettingsToast(error.message || 'The settings request could not be completed.', 'error');
+        } finally {
+            settingsMutationPending = false;
+            controls.forEach(button => button.disabled = false);
+        }
+    }
+
+    function postSettingsJson(url, values, method = 'POST') {
+        return osoSettingsRequest(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
     }
 
     function settingsInputValue(id) {
@@ -2164,105 +1971,83 @@
             },
             security: {
                 session_timeout: Number(settingsInputValue('setSessionTimeout')),
-                auto_lock_interval: Number(settingsInputValue('setAutoLockInterval')),
-            },
-            notifications: {
-                new_proposal_alert: settingsChecked('setNewProposalToggle'),
-                tosa_applicant_alert: settingsChecked('setTosaApplicantToggle'),
-                sound_effects: settingsChecked('setSoundEffectsToggle'),
-                approval_dispatches: settingsChecked('setApprovalDispatchesToggle'),
-                revision_alerts: settingsChecked('setRevisionAlertsToggle'),
-                broadcast_banner: settingsChecked('setBroadcastBannerToggle'),
-                email_digest_frequency: settingsInputValue('setEmailDigestFreq'),
-                digest_email: settingsInputValue('setDigestEmail'),
-            },
-            preferences: {
-                timezone: settingsInputValue('setTimezoneSelect'),
-                date_format: settingsInputValue('setDateFormatSelect'),
-                time_format: settingsInputValue('setTimeFormatSelect'),
-                language: settingsInputValue('setLangSelect'),
-                theme: settingsInputValue('setThemeSelect'),
-                high_contrast: settingsChecked('setHighContrastToggle'),
-                micro_animations: settingsChecked('setMicroAnimationsToggle'),
-                default_landing_module: settingsInputValue('setDefaultLandingModule'),
-                table_page_size: Number(settingsInputValue('setTablePageSize')),
-            },
-            records: {
-                auto_archive: settingsChecked('setAutoArchiveToggle'),
-                retention_schedule: settingsInputValue('setRetentionSchedule'),
-                cloud_backup: settingsChecked('setCloudBackupToggle'),
+                tosa_gate: settingsChecked('setTosaGateToggle'),
             },
         };
-
-        if (settingsIsOso) {
-            values.security.tosa_gate = settingsChecked('setTosaGateToggle');
-            values.security.tosa_evaluation_mode = settingsInputValue('setTosaEvaluationMode');
-        }
 
         return values[section] || null;
     }
 
-    async function saveSettingsSection(sectionName, options = {}) {
-        const section = sectionName.toLowerCase().replace('data & records', 'records');
-        if (section === 'account') {
-            return saveOsoAccount(options);
+    async function persistSettingsSection(section) {
+        const data = await postSettingsJson(osoSettingsRoutes.update, { section, values: collectOsoSection(section) });
+        if (section === 'general' && data.settings?.general) {
+            const name = data.settings.general.office_name;
+            const kicker = document.querySelector('.org-topbar .org-module-kicker');
+            if (kicker) kicker.textContent = `${name} Review Desk`;
+            const separator = document.title.lastIndexOf(' | ');
+            if (separator >= 0) document.title = `${document.title.slice(0, separator)} | ${name}`;
         }
-
-        const values = collectOsoSection(section);
-        if (!values) return;
-
-        try {
-            const data = await osoSettingsRequest(osoSettingsRoutes.update, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ section, values }),
-            });
-            if (!options.silent) showSettingsToast(data.message || `${sectionName} settings saved.`, 'success');
-            return data;
-        } catch (error) {
-            if (!options.silent) showSettingsToast(error.message, 'error');
-            throw error;
-        }
+        window.dispatchEvent(new CustomEvent('oso-settings-saved', { detail: { section, settings: data.settings } }));
+        return data;
     }
 
-    async function saveOsoAccount(options = {}) {
-        try {
-            const data = await osoSettingsRequest(osoSettingsRoutes.account, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: settingsInputValue('setOfficerName'),
-                    office_title: settingsInputValue('setOfficerDesignation'),
-                    email: settingsInputValue('setOfficerEmail'),
-                    employee_id: settingsInputValue('setOfficerEmployeeId'),
-                }),
-            });
-            if (!options.silent) showSettingsToast(data.message || 'Account profile saved.', 'success');
-            return data;
-        } catch (error) {
-            if (!options.silent) showSettingsToast(error.message, 'error');
-            throw error;
-        }
+    function saveSettingsSection(sectionName) {
+        const section = sectionName.toLowerCase();
+        if (section === 'account') return saveOsoAccount();
+        return runSettingsMutation(async () => {
+            const data = await persistSettingsSection(section);
+            showSettingsToast(data.message || `${sectionName} settings saved.`, 'success');
+        });
     }
 
-    async function saveAllSettings() {
-        try {
-            await saveOsoAccount({ silent: true });
-            const sections = ['security', 'notifications', 'preferences'];
-            if (settingsIsOso) sections.unshift('general');
-            if (settingsIsOso) sections.push('records');
-            for (const section of sections) {
-                await saveSettingsSection(section, { silent: true });
+    async function persistSettingsProfile() {
+        const data = await postSettingsJson(osoSettingsRoutes.account, {
+            name: settingsInputValue('setOfficerName'),
+            office_title: settingsInputValue('setOfficerDesignation'),
+            email: settingsInputValue('setOfficerEmail'),
+            employee_id: settingsInputValue('setOfficerEmployeeId'),
+        });
+        const user = data.user;
+        if (user) {
+            const emailInput = document.getElementById('setOfficerEmail');
+            if (emailInput.value.trim().toLowerCase() === user.email) emailInput.value = user.email;
+            document.querySelectorAll('#settingsProfileName, .org-settings-nav-footer > div:nth-child(2), .org-user-pill-name, .org-dropdown-name').forEach(element => element.textContent = user.name);
+            document.querySelectorAll('#settingsProfileInitials, .org-user-avatar span, .org-dropdown-avatar span').forEach(element => element.textContent = user.initials);
+            document.querySelectorAll('.org-dropdown-email').forEach(element => element.textContent = user.email);
+            if (settingsAccounts.has(Number(settingsOfficerId))) {
+                upsertOsoUser({ ...settingsAccounts.get(Number(settingsOfficerId)), ...user });
             }
-            showSettingsToast('Your settings were saved to the backend.', 'success');
-            setTimeout(() => closeSettingsModal(), 650);
-        } catch (error) {
-            showSettingsToast(error.message, 'error');
         }
+        return data;
+    }
+
+    function saveOsoAccount() {
+        return runSettingsMutation(async () => {
+            const data = await persistSettingsProfile();
+            showSettingsToast(data.message || 'Account profile saved.', 'success');
+        });
+    }
+
+    function saveAllSettings() {
+        return runSettingsMutation(async () => {
+            const saved = [];
+            const sections = settingsIsOso ? ['general', 'account', 'security'] : ['account'];
+            for (const section of sections) {
+                try {
+                    if (section === 'account') await persistSettingsProfile();
+                    else await persistSettingsSection(section);
+                    saved.push(section === 'account' ? 'Profile' : section === 'general' ? 'General' : 'TOSA controls');
+                } catch (error) {
+                    const prefix = saved.length ? `Partially saved: ${saved.join(', ')}. ` : 'No settings were saved. ';
+                    throw new Error(`${prefix}${section === 'account' ? 'Profile' : section} was not saved: ${error.message} Remaining sections were not saved.`);
+                }
+            }
+            showSettingsToast('General settings, profile, and TOSA controls saved. Passwords and PINs were not changed.', 'success');
+        });
     }
 
     function toggleSettingState(settingName, isChecked) {
-        showSettingsToast(`${settingName} ${isChecked ? 'enabled' : 'disabled'} locally. Save Changes to persist it.`, 'info');
+        showSettingsToast(`${settingName} will be ${isChecked ? 'enabled' : 'disabled'} after saving TOSA access controls.`, 'info');
     }
 
     // Password Strengths
@@ -2289,68 +2074,45 @@
     function togglePwVisibility(inputId, btnEl) {
         const input = document.getElementById(inputId);
         if (!input) return;
-        if (input.type === 'password') {
-            input.type = 'text';
-            btnEl.innerHTML = '<i class="bi bi-eye-slash"></i>';
-        } else {
-            input.type = 'password';
-            btnEl.innerHTML = '<i class="bi bi-eye"></i>';
-        }
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        btnEl.innerHTML = `<i class="bi ${reveal ? 'bi-eye-slash' : 'bi-eye'}"></i>`;
+        btnEl.setAttribute('aria-label', reveal ? 'Hide password or PIN' : 'Show password or PIN');
+        btnEl.setAttribute('aria-pressed', String(reveal));
     }
 
-    async function handlePasswordUpdate(e) {
+    function handlePasswordUpdate(e) {
         e.preventDefault();
-        const cur = document.getElementById('setCurrentPassword').value;
-        const nw = document.getElementById('setNewPassword').value;
-        const cf = document.getElementById('setConfirmPassword').value;
-
-        if (!nw || nw !== cf) {
-            showSettingsToast('Passwords do not match or empty. Please check.', 'info');
+        if (!settingsInputValue('setNewPassword') || settingsInputValue('setNewPassword') !== settingsInputValue('setConfirmPassword')) {
+            showSettingsToast('Enter a new password and matching confirmation.', 'error');
             return;
         }
-        try {
-            const data = await osoSettingsRequest(osoSettingsRoutes.password, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    current_password: cur,
-                    new_password: nw,
-                    new_password_confirmation: cf,
-                }),
+        return runSettingsMutation(async () => {
+            const data = await postSettingsJson(osoSettingsRoutes.password, {
+                current_password: settingsInputValue('setCurrentPassword'),
+                new_password: settingsInputValue('setNewPassword'),
+                new_password_confirmation: settingsInputValue('setConfirmPassword'),
             });
-            showSettingsToast(data.message || 'Account password updated.', 'success');
-            document.getElementById('setCurrentPassword').value = '';
-            document.getElementById('setNewPassword').value = '';
-            document.getElementById('setConfirmPassword').value = '';
+            ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword'].forEach(clearSettingsCredential);
             checkPasswordStrength('');
-        } catch (error) {
-            showSettingsToast(error.message, 'error');
-        }
+            showSettingsToast(data.message || 'Account password updated.', 'success');
+        });
     }
 
-    async function saveOsoPin(type = 'master') {
-        const inputId = type === 'tosa' ? 'setTosaPinField' : 'setNewPinInput';
-        const input = document.getElementById(inputId);
-        const pin = input?.value || '';
+    function saveOsoPin(type = 'tosa') {
+        if (type !== 'tosa') return;
+        const pin = settingsInputValue('setTosaPinField');
         if (!/^\d{4}$/.test(pin)) {
-            showSettingsToast('Please enter a valid 4-digit security PIN.', 'info');
+            showSettingsToast('Please enter a valid 4-digit TOSA PIN.', 'error');
             return;
         }
-        try {
-            const data = await osoSettingsRequest(`${osoSettingsRoutes.pin}/${type}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pin }),
-            });
-            showSettingsToast(data.message || `${type.toUpperCase()} PIN updated.`, 'success');
-            if (input) input.value = '';
-        } catch (error) {
-            showSettingsToast(error.message, 'error');
-        }
-    }
-
-    function updateMasterPin() {
-        return saveOsoPin('master');
+        return runSettingsMutation(async () => {
+            const data = await postSettingsJson(`${osoSettingsRoutes.pin}/tosa`, { pin });
+            clearSettingsCredential('setTosaPinField');
+            document.getElementById('settingsTosaPinStatus').textContent = 'Current PIN is configured and stored as a one-way hash. Enter a new 4-digit PIN to replace it.';
+            window.dispatchEvent(new CustomEvent('oso-settings-saved', { detail: { section: 'pin' } }));
+            showSettingsToast(data.message || 'TOSA PIN updated.', 'success');
+        });
     }
 
     // Logo Upload Trigger
@@ -2358,117 +2120,321 @@
         document.getElementById('settingsLogoFileInput')?.click();
     }
 
-    async function handleLogoChange(input) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.getElementById('settingsLogoPreview');
-                if (img) img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+    function applySettingsLogo(url) {
+        const image = document.getElementById('settingsLogoPreview');
+        if (image) image.src = url;
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) favicon.href = url;
+    }
 
-            const formData = new FormData();
-            formData.append('logo', file);
+    function handleLogoChange(input) {
+        const file = input.files?.[0];
+        if (!file) return;
+        if (!/\.(png|jpe?g)$/i.test(file.name) || file.size > 2048 * 1024) {
+            input.value = '';
+            showSettingsToast('Choose a PNG or JPEG logo no larger than 2 MB.', 'error');
+            return;
+        }
+        return runSettingsMutation(async () => {
             try {
+                const formData = new FormData();
+                formData.append('logo', file);
                 const data = await osoSettingsRequest(osoSettingsRoutes.logo, { method: 'POST', body: formData });
-                const img = document.getElementById('settingsLogoPreview');
-                if (img && data.url) img.src = `${data.url}?v=${Date.now()}`;
-                input.value = '';
+                if (data.url) applySettingsLogo(`${data.url}?v=${Date.now()}`);
                 showSettingsToast(data.message || 'Institutional logo uploaded.', 'success');
-            } catch (error) {
+            } finally {
                 input.value = '';
-                showSettingsToast(error.message, 'error');
+            }
+        });
+    }
+
+    function resetLogoToDefault() {
+        if (!window.confirm('Reset the OSO logo to the default OrgChain emblem?')) return;
+        return runSettingsMutation(async () => {
+            const data = await osoSettingsRequest(osoSettingsRoutes.logoReset, { method: 'DELETE' });
+            applySettingsLogo(@json(asset('Orgchain logo.png')));
+            showSettingsToast(data.message || 'Institutional logo reset.', 'success');
+        });
+    }
+
+    // Account metadata is shared by server-rendered rows and confirmed API responses.
+    function filterSettingsAccounts(query = settingsInputValue('settingsAccountSearch')) {
+        const q = query.trim().toLowerCase();
+        let matches = 0;
+        document.querySelectorAll('[data-settings-user-id]').forEach(row => {
+            const user = settingsAccounts.get(Number(row.dataset.settingsUserId));
+            if (!user) return;
+            const text = [user.name, user.email, user.organization_name, user.role, user.office_role, user.office_title].join(' ').toLowerCase();
+            row.hidden = Boolean(q) && !text.includes(q);
+            if (!row.hidden) matches++;
+        });
+        const empty = document.getElementById('settingsAccountSearchEmpty');
+        if (empty) empty.hidden = !q || matches > 0;
+    }
+
+    function updateNewOfficerClearance() {
+        const role = settingsInputValue('newOfficerRole');
+        const isSo = role === 'so';
+        const organization = document.getElementById('newOfficerOrganization');
+        organization.required = isSo;
+        organization.disabled = !isSo;
+        document.getElementById('newOfficerOrganizationField').hidden = !isSo;
+        const select = document.getElementById('newOfficerTosaClearance');
+        [...select.options].forEach((option, index) => {
+            option.disabled = index > (role === 'oso' ? 3 : role === 'ovcaa' ? 2 : 0);
+            option.hidden = option.disabled;
+        });
+        if (select.selectedOptions[0]?.disabled || isSo) select.value = 'No Access';
+        select.disabled = isSo;
+        document.getElementById('newOfficerClearanceField').hidden = isSo;
+    }
+
+    function showSettingsAccountError(dialog, message = '') {
+        const error = dialog.querySelector('[role="alert"]');
+        error.textContent = message;
+        error.hidden = !message;
+        if (message) error.focus();
+    }
+
+    function openSettingsAccountDialog(dialog, focusId) {
+        if (!settingsIsOso || settingsMutationPending) return;
+        settingsAccountReturnFocus = document.activeElement;
+        showSettingsAccountError(dialog);
+        dialog.appendChild(document.getElementById('settingsToastContainer'));
+        if (!dialog.open) dialog.showModal();
+        document.getElementById(focusId).focus();
+    }
+
+    function openAddUserModal() {
+        updateNewOfficerClearance();
+        openSettingsAccountDialog(document.getElementById('settingsAddUserModal'), 'newOfficerName');
+    }
+
+    function upsertOsoUser(user) {
+        const tbody = document.getElementById('settingsUserListTbody');
+        if (!tbody) return;
+        const id = Number(user.id);
+        settingsAccounts.set(id, user);
+        tbody.querySelector('td[colspan]')?.closest('tr').remove();
+        let row = tbody.querySelector(`[data-settings-user-id="${id}"]`);
+        if (!row) {
+            row = document.createElement('tr');
+            row.dataset.settingsUserId = id;
+            tbody.appendChild(row);
+        }
+        row.dataset.settingsUser = JSON.stringify(user);
+        // Only fixed markup is parsed; every account-provided value uses textContent.
+        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name></strong><small data-user-email></small><small data-user-title></small></div></div></td><td><span class="org-settings-role-badge"></span><small data-user-organization></small></td><td><span data-user-clearance></span></td><td><span data-user-status></span><small data-user-password-state></small></td><td data-user-updated></td><td><div class="org-settings-user-actions"></div></td>';
+        row.querySelector('[data-user-name]').textContent = user.name;
+        row.querySelector('[data-user-email]').textContent = user.email;
+        row.querySelector('[data-user-title]').textContent = user.office_title || '';
+        row.querySelector('.org-settings-avatar-sm').textContent = user.initials;
+        const role = row.querySelector('.org-settings-role-badge');
+        role.textContent = user.role;
+        const roleClass = { so: 'is-so', oso: 'is-admin', sdo: 'is-sdo', oc: 'is-oc', ovcaa: 'is-ovcaa' }[user.office_role];
+        if (roleClass) role.classList.add(roleClass);
+        row.querySelector('[data-user-organization]').textContent = user.organization_name || (user.office_role === 'so' ? 'No organization assigned' : '');
+        const clearance = row.querySelector('[data-user-clearance]');
+        clearance.textContent = user.tosa_clearance;
+        clearance.className = user.tosa_clearance === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green';
+        const status = row.querySelector('[data-user-status]');
+        status.textContent = user.is_active ? 'Enabled' : 'Disabled';
+        status.className = user.is_active ? 'org-settings-status-active' : 'org-settings-pill-gray';
+        row.querySelector('[data-user-password-state]').textContent = user.must_change_password ? 'Password change required' : '';
+        const updatedAt = user.updated_at ? new Date(user.updated_at) : null;
+        row.querySelector('[data-user-updated]').textContent = updatedAt && !Number.isNaN(updatedAt.getTime()) ? updatedAt.toLocaleString() : 'Not recorded';
+        const actions = row.querySelector('.org-settings-user-actions');
+        const addAction = (action, label, disabled = false) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'org-settings-btn-subtle';
+            button.dataset.accountAction = action;
+            button.textContent = label;
+            button.disabled = disabled;
+            button.setAttribute('aria-label', `${label}: ${user.name}`);
+            if (disabled) button.title = 'Turnover requires an enabled account with an assigned organization.';
+            actions.appendChild(button);
+        };
+        if (id === Number(settingsOfficerId)) {
+            addAction('own', 'My Account');
+        } else {
+            addAction('edit', 'Edit profile');
+            addAction('reset', 'Reset temporary password');
+            if (user.office_role === 'so') addAction('turnover', 'Turn over SO officer', !user.is_active || !user.student_organization_id);
+            addAction('status', user.is_active ? 'Disable' : 'Enable');
+        }
+        filterSettingsAccounts();
+    }
+
+    function openAccountManagement(id, action) {
+        const user = settingsAccounts.get(Number(id));
+        if (!user || !settingsIsOso || settingsMutationPending) return;
+        if (Number(id) === Number(settingsOfficerId)) {
+            switchSettingsTab('account');
+            document.getElementById('setOfficerName')?.focus();
+            return;
+        }
+        if (!['edit', 'reset', 'turnover'].includes(action)) return;
+        if (action === 'turnover' && (user.office_role !== 'so' || !user.is_active || !user.student_organization_id)) {
+            showSettingsToast('Turnover requires an enabled SO account with an assigned organization.', 'error');
+            return;
+        }
+        const dialog = document.getElementById('settingsAccountModal');
+        dialog.querySelector('form').reset();
+        settingsAccountAction = action;
+        settingsAccountTargetId = Number(id);
+        const isEdit = action === 'edit';
+        const isReset = action === 'reset';
+        const labels = { edit: 'Edit Officer Profile', reset: 'Reset Temporary Password', turnover: 'Turn Over SO Officer' };
+        document.getElementById('settingsAccountTitle').textContent = labels[action];
+        document.getElementById('settingsAccountSubmit').textContent = { edit: 'Save Profile', reset: 'Reset Password', turnover: 'Confirm Secure Turnover' }[action];
+        document.getElementById('settingsAccountSubject').textContent = `${user.name} · ${user.organization_name || user.role}`;
+        document.getElementById('settingsAccountDescription').textContent = isEdit
+            ? 'Update this officer’s profile. Changing their email revokes their existing sessions and remembered login.'
+            : isReset
+                ? 'The old password, existing sessions, and remembered login will be revoked. A disabled account stays disabled.'
+                : 'Create a separate incoming officer account for the same organization. The outgoing account will be disabled and all its sessions and remembered login revoked. Its identity, activities, ledger, AR/FR, and archive history are retained. This cannot be repeated for the disabled outgoing account.';
+        document.getElementById('settingsAccountAssignment').textContent = `${user.role}${user.organization_name ? ' · ' + user.organization_name : ''}`;
+        document.getElementById('settingsAccountImmutable').hidden = isReset;
+        document.getElementById('settingsTurnoverEmailHelp').hidden = action !== 'turnover';
+        dialog.querySelectorAll('[data-account-profile-field]').forEach(field => {
+            field.hidden = isReset;
+            field.querySelector('input').disabled = isReset;
+        });
+        dialog.querySelectorAll('[data-account-password-field]').forEach(field => {
+            field.hidden = isEdit;
+            field.querySelector('input').disabled = isEdit;
+        });
+        if (isEdit) {
+            document.getElementById('accountOfficerName').value = user.name;
+            document.getElementById('accountOfficerEmail').value = user.email;
+            document.getElementById('accountOfficerTitle').value = user.office_title || '';
+            document.getElementById('accountOfficerEmployeeId').value = user.employee_id || '';
+        }
+        openSettingsAccountDialog(dialog, isReset ? 'accountOfficerPassword' : 'accountOfficerName');
+    }
+
+    function handleAddUserSubmit(event) {
+        event.preventDefault();
+        const dialog = document.getElementById('settingsAddUserModal');
+        showSettingsAccountError(dialog);
+        if (settingsInputValue('newOfficerPassword') !== settingsInputValue('newOfficerPasswordConfirmation')) {
+            showSettingsAccountError(dialog, 'The temporary password and confirmation must match.');
+            return;
+        }
+        const role = settingsInputValue('newOfficerRole');
+        const values = {
+            name: settingsInputValue('newOfficerName'),
+            email: settingsInputValue('newOfficerEmail'),
+            office_role: role,
+            office_title: settingsInputValue('newOfficerTitle'),
+            employee_id: settingsInputValue('newOfficerEmployeeId'),
+            password: settingsInputValue('newOfficerPassword'),
+            password_confirmation: settingsInputValue('newOfficerPasswordConfirmation'),
+            tosa_clearance: role === 'so' ? 'No Access' : settingsInputValue('newOfficerTosaClearance'),
+        };
+        if (role === 'so') values.student_organization_id = settingsInputValue('newOfficerOrganization');
+        return runSettingsMutation(async () => {
+            const data = await postSettingsJson(osoSettingsRoutes.users, values);
+            upsertOsoUser(data.user);
+            dialog.querySelector('form').reset();
+            updateNewOfficerClearance();
+            dialog.close();
+            showSettingsToast(data.message || 'Officer account created.', 'success');
+            filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
+        });
+    }
+
+    function handleAccountManagementSubmit(event) {
+        event.preventDefault();
+        const action = settingsAccountAction;
+        const id = settingsAccountTargetId;
+        if (!id || !['edit', 'reset', 'turnover'].includes(action)) return;
+        const dialog = document.getElementById('settingsAccountModal');
+        showSettingsAccountError(dialog);
+        const values = {};
+        if (action !== 'reset') {
+            values.name = settingsInputValue('accountOfficerName');
+            values.email = settingsInputValue('accountOfficerEmail');
+            values.office_title = settingsInputValue('accountOfficerTitle');
+            values.employee_id = settingsInputValue('accountOfficerEmployeeId');
+        }
+        if (action !== 'edit') {
+            values.password = settingsInputValue('accountOfficerPassword');
+            values.password_confirmation = settingsInputValue('accountOfficerPasswordConfirmation');
+            if (values.password !== values.password_confirmation) {
+                showSettingsAccountError(dialog, 'The temporary password and confirmation must match.');
+                return;
             }
         }
+        const suffix = { edit: '', reset: '/reset-password', turnover: '/turnover' }[action];
+        return runSettingsMutation(async () => {
+            const data = await postSettingsJson(`${osoSettingsRoutes.userStatusBase}/${id}${suffix}`, values, action === 'edit' ? 'PATCH' : 'POST');
+            if (action === 'turnover') upsertOsoUser(data.previous_user);
+            upsertOsoUser(data.user);
+            dialog.close();
+            showSettingsToast(data.message || 'Officer account updated.', 'success');
+            filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
+        });
     }
 
-    async function resetLogoToDefault() {
-        if (!window.confirm('Reset the OSO logo to the default OrgChain emblem?')) return;
-        const img = document.getElementById('settingsLogoPreview');
-        if (img) img.src = "{{ asset('Orgchain logo.png') }}";
-        try {
-            const data = await osoSettingsRequest(osoSettingsRoutes.logoReset, { method: 'DELETE' });
-            showSettingsToast(data.message || 'Institutional logo reset.', 'success');
-        } catch (error) {
-            showSettingsToast(error.message, 'error');
+    function toggleOsoUserStatus(id, isActive) {
+        if (Number(id) === Number(settingsOfficerId)) {
+            showSettingsToast('Use My Account to manage your own profile and password. You cannot change your own account status.', 'error');
+            return;
         }
-    }
-
-    // Sub-modals & Exports
-    function openAddUserModal() {
-        document.getElementById('settingsAddUserModal')?.showModal();
-    }
-
-    async function handleAddUserSubmit(e) {
-        e.preventDefault();
-        const name = document.getElementById('newOfficerName').value;
-        const email = document.getElementById('newOfficerEmail').value;
-        const role = document.getElementById('newOfficerRole').value;
-        const tosa = document.getElementById('newOfficerTosaClearance').value;
-        const password = document.getElementById('newOfficerPassword').value;
-        const passwordConfirmation = document.getElementById('newOfficerPasswordConfirmation').value;
-
-        try {
-            const data = await osoSettingsRequest(osoSettingsRoutes.users, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name,
-                    email,
-                    office_role: role,
-                    password,
-                    password_confirmation: passwordConfirmation,
-                    tosa_clearance: tosa,
-                }),
-            });
-            document.getElementById('settingsAddUserModal')?.close();
-            showSettingsToast(data.message || `Officer account for ${name} created.`, 'success');
-            setTimeout(() => window.location.reload(), 450);
-        } catch (error) {
-            showSettingsToast(error.message, 'error');
-        }
-    }
-
-    async function toggleOsoUserStatus(id, isActive) {
-        if (!window.confirm(`${isActive ? 'Activate' : 'Deactivate'} this officer account?`)) return;
-        try {
-            const data = await osoSettingsRequest(`${osoSettingsRoutes.userStatusBase}/${id}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_active: isActive }),
-            });
+        const user = settingsAccounts.get(Number(id));
+        if (!user || settingsMutationPending) return;
+        if (!window.confirm(isActive ? `Enable ${user.name}? Previously revoked sessions remain invalid.` : `Disable ${user.name}? All existing sessions and remembered login will be revoked. Their identity and records are retained.`)) return;
+        return runSettingsMutation(async () => {
+            const data = await postSettingsJson(`${osoSettingsRoutes.userStatusBase}/${id}/status`, { is_active: isActive }, 'PATCH');
+            upsertOsoUser(data.user);
             showSettingsToast(data.message || 'Officer account status updated.', 'success');
-            setTimeout(() => window.location.reload(), 450);
+        });
+    }
+
+    async function downloadSettingsFile(url, label) {
+        showSettingsToast(`Preparing ${label} for download…`, 'info');
+        try {
+            const response = await fetch(url, { headers: { Accept: 'application/json, text/csv', 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!response.ok) throw new Error(await osoSettingsError(response));
+            const disposition = response.headers.get('content-disposition') || '';
+            if (response.redirected || !disposition.toLowerCase().includes('attachment')) {
+                throw new Error('The server did not return a download. Your session may have expired; reload and sign in again.');
+            }
+            const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || disposition.match(/filename=([^;]+)/i)?.[1] || 'orgchain-export';
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+            showSettingsToast(`${label} download started.`, 'success');
         } catch (error) {
-            showSettingsToast(error.message, 'error');
+            showSettingsToast(error.message || 'The download could not be completed.', 'error');
         }
     }
 
     function triggerManualBackup() {
-        showSettingsToast('Preparing the signed OSO snapshot download…', 'info');
-        window.location.assign(osoSettingsRoutes.snapshot);
+        return downloadSettingsFile(osoSettingsRoutes.snapshot, 'Configuration snapshot');
     }
 
     function exportDataPackage(type) {
-        const exportKeys = {
+        if (type === 'Office Snapshot') return downloadSettingsFile(osoSettingsRoutes.snapshot, 'Office account snapshot');
+        const keys = {
             'Organization Roster': 'organization-roster',
             'Accomplishment Dossier': 'accomplishment-dossier',
             'TOSA Manifest': 'tosa-manifest',
-            'Audit Logs': 'audit-logs',
         };
-        const key = exportKeys[type];
+        const key = keys[type];
         if (!key) {
             showSettingsToast('That export package is not available.', 'error');
             return;
         }
-        showSettingsToast('Preparing "' + type + '" for download…', 'info');
-        window.location.assign(osoSettingsRoutes.exportsBase + '/' + key);
-    }
-
-    function applyLiveTheme(themeKey) {
-        document.documentElement.dataset.settingsTheme = themeKey;
-        showSettingsToast(`Theme preference changed locally to ${themeKey}. Save Preferences to persist it.`, 'info');
+        return downloadSettingsFile(`${osoSettingsRoutes.exportsBase}/${key}`, type);
     }
 
     // Settings Toast helper
@@ -2481,7 +2447,12 @@
         const icon = type === 'success'
             ? 'bi-check-circle-fill'
             : (type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill');
-        toast.innerHTML = `<i class="bi ${icon}"></i> <span>${msg}</span>`;
+        const iconElement = document.createElement('i');
+        iconElement.className = `bi ${icon}`;
+        iconElement.setAttribute('aria-hidden', 'true');
+        const message = document.createElement('span');
+        message.textContent = msg;
+        toast.append(iconElement, message);
 
         container.appendChild(toast);
         setTimeout(() => {
@@ -2489,13 +2460,77 @@
             toast.style.transform = 'translateY(12px)';
             toast.style.transition = 'all 0.3s ease';
             setTimeout(() => toast.remove(), 300);
-        }, 3200);
+        }, type === 'error' ? 10000 : 4500);
     }
 
-    // Close settings on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+    document.querySelectorAll('#orgSettingsModal .org-settings-pw-toggle').forEach(button => {
+        button.setAttribute('aria-label', 'Show password or PIN');
+        button.setAttribute('aria-pressed', 'false');
+    });
+
+    document.querySelectorAll('[data-settings-user]').forEach(row => {
+        upsertOsoUser(JSON.parse(row.dataset.settingsUser));
+    });
+    updateNewOfficerClearance();
+
+    document.getElementById('settingsUserListTbody')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-account-action]');
+        if (!button || button.disabled || settingsMutationPending) return;
+        const id = Number(button.closest('[data-settings-user-id]').dataset.settingsUserId);
+        const action = button.dataset.accountAction;
+        if (action === 'status') {
+            toggleOsoUserStatus(id, !settingsAccounts.get(id).is_active);
+        } else {
+            openAccountManagement(id, action);
+        }
+    });
+
+    document.querySelectorAll('.org-settings-submodal').forEach(dialog => {
+        dialog.addEventListener('cancel', event => {
+            if (settingsMutationPending) {
+                event.preventDefault();
+                showSettingsToast('Please wait for the current account change to finish.', 'info');
+            }
+        });
+        dialog.addEventListener('close', () => {
+            const targetId = settingsAccountTargetId;
+            dialog.querySelectorAll('input[type="password"]').forEach(input => input.value = '');
+            document.body.appendChild(document.getElementById('settingsToastContainer'));
+            showSettingsAccountError(dialog);
+            settingsAccountAction = null;
+            settingsAccountTargetId = null;
+            if (document.getElementById('orgSettingsModal').getAttribute('aria-hidden') === 'false') {
+                const fallback = targetId ? document.querySelector(`[data-settings-user-id="${targetId}"] button:not(:disabled)`) : null;
+                const focus = settingsAccountReturnFocus?.isConnected ? settingsAccountReturnFocus : fallback;
+                if (focus && !focus.disabled) focus.focus();
+                else document.querySelector('#orgSettingsModal .org-settings-dialog').focus();
+            }
+            settingsAccountReturnFocus = null;
+        });
+    });
+
+    document.getElementById('orgSettingsModal').addEventListener('click', event => {
+        if (event.target.id === 'orgSettingsModal') closeSettingsModal();
+    });
+
+    document.addEventListener('keydown', event => {
+        const modal = document.getElementById('orgSettingsModal');
+        if (modal.getAttribute('aria-hidden') === 'true' || document.querySelector('.org-settings-submodal[open]')) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
             closeSettingsModal();
+        } else if (event.key === 'Tab') {
+            const elements = [...modal.querySelectorAll('button, input, select, a[href], [tabindex="0"]')]
+                .filter(element => !element.disabled && element.getClientRects().length);
+            const first = elements[0];
+            const last = elements[elements.length - 1];
+            if (event.shiftKey && (document.activeElement === first || !elements.includes(document.activeElement))) {
+                event.preventDefault();
+                last?.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || !elements.includes(document.activeElement))) {
+                event.preventDefault();
+                first?.focus();
+            }
         }
     });
 </script>

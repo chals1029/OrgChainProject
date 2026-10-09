@@ -181,7 +181,6 @@ class OrgWorkflowService
         $requirements = $activity->activity_scope === 'local_off_campus' ? $requirements->localOffCampusRequirements() : $requirements->inCampusRequirements();
         foreach ($requirements as $requirement) {
             if (empty($requirement['required_on_submit'])) continue;
-            if (! empty($requirement['condition']) && empty($files['conditions'][$requirement['condition']])) continue;
             $file = $files[$requirement['key']] ?? null;
             if (! is_array($file) || empty($file['path']) || ! \Illuminate\Support\Facades\Storage::disk('public')->exists($file['path'])) {
                 throw new \RuntimeException('Missing required upload: '.$requirement['title'].'. Ask SO to upload it to the matching checklist slot.');

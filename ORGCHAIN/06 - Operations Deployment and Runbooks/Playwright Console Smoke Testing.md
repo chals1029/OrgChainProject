@@ -39,7 +39,7 @@ Also lightly clicks a few non-submit buttons per page.
 
 ## Credentials used
 
-See [[Quick Reference and Cheatsheet]] — office password `Office@2026!`.
+Supply `E2E_OFFICE_PASSWORD` privately for the configured office smoke accounts. Never commit the value or use production accounts for automated mutation scenarios.
 
 ## Known quirks
 

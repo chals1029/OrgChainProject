@@ -117,6 +117,41 @@
             <div class="meta-item"><span>Generated</span><strong>{{ $generatedAt }}</strong></div>
         </section>
 
+        @if ($officeRole === 'oso' && $osoFinancialOverview !== null)
+            <h2>Organization Financial Overview</h2>
+            <p class="section-note">AY {{ $osoFinancialOverview['academic_year'] }} · {{ $osoFinancialOverview['semester'] === 'Annual' ? 'Full academic year' : $osoFinancialOverview['semester'] }}. Organization-scope cash totals are independent of the selected activity. Approved budgets are not cash outflows.</p>
+            <section class="summary-grid" aria-label="Organization cash summary">
+                @foreach ([
+                    'beginning_balance' => 'Beginning cash',
+                    'cash_inflow' => 'Cash inflow',
+                    'cash_outflow' => 'Cash outflow',
+                    'ending_balance' => 'Ending cash',
+                ] as $key => $label)
+                    <div class="summary-card"><span>{{ $label }}</span><strong>Php {{ number_format($osoFinancialOverview['totals'][$key], 2) }}</strong></div>
+                @endforeach
+            </section>
+            <table aria-label="Organization cash breakdown">
+                <thead><tr><th style="width:25%;">Organization</th><th class="num">Beginning cash</th><th class="num">Inflow</th><th class="num">Outflow</th><th class="num">Ending cash</th><th class="num">Approved budgets</th></tr></thead>
+                <tbody>
+                    @forelse ($osoFinancialOverview['rows'] as $row)
+                        <tr>
+                            <td>
+                                {{ $row['organization'] }}<br>{{ $row['college'] }}
+                                @unless ($row['has_account'])
+                                    <br>No saved cash account for this year
+                                @endunless
+                            </td>
+                            @foreach (['beginning_balance', 'cash_inflow', 'cash_outflow', 'ending_balance', 'approved_budget'] as $key)
+                                <td class="num">Php {{ number_format($row[$key], 2) }}</td>
+                            @endforeach
+                        </tr>
+                    @empty
+                        <tr><td colspan="6">No organizations match the selected filters.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        @endif
+
         <section class="summary-grid" aria-label="Budget summary">
             <div class="summary-card"><span>Approved budget</span><strong>Php {{ number_format($approvedTotal, 2) }}</strong></div>
             <div class="summary-card"><span>Actual expenses</span><strong>Php {{ number_format($actualTotal, 2) }}</strong></div>

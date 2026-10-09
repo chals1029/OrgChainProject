@@ -31,9 +31,8 @@ status: active
 
 | Demo SR Code | Name | Email |
 | :----------- | :--- | :---- |
-| `21-00001` | Charles Samotanez | `21-00001@g.batstate-u.edu.ph` |
-| `21-00002` | Maria Santos | `21-00002@g.batstate-u.edu.ph` |
-| `23-73068` | — | `23-73068@g.batstate-u.edu.ph` |
+| `21-00001` | Demo Student One | `21-00001@g.batstate-u.edu.ph` |
+| `21-00002` | Demo Student Two | `21-00002@g.batstate-u.edu.ph` |
 
 **Student screens**
 - `/portal` — Home / overview (budget utilization + **on-chain budget seals**, activities)
@@ -51,11 +50,11 @@ status: active
 
 | Role      | Email                              | Password       |
 | :-------- | :--------------------------------- | :------------- |
-| **SO**    | `so.office@g.batstate-u.edu.ph`    | `Office@2026!` |
-| **OSO**   | `oso.office@g.batstate-u.edu.ph`   | `Office@2026!` |
-| **SDO**   | `sdo.office@g.batstate-u.edu.ph`   | `Office@2026!` |
-| **OVCAA** | `ovcaa.office@g.batstate-u.edu.ph` | `Office@2026!` |
-| OC        | sc.office@g.batstate-u.edu.ph      | `Office@2026!` |
+| **SO**    | `so.office@g.batstate-u.edu.ph`    | Privately provisioned |
+| **OSO**   | `oso.office@g.batstate-u.edu.ph`   | Privately provisioned |
+| **SDO**   | `sdo.office@g.batstate-u.edu.ph`   | Privately provisioned |
+| **OVCAA** | `ovcaa.office@g.batstate-u.edu.ph` | Privately provisioned |
+| OC        | oc.office@g.batstate-u.edu.ph      | Privately provisioned |
 |           |                                    |                |
 
 **Office screens after login**
@@ -89,10 +88,10 @@ status: active
 
 | Side / Role | Name | Email | Password | Access & Auth Flow |
 | :--- | :--- | :---- | :------- | :----------------- |
-| **Admin Side** | Main Admin | `admin@ssc.test` | `Admin@2026!` | Full Admin Control Center (displays 6-digit code on-screen) |
-| **Admin Side** | SSC Election Admin | `ssc.admin@g.batstate-u.edu.ph` | `Admin@2026!` | Full Admin Control Center (displays 6-digit code on-screen) |
-| **Canvassing Side** | Canvassing Officer | `canvass@ssc.test` | `Canvass@2026!` | Direct access to Canvassing Dashboard & Tally (no OTP) |
-| **Canvassing Side** | SSC Canvassing Desk | `ssc.canvass@g.batstate-u.edu.ph` | `Canvass@2026!` | Direct access to Canvassing Dashboard & Tally (no OTP) |
+| **Admin Side** | Main Admin | `admin@ssc.test` | Privately provisioned | Full Admin Control Center (displays 6-digit code on-screen) |
+| **Admin Side** | SSC Election Admin | `ssc.admin@g.batstate-u.edu.ph` | Privately provisioned | Full Admin Control Center (displays 6-digit code on-screen) |
+| **Canvassing Side** | Canvassing Officer | `canvass@ssc.test` | Privately provisioned | Direct access to Canvassing Dashboard & Tally (no OTP) |
+| **Canvassing Side** | SSC Canvassing Desk | `ssc.canvass@g.batstate-u.edu.ph` | Privately provisioned | Direct access to Canvassing Dashboard & Tally (no OTP) |
 
 > [!note]
 > - **Canvassing side** signs in with Email + Password and bypasses OTP, redirecting directly to `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91`.

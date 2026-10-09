@@ -23,10 +23,9 @@
 @endsection
 
 @section('content')
-    @include('org.partials.semester-report-workflow', [
+    @include('org.partials.semester-report-status', [
         'reportType' => 'fr',
         'reportBundle' => $reportBundle ?? [],
-        'reportQueue' => $reportQueue ?? [],
         'organizations' => $organizations ?? collect(),
         'selectedOrganization' => $selectedOrganization ?? '',
         'selectedSemester' => $selectedSemester ?? '1st Semester',
@@ -493,7 +492,7 @@
             @include('org.partials.fund-balances')
         @endif
 
-        {{-- 0. Report filters live in the semester-report workflow above. --}}
+        {{-- Report filters live in the Financial Report status panel above. --}}
 
         {{-- 1 & 2. Organization Information & Activity/Project Information Panels --}}
         <div class="org-info-panels-grid">

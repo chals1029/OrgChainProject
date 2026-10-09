@@ -10,26 +10,12 @@
         <span>System-checked</span>
     </div>
 
-    @if (($role ?? '') === 'so' && !empty($fundAccount))
-        <form method="post" action="{{ route('office.funds.update', $fundAccount) }}" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:0.75rem;align-items:end;margin-bottom:1rem;">
-            @csrf
-            <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:800;">
-                Total Funds
-                <input type="number" name="total_funds" value="{{ $fundAccount->total_funds }}" min="0" style="padding:0.55rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
-            </label>
-            <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:800;">
-                Beginning Balance
-                <input type="number" name="beginning_balance" value="{{ $fundAccount->beginning_balance }}" min="0" style="padding:0.55rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
-            </label>
-            <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:800;">
-                Total Funds Received
-                <input type="number" name="total_funds_received" value="{{ $fundAccount->total_funds_received }}" min="0" style="padding:0.55rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
-            </label>
-            <button type="submit" class="org-btn org-btn-primary">Update Funds</button>
-        </form>
-    @elseif (!empty($transparency['total_funds']))
+    @if (!empty($transparency['total_funds']))
         <p style="margin:0 0 1rem;font-weight:700;">Total Funds: Php {{ number_format($transparency['total_funds'], 2) }}
             · Beginning: Php {{ number_format($transparency['beginning_balance'] ?? 0, 2) }}</p>
+    @endif
+    @if ($role === 'so')
+        <p><a href="{{ route('office.financial') }}">Manage opening cash and income in Financial Report</a></p>
     @endif
 
     @if (($role ?? '') === 'oso' && !empty($urgencyQueue) && count($urgencyQueue))

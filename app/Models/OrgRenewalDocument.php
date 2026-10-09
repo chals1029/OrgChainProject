@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class OrgRenewalDocument extends Model
 {
@@ -60,6 +61,18 @@ class OrgRenewalDocument extends Model
     public function isVerified(): bool
     {
         return $this->review_status === self::REVIEW_VERIFIED;
+    }
+
+    public function hasStoredFile(): bool
+    {
+        $path = trim((string) $this->file_path);
+        if ($path === '') {
+            return false;
+        }
+
+        $disk = Storage::disk('public');
+
+        return $disk->fileExists($path) && $disk->size($path) > 0;
     }
 
     public function submission(): BelongsTo

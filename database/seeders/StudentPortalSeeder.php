@@ -13,12 +13,17 @@ class StudentPortalSeeder extends Seeder
 {
     public function run(): void
     {
+        $password = (string) env('STUDENT_DEMO_PASSWORD');
+        if ($password === '') {
+            throw new \RuntimeException('Set STUDENT_DEMO_PASSWORD privately before seeding demo students.');
+        }
+
         $demo = Student::query()->updateOrCreate(
             ['sr_code' => '21-00001'],
             [
-                'name' => 'Charles Samotanez',
+                'name' => 'Demo Student One',
                 'email' => '21-00001@g.batstate-u.edu.ph',
-                'password' => 'Student@2026!',
+                'password' => $password,
                 'college' => 'College of Informatics and Computing Sciences',
                 'program' => 'BS Information Technology',
                 'year_level' => '4th Year',
@@ -29,9 +34,9 @@ class StudentPortalSeeder extends Seeder
         Student::query()->updateOrCreate(
             ['sr_code' => '21-00002'],
             [
-                'name' => 'Maria Santos',
+                'name' => 'Demo Student Two',
                 'email' => '21-00002@g.batstate-u.edu.ph',
-                'password' => 'Student@2026!',
+                'password' => $password,
                 'college' => 'College of Arts and Sciences',
                 'program' => 'BS Psychology',
                 'year_level' => '3rd Year',
@@ -40,11 +45,11 @@ class StudentPortalSeeder extends Seeder
         );
 
         Student::query()->updateOrCreate(
-            ['sr_code' => '23-73600'],
+            ['sr_code' => '21-00003'],
             [
-                'name' => 'Student User',
-                'email' => '23-73600@g.batstate-u.edu.ph',
-                'password' => 'Student@2026!',
+                'name' => 'Demo Student Three',
+                'email' => '21-00003@g.batstate-u.edu.ph',
+                'password' => $password,
                 'college' => 'College of Informatics and Computing Sciences',
                 'program' => 'BS Information Technology',
                 'year_level' => '3rd Year',

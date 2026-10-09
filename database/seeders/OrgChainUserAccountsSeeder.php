@@ -15,7 +15,7 @@ class OrgChainUserAccountsSeeder extends Seeder
                 'user_id' => 1,
                 'org_id' => null,
                 'sr_code' => '21-00001',
-                'full_name' => 'Charles Samotanez',
+                'full_name' => 'Demo Student One',
                 'password_hash' => null,
                 'email' => '21-00001@g.batstate-u.edu.ph',
                 'college' => 'College of Informatics and Computing Sciences',
@@ -33,7 +33,7 @@ class OrgChainUserAccountsSeeder extends Seeder
                 'user_id' => 2,
                 'org_id' => null,
                 'sr_code' => '21-00002',
-                'full_name' => 'Maria Santos',
+                'full_name' => 'Demo Student Two',
                 'password_hash' => null,
                 'email' => '21-00002@g.batstate-u.edu.ph',
                 'college' => 'College of Arts and Sciences',
@@ -45,18 +45,18 @@ class OrgChainUserAccountsSeeder extends Seeder
             ]
         );
 
-        $existingUser = UserAccount::query()->where('sr_code', '23-73600')->first();
+        $existingUser = UserAccount::query()->where('sr_code', '21-00003')->first();
         $nextUserId = $existingUser?->user_id ?? ((int) UserAccount::query()->max('user_id') + 1);
 
         UserAccount::query()->updateOrCreate(
-            ['sr_code' => '23-73600'],
+            ['sr_code' => '21-00003'],
             [
                 'user_id' => $nextUserId,
                 'org_id' => null,
-                'sr_code' => '23-73600',
-                'full_name' => 'Lilian Christine',
+                'sr_code' => '21-00003',
+                'full_name' => 'Demo Student Three',
                 'password_hash' => null,
-                'email' => '23-73600@g.batstate-u.edu.ph',
+                'email' => '21-00003@g.batstate-u.edu.ph',
                 'college' => 'College of Informatics and Computing Sciences',
                 'program' => 'BS Information Technology',
                 'year_level' => '4th Year',

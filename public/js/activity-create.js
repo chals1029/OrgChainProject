@@ -59,8 +59,6 @@
 
         var typeInputs = Array.prototype.slice.call(form.querySelectorAll('input[name="activity_type"]'));
         var requirementPanels = Array.prototype.slice.call(form.querySelectorAll('.ap-requirement-panel[data-requirement-type]'));
-        var documentPanels = Array.prototype.slice.call(form.querySelectorAll('[data-document-type]'));
-        var conditionToggles = Array.prototype.slice.call(form.querySelectorAll('input[data-condition-toggle]'));
         var heading = document.getElementById('requirementsHeading');
         var countEl = document.getElementById('requirementsCount');
         var progress = document.getElementById('requirementsProgress');
@@ -70,8 +68,6 @@
         var submitButton = document.getElementById('activitySubmitButton');
         var downloadButton = document.getElementById('downloadTemplatesBtn');
         var pageHeaderDesc = document.getElementById('pageHeaderDesc');
-        var bulkInput = document.getElementById('bulkDocUpload');
-        var bulkStatus = document.getElementById('bulkDocUploadStatus');
         var startsAt = form.querySelector('[name="starts_at"]');
         var endsAt = form.querySelector('[name="ends_at"]');
         var templateUrl = form.dataset.templateUrl || '';
@@ -93,17 +89,12 @@
                     icon: row.querySelector('[data-file-icon]'),
                     status: status,
                     uploadLabel: row.querySelector('[data-upload-label]'),
-                    condition: row.dataset.condition || '',
-                    toggle: null,
                     required: row.dataset.required === '1',
                     existing: row.dataset.existingFile === '1',
                     currentName: status ? (status.dataset.currentName || '') : '',
                     title: titleEl ? cleanText(titleEl.textContent) : fieldLabel(input),
                     error: '',
                 };
-                if (state.condition) {
-                    state.toggle = panel.querySelector('input[data-condition-toggle="' + CSS.escape(state.condition) + '"]');
-                }
                 rows.push(state);
                 rowsByInput.set(input, state);
             });
@@ -124,7 +115,7 @@
         };
 
         var rowIsActive = function (state) {
-            return state.type === activeType && (!state.toggle || state.toggle.checked);
+            return state.type === activeType;
         };
 
         var rowIsComplete = function (state) {
@@ -139,7 +130,6 @@
             var invalid = !!(file && state.error);
 
             state.input.disabled = !active;
-            state.row.classList.toggle('is-inactive', state.type === activeType && !active);
             state.row.classList.toggle('has-file', complete);
             state.row.classList.toggle('is-invalid', invalid);
             if (invalid) state.input.setAttribute('aria-invalid', 'true');
@@ -155,9 +145,8 @@
             if (state.status) {
                 var text;
                 if (invalid) text = state.error;
-                else if (file) text = file.name + ' (' + formatSize(file.size) + ') — uploads when you save';
+                else if (file) text = file.name + ' (' + formatSize(file.size) + ') — uploads when you submit';
                 else if (state.existing) text = state.currentName ? 'Current file: ' + state.currentName : 'Current file on record';
-                else if (state.toggle && !state.toggle.checked) text = 'Enable the condition if this document applies.';
                 else text = 'No file selected';
                 state.status.textContent = text;
                 state.status.classList.toggle('is-error', invalid);
@@ -168,28 +157,6 @@
             var file = state.input.files.length ? state.input.files[0] : null;
             state.error = file ? fileError(file) : '';
             state.input.setCustomValidity(state.error);
-        };
-
-        var validateBulk = function () {
-            if (!bulkInput) return;
-            var files = bulkInput.files;
-            var errors = [];
-            var names = [];
-            for (var i = 0; i < files.length; i++) {
-                var error = fileError(files[i]);
-                if (error) errors.push(error);
-                names.push(files[i].name);
-            }
-            bulkInput.setCustomValidity(errors.join(' '));
-            if (errors.length) bulkInput.setAttribute('aria-invalid', 'true');
-            else bulkInput.removeAttribute('aria-invalid');
-            if (bulkStatus) {
-                bulkStatus.textContent = errors.length
-                    ? errors.join(' ')
-                    : (names.length ? plural(names.length, 'supporting file') + ' selected: ' + listPreview(names) : 'No files selected.');
-                bulkStatus.classList.toggle('is-error', errors.length > 0);
-            }
-            return errors;
         };
 
         var validateSchedule = function () {
@@ -229,11 +196,10 @@
                 if (rowIsComplete(state)) done++;
                 else missing.push(state.title);
             }
-            var bulkInvalid = !!(bulkInput && bulkInput.validationMessage);
             var fields = invalidFields();
             var remaining = total - done;
             var checklistComplete = remaining === 0;
-            var ready = checklistComplete && badFiles.length === 0 && !bulkInvalid && fields.length === 0;
+            var ready = checklistComplete && badFiles.length === 0 && fields.length === 0;
 
             if (countEl) {
                 countEl.textContent = total ? done + ' of ' + total + ' required ready' : 'No required uploads';
@@ -251,14 +217,14 @@
                     : 'All required documents ready';
             }
             if (remainingHelp) {
-                if (badFiles.length || bulkInvalid) {
-                    remainingHelp.textContent = 'Replace invalid files before saving or submitting.';
+                if (badFiles.length) {
+                    remainingHelp.textContent = 'Replace invalid files before submitting.';
                 } else if (fields.length) {
                     remainingHelp.textContent = 'Complete the starred activity fields and check the schedule.';
                 } else if (missing.length) {
-                    remainingHelp.textContent = 'Upload the remaining documents, or save a draft while preparing them.';
+                    remainingHelp.textContent = 'Upload every required document to submit for review.';
                 } else {
-                    remainingHelp.textContent = 'Ready to submit for review. Files upload when you save or submit.';
+                    remainingHelp.textContent = 'Ready to submit for review. Files upload when you submit.';
                 }
             }
             if (submitButton) submitButton.disabled = !ready;
@@ -289,13 +255,6 @@
             requirementPanels.forEach(function (panel) {
                 panel.hidden = panel.dataset.requirementType !== activeType;
             });
-            documentPanels.forEach(function (panel) {
-                panel.hidden = panel.dataset.documentType !== activeType;
-            });
-            conditionToggles.forEach(function (toggle) {
-                var panel = toggle.closest('.ap-requirement-panel');
-                toggle.disabled = !!panel && panel.dataset.requirementType !== activeType;
-            });
             rows.forEach(renderRow);
             updateReadiness();
         };
@@ -311,7 +270,7 @@
             } else if (state.error) {
                 showNotice(state.error, true);
             } else {
-                showNotice('Selected ' + file.name + ' for ' + state.title + '. It uploads when you save a draft or submit.', false);
+                showNotice('Selected ' + file.name + ' for ' + state.title + '. It uploads when you submit for review.', false);
             }
         };
 
@@ -321,24 +280,9 @@
                 applyType();
                 return;
             }
-            if (target.hasAttribute && target.hasAttribute('data-condition-toggle')) {
-                rows.forEach(function (state) {
-                    if (state.toggle === target) renderRow(state);
-                });
-                updateReadiness();
-                return;
-            }
             var state = rowsByInput.get(target);
             if (state) {
                 onRequirementFileChange(state);
-                updateReadiness();
-                return;
-            }
-            if (target === bulkInput) {
-                var errors = validateBulk();
-                var count = bulkInput.files.length;
-                if (errors.length) showNotice(errors.join(' '), true);
-                else if (count) showNotice('Selected ' + plural(count, 'supporting file') + '. Supporting files upload when you save and do not replace checklist items.', false);
                 updateReadiness();
                 return;
             }
@@ -361,7 +305,17 @@
             if (state) state.row.scrollIntoView({ block: 'center' });
         }, true);
 
+        form.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') return;
+            var target = event.target;
+            if (target.tagName === 'INPUT' && target.type !== 'submit' && target.type !== 'button') event.preventDefault();
+        });
+
         form.addEventListener('submit', function (event) {
+            if (event.submitter !== undefined && event.submitter !== submitButton) {
+                event.preventDefault();
+                return;
+            }
             applyType();
             for (var i = 0; i < rows.length; i++) {
                 var state = rows[i];
@@ -371,22 +325,19 @@
                 state.row.scrollIntoView({ block: 'center' });
                 return;
             }
-            if (bulkInput && bulkInput.validationMessage) {
+            var readiness = updateReadiness();
+            if (!readiness.ready) {
                 event.preventDefault();
-                showNotice(bulkInput.validationMessage, true);
+                showNotice(readiness.missing.length
+                    ? 'Upload the required checklist items before submitting: ' + listPreview(readiness.missing) + '.'
+                    : 'Complete the form before submitting for review.', true);
                 return;
             }
-            var submitter = event.submitter;
-            if (submitter && submitter.name === 'submission_action' && submitter.value === 'submit') {
-                var readiness = updateReadiness();
-                if (!readiness.ready) {
-                    event.preventDefault();
-                    showNotice(readiness.missing.length
-                        ? 'Upload the required checklist items before submitting: ' + listPreview(readiness.missing) + '.'
-                        : 'Complete the form before submitting for review.', true);
-                    return;
-                }
-            }
+            if (submitButton) submitButton.disabled = true;
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) updateReadiness();
         });
 
 
@@ -407,7 +358,6 @@
         window.addEventListener('load', scheduleHeight);
 
         rows.forEach(validateRowFile);
-        validateBulk();
         validateSchedule();
         applyType();
         syncHeight();

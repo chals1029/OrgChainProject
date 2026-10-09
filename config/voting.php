@@ -62,7 +62,7 @@ return [
 
     'nodes' => [
         'current_node' => (int) env('BLOCKCHAIN_CURRENT_NODE', 1),
-        'secret_token' => env('BLOCKCHAIN_NODE_SECRET', 'orgchain-node-auth-secret-2026'),
+        'secret_token' => env('BLOCKCHAIN_NODE_SECRET', ''),
         'timeout_seconds' => (int) env('BLOCKCHAIN_NODE_TIMEOUT', 3),
         'urls' => [
             1 => env('BLOCKCHAIN_NODE_1_URL', 'local'),

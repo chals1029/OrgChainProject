@@ -20,9 +20,11 @@
         <a href="{{ route('office.updates.templates.document', 'source-tosa-application') }}" class="org-btn org-btn-ghost org-btn-sm">
             <i class="bi bi-file-earmark-word"></i> TOSA Application Form
         </a>
+        @if($tosaPinGateEnabled ?? true)
         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="lockTosaSession()" title="Lock Module">
             <i class="bi bi-lock-fill"></i> Lock Session
         </button>
+        @endif
     </div>
 @endsection
 
@@ -3925,15 +3927,14 @@
     {{-- =========================================================================
          TOSA JavaScript Engine
          ========================================================================= --}}
-    @php
-        $tosaPinGateEnabled = (bool) data_get($officeSettings ?? [], 'security.tosa_gate', true);
-        $tosaSessionTimeoutSeconds = max(0, (int) data_get($officeSettings ?? [], 'security.session_timeout', 15)) * 60;
-    @endphp
     <script>
         // Data Store
         const TOSA_PIN_VERIFY_URL = @json(route('office.tosa.pin.verify'));
-        const TOSA_PIN_GATE_ENABLED = @json($tosaPinGateEnabled);
-        const TOSA_SESSION_TIMEOUT_SECONDS = @json($tosaSessionTimeoutSeconds);
+        const TOSA_LOCK_URL = @json(route('office.tosa.pin.lock'));
+        const TOSA_SERVER_UNLOCKED = @json($tosaUnlocked ?? false);
+        const TOSA_UNLOCK_SECONDS_REMAINING = @json($tosaUnlockSecondsRemaining ?? 0);
+        const TOSA_CAN_REVIEW = @json($tosaCanReview ?? false);
+        const TOSA_CAN_MANAGE_TEMPLATES = @json($tosaCanManageTemplates ?? false);
         let pinVerificationInFlight = false;
         const PAGE_SIZE = 7;
         let isTosaUnlocked = false;
@@ -3947,7 +3948,7 @@
         let currentReqStatus = '';
         let activeReviewApplicantId = null;
         let autoLockInterval = null;
-        let secondsRemaining = 900; // 15 minutes
+        let refreshTosaAfterSettings = false;
 
         // TOSA Applicants Data Store (from controller)
         @php
@@ -4060,12 +4061,9 @@
 
         async function validatePin(pin) {
             if (pinVerificationInFlight || !/^\d{4}$/.test(pin)) return;
-
             pinVerificationInFlight = true;
             const button = document.getElementById('tosaUnlockBtn');
             if (button) button.disabled = true;
-
-            let valid = false;
             try {
                 const response = await fetch(TOSA_PIN_VERIFY_URL, {
                     method: 'POST',
@@ -4077,33 +4075,23 @@
                     },
                     body: JSON.stringify({ pin }),
                 });
-                valid = response.ok;
-            } catch (error) {
-                valid = false;
-            }
-
-            if (valid) {
-                unlockTosaSession();
-            } else {
-                const alertEl = document.getElementById('tosaPinAlert');
-                if (alertEl) {
-                    alertEl.style.display = 'flex';
-                    document.getElementById('tosaPinAlertText').textContent = 'Invalid Security PIN. Please try again.';
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Unable to unlock TOSA.');
                 }
-                [1, 2, 3, 4].forEach(num => {
-                    const box = document.getElementById('pinBox' + num);
-                    if (box) box.value = '';
-                });
+                location.reload();
+            } catch (error) {
+                document.getElementById('tosaPinAlert').style.display = 'flex';
+                document.getElementById('tosaPinAlertText').textContent = error.message || 'Unable to reach the server. Please try again.';
+                [1, 2, 3, 4].forEach(num => { document.getElementById('pinBox' + num).value = ''; });
                 document.getElementById('pinBox1')?.focus();
+                pinVerificationInFlight = false;
+                if (button) button.disabled = false;
             }
-
-            pinVerificationInFlight = false;
-            if (button) button.disabled = false;
         }
 
         function unlockTosaSession() {
             isTosaUnlocked = true;
-            sessionStorage.setItem('tosa_unlocked', 'true');
 
             document.getElementById('tosaPinScreen').style.display = 'none';
             document.getElementById('tosaWorkspace').style.display = 'flex';
@@ -4117,59 +4105,59 @@
 
             renderAllTosaData();
             startAutoLockTimer();
-            showTosaToast('Top 10 Outstanding Students Module successfully unlocked! Authorized OSO Reviewer session active.', 'success');
         }
 
-        function lockTosaSession() {
+        function hideTosaWorkspace() {
             isTosaUnlocked = false;
-            sessionStorage.removeItem('tosa_unlocked');
-
+            if (autoLockInterval) clearInterval(autoLockInterval);
             document.getElementById('tosaPinScreen').style.display = 'flex';
             document.getElementById('tosaWorkspace').style.display = 'none';
             document.getElementById('tosaUnlockedActions').style.display = 'none';
-
             const badge = document.getElementById('tosaHeaderBadge');
-            if (badge) {
-                badge.className = 'tosa-badge-locked';
-                badge.innerHTML = '<i class="bi bi-shield-lock-fill"></i> Restricted Access';
+            badge.className = 'tosa-badge-locked';
+            badge.innerHTML = '<i class="bi bi-shield-lock-fill"></i> Restricted Access';
+            document.querySelectorAll('dialog.tosa-modal[open]').forEach(dialog => dialog.close());
+            tosaApplicants = [];
+            tosaQualifiedApplicants = [];
+            renderAllTosaData();
+        }
+
+        async function lockTosaSession() {
+            try {
+                const response = await fetch(TOSA_LOCK_URL, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                });
+                if (!response.ok) throw new Error('Unable to lock TOSA. Please try again.');
+                hideTosaWorkspace();
+                location.reload();
+            } catch (error) {
+                showTosaToast(error.message || 'Unable to reach the server. TOSA was not locked.', 'error');
             }
-
-            // Clear inputs
-            [1, 2, 3, 4].forEach(num => {
-                const box = document.getElementById(`pinBox${num}`);
-                if (box) box.value = '';
-            });
-            document.getElementById('tosaPinAlert').style.display = 'none';
-            document.getElementById('pinBox1')?.focus();
-
-            if (autoLockInterval) clearInterval(autoLockInterval);
-            showTosaToast('Top 10 Outstanding Students Module locked.', 'info');
         }
 
         function startAutoLockTimer() {
             if (autoLockInterval) clearInterval(autoLockInterval);
-            secondsRemaining = TOSA_SESSION_TIMEOUT_SECONDS;
-            if (secondsRemaining <= 0) {
-                const timerText = document.getElementById('tosaTimerText');
-                if (timerText) timerText.textContent = 'Auto-lock disabled';
+            const timerText = document.getElementById('tosaTimerText');
+            if (TOSA_UNLOCK_SECONDS_REMAINING <= 0) {
+                timerText.textContent = 'No timed re-lock';
                 return;
             }
-
-            autoLockInterval = setInterval(() => {
-                secondsRemaining--;
-                const mins = Math.floor(secondsRemaining / 60);
-                const secs = secondsRemaining % 60;
-                const timerText = document.getElementById('tosaTimerText');
-                if (timerText) {
-                    timerText.textContent = `Auto-lock in ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            const deadline = Date.now() + TOSA_UNLOCK_SECONDS_REMAINING * 1000;
+            function updateTimer() {
+                const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                timerText.textContent = `Auto-lock in ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+                if (remaining === 0) {
+                    hideTosaWorkspace();
+                    location.reload();
                 }
-
-                if (secondsRemaining <= 0) {
-                    clearInterval(autoLockInterval);
-                    lockTosaSession();
-                    showTosaToast('Top 10 Outstanding Students session auto-locked due to inactivity.', 'warning');
-                }
-            }, 1000);
+            }
+            autoLockInterval = setInterval(updateTimer, 1000);
+            updateTimer();
         }
 
         // -------------------------------------------------------------------------
@@ -4454,7 +4442,7 @@
                                         <i class="bi bi-file-earmark-text"></i>
                                         <span>View Documents</span>
                                     </button>
-                                    ${a.status === 'Approved' ? `
+                                    ${!TOSA_CAN_REVIEW ? '' : a.status === 'Approved' ? `
                                         <button type="button" class="tosa-sub-btn is-approve" style="background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; cursor: default;" title="Applicant Already Approved" disabled>
                                             <i class="bi bi-check2-circle"></i>
                                             <span>Approved</span>
@@ -4559,6 +4547,10 @@
         }[subsection] || 'Pending');
 
         async function persistApplicantSubsection(id, subsection, remarks, successMsg, successType) {
+            if (!isTosaUnlocked || !TOSA_CAN_REVIEW) {
+                showTosaToast('Your TOSA clearance allows viewing only.', 'warning');
+                return;
+            }
             const applicant = tosaApplicants.find(a => a.id === id);
             if (!applicant) return;
             try {
@@ -4701,9 +4693,9 @@
                                     <button type="button" class="tosa-action-btn" title="Edit Requirement" onclick="openEditRequirementModal(${req.id})">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button type="button" class="tosa-action-btn" title="Upload Template / Sample" onclick="openUploadTemplateModal(${req.id})">
+                                    ${TOSA_CAN_MANAGE_TEMPLATES ? `<button type="button" class="tosa-action-btn" title="Upload Template / Sample" onclick="openUploadTemplateModal(${req.id})">
                                         <i class="bi bi-upload"></i>
-                                    </button>
+                                    </button>` : ''}
                                     <button type="button" class="tosa-action-btn is-delete" title="Delete Requirement" onclick="deleteRequirement(${req.id})">
                                         <i class="bi bi-trash3"></i>
                                     </button>
@@ -4872,6 +4864,10 @@
         }
 
         function openUploadTemplateModal(id) {
+            if (!isTosaUnlocked || !TOSA_CAN_MANAGE_TEMPLATES) {
+                showTosaToast('Official TOSA templates are managed by authorized OSO administrators.', 'warning');
+                return;
+            }
             const req = tosaRequirements.find(r => r.id === id);
             if (!req) return;
             document.getElementById('uploadReqId').value = req.id;
@@ -5123,14 +5119,15 @@
 
             setElText('revName', applicant.name);
             setElText('revOrg', applicant.program || applicant.org);
-            setElText('revMeta', `SR-Code: ${applicant.studentId || applicant.sr || '23-73068'} • ${applicant.program || applicant.org} (${applicant.yearLevel || 'Candidate'})`);
+            const studentId = applicant.studentId || applicant.sr || '';
+            setElText('revMeta', `SR-Code: ${studentId || 'Not provided'} • ${applicant.program || applicant.org} (${applicant.yearLevel || 'Candidate'})`);
             setElText('revDate', applicant.date);
             setElText('revAvatar', applicant.name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase());
             setElVal('revRemarksInput', applicant.remarks || '');
             setElText('revHonor', applicant.honorStanding || 'President\'s Lister · Highest Honors');
 
-            // Real Example Document Storage Paths
-            const baseStudentPath = '/storage/tosa/23-73068';
+            // Resolve document paths for the selected applicant, never another student's dossier.
+            const baseStudentPath = `/storage/tosa/${encodeURIComponent(studentId)}`;
             const baseTemplatePath = '/storage/tosa-templates';
 
             const applicantDocs = [
@@ -5829,12 +5826,21 @@
             return div.innerHTML;
         }
 
+        window.addEventListener('oso-settings-saved', event => {
+            if (event.detail?.section === 'security' || event.detail?.section === 'pin') {
+                refreshTosaAfterSettings = true;
+                hideTosaWorkspace();
+            }
+        });
+        window.addEventListener('oso-settings-closed', () => {
+            if (refreshTosaAfterSettings) location.reload();
+        });
+
         // -------------------------------------------------------------------------
         // Initialization on DOM Load
         // -------------------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
-            const wasUnlocked = sessionStorage.getItem('tosa_unlocked') === 'true';
-            if (wasUnlocked || !TOSA_PIN_GATE_ENABLED) {
+            if (TOSA_SERVER_UNLOCKED) {
                 unlockTosaSession();
             } else {
                 document.getElementById('pinBox1')?.focus();

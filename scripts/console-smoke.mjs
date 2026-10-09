@@ -6,7 +6,10 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 
 const BASE = process.env.APP_URL || 'http://127.0.0.1:8000';
-const OFFICE_PASS = 'Office@2026!';
+const OFFICE_PASS = process.env.E2E_OFFICE_PASSWORD;
+if (!OFFICE_PASS) {
+  throw new Error('Set E2E_OFFICE_PASSWORD privately before running the office console smoke.');
+}
 
 /** Every office desk URL we care about */
 const ALL_OFFICE = [

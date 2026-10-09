@@ -22,10 +22,10 @@ const ROOT = path.resolve(__dirname, '../..');
 
 const PORT = Number(process.env.ORGCHAIN_NODE_PORT || 8001);
 const NODE_ID = Number(process.env.ORGCHAIN_NODE_ID || 2);
-const SECRET =
-  process.env.ORGCHAIN_NODE_SECRET ||
-  process.env.BLOCKCHAIN_NODE_SECRET ||
-  'orgchain-node-auth-secret-2026';
+const SECRET = process.env.ORGCHAIN_NODE_SECRET || process.env.BLOCKCHAIN_NODE_SECRET;
+if (!SECRET) {
+  throw new Error('Set ORGCHAIN_NODE_SECRET or BLOCKCHAIN_NODE_SECRET privately before starting the node.');
+}
 const LEDGER_ROOT =
   process.env.ORGCHAIN_NODE_LEDGER ||
   path.join(ROOT, 'storage', 'app', 'chain-node', `node-${NODE_ID}`);

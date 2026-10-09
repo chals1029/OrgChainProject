@@ -21,9 +21,12 @@ It links Student Organizations (SO) with the Office of Student Organizations (OS
 | Financial Report | `GET /office-desk/financial-report` | Semester expense lines sourced from recorded utilization |
 | Accomplishment Report | `GET /office-desk/accomplishment-report` | End-of-term accomplishment submissions |
 | Updates | `GET /office-desk/updates` | Read-only OSO announcements and downloadable template documents |
-| Archive | `GET /office-desk/archive` | Persistent archive folders and documents |
-| New folder / upload | `POST /office-desk/archive/folders`, `POST /office-desk/archive/documents` | Creates folders; stores uploads under `storage/app/public/archive` |
+| Archive | `GET /office-desk/archive` | SO sees only its assigned organization’s folders, documents and activity files; OSO retains access across organizations |
+| New folder / upload | `POST /office-desk/archive/folders`, `POST /office-desk/archive/documents` | Creates nested folders and explicitly saves uploads on the private `local` disk; DOCX content is validated and files are limited to 20 MB |
+| Archive view / download | `GET /office-desk/archive/documents/{document}/view`, `GET /office-desk/archive/documents/{document}/download` | Authenticated, ownership-checked previews and original downloads; activity files use the equivalent `activity-documents` routes |
 | TOSA | `GET /office-desk/tosa` | Restricted Ten Outstanding Students Awards review desk with auto-lock session |
+
+SO archiving: open **Archive**, create a folder, choose **Upload Document**, select that folder and a DOCX file, then submit **Upload & Archive**. File selection alone does not upload or save anything. Document cards open centered previews of the actual Word content; downloads preserve the original filename and bytes. Manual archiving does not submit or change AR/FR reports.
 
 ### Student portal (`/portal`, `student.auth` middleware)
 
@@ -42,13 +45,33 @@ Integrated official voting module (admin, voter flows, Google OAuth, canvassing)
 - **Students** (`student` guard, `App\Models\UserAccount` on the `orgchain` connection, keyed by `sr_code` with `full_name`, `college`, `program`, `year_level`):
   - SR Code login with an emailed verification code (`POST /student/login/code`, `POST /student/login/verify`).
   - Continue with Institutional Account via Google OAuth (`GET /student/auth/google`, `GET /student/auth/google/callback`), restricted to the BatStateU Google domain.
-- **Offices** (`office` guard, `App\Models\OfficeUser` with roles `so`, `oso`, `sdo`, `ovcaa`): BatStateU email + password on the private login path configured by `OFFICE_LOGIN_PATH`.
+- **Offices** (`office` guard, `App\Models\OfficeUser` with roles `so`, `oso`, `sdo`, `ovcaa`, `oc`): BatStateU email + password on the private login path configured by `OFFICE_LOGIN_PATH`. New and reset accounts must replace their temporary password at `/office-desk/password/change` before viewing data or using other office actions. Existing accounts are not forced to change their password by the migration.
+
+### OSO account management and officer turnover
+
+Open **Settings → Users & Roles** as OSO. Search by name, email, organization, role or title.
+
+- **Add Officer Account:** choose the role, enter the officer’s own official institutional email and a confirmed temporary password. SO accounts require a registered organization and have no TOSA access. Share temporary credentials privately; the officer must set a different personal password on first login.
+- **Edit profile:** update the officer’s name, email, title or employee ID. Role and assigned organization remain immutable. An email change revokes existing sessions and remembered login.
+- **Reset temporary password:** choose a different password from the current one. Old credentials and sessions stop working; the user must change the replacement password before accessing the desk. Resetting a disabled account does not enable it.
+- **Turn over SO officer:** select the active outgoing representative and enter a separate incoming account’s name, unique university email and confirmed temporary password. The incoming account inherits only the same organization assignment, not the outgoing identity. Saving atomically creates the incoming account and disables the outgoing one. Concurrent or repeated turnover cannot create multiple replacements.
+- **Disable / Enable:** toggle another account’s access without deleting its identity or history. Revoked sessions stay invalid after re-enabling; a fresh login is required. Use **My Account** for your own profile/password rather than administrative account actions.
+
+Turnover retains organization activities, cash ledger, AR/FR, renewal and archive records. Past officer identities remain stored; do not rename the outgoing account to the new officer or share the outgoing password. Deans and advisers have no separate login role unless a defined review workflow is added.
 
 ## Key data
 
 - Default `mysql` connection (`DB_DATABASE`, voting data): `office_users`, `org_activities`, `in_campus_activity_submissions` (in-campus + `local_off_campus` types, TinyMCE HTML columns, JSON attachments), `expense_receipt_reviews`, `archive_folders`, `archive_documents`, `budget_items`.
 - `orgchain` connection (`DB_ORGCHAIN_DATABASE`): `user_accounts` (students by `sr_code`), `community_posts`, `community_comments`, `community_likes`.
-- Uploads live under `storage/app/public` (`in-campus-activities/`, `expense-receipts/`, `archive/`); run `php artisan storage:link` to expose them.
+- Activity and receipt uploads, plus existing report archives, retain their public storage paths under `storage/app/public`; `php artisan storage:link` exposes that disk. New manual archive uploads use the private `local` disk instead. `archive_documents.file_disk` preserves legacy `public` records while authenticated archive view/download routes enforce organization ownership.
+
+## Source control and private configuration
+
+Keep `.env`, credentials, signing keys, database dumps, uploaded records and populated report examples out of Git. The local real-student TOSA seeder, supplied accomplishment reference PDF and populated CARS renewal examples are excluded; blank official templates remain available. Untracking a file preserves its local copy but does not erase older Git history. Previously published credentials require coordinated rotation, and historical private records require a separate history-cleanup plan.
+
+Account seeders have no public password defaults. Configure `OFFICE_SEED_PASSWORD`, `STUDENT_DEMO_PASSWORD`, `VOTING_ADMIN_SEED_PASSWORD`, `VOTING_CANVASSING_SEED_PASSWORD` and `SYSTEM_ADMIN_PASSWORD` privately before running the corresponding seeders. Demo student and registry identities are synthetic. Never run destructive development database resets against user data.
+
+Configure `BLOCKCHAIN_NODE_SECRET` privately and consistently across the participating nodes. The slim node also accepts `ORGCHAIN_NODE_SECRET`; it refuses startup without a secret, and the receive API rejects missing server configuration or mismatched tokens. The PowerShell launcher requests a private secret without echoing it or saving it in its connection handout. Office smoke scripts require private `E2E_OFFICE_PASSWORD` configuration.
 
 ## Tech stack
 

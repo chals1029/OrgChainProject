@@ -98,15 +98,17 @@
                 @endif
 
                 {{-- Semester AR/FR reports belong only to SO and OSO. --}}
-                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
+                @if ($officeRole === 'oso')
+                <a href="{{ route('office.reports.index') }}" class="org-nav-link {{ ($activeNav ?? '') === 'semester-reports' ? 'is-active' : '' }}">
+                    <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
+                    <span>AR &amp; FR Reports</span>
+                </a>
+                @elseif ($isStudentOrgDesk)
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
                     <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
                     <span>Financial Report</span>
                     <em class="org-badge-count">{{ $navBadges['fr_attachments'] ?? 4 }}</em>
                 </a>
-                @endif
-
-                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
                     <i class="bi bi-trophy is-ico-gold"></i>
                     <span>Accomplishment Report</span>
@@ -132,11 +134,13 @@
                         @endif
                     </a>
                 @endif
-                @if (($office->office_role ?? '') === 'oso')
+                @if (in_array($officeRole, ['so', 'oso'], true))
                     <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
                         <i class="bi bi-archive-fill is-ico-slate"></i>
                         <span>Archive</span>
                     </a>
+                @endif
+                @if ($officeRole === 'oso')
                     <a href="{{ route('office.student-reports') }}" class="org-nav-link {{ ($activeNav ?? '') === 'reports' ? 'is-active' : '' }}">
                         <i class="bi bi-chat-square-text-fill is-ico-maroon"></i>
                         <span>Student Reports</span>

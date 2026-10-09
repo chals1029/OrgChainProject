@@ -1159,13 +1159,21 @@
         /* OSO document review preview. Keep the original file download inside
            the preview so a reviewer can inspect the submission before acting. */
         .activity-document-preview-dialog {
+            box-sizing: border-box;
+            position: fixed;
+            inset: 0;
+            margin: auto;
             width: min(1120px, calc(100vw - 2rem));
             max-width: none;
+            max-height: calc(100dvh - 2rem);
             padding: 0;
             border: 0;
             border-radius: 18px;
             background: transparent;
             box-shadow: 0 22px 70px rgba(38, 23, 27, 0.28);
+            overflow: hidden;
+            animation: none;
+            transform: none;
         }
 
         .activity-document-preview-dialog::backdrop {
@@ -1175,7 +1183,7 @@
 
         .activity-document-preview-box {
             display: flex;
-            max-height: min(92vh, 980px);
+            max-height: min(92vh, 980px, calc(100dvh - 2rem));
             flex-direction: column;
             overflow: hidden;
             border-radius: 18px;
@@ -1227,7 +1235,8 @@
         }
 
         .activity-document-preview-body {
-            min-height: 360px;
+            flex: 1 1 auto;
+            min-height: 0;
             max-height: 72vh;
             overflow: auto;
             padding: 1.25rem;
@@ -1236,6 +1245,7 @@
         }
 
         .activity-document-preview-body .docx-wrapper {
+            min-width: fit-content;
             padding: 0 !important;
             background: transparent !important;
         }

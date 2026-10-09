@@ -35,7 +35,7 @@ class SystemAdminAccessTest extends TestCase
 
         $this->post(route('system-admin.login'), [
             'email' => $admin->email,
-            'password' => 'SystemAdmin@2026!',
+            'password' => 'FixtureSystemAdminOnly@2026!',
         ])->assertRedirect(route('system-admin.dashboard'));
 
         $this->assertAuthenticatedAs($admin, 'system_admin');

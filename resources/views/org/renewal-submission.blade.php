@@ -5,7 +5,7 @@
     $docs = $requiredDocs ?? [];
     $org = $organization ?? null;
     $totalRequired = count($docs);
-    $docsByKey = $submission->documents->keyBy('doc_key');
+    $docsByKey = $submission->storedDocuments();
     $isReviewable = (bool) ($canReviewDocuments ?? false);
     $canApprove = (bool) ($canApproveRenewal ?? false);
 
@@ -30,7 +30,6 @@
     $initials = $initials !== '' ? strtoupper($initials) : 'ORG';
 
     $packetStates = [
-        'draft' => ['Draft', 'is-muted', 'bi-pencil-square'],
         'submitted' => ['Submitted · Under Review', 'is-pending', 'bi-send-check'],
         'approved' => ['Approved', 'is-verified', 'bi-check-all'],
         'returned' => ['Returned for Revision', 'is-returned', 'bi-arrow-return-left'],
@@ -267,13 +266,9 @@
                     </div>
                 </div>
                 <div class="rs-summary-meta">
-                    <span>
-                        @if ($submission->submitted_at)
-                            Submitted <strong>{{ $submission->submitted_at->format('M j, Y g:i A') }}</strong>
-                        @else
-                            <strong>Not yet submitted</strong>
-                        @endif
-                    </span>
+                    @if ($submission->submitted_at)
+                        <span>Submitted <strong>{{ $submission->submitted_at->format('M j, Y g:i A') }}</strong></span>
+                    @endif
                     <span>Adviser: <strong>{{ $submission->adviser_name ?: '—' }}</strong></span>
                     <span>Dean: <strong>{{ $submission->dean_name ?: '—' }}</strong></span>
                     @if ($submission->reviewed_at)
@@ -333,8 +328,7 @@
                             <strong id="{{ $titleId }}">{{ $row['title'] }}</strong>
                             @if ($doc)
                                 <small>
-                                    <i class="bi bi-paperclip" aria-hidden="true"></i> {{ $doc->file_name }}
-                                    · {{ $ext !== '' ? strtoupper($ext) : 'File' }}
+                                    <i class="bi bi-paperclip" aria-hidden="true"></i> {{ $ext !== '' ? strtoupper($ext).' document' : 'Document' }}
                                     @if ($firstUploadedAt)
                                         · First uploaded {{ $firstUploadedAt->format('M j, Y g:i A') }}
                                     @endif

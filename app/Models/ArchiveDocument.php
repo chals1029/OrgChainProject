@@ -12,6 +12,7 @@ class ArchiveDocument extends Model
         'name',
         'original_name',
         'file_path',
+        'file_disk',
         'mime_type',
         'file_size',
         'uploaded_by',

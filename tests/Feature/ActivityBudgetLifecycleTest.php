@@ -33,7 +33,9 @@ class ActivityBudgetLifecycleTest extends TestCase
     {
         parent::setUp();
         $this->useLaragonDatabase();
-        DB::connection('mysql')->beginTransaction();
+        foreach (['mysql', 'orgchain'] as $connection) {
+            DB::connection($connection)->beginTransaction();
+        }
         Carbon::setTestNow('2026-10-01 09:00:00');
         Storage::fake('public');
         Storage::fake('local');
@@ -49,7 +51,7 @@ class ActivityBudgetLifecycleTest extends TestCase
             'college' => 'CICS', 'academic_year' => '2026-2027', 'is_active' => true,
         ]);
         $this->account = OrgFundAccount::create([
-            'organization_name' => $this->organization->name, 'fiscal_year' => '2026-2027', 'total_funds' => 10000,
+            'organization_name' => $this->organization->name, 'fiscal_year' => '2026-2027', 'cash_opening_balance' => '10000.00',
         ]);
         $this->mock(BudgetChainService::class, function ($mock) {
             $mock->shouldReceive('recentBlocks')->andReturn([]);
@@ -62,17 +64,29 @@ class ActivityBudgetLifecycleTest extends TestCase
 
     protected function tearDown(): void
     {
-        while (DB::connection('mysql')->transactionLevel() > 0) DB::connection('mysql')->rollBack();
+        foreach (['mysql', 'orgchain'] as $connection) {
+            while (DB::connection($connection)->transactionLevel() > 0) DB::connection($connection)->rollBack();
+        }
         Carbon::setTestNow();
         parent::tearDown();
+    }
+
+    private function organizationSo(): OfficeUser
+    {
+        return OfficeUser::create([
+            'name' => 'Lifecycle assigned so', 'email' => Str::uuid().'@example.test',
+            'username' => 'test-'.Str::random(15), 'password' => Str::random(30),
+            'office_role' => 'so', 'office_title' => 'SO test desk', 'is_active' => true,
+            'student_organization_id' => $this->organization->id,
+        ]);
     }
 
     private function activityPayload(array $override = []): array
     {
         $files = [];
         foreach (app(ActivityRequirements::class)->inCampusRequirements() as $req) {
-            if ($req['required_on_submit'] && ! $req['condition']) {
-                $files[$req['key']] = UploadedFile::fake()->create($req['key'].'.pdf', 1, 'application/pdf');
+            if ($req['required_on_submit']) {
+                $files[$req['key']] = UploadedFile::fake()->createWithContent($req['key'].'.pdf', "%PDF-1.4\n% Activity lifecycle document\n%%EOF\n");
             }
         }
         return array_merge([
@@ -369,7 +383,7 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->delete('/office-desk/activities/'.$submission->id.'/attachments/wpcf')->assertForbidden();
     }
 
-    public function test_missing_fund_account_blocks_final_approval_until_funds_are_configured(): void
+    public function test_missing_fund_account_blocks_final_approval_until_opening_cash_is_saved(): void
     {
         $a = $this->submitted();
         $this->actingAs($this->offices['oso'], 'office')->post('/office-desk/activities/'.$a->id.'/advance', ['documents_reviewed' => '1'])->assertSessionHasNoErrors();
@@ -379,46 +393,34 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->assertSame('oc_review', $a->refresh()->workflow_status);
         $this->actingAs($this->offices['oc'], 'office')->post('/office-desk/activities/'.$a->id.'/advance')->assertSessionHasErrors('workflow');
         $this->assertSame('oc_review', $a->refresh()->workflow_status);
-        $funds = ['organization_name' => $this->organization->name, 'academic_year' => '2026-2027', 'total_funds' => 10000];
-        $this->actingAs($this->offices['so'], 'office')->post('/office-desk/budget-utilization/accounts', $funds)->assertSessionHasNoErrors();
+        $so = $this->organizationSo();
+        $opening = ['academic_year' => '2026-2027', 'opening_balance' => '10000.00'];
+        $this->actingAs($so, 'office')->post('/office-desk/financial-report/opening', $opening)->assertSessionHasNoErrors();
         $this->actingAs($this->offices['oc'], 'office')->post('/office-desk/activities/'.$a->id.'/advance')->assertSessionHasNoErrors();
         $this->assertSame('oc_approved', $a->refresh()->workflow_status);
-        $funds['total_funds'] = 4999;
-        $this->actingAs($this->offices['so'], 'office')->post('/office-desk/budget-utilization/accounts', $funds)->assertSessionHasErrors('total_funds');
-        $this->assertSame(10000, (int) OrgFundAccount::where('organization_name', $this->organization->name)->value('total_funds'));
+        $this->actingAs($so, 'office')->post('/office-desk/financial-report/opening', ['opening_balance' => '4999.99'] + $opening)->assertSessionHasErrors('opening_balance');
+        $this->assertSame('10000.00', (string) OrgFundAccount::where('organization_name', $this->organization->name)->value('cash_opening_balance'));
+        $this->actingAs($so, 'office')->post('/office-desk/financial-report/opening', ['opening_balance' => '5000.00'] + $opening)->assertSessionHasNoErrors();
+        $account = OrgFundAccount::where('organization_name', $this->organization->name)->sole();
+        $this->assertSame(0.0, app(ActivityBudgetService::class)->balance($account)['available']);
     }
 
-    public function test_only_so_can_configure_fund_accounts_and_oso_is_read_only(): void
+    public function test_only_the_assigned_so_can_save_opening_cash_and_oso_is_read_only(): void
     {
-        $funds = [
-            'organization_name' => $this->organization->name,
-            'academic_year' => '2026-2027',
-            'total_funds' => 12000,
-        ];
+        $opening = ['academic_year' => '2026-2027', 'opening_balance' => '12000.00'];
 
         $this->actingAs($this->offices['oso'], 'office')
             ->get('/office-desk/budget-utilization?organization='.urlencode($this->organization->name).'&academic_year=2026-2027')
-            ->assertOk()
-            ->assertDontSee('Set organization funds', false)
-            ->assertDontSee('Organization funds', false)
-            ->assertDontSee('Recorded fund balance', false);
+            ->assertOk();
+        $this->actingAs($this->offices['oso'], 'office')->post('/office-desk/financial-report/opening', $opening)->assertForbidden();
+        $this->actingAs($this->offices['so'], 'office')->post('/office-desk/financial-report/opening', $opening)->assertForbidden();
+        $this->assertSame('10000.00', (string) $this->account->fresh()->cash_opening_balance);
 
-        $this->actingAs($this->offices['oso'], 'office')
-            ->post('/office-desk/budget-utilization/accounts', $funds)
-            ->assertForbidden();
-
-        $this->actingAs($this->offices['oso'], 'office')
-            ->post('/office-desk/funds/'.$this->account->id, [
-                'total_funds' => 12000,
-                'beginning_balance' => 0,
-                'total_funds_received' => 12000,
-            ])
-            ->assertForbidden();
-
+        $this->actingAs($this->organizationSo(), 'office')->post('/office-desk/financial-report/opening', $opening)->assertSessionHasNoErrors();
+        $this->assertSame('12000.00', (string) $this->account->fresh()->cash_opening_balance);
         $this->actingAs($this->offices['so'], 'office')
             ->get('/office-desk/budget-utilization?organization='.urlencode($this->organization->name).'&academic_year=2026-2027')
-            ->assertOk()
-            ->assertSee('Set organization funds', false);
+            ->assertOk();
     }
 
     public function test_missing_required_upload_is_rejected_and_returned_submission_retains_its_files(): void

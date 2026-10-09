@@ -39,49 +39,42 @@ class ActivityBudgetService
         };
     }
 
-    public function accountActivities(OrgFundAccount $account)
-    {
-        [$from, $to] = $this->dates($account->fiscal_year);
-        return OrgActivity::query()->visibleToStudents()->where(function ($q) use ($account, $from, $to) {
-            $q->where('org_fund_account_id', $account->id)->orWhere(function ($legacy) use ($account, $from, $to) {
-                $legacy->whereNull('org_fund_account_id')->where('organization_name', $account->organization_name)
-                    ->whereBetween('starts_at', [$from, $to.' 23:59:59']);
-            });
-        });
-    }
-
     public function balance(OrgFundAccount $account): array
     {
-        $activities = $this->accountActivities($account)->get();
-        $allocated = round((float) $activities->sum('approved_budget'), 2);
-        $spent = round((float) $activities->sum('implemented_budget'), 2);
-        return [
-            'account_id' => $account->id, 'organization' => $account->organization_name,
-            'year' => $account->fiscal_year, 'total' => (float) $account->total_funds,
-            'allocated' => $allocated, 'spent' => $spent,
-            'reserved' => round(max(0, $allocated - $spent), 2),
-            'cash' => round((float) $account->total_funds - $spent, 2),
-            'available' => round((float) $account->total_funds - $allocated, 2),
-        ];
+        return $this->ledger()->balance($account);
     }
 
-    // Called inside the activity transaction. The account lock serializes
-    // concurrent approvals and expense posts for the same organization.
+    /**
+     * Called inside the activity transaction after the activity row lock and
+     * before any non-locking read, so the account lock that serializes
+     * approvals and expense posts also gives this check fresh totals.
+     */
     public function reserve(OrgActivity $activity): void
     {
+        $ledger = $this->ledger();
         $year = $this->period($activity->starts_at)['academic_year'];
-        $account = OrgFundAccount::query()->where('organization_name', $activity->organization_name)
-            ->where('fiscal_year', $year)->lockForUpdate()->first();
+        $account = $ledger->lockAccountFor($activity);
         if (! $account) {
-            throw ValidationException::withMessages(['budget' => 'Set up this organization’s fund account for '.$year.' in Budget Utilization before final approval.']);
+            throw ValidationException::withMessages(['budget' => 'Save the organization’s AY '.$year.' opening cash balance in Financial Report before final approval.']);
         }
-        $alreadyReserved = (float) $this->accountActivities($account)->whereKeyNot($activity->id)->sum('approved_budget');
-        if ((float) $activity->approved_budget <= 0 || $alreadyReserved + (float) $activity->approved_budget > (float) $account->total_funds) {
-            throw ValidationException::withMessages(['budget' => 'The activity allocation exceeds the organization’s available funds.']);
+        $approved = OrganizationCashLedger::cents($activity->approved_budget);
+        if ($approved <= 0) {
+            throw ValidationException::withMessages(['budget' => 'Enter the activity’s approved budget before final approval.']);
+        }
+        $snapshot = $ledger->snapshot($account, (int) $activity->id);
+        $unspent = max(0, $approved - $ledger->activitySpentCents($activity));
+        if ($snapshot['reserved'] + $unspent > $snapshot['cash']) {
+            throw ValidationException::withMessages(['budget' => 'The activity allocation of ₱'.number_format($unspent / 100, 2)
+                .' exceeds the organization’s available cash of ₱'.number_format(max(0, $snapshot['available']) / 100, 2).' for AY '.$account->fiscal_year.'.']);
         }
         $activity->org_fund_account_id = $account->id;
         $activity->approved_at = now();
         $this->syncBudgetItem($activity);
+    }
+
+    private function ledger(): OrganizationCashLedger
+    {
+        return app(OrganizationCashLedger::class);
     }
 
     public function syncBudgetItem(OrgActivity $activity): void
@@ -114,12 +107,13 @@ class ActivityBudgetService
                 if ($activity->workflow_status !== 'oc_approved') {
                     throw ValidationException::withMessages(['activity' => 'Select a final-approved activity.']);
                 }
+                $ledger = $this->ledger();
                 $year = $this->period($activity->starts_at)['academic_year'];
-                $account = OrgFundAccount::query()->where('organization_name', $activity->organization_name)
-                    ->where('fiscal_year', $year)->lockForUpdate()->first();
+                $account = $ledger->lockAccountFor($activity);
                 if (! $account) {
-                    throw ValidationException::withMessages(['budget' => 'Set up the organization fund account for '.$year.' before recording expenses.']);
+                    throw ValidationException::withMessages(['budget' => 'Save the organization’s AY '.$year.' opening cash balance in Financial Report before recording expenses.']);
                 }
+                [$fiscalStart, $fiscalEnd] = $this->dates($account->fiscal_year);
                 $receipts = collect();
                 $storedAttachmentsByHash = [];
                 foreach ($entries as $entry) {
@@ -156,6 +150,23 @@ class ActivityBudgetService
                         $receipts->push($prior); // Browser retries never charge the budget again.
                         continue;
                     }
+                    if (ExpenseReceiptReview::query()->where('request_key', $data['request_key'])->exists()) {
+                        throw ValidationException::withMessages(['receipt' => 'This expense form was already submitted for another activity. Reload the page before recording it again.']);
+                    }
+                    $expenseDate = Carbon::parse($data['expense_date'])->toDateString();
+                    if ($expenseDate < $fiscalStart || $expenseDate > $fiscalEnd || $expenseDate > now()->toDateString()) {
+                        throw ValidationException::withMessages(['expense_date' => 'Expense dates must fall within AY '.$account->fiscal_year.' ('.$fiscalStart.' to '.$fiscalEnd.') and cannot be in the future.']);
+                    }
+                    $unitCents = OrganizationCashLedger::cents($data['unit_cost']);
+                    $cents = $unitCents * (int) $data['quantity'];
+                    if ($unitCents <= 0 || (int) $data['quantity'] < 1) {
+                        throw ValidationException::withMessages(['unit_cost' => 'Enter a positive quantity and unit cost.']);
+                    }
+                    $activitySpent = $ledger->activitySpentCents($activity);
+                    $activityRemaining = OrganizationCashLedger::cents($activity->approved_budget) - $activitySpent;
+                    if ($cents > $activityRemaining || $cents > $ledger->snapshot($account)['cash']) {
+                        throw ValidationException::withMessages(['unit_cost' => 'The batch exceeds the remaining activity budget or organization cash balance.']);
+                    }
                     $extension = strtolower($file->getClientOriginalExtension());
                     if ($extension === 'docx' || $file->getMimeType() === 'application/pdf') {
                         $document = app(ReceiptDocumentValidator::class)->validate($file);
@@ -169,13 +180,6 @@ class ActivityBudgetService
                         'ocr_confidence' => null,
                         'ocr_corrections' => null,
                     ];
-                    $unitCents = (int) round((float) $data['unit_cost'] * 100);
-                    $cents = $unitCents * (int) $data['quantity'];
-                    $activityRemaining = (int) round(((float) $activity->approved_budget - (float) $activity->implemented_budget) * 100);
-                    $balance = $this->balance($account);
-                    if ($cents > $activityRemaining || $cents > (int) round($balance['cash'] * 100)) {
-                        throw ValidationException::withMessages(['unit_cost' => 'The batch exceeds the remaining activity budget or organization cash balance.']);
-                    }
                     $attachments = [];
                     foreach ($files as $attachmentFile) {
                         $attachmentHash = hash_file('sha256', $attachmentFile->getRealPath());
@@ -203,7 +207,7 @@ class ActivityBudgetService
                         'request_key' => $data['request_key'], 'file_hash' => $fileHash,
                         'item_name' => $data['item_name'], 'category' => $data['category'] ?? null,
                         'supplier' => trim($data['supplier'] ?? ''), 'quantity' => $data['quantity'],
-                        'unit_cost' => number_format($unitCents / 100, 2, '.', ''), 'expense_date' => $data['expense_date'],
+                        'unit_cost' => OrganizationCashLedger::decimal($unitCents), 'expense_date' => $expenseDate,
                         'receipt_reference' => trim($data['receipt_reference']),
                         'receipt_path' => $primary['path'], 'receipt_disk' => 'local', 'receipt_name' => $primary['name'],
                         'receipt_attachments' => $attachments,
@@ -211,7 +215,7 @@ class ActivityBudgetService
                         'receipt_type' => $data['receipt_type'] ?? 'unknown', 'payment_method' => $data['payment_method'] ?? 'unknown',
                         'student_confirmed' => true, 'verification_status' => 'pending_seal',
                     ]);
-                    $activity->implemented_budget = number_format(((int) round((float) $activity->implemented_budget * 100) + $cents) / 100, 2, '.', '');
+                    $activity->implemented_budget = OrganizationCashLedger::decimal($activitySpent + $cents);
                     $activity->org_fund_account_id = $account->id;
                     $activity->save();
                     $this->syncBudgetItem($activity);

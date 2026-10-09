@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class OrgRenewalSubmission extends Model
 {
@@ -46,7 +47,7 @@ class OrgRenewalSubmission extends Model
 
     public function uploadedKeys(): array
     {
-        return $this->documents->pluck('doc_key')->all();
+        return $this->storedDocuments()->keys()->all();
     }
 
     public function completionPercent(array $requiredDocs): int
@@ -65,14 +66,14 @@ class OrgRenewalSubmission extends Model
 
     /**
      * Review tally against the given checklist; documents whose key is not on
-     * the checklist never count toward verification.
+     * the checklist or whose stored file is absent/empty never count.
      *
      * @return array{required: int, verified: int, missing: int}
      */
     public function requiredDocumentReview(array $requiredDocs): array
     {
         $requiredKeys = collect($requiredDocs)->pluck('key')->filter()->unique()->values();
-        $documents = $this->documents->keyBy('doc_key');
+        $documents = $this->storedDocuments();
 
         return [
             'required' => $requiredKeys->count(),
@@ -89,5 +90,15 @@ class OrgRenewalSubmission extends Model
             && $review['required'] > 0
             && $review['missing'] === 0
             && $review['verified'] === $review['required'];
+    }
+
+    /**
+     * Documents backed by a real stored file, keyed by doc_key.
+     */
+    public function storedDocuments(): Collection
+    {
+        return $this->documents
+            ->filter(fn (OrgRenewalDocument $document) => $document->hasStoredFile())
+            ->keyBy('doc_key');
     }
 }

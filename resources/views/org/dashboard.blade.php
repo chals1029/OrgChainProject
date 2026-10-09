@@ -77,6 +77,31 @@
             gap: 1.25rem;
         }
 
+        .org-so-dashboard {
+            gap: 1.75rem;
+        }
+
+        .org-so-dashboard .org-kpi-row,
+        .org-so-dashboard .org-dash-2col {
+            gap: 1.5rem;
+        }
+
+        .org-so-dashboard .org-kpi-card {
+            min-width: 0;
+        }
+
+        .org-so-dashboard .org-budget-snapshot .org-kpi-head {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.85rem;
+        }
+
+        .org-so-dashboard .org-budget-snapshot .org-kpi-num {
+            font-size: clamp(1.2rem, 1.8vw, 1.75rem);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+
         .org-kpi-card {
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(16px);
@@ -2122,6 +2147,12 @@
         }
 
         /* Responsive Behavior for Laptops & Mobile */
+        @media (max-width: 1280px) {
+            .org-so-dashboard .org-budget-snapshot .org-kpi-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
         @media (max-width: 1100px) {
             .org-kpi-row {
                 grid-template-columns: repeat(2, 1fr);
@@ -2176,6 +2207,9 @@
             .org-kpi-row {
                 grid-template-columns: 1fr;
                 gap: 0.85rem;
+            }
+            .org-so-dashboard .org-budget-snapshot .org-kpi-row {
+                grid-template-columns: 1fr;
             }
             .oso-cause-item {
                 flex-direction: column;
@@ -2650,7 +2684,7 @@
         </div>
     @else
         {{-- SDO, OVCAA, AND STUDENT ORG DASHBOARDS --}}
-        <div class="org-dash-grid">
+        <div @class(['org-dash-grid', 'org-so-dashboard' => $isSo])>
             {{-- 1. Top 4 KPI Cards (cards first, pipeline below) --}}
             <div class="org-kpi-row">
                 @if ($isSdo)
@@ -3131,7 +3165,7 @@
                     </section>
                 @else
                     {{-- Student Org: Budget Snapshot --}}
-                    <section class="org-dash-card" style="grid-column: 1 / -1;">
+                    <section class="org-dash-card org-budget-snapshot" style="grid-column: 1 / -1;">
                         <div class="org-dash-card-header">
                             <h3 class="org-dash-card-title">
                                 <i class="bi bi-coin" style="color: #ca8a04;"></i> Budget Snapshot
@@ -3142,9 +3176,9 @@
                         </div>
 
                         @php
-                            $snapAllocated = (int) ($transparency['total_funds'] ?? $transparency['allocated'] ?? 185000);
-                            $snapUtilized = (int) ($transparency['utilized'] ?? 115150);
-                            $snapRemaining = (int) ($transparency['remaining'] ?? max(0, $snapAllocated - $snapUtilized));
+                            $snapAllocated = (float) ($transparency['total_funds'] ?? 0);
+                            $snapUtilized = (float) ($transparency['utilized'] ?? 0);
+                            $snapRemaining = (float) ($transparency['remaining'] ?? 0);
                             $snapPercent = (int) ($transparency['percent'] ?? ($snapAllocated > 0 ? round(($snapUtilized / $snapAllocated) * 100) : 0));
                             $snapRemainPct = (int) ($transparency['remaining_percent'] ?? ($snapAllocated > 0 ? round(($snapRemaining / $snapAllocated) * 100) : 0));
                             $snapshotStartYear = now()->month < 8 ? now()->year - 1 : now()->year;
@@ -3161,7 +3195,7 @@
                                     <div class="org-kpi-icon is-pink">
                                         <i class="bi bi-wallet2"></i>
                                     </div>
-                                    <div class="org-kpi-num">₱{{ number_format($snapAllocated) }}</div>
+                                    <div class="org-kpi-num">₱{{ number_format($snapAllocated, 2) }}</div>
                                 </div>
                                 <h3 class="org-kpi-title">{{ ($isSo ?? false) ? 'Total Funds' : 'Total Allocated' }}</h3>
                                 <p class="org-kpi-sub">A.Y. {{ $snapshotAcademicYear }} · {{ $snapshotTerm }}</p>
@@ -3171,55 +3205,20 @@
                                     <div class="org-kpi-icon is-amber">
                                         <i class="bi bi-receipt"></i>
                                     </div>
-                                    <div class="org-kpi-num">₱{{ number_format($snapUtilized) }}</div>
+                                    <div class="org-kpi-num">₱{{ number_format($snapUtilized, 2) }}</div>
                                 </div>
                                 <h3 class="org-kpi-title">Utilized ({{ $snapPercent }}%)</h3>
-                                <p class="org-kpi-sub">Disbursed with receipts</p>
+                                <p class="org-kpi-sub">Recorded receipts and preserved earlier spending</p>
                             </article>
                             <article class="org-kpi-card">
                                 <div class="org-kpi-head">
                                     <div class="org-kpi-icon is-green">
                                         <i class="bi bi-piggy-bank"></i>
                                     </div>
-                                    <div class="org-kpi-num">₱{{ number_format($snapRemaining) }}</div>
+                                    <div class="org-kpi-num">₱{{ number_format($snapRemaining, 2) }}</div>
                                 </div>
-                                <h3 class="org-kpi-title">Remaining ({{ $snapRemainPct }}%)</h3>
-                                <p class="org-kpi-sub">Available balance</p>
-                            </article>
-                            <article class="org-kpi-card">
-                                <div class="org-kpi-head">
-                                    <div class="org-kpi-icon is-blue">
-                                        <i class="bi bi-arrow-repeat"></i>
-                                    </div>
-                                    <div class="org-kpi-num">{{ $snapPercent }}%</div>
-                                </div>
-                                <h3 class="org-kpi-title">Utilization Rate</h3>
-                                <div class="org-mini-progress">
-                                    <div class="org-mini-fill-maroon" style="width: {{ min(100, $snapPercent) }}%;"></div>
-                                </div>
-                                <p class="org-kpi-sub">Burn rate this term</p>
-                            </article>
-                        </div>
-                            </article>
-                            <article class="org-kpi-card">
-                                <div class="org-kpi-head">
-                                    <div class="org-kpi-icon is-amber">
-                                        <i class="bi bi-receipt"></i>
-                                    </div>
-                                    <div class="org-kpi-num">₱{{ number_format($snapUtilized) }}</div>
-                                </div>
-                                <h3 class="org-kpi-title">Utilized ({{ $snapPercent }}%)</h3>
-                                <p class="org-kpi-sub">Disbursed with receipts</p>
-                            </article>
-                            <article class="org-kpi-card">
-                                <div class="org-kpi-head">
-                                    <div class="org-kpi-icon is-green">
-                                        <i class="bi bi-piggy-bank"></i>
-                                    </div>
-                                    <div class="org-kpi-num">₱{{ number_format($snapRemaining) }}</div>
-                                </div>
-                                <h3 class="org-kpi-title">Remaining ({{ $snapRemainPct }}%)</h3>
-                                <p class="org-kpi-sub">Available balance</p>
+                                <h3 class="org-kpi-title">{{ ($isSo ?? false) ? 'Recorded cash' : 'Remaining' }} ({{ $snapRemainPct }}%)</h3>
+                                <p class="org-kpi-sub">Cash after spending, before activity reservations</p>
                             </article>
                             <article class="org-kpi-card">
                                 <div class="org-kpi-head">

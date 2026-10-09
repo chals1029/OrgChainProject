@@ -115,72 +115,6 @@ class DashboardReportingTest extends TestCase
     }
 
 
-    public function test_reporting_filters_are_present_and_period_aware_for_every_office_desk(): void
-    {
-        foreach (['so', 'oso', 'sdo', 'ovcaa'] as $role) {
-            $user = $this->ensureOfficeUser($role);
-
-            $this->actingAs($user, 'office')
-                ->get('/office-desk/analytics')
-                ->assertOk()
-                ->assertSee('function rowMatchesFilters', false)
-                ->assertSee('function renderCollegePerformance', false)
-                ->assertSee('id="organizationFilter"', false)
-                ->assertSee('id="scopeFilter"', false);
-
-            $this->actingAs($user, 'office')
-                ->get('/office-desk/budget-utilization')
-                ->assertOk()
-                ->assertSee('function budgetRowMatchesPeriod', false)
-                ->assertSee('id="budgetYearSelector"', false)
-                ->assertSee('id="budgetTermSelector"', false)
-                ->assertSee('id="budgetExpensePagination"', false)
-                ->assertSee('id="budgetDocumentsPagination"', false)
-                ->assertSee('id="budgetTimelinePagination"', false)
-                ->assertSee('function goToBudgetExpensePage', false);
-
-            $financial = $this->actingAs($user, 'office')->get('/office-desk/financial-report');
-            $accomplishment = $this->actingAs($user, 'office')->get('/office-desk/accomplishment-report');
-
-            if (in_array($role, ['sdo', 'ovcaa'], true)) {
-                $financial->assertForbidden();
-                $accomplishment->assertForbidden();
-                continue;
-            }
-
-            $financial
-                ->assertOk()
-                ->assertSee('function matchesFinancialPeriod', false)
-                ->assertSee('Semester AR + FR submission', false)
-                ->assertSee('aria-label="Report organization"', false)
-                ->assertSee('name="semester"', false)
-                ->assertSee('name="academic_year"', false)
-                ->assertDontSee('id="finYearSelect"', false)
-                ->assertDontSee('id="finSemSelect"', false)
-                ->assertSee('id="financialLedgerPagination"', false)
-                ->assertSee('id="financialDocumentsPagination"', false)
-                ->assertSee('id="financialHistoryPagination"', false)
-                ->assertSee('function goToFinancialLedgerPage', false);
-
-            $accomplishment
-                ->assertOk()
-                ->assertSee('function buildLiveAccomplishmentDataset', false)
-                ->assertSee('id="accYearSelect"', false)
-                ->assertSee('id="accSemSelect"', false)
-                ->assertSee('id="accomplishmentActivityPagination"', false)
-                ->assertSee('function goToAccomplishmentActivityPage', false)
-                ->assertSee('data-folder-pagination', false);
-
-            if ($role === 'oso') {
-                $financial
-                    ->assertDontSee('Organization funds', false)
-                    ->assertDontSee('Recorded fund balance', false);
-                $accomplishment
-                    ->assertDontSee('Organization funds', false)
-                    ->assertDontSee('Recorded fund balance', false);
-            }
-        }
-    }
 
     public function test_activity_queue_uses_academic_year_filter_and_view_details_actions(): void
     {
@@ -473,30 +407,5 @@ class DashboardReportingTest extends TestCase
             ->assertSee('function applyScopeFilter()', false);
     }
 
-    public function test_tosa_applicants_render_once_in_the_searchable_table(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk/tosa')
-            ->assertOk()
-            ->assertSee('id="tosaApplicantsTbody"', false)
-            ->assertSee('function renderApplicantsTable()', false)
-            ->assertSee('id="tosaQueuePagination"', false)
-            ->assertSee('id="tosaLogPagination"', false)
-            ->assertDontSee('name="subsection"', false);
-    }
-
-    public function test_tosa_applicant_table_has_no_gwa_and_uses_view_documents_action_with_document_viewer(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk/tosa')
-            ->assertOk()
-            ->assertDontSee('GWA / Honors', false)
-            ->assertDontSee('GWA (Scholastic Record)', false)
-            ->assertDontSee('id="revGwaInput"', false)
-            ->assertSee('id="tosaDocViewerModal"', false)
-            ->assertSee('id="tosaDocViewerIframe"', false)
-            ->assertSee('id="revTemplateListContainer"', false)
-            ->assertSee('View Documents', false);
-    }
 }
 

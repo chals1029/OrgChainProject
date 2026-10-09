@@ -13,9 +13,12 @@ const BASE = process.env.APP_URL || 'http://127.0.0.1:8000';
 const OFFICE_PATH = '/orgchain-office-access-a9e2f71c4b83';
 const OFFICE = {
   email: 'so.office@g.batstate-u.edu.ph',
-  password: 'Office@2026!',
+  password: process.env.E2E_OFFICE_PASSWORD,
 };
 const STUDENT_SR = process.env.E2E_SR_CODE || '21-00001';
+if (!OFFICE.password) {
+  throw new Error('Set E2E_OFFICE_PASSWORD privately before running the office authentication smoke.');
+}
 
 const findings = [];
 

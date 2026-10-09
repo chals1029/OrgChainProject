@@ -66,11 +66,13 @@ winget install Cloudflare.cloudflared
    cp .env.example .env
    php artisan key:generate
    ```
+Generate one random shared secret privately and configure the same value on all nodes. For example, run `php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"` locally, then store the result only in private environment configuration. Do not commit it or publish it in screenshots or logs. Nodes have no built-in shared-secret default.
+
 
 2. In Laptop 2's `.env`, configure:
    ```env
    BLOCKCHAIN_CURRENT_NODE=2
-   BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
+   BLOCKCHAIN_NODE_SECRET=<private-node-shared-secret>
    ```
 
 3. Start the application server in Terminal 1:
@@ -104,7 +106,7 @@ winget install Cloudflare.cloudflared
 2. In Laptop 3's `.env`, configure:
    ```env
    BLOCKCHAIN_CURRENT_NODE=3
-   BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
+   BLOCKCHAIN_NODE_SECRET=<private-node-shared-secret>
    ```
 
 3. Start the application server in Terminal 1:
@@ -127,7 +129,7 @@ winget install Cloudflare.cloudflared
 1. In Laptop 1's `.env`, paste the generated URLs from Laptop 2 and Laptop 3:
    ```env
    BLOCKCHAIN_CURRENT_NODE=1
-   BLOCKCHAIN_NODE_SECRET=orgchain-node-auth-secret-2026
+   BLOCKCHAIN_NODE_SECRET=<private-node-shared-secret>
    BLOCKCHAIN_NODE_TIMEOUT=5
 
    BLOCKCHAIN_NODE_1_URL=local

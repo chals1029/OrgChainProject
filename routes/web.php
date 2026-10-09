@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\CommunityFeedController;
+use App\Http\Controllers\AccomplishmentReportController;
 use App\Http\Controllers\OfficeAuthController;
+use App\Http\Controllers\OfficeAccountController;
 use App\Http\Controllers\OfficePortalController;
+use App\Http\Controllers\ReportSubmissionWindowController;
+use App\Http\Controllers\SoFinancialReportController;
 use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentPortalController;
 use App\Http\Controllers\SystemAdminAuthController;
@@ -68,6 +72,8 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {
+    Route::get('/password/change', [OfficeAuthController::class, 'showPasswordChange'])->name('password.change');
+    Route::post('/password/change', [OfficeAuthController::class, 'completePasswordChange'])->name('password.complete');
     Route::get('/', [OfficePortalController::class, 'dashboard'])->name('home');
     Route::get('/analytics', [OfficePortalController::class, 'analytics'])->name('analytics');
     Route::get('/analytics/export', [OfficePortalController::class, 'exportAnalytics'])->name('analytics.export');
@@ -82,15 +88,22 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/activities/{activity}/advance', [OfficePortalController::class, 'advanceActivity'])->name('activities.advance');
     Route::post('/activities/{activity}/return', [OfficePortalController::class, 'returnActivity'])->name('activities.return');
     Route::post('/activities/{activity}/docs/{doc}', [OfficePortalController::class, 'updateComplianceDoc'])->name('activities.docs.update');
-    Route::post('/funds/{account}', [OfficePortalController::class, 'updateFunds'])->name('funds.update');
     Route::post('/reports/{report}/status', [OfficePortalController::class, 'updateReportStatus'])->name('reports.status');
     Route::post('/reports/{reportType}/documents', [OfficePortalController::class, 'storeReportDocument'])->name('reports.documents.store');
     Route::get('/reports/documents/{document}/view', [OfficePortalController::class, 'viewReportDocument'])->name('reports.documents.view');
-    Route::post('/reports/semester/submit', [OfficePortalController::class, 'submitSemesterReports'])->name('reports.semester.submit');
-    Route::post('/reports/semester/review', [OfficePortalController::class, 'reviewSemesterReports'])->name('reports.semester.review');
+    Route::get('/reports', [OfficePortalController::class, 'semesterReportDesk'])->name('reports.index');
+    Route::get('/reports/documents/{document}/workbook', [OfficePortalController::class, 'previewReportWorkbook'])->name('reports.documents.workbook');
+    Route::post('/reports/{reportType}/submit', [OfficePortalController::class, 'submitSemesterReport'])->whereIn('reportType', ['ar', 'fr'])->name('reports.submit');
+    Route::post('/reports/{reportType}/submission-lock', [ReportSubmissionWindowController::class, 'update'])->whereIn('reportType', ['ar', 'fr'])->name('reports.submission-lock');
+    Route::post('/reports/{reportType}/review', [OfficePortalController::class, 'reviewSemesterReport'])->whereIn('reportType', ['ar', 'fr'])->name('reports.review');
     Route::get('/budget-utilization/print', [OfficePortalController::class, 'printBudget'])->name('budget.print');
     Route::get('/financial-report/print', [OfficePortalController::class, 'printFinancial'])->name('financial.print');
     Route::get('/accomplishment-report/print', [OfficePortalController::class, 'printAccomplishment'])->name('accomplishment.print');
+    Route::post('/accomplishment-report/activities', [AccomplishmentReportController::class, 'store'])->name('accomplishment.reports.store');
+    Route::post('/accomplishment-report/activities/{report}', [AccomplishmentReportController::class, 'update'])->name('accomplishment.reports.update');
+    Route::get('/accomplishment-report/activities/{report}/preview', [AccomplishmentReportController::class, 'preview'])->name('accomplishment.reports.preview');
+    Route::get('/accomplishment-report/activities/{report}/evidence/{evidence}', [AccomplishmentReportController::class, 'evidence'])->name('accomplishment.evidence');
+    Route::get('/accomplishment-report/template', [AccomplishmentReportController::class, 'template'])->name('accomplishment.template');
     Route::post('/oso/remind/{activity}', [OfficePortalController::class, 'sendOrgReminder'])->name('oso.remind');
     Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
     Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
@@ -99,8 +112,14 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/budget-utilization/receipt-reviews', [OfficePortalController::class, 'storeReceiptReview'])->name('budget.receipts.store');
     Route::post('/budget-utilization/receipts/{review}/retry', [OfficePortalController::class, 'retryReceiptSeal'])->name('budget.receipts.retry');
     Route::get('/budget-utilization/receipt-package', \App\Http\Controllers\ReceiptPackageController::class)->name('budget.receipts.package');
-    Route::post('/budget-utilization/accounts', [OfficePortalController::class, 'storeFundAccount'])->name('budget.accounts.store');
     Route::get('/financial-report', [OfficePortalController::class, 'financial'])->name('financial');
+    Route::get('/financial-report/template', [SoFinancialReportController::class, 'template'])->name('financial.template');
+    Route::get('/financial-report/export', [SoFinancialReportController::class, 'export'])->name('financial.export');
+    Route::post('/financial-report/opening', [SoFinancialReportController::class, 'saveOpening'])->name('financial.opening');
+    Route::post('/financial-report/income', [SoFinancialReportController::class, 'storeIncome'])->name('financial.income');
+    Route::post('/financial-report/reports', [SoFinancialReportController::class, 'store'])->name('financial.reports.store');
+    Route::get('/financial-report/reports/{document}/preview', [SoFinancialReportController::class, 'preview'])->name('financial.reports.preview');
+    Route::post('/financial-report/reports/{document}/submit', [SoFinancialReportController::class, 'submit'])->name('financial.reports.submit');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
     Route::post('/updates/announcements', [OfficePortalController::class, 'storeAnnouncement'])->name('updates.announcements.store');
@@ -114,10 +133,14 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/settings/password', [OfficePortalController::class, 'updateOsoPassword'])->name('settings.password');
     Route::post('/settings/pin/{type?}', [OfficePortalController::class, 'updateOsoPin'])->name('settings.pin');
     Route::post('/settings/tosa-pin/verify', [OfficePortalController::class, 'verifyOsoTosaPin'])->name('tosa.pin.verify');
+    Route::post('/settings/tosa-pin/lock', [OfficePortalController::class, 'lockOsoTosa'])->name('tosa.pin.lock');
     Route::post('/settings/logo', [OfficePortalController::class, 'storeOsoLogo'])->name('settings.logo');
     Route::delete('/settings/logo', [OfficePortalController::class, 'resetOsoLogo'])->name('settings.logo.reset');
-    Route::post('/settings/users', [OfficePortalController::class, 'storeOsoUser'])->name('settings.users.store');
-    Route::patch('/settings/users/{user}/status', [OfficePortalController::class, 'updateOsoUserStatus'])->name('settings.users.status');
+    Route::post('/settings/users', [OfficeAccountController::class, 'store'])->name('settings.users.store');
+    Route::patch('/settings/users/{user}', [OfficeAccountController::class, 'update'])->name('settings.users.update');
+    Route::post('/settings/users/{user}/reset-password', [OfficeAccountController::class, 'resetPassword'])->name('settings.users.password');
+    Route::post('/settings/users/{user}/turnover', [OfficeAccountController::class, 'turnover'])->name('settings.users.turnover');
+    Route::patch('/settings/users/{user}/status', [OfficeAccountController::class, 'status'])->name('settings.users.status');
     Route::get('/settings/snapshot', [OfficePortalController::class, 'downloadOsoSnapshot'])->name('settings.snapshot');
     Route::get('/settings/exports/{type}', [OfficePortalController::class, 'downloadOsoDataPackage'])->name('settings.exports');
     Route::get('/renewal', [OfficePortalController::class, 'renewal'])->name('renewal');
@@ -128,7 +151,6 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::delete('/renewal/requirements/{docKey}', [OfficePortalController::class, 'destroyRenewalRequirement'])->name('renewal.requirements.destroy');
     Route::get('/renewal/requirements/{docKey}/file', [OfficePortalController::class, 'renewalRequirementFile'])->name('renewal.requirements.file');
     Route::post('/renewal/submit', [OfficePortalController::class, 'storeRenewalSubmission'])->name('renewal.submit');
-    Route::post('/renewal/documents', [OfficePortalController::class, 'storeRenewalDocument'])->name('renewal.documents');
     Route::get('/renewal/submissions/{submission}', [OfficePortalController::class, 'showRenewalSubmission'])->name('renewal.submissions.show');
     Route::post('/renewal/submissions/{submission}/review', [OfficePortalController::class, 'reviewRenewalSubmission'])->name('renewal.review');
     Route::post('/renewal/documents/{document}/review', [OfficePortalController::class, 'reviewRenewalDocument'])->name('renewal.documents.review');
@@ -140,6 +162,10 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
     Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');
+    Route::get('/archive/documents/{document}/view', [OfficePortalController::class, 'viewArchiveDocument'])->name('archive.documents.view');
+    Route::get('/archive/documents/{document}/download', [OfficePortalController::class, 'downloadArchiveDocument'])->name('archive.documents.download');
+    Route::get('/archive/activity-documents/{document}/view', [OfficePortalController::class, 'viewArchivedActivityDocument'])->name('archive.activity-documents.view');
+    Route::get('/archive/activity-documents/{document}/download', [OfficePortalController::class, 'downloadArchivedActivityDocument'])->name('archive.activity-documents.download');
     Route::get('/student-reports', [OfficePortalController::class, 'studentReports'])->name('student-reports');
     Route::post('/student-reports/{report}/review', [OfficePortalController::class, 'reviewStudentReport'])->name('student-reports.review');
 });
