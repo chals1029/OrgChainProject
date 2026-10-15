@@ -1,0 +1,22 @@
+[Unit]
+Description=OrgChain private readiness observations
+After=network-online.target mysql.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+SupplementaryGroups=docker
+WorkingDirectory=/srv/orgchain/current
+ExecStart=/usr/bin/php /srv/orgchain/current/artisan system:check-health
+UMask=0077
+TimeoutStartSec=240
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/orgchain/current/storage
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

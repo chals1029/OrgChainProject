@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh OrgChain private readiness every five minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=5min
+AccuracySec=5s
+Unit=orgchain-health.service
+
+[Install]
+WantedBy=timers.target
