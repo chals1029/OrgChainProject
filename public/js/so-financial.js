@@ -163,6 +163,7 @@
             showWorkbookError(message);
             workbookInput.focus();
         }
+        if (!message) window.OrgActionConfirmations.confirmSubmit(event, 'Create this Financial Report?');
     });
 
     /* Submit gate: a report must be opened with View in this page first */
@@ -189,7 +190,7 @@
                 return;
             }
             const label = report ? `${report.title} (${report.academic_year} · ${report.semester})` : 'this Financial Report';
-            if (!window.confirm(`Submit ${label} to OSO? This Financial Report is locked while OSO reviews it.`)) {
+            if (!window.OrgActionConfirmations.confirmSubmit(event, `Submit ${label} to OSO? This Financial Report is locked while OSO reviews it.`)) {
                 event.preventDefault();
                 return;
             }

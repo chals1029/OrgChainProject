@@ -10,13 +10,13 @@
         </span>
     </div>
     <p class="org-welcome">
-        Student Voice submissions from the student portal. Verify legitimate reports or dismiss noise — students see the status of their own submissions.
+        Student Voice submissions from the student portal. Acknowledge feedback or dismiss it — students see the status of their own submissions.
     </p>
 @endsection
 
 @section('actions')
     <span style="font-size:0.8rem;font-weight:700;color:#7a7074;">
-        {{ $stats['total'] ?? 0 }} total · {{ $stats['verified'] ?? 0 }} verified · {{ $stats['dismissed'] ?? 0 }} dismissed
+        {{ $stats['total'] ?? 0 }} total · {{ $stats['verified'] ?? 0 }} acknowledged · {{ $stats['dismissed'] ?? 0 }} dismissed
     </span>
 @endsection
 
@@ -86,7 +86,7 @@
     <div class="sr-stats">
         <div class="sr-stat"><strong>{{ $stats['total'] ?? 0 }}</strong><span>Total reports</span></div>
         <div class="sr-stat"><strong>{{ $stats['pending'] ?? 0 }}</strong><span>Pending review</span></div>
-        <div class="sr-stat"><strong>{{ $stats['verified'] ?? 0 }}</strong><span>Verified</span></div>
+        <div class="sr-stat"><strong>{{ $stats['verified'] ?? 0 }}</strong><span>Acknowledged</span></div>
         <div class="sr-stat"><strong>{{ $stats['dismissed'] ?? 0 }}</strong><span>Dismissed</span></div>
     </div>
 
@@ -98,7 +98,7 @@
                 <select name="status">
                     <option value="">All</option>
                     @foreach (['pending', 'verified', 'dismissed'] as $opt)
-                        <option value="{{ $opt }}" @selected(($filters['status'] ?? '') === $opt)>{{ ucfirst($opt) }}</option>
+                        <option value="{{ $opt }}" @selected(($filters['status'] ?? '') === $opt)>{{ $opt === 'verified' ? 'Acknowledged' : ucfirst($opt) }}</option>
                     @endforeach
                 </select>
             </label>
@@ -126,7 +126,7 @@
     </section>
 
     <section class="sr-card">
-        <h3><i class="bi bi-chat-square-text-fill"></i> Verification queue</h3>
+        <h3><i class="bi bi-chat-square-text-fill"></i> Feedback review queue</h3>
         <div class="sr-table-wrap">
             <table class="sr-table">
                 <thead>
@@ -154,7 +154,7 @@
                                 @endif
                             </td>
                             <td style="white-space:nowrap;font-size:0.8rem;">{{ optional($report->created_at)->format('M j, Y g:i A') }}</td>
-                            <td><span class="sr-pill {{ $report->status }}">{{ strtoupper($report->status) }}</span></td>
+                            <td><span class="sr-pill {{ $report->status }}">{{ $report->status === 'verified' ? 'ACKNOWLEDGED' : strtoupper($report->status) }}</span></td>
                             <td>
                                 <button
                                     type="button"
@@ -167,7 +167,7 @@
                                     data-report-submitted="{{ optional($report->created_at)->format('M j, Y g:i A') }}"
                                     data-report-status="{{ $report->status }}"
                                     data-report-note="{{ $report->review_note ?: '' }}"
-                                    data-report-reviewed="{{ $report->verified_at ? 'Reviewed '.$report->verified_at->format('M j, Y g:i A') : 'Not reviewed yet' }}"
+                                    data-report-reviewed="{{ $report->status === 'verified' ? 'Acknowledged'.($report->verified_at ? ' '.$report->verified_at->format('M j, Y g:i A') : '') : ($report->status === 'dismissed' ? 'Dismissed' : 'Not reviewed yet') }}"
                                     data-review-url="{{ route('office.student-reports.review', $report) }}"
                                     onclick="openStudentReportDetails(this)">
                                     <i class="bi bi-eye"></i> View details
@@ -217,16 +217,16 @@
                 <label for="srDetailReviewNote">Review note <span style="font-weight:600;color:#8b7b80;">(optional for dismissal)</span></label>
                 <textarea id="srDetailReviewNote" placeholder="Add context for dismissing this report…"></textarea>
                 <div class="sr-detail-actions">
-                    <form id="srDetailDismissForm" method="POST" onsubmit="syncStudentReportReviewNote(this);">
+                    <form id="srDetailDismissForm" method="POST" onsubmit="syncStudentReportReviewNote(this);" data-confirm-message="Dismiss this student feedback without acknowledging it?">
                         @csrf
                         <input type="hidden" name="decision" value="dismissed">
                         <input type="hidden" name="review_note" value="">
                         <button type="submit" class="org-btn org-btn-sm sr-dismiss-btn"><i class="bi bi-x-lg"></i> Dismiss report</button>
                     </form>
-                    <form id="srDetailVerifyForm" method="POST">
+                    <form id="srDetailAcknowledgeForm" method="POST" data-confirm-message="Acknowledge receipt of this student feedback?">
                         @csrf
-                        <input type="hidden" name="decision" value="verified">
-                        <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-check-lg"></i> Verify report</button>
+                        <input type="hidden" name="decision" value="acknowledged">
+                        <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-check-lg"></i> Acknowledge report</button>
                     </form>
                 </div>
             </div>
@@ -259,7 +259,7 @@
             document.getElementById('srDetailReviewedText').textContent = data.reportReviewed || 'Reviewed';
             document.getElementById('srDetailReviewNote').value = '';
 
-            document.getElementById('srDetailVerifyForm').action = data.reviewUrl || '';
+            document.getElementById('srDetailAcknowledgeForm').action = data.reviewUrl || '';
             document.getElementById('srDetailDismissForm').action = data.reviewUrl || '';
 
             if (!modal.open) modal.showModal();

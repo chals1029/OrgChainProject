@@ -117,7 +117,7 @@
         </div>
     @endif
 
-    <form id="activityProposalForm" class="ap-form" method="post"
+    <form id="activityProposalForm" class="ap-form" method="post" data-confirm="manual"
           action="{{ $submission->exists ? route('office.activities.update', $submission) : route('office.activities.store') }}"
           enctype="multipart/form-data" data-template-url="{{ route('office.activities.templates.download') }}"
           data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
@@ -424,7 +424,6 @@
         (function () {
             const deleteAttachment = (button) => {
                 const name = button.dataset.attachmentName || 'this document';
-                if (!window.confirm(`Remove ${name}?`)) return;
 
                 // Submit a standalone form so the activity edit form remains a
                 // PUT request when the user submits the activity.
@@ -432,6 +431,7 @@
                 form.method = 'POST';
                 form.action = button.dataset.attachmentDeleteUrl;
                 form.style.display = 'none';
+                form.dataset.confirmMessage = `Remove ${name}?`;
 
                 const token = document.querySelector('input[name="_token"]')?.value;
                 if (token) {
@@ -448,7 +448,7 @@
                 method.value = 'DELETE';
                 form.appendChild(method);
                 document.body.appendChild(form);
-                form.submit();
+                form.requestSubmit();
             };
 
 

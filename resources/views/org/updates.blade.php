@@ -1162,7 +1162,7 @@
                 </div>
             </div>
 
-            <form id="announcementComposerForm" method="post" action="{{ route('office.updates.announcements.store') }}" enctype="multipart/form-data" data-org-upload-form>
+            <form id="announcementComposerForm" method="post" action="{{ route('office.updates.announcements.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Publish this announcement to students and office accounts?">
                 @csrf
                 <div class="aso-form-row">
                     <div class="aso-input-group">
@@ -1313,6 +1313,7 @@
                         </div>
 
                         <h3 class="aso-card-title">{{ $item['title'] }}</h3>
+                        <small data-acknowledgment-for="{{ $item['id'] }}" @if (!$item['acknowledged_at']) hidden @endif>Acknowledged by you</small>
                         <p class="aso-card-snippet">{{ $item['body'] }}</p>
 
                         @if (!empty($item['attachment']))
@@ -1325,7 +1326,7 @@
                     </div>
 
                     <div class="aso-card-footer">
-                        <button type="button" class="aso-btn-view-notice" onclick="openAnnouncementDetailModal('{{ addslashes($item['title']) }}', '{{ $type }}', '{{ $item['priority'] ?? 'normal' }}', '{{ addslashes($item['author']) }}', '{{ $item['time'] }}', '{{ addslashes($item['body']) }}', '{{ addslashes($item['attachment'] ?? '') }}', '{{ $item['attachment_size'] ?? '' }}', '{{ $item['attachment_url'] ?? '' }}', '{{ route('office.updates.announcements.document', $item['id']) }}')">
+                        <button type="button" class="aso-btn-view-notice" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
                             <span>View Notice</span> <i class="bi bi-arrow-right"></i>
                         </button>
                         <div style="display: flex; gap: 0.35rem;">
@@ -1337,7 +1338,7 @@
                             <a class="aso-action-btn" title="Preview Notice" href="#" onclick="event.preventDefault(); previewOfficeDoc('{{ route('office.updates.announcements.document', $item['id']) }}', '{{ addslashes($item['title']) }}')" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">
                                 <i class="bi bi-file-earmark-word"></i>
                             </a>
-                            <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink('{{ addslashes($item['title']) }}')">
+                            <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink({{ $item['id'] }})">
                                 <i class="bi bi-link-45deg"></i>
                             </button>
                         </div>
@@ -1409,10 +1410,10 @@
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <div class="aso-tbl-actions">
-                                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openAnnouncementDetailModal('{{ addslashes($item['title']) }}', '{{ $type }}', '{{ $item['priority'] ?? 'normal' }}', '{{ addslashes($item['author']) }}', '{{ $item['time'] }}', '{{ addslashes($item['body']) }}', '{{ addslashes($item['attachment'] ?? '') }}', '{{ $item['attachment_size'] ?? '' }}', '{{ $item['attachment_url'] ?? '' }}', '{{ route('office.updates.announcements.document', $item['id']) }}')">
+                                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
                                             <i class="bi bi-eye"></i> View Notice
                                         </button>
-                                        <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink('{{ addslashes($item['title']) }}')">
+                                        <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink({{ $item['id'] }})">
                                             <i class="bi bi-link-45deg"></i>
                                         </button>
                                     </div>
@@ -1638,7 +1639,7 @@
                 </button>
                 <div style="display: flex; gap: 0.65rem;">
                     <button type="button" class="org-btn org-btn-ghost" onclick="closeAnnouncementDetailModal()">Close</button>
-                    <button type="button" class="aso-btn-publish" onclick="showToast('Notice acknowledged', 'info'); closeAnnouncementDetailModal();">
+                    <button type="button" class="aso-btn-publish" id="acknowledgeNoticeButton" onclick="acknowledgeCurrentNotice()">
                         <i class="bi bi-check2-circle"></i> Acknowledge Notice
                     </button>
                 </div>
@@ -1654,7 +1655,7 @@
                     <h3><i class="bi bi-cloud-upload-fill" style="color: var(--aso-maroon);"></i> Upload Official Template</h3>
                     <button type="button" class="aso-modal-close" onclick="closeUploadTemplateModal()">&times;</button>
                 </div>
-                <form method="post" action="{{ route('office.updates.templates.store') }}" enctype="multipart/form-data" data-org-upload-form>
+                <form method="post" action="{{ route('office.updates.templates.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Upload and publish this official template?">
                     @csrf
                     <div class="aso-input-group" style="margin-bottom: 1rem;">
                         <label for="newTplName">Template / Document Title *</label>
@@ -1768,6 +1769,8 @@
         let pendingAttachedFile = null;
         let currentAnnouncementView = 'grid'; // 'grid' | 'list'
         let currentTemplateView = 'grid'; // 'grid' | 'list'
+        const persistedAnnouncements = new Map(@json($announcements).map(item => [Number(item.id), item]));
+        let currentAnnouncementId = null;
 
         function focusAnnouncementComposer() {
             const section = document.getElementById('composerSection');
@@ -1881,124 +1884,6 @@
             updateComposerPriorityPreview('normal');
         }
 
-        // =========================================================================
-        // Publish Announcement
-        // =========================================================================
-        function handlePublishAnnouncement(e) {
-            e.preventDefault();
-            const type = document.getElementById('postTypeSelect').value;
-            const priority = document.getElementById('postPrioritySelect').value;
-            const body = document.getElementById('postBody').value.trim();
-            const author = '{{ $office->name ?? "Office of Student Organizations (OSO)" }}';
-
-            if (!body) return;
-
-            const headline = body.split(/\s+/).slice(0, 9).join(' ') + (body.split(/\s+/).length > 9 ? '…' : '');
-            const title = `${type}: ${headline}`;
-
-            const isHigh = priority === 'high';
-            const typeBadgeClass = getTypeBadgeClass(type);
-            const newId = 'ann_' + Date.now();
-            const attachName = pendingAttachedFile ? pendingAttachedFile.name : '';
-            const attachSize = pendingAttachedFile ? formatBytes(pendingAttachedFile.size) : '';
-
-            // 1. Insert into Grid View
-            const grid = document.getElementById('announcementsGrid');
-            const card = document.createElement('article');
-            card.className = `aso-announce-card ${isHigh ? 'is-high-priority' : 'is-normal-priority'}`;
-            card.setAttribute('data-priority', priority);
-            card.setAttribute('data-type', type);
-            card.setAttribute('data-title', title.toLowerCase());
-            card.setAttribute('data-body', body.toLowerCase());
-            card.setAttribute('data-id', newId);
-            card.style.animation = 'slideUpToast 0.35s ease';
-
-            let attachHtmlGrid = '';
-            if (pendingAttachedFile) {
-                attachHtmlGrid = `
-                    <div class="aso-card-attach-pill" title="${escapeHtml(attachName)}">
-                        <i class="bi bi-paperclip"></i>
-                        <span>${escapeHtml(attachName)}</span>
-                        <span style="color: var(--aso-ink-muted); font-size: 0.7rem;">(${attachSize})</span>
-                    </div>
-                `;
-            }
-
-            card.innerHTML = `
-                <div>
-                    <div class="aso-card-head">
-                        <div class="aso-card-author">
-                            <div class="aso-card-avatar"><i class="bi bi-building"></i></div>
-                            <span class="aso-card-author-name">${escapeHtml(author)}</span>
-                        </div>
-                        <span class="aso-card-time">Just now</span>
-                    </div>
-                    <div class="aso-card-badges">
-                        <span class="aso-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
-                        ${isHigh ? '<span class="aso-badge aso-badge-priority-high">HIGH</span>' : '<span class="aso-badge aso-badge-priority-normal">NORMAL</span>'}
-                    </div>
-                    <h3 class="aso-card-title">${escapeHtml(title)}</h3>
-                    <p class="aso-card-snippet">${escapeHtml(body)}</p>
-                    ${attachHtmlGrid}
-                </div>
-                <div class="aso-card-footer">
-                    <button type="button" class="aso-btn-view-notice" onclick="openAnnouncementDetailModal('${escapeHtml(title)}', '${escapeHtml(type)}', '${priority}', '${escapeHtml(author)}', 'Just now', '${escapeHtml(body)}', '${escapeHtml(attachName)}', '${attachSize}')">
-                        <span>View Notice</span> <i class="bi bi-arrow-right"></i>
-                    </button>
-                    <div style="display: flex; gap: 0.35rem;">
-                        ${pendingAttachedFile ? `<button type="button" class="aso-action-btn" title="Download Attachment" onclick="downloadAttachment('${escapeHtml(attachName)}')"><i class="bi bi-download"></i></button>` : ''}
-                        <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink('${escapeHtml(title)}')"><i class="bi bi-link-45deg"></i></button>
-                    </div>
-                </div>
-            `;
-            grid.insertBefore(card, grid.firstChild);
-
-            // 2. Insert into List Table View
-            const tbody = document.getElementById('announcementsTableBody');
-            const row = document.createElement('tr');
-            row.setAttribute('data-priority', priority);
-            row.setAttribute('data-type', type);
-            row.setAttribute('data-title', title.toLowerCase());
-            row.setAttribute('data-body', body.toLowerCase());
-            row.setAttribute('data-id', newId);
-            row.style.animation = 'slideUpToast 0.35s ease';
-
-            row.innerHTML = `
-                <td style="white-space: nowrap;">
-                    <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
-                        <span class="aso-badge ${typeBadgeClass}">${escapeHtml(type)}</span>
-                        ${isHigh ? '<span class="aso-badge aso-badge-priority-high">HIGH</span>' : ''}
-                    </div>
-                </td>
-                <td class="aso-tbl-title-cell">
-                    <div class="aso-tbl-title-text">${escapeHtml(title)}</div>
-                    <div class="aso-tbl-teaser">${escapeHtml(body)}</div>
-                </td>
-                <td style="white-space: nowrap; font-size: 0.82rem; font-weight: 600; color: var(--aso-ink-dark);">
-                    ${escapeHtml(author)}
-                </td>
-                <td style="white-space: nowrap; font-size: 0.8rem; color: var(--aso-ink-muted);">
-                    Just now
-                </td>
-                <td style="white-space: nowrap;">
-                    ${pendingAttachedFile ? `<button type="button" class="aso-tbl-btn-action is-download" title="${escapeHtml(attachName)}" onclick="downloadAttachment('${escapeHtml(attachName)}')"><i class="bi bi-paperclip"></i> ${attachSize}</button>` : '<span style="color: var(--aso-ink-muted); font-size: 0.8rem;">—</span>'}
-                </td>
-                <td style="text-align: right; white-space: nowrap;">
-                    <div class="aso-tbl-actions">
-                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openAnnouncementDetailModal('${escapeHtml(title)}', '${escapeHtml(type)}', '${priority}', '${escapeHtml(author)}', 'Just now', '${escapeHtml(body)}', '${escapeHtml(attachName)}', '${attachSize}')">
-                            <i class="bi bi-eye"></i> View Notice
-                        </button>
-                        <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink('${escapeHtml(title)}')">
-                            <i class="bi bi-link-45deg"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.insertBefore(row, tbody.firstChild);
-
-            resetComposerForm();
-            showToast('Announcement successfully published to all student organizations!', 'success');
-        }
 
         // =========================================================================
         // Filtering & Searching Announcements
@@ -2068,7 +1953,13 @@
         // =========================================================================
         // Announcement Full Detail Modal
         // =========================================================================
-        function openAnnouncementDetailModal(title, type, priority, author, time, body, attachment, attachSize, attachUrl, docUrl) {
+        function openAnnouncementDetailModal(id) {
+            const item = persistedAnnouncements.get(Number(id));
+            if (!item) return;
+            currentAnnouncementId = Number(id);
+            const {title, type, priority, author, time, body, attachment} = item;
+            const attachSize = item.attachment_size;
+            const attachUrl = item.attachment_url;
             document.getElementById('modalAnnounceTitle').textContent = title;
             document.getElementById('modalAnnounceAuthor').textContent = author;
             document.getElementById('modalAnnounceTime').textContent = time;
@@ -2090,17 +1981,11 @@
 
             // Attachment
             const attachSection = document.getElementById('modalAttachmentSection');
-            if (attachment && attachment.trim() !== '') {
+            if (attachment && attachUrl) {
                 document.getElementById('modalAttachName').textContent = attachment;
                 document.getElementById('modalAttachSize').textContent = attachSize || 'Attached File';
                 document.getElementById('modalAttachDownloadBtn').onclick = function() {
-                    if (attachUrl) {
-                        window.location.href = attachUrl;
-                    } else if (docUrl) {
-                        window.location.href = docUrl;
-                    } else {
-                        downloadNoticeText(title, author, time, body);
-                    }
+                    window.location.href = attachUrl;
                 };
                 attachSection.style.display = 'block';
             } else {
@@ -2108,11 +1993,46 @@
             }
 
             document.getElementById('modalCopyLinkBtn').onclick = function() {
-                copyAnnouncementLink(title);
+                copyAnnouncementLink(id);
             };
+            const acknowledgeButton = document.getElementById('acknowledgeNoticeButton');
+            acknowledgeButton.disabled = Boolean(item.acknowledged_at);
+            acknowledgeButton.textContent = item.acknowledged_at ? 'Acknowledged by you' : 'Acknowledge Notice';
 
             const dialog = document.getElementById('announcementDetailModal');
             if (dialog) dialog.showModal();
+        }
+
+        async function acknowledgeCurrentNotice() {
+            const item = persistedAnnouncements.get(currentAnnouncementId);
+            if (!item || item.acknowledged_at) return;
+            if (!window.OrgActionConfirmations.confirm('Acknowledge this notice?')) return;
+
+            const button = document.getElementById('acknowledgeNoticeButton');
+            button.disabled = true;
+            try {
+                const response = await fetch(item.acknowledge_url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                const result = await response.json();
+                if (!response.ok || !result.ok || !result.acknowledged_at) {
+                    throw new Error(result.message || 'The notice could not be acknowledged.');
+                }
+                item.acknowledged_at = result.acknowledged_at;
+                document.querySelectorAll('[data-acknowledgment-for="' + item.id + '"]').forEach(state => { state.hidden = false; });
+                if (currentAnnouncementId === Number(item.id)) {
+                    button.textContent = 'Acknowledged by you';
+                }
+                showToast('Notice acknowledged.', 'success');
+            } catch (error) {
+                if (currentAnnouncementId === Number(item.id)) button.disabled = false;
+                showToast(error.message || 'The notice could not be acknowledged. Please try again.', 'error');
+            }
         }
 
         function closeAnnouncementDetailModal() {
@@ -2175,7 +2095,7 @@
                 } else if (previewUrl) {
                     window.location.href = previewUrl;
                 } else {
-                    downloadTemplateFile(name, undefined, desc);
+                    showToast(`The original file for "${name}" is unavailable.`, 'info');
                 }
                 closeTemplatePreviewModal();
             };
@@ -2199,149 +2119,44 @@
             if (dialog) dialog.close();
         }
 
-        function handleUploadTemplateSubmit(e) {
-            e.preventDefault();
-            const name = document.getElementById('newTplName').value.trim();
-            const category = document.getElementById('newTplCategory').value;
-            const format = document.getElementById('newTplFormat').value;
-            const desc = document.getElementById('newTplDesc').value.trim();
-            const file = document.getElementById('newTplFile').files[0];
-
-            if (!name) return;
-
-            const iconClass = format === 'PDF' ? 'is-pdf' : (format === 'XLSX' ? 'is-xlsx' : 'is-docx');
-            const iconBi = format === 'PDF' ? 'bi-file-earmark-pdf-fill' : (format === 'XLSX' ? 'bi-file-earmark-spreadsheet-fill' : 'bi-file-earmark-text-fill');
-            const sizeStr = file ? formatBytes(file.size) : '180 KB';
-            const newId = 'tpl_' + Date.now();
-
-            // 1. Insert into Grid View
-            const grid = document.getElementById('templateGrid');
-            const card = document.createElement('article');
-            card.className = 'aso-tpl-card';
-            card.setAttribute('data-name', name.toLowerCase());
-            card.setAttribute('data-category', category.toLowerCase());
-            card.setAttribute('data-id', newId);
-            card.style.animation = 'slideUpToast 0.35s ease';
-
-            card.innerHTML = `
-                <div>
-                    <div class="aso-tpl-top">
-                        <div class="aso-tpl-filetype-icon ${iconClass}">
-                            <i class="bi ${iconBi}"></i>
-                        </div>
-                        <div class="aso-tpl-details">
-                            <div class="aso-tpl-tag-row">
-                                <span class="aso-tpl-category">${escapeHtml(category)}</span>
-                                <span class="aso-tpl-format-badge">${format}</span>
-                            </div>
-                            <h3 class="aso-tpl-name">${escapeHtml(name)}</h3>
-                        </div>
-                    </div>
-                    <p class="aso-tpl-desc">${escapeHtml(desc || 'Official template document uploaded by OSO.')}</p>
-                </div>
-                <div>
-                    <div class="aso-tpl-meta">
-                        <span><i class="bi bi-hdd"></i> ${sizeStr}</span>
-                        <span><i class="bi bi-arrow-down-circle"></i> <strong class="tpl-download-count">0</strong> downloads</span>
-                    </div>
-                    <div class="aso-tpl-actions">
-                        <button type="button" class="aso-btn-preview" onclick="openTemplatePreviewModal('${escapeHtml(name)}', '${escapeHtml(category)}', '${format}', '${sizeStr}', 'Just now', '${escapeHtml(desc)}')">
-                            <i class="bi bi-eye"></i> Preview
-                        </button>
-                        <button type="button" class="aso-btn-download" onclick="downloadTemplateFile('${escapeHtml(name)}', '${newId}')">
-                            <i class="bi bi-download"></i> Download
-                        </button>
-                    </div>
-                </div>
-            `;
-            grid.insertBefore(card, grid.firstChild);
-
-            // 2. Insert into List Table View
-            const tbody = document.getElementById('templateTableBody');
-            const row = document.createElement('tr');
-            row.setAttribute('data-name', name.toLowerCase());
-            row.setAttribute('data-category', category.toLowerCase());
-            row.setAttribute('data-id', newId);
-            row.style.animation = 'slideUpToast 0.35s ease';
-
-            row.innerHTML = `
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.85rem;">
-                        <div class="aso-tpl-filetype-icon ${iconClass}" style="width: 36px; height: 36px; font-size: 1.15rem; border-radius: 10px;">
-                            <i class="bi ${iconBi}"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight: 700; color: var(--aso-ink-dark); font-size: 0.92rem; line-height: 1.3;">${escapeHtml(name)}</div>
-                            <div style="font-size: 0.76rem; color: var(--aso-ink-muted); margin-top: 0.15rem;">${escapeHtml(desc || 'Official template document.')}</div>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="aso-tpl-category">${escapeHtml(category)}</span>
-                </td>
-                <td>
-                    <span class="aso-tpl-format-badge">${format}</span>
-                </td>
-                <td style="font-weight: 600; color: var(--aso-ink-body);">
-                    ${sizeStr}
-                </td>
-                <td>
-                    <span style="font-weight: 700; color: var(--aso-ink-dark);"><i class="bi bi-download" style="color: var(--aso-ink-muted);"></i> <span class="tpl-download-count">0</span></span>
-                </td>
-                <td style="font-size: 0.8rem; color: var(--aso-ink-muted);">
-                    Just now
-                </td>
-                <td style="text-align: right; white-space: nowrap;">
-                    <div class="aso-tbl-actions">
-                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openTemplatePreviewModal('${escapeHtml(name)}', '${escapeHtml(category)}', '${format}', '${sizeStr}', 'Just now', '${escapeHtml(desc)}')">
-                            <i class="bi bi-eye"></i> Preview
-                        </button>
-                        <button type="button" class="aso-tbl-btn-action is-download" onclick="downloadTemplateFile('${escapeHtml(name)}', '${newId}')">
-                            <i class="bi bi-download"></i> Download
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.insertBefore(row, tbody.firstChild);
-
-            closeUploadTemplateModal();
-            showToast(`Template "${name}" successfully published!`, 'success');
-        }
 
         // =========================================================================
         // Helpers (Downloads, Copy, Toast, Formatters)
         // =========================================================================
-        function downloadTemplateFile(name, templateId, desc) {
-            if (templateId !== undefined && templateId !== null && String(templateId).indexOf('db-') !== 0) {
-                const gridCard = document.querySelector(`#templateGrid .aso-tpl-card[data-id="${templateId}"] .tpl-download-count`);
-                if (gridCard) gridCard.textContent = parseInt(gridCard.textContent || '0') + 1;
 
-                const tableRow = document.querySelector(`#templateTableBody tr[data-id="${templateId}"] .tpl-download-count`);
-                if (tableRow) tableRow.textContent = parseInt(tableRow.textContent || '0') + 1;
+
+        async function copyAnnouncementLink(id) {
+            const item = persistedAnnouncements.get(Number(id));
+            if (!item) return;
+            let copied = false;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(item.url);
+                    copied = true;
+                }
+            } catch (_) {
+                // Insecure contexts and blocked clipboard permissions use the browser copy command.
             }
-
-            showToast(`The original file for "${name}" is not configured yet.`, 'info');
-        }
-
-        function downloadAttachment(name) {
-            showToast(`No stored file for "${name}" — publishing an announcement with an attachment enables real downloads.`, 'info');
-        }
-
-        function downloadNoticeText(title, author, time, body) {
-            const text = `${title}\nBy ${author} · ${time}\n${'='.repeat(48)}\n\n${body}\n`;
-            const blob = new Blob([text], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = title.replace(/[^a-z0-9]+/gi, '_').slice(0, 60) + '.txt';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-            showToast('Notice downloaded.', 'success');
-        }
-
-        function copyAnnouncementLink(title) {
-            navigator.clipboard?.writeText(window.location.href);
-            showToast(`Direct link to "${title}" copied to clipboard!`, 'info');
+            if (!copied) {
+                const input = document.createElement('textarea');
+                input.value = item.url;
+                input.setAttribute('readonly', '');
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                const host = document.querySelector('dialog[open]') || document.body;
+                const previousFocus = document.activeElement;
+                host.appendChild(input);
+                input.focus();
+                input.select();
+                try { copied = document.execCommand('copy'); } catch (_) { copied = false; }
+                input.remove();
+                previousFocus?.focus();
+            }
+            if (copied) {
+                showToast('Announcement link copied.', 'success');
+            } else {
+                window.prompt('Copy this announcement link:', item.url);
+            }
         }
 
         let officePreviewObjectUrl = null;
@@ -2450,5 +2265,8 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        const sharedAnnouncement = new URL(window.location.href).searchParams.get('announcement');
+        if (sharedAnnouncement) openAnnouncementDetailModal(sharedAnnouncement);
     </script>
 @endsection

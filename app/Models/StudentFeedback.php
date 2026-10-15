@@ -36,6 +36,6 @@ class StudentFeedback extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class);
+        return $this->belongsTo(UserAccount::class, 'student_id', 'user_id');
     }
 }

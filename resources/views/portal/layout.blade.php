@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
     @endif
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
 </head>
 <body class="landing-body portal-body" data-portal-tab="{{ $tab ?? 'home' }}">
     <div class="page-ambient" aria-hidden="true">
@@ -95,10 +96,12 @@
                     <p class="sp-module-kicker">BatStateU Student Portal</p>
                 </div>
                 <div class="sp-top-actions">
-                    <div class="sp-search-box" id="spTopSearchBox" @if(($tab ?? '') === 'activities' || ($tab ?? '') === 'announcements' || ($tab ?? '') === 'tosa') style="display: none;" @endif>
-                        <i class="bi bi-search"></i>
-                        <input type="search" placeholder="Search activities, reports, and more..." aria-label="Search activities, reports, and more">
-                    </div>
+                    <form method="get" action="{{ route('portal.community') }}" class="sp-search-box" id="spTopSearchBox" @if(($tab ?? '') !== 'community') style="display: none;" @endif role="search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" name="community_q" value="{{ $communitySearch ?? '' }}" placeholder="Search community posts…" aria-label="Search community posts">
+                        <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
+                        <button type="submit" class="sp-link-btn">Search</button>
+                    </form>
                     <div class="sp-top-menu-wrap">
                         <button type="button" class="sp-settings-btn" id="spSettingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-haspopup="true">
                             <i class="bi bi-gear"></i>
@@ -112,11 +115,6 @@
                             <button type="button" class="sp-dropdown-item" id="spProfileSettingsBtn">
                                 <i class="bi bi-person-gear"></i>
                                 <span>Profile settings</span>
-                            </button>
-                            <button type="button" class="sp-dropdown-item" id="spCompactToggleBtn" aria-pressed="false">
-                                <i class="bi bi-layout-sidebar-inset"></i>
-                                <span>Compact view</span>
-                                <em class="sp-toggle-pill" aria-hidden="true"><span></span></em>
                             </button>
                         </div>
                     </div>
@@ -155,7 +153,7 @@
                                 <small>{{ $student->sr_code ?? '' }}</small>
                             </div>
                             <div class="sp-dropdown-divider"></div>
-                            <form method="post" action="{{ route('student.logout') }}" class="sp-dropdown-logout">
+                            <form method="post" action="{{ route('student.logout') }}" class="sp-dropdown-logout" data-confirm-message="Log out of your student portal?">
                                 @csrf
                                 <button type="submit" class="sp-dropdown-item">
                                     <i class="bi bi-box-arrow-left"></i>
@@ -169,12 +167,22 @@
 
             <div class="sp-content" id="portalMain">
                 @if (session('status'))
-                    <div class="sp-flash" role="status">
+                    <div class="sp-flash" role="status" aria-live="polite" data-success-flash>
                         <i class="bi bi-check-circle-fill"></i>
                         <span>{{ session('status') }}</span>
                     </div>
                 @endif
 
+                @if ($errors->any() && ($tab ?? '') !== 'tosa')
+                    <div class="sp-error" role="alert">
+                        <strong>Please correct the following:</strong>
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 @yield('content')
             </div>
         </div>
@@ -201,7 +209,7 @@
                 <div class="sp-modal-head-title"><i class="bi bi-person-gear"></i> <span id="spProfileModalTitle">Profile settings</span></div>
                 <button type="button" class="sp-modal-close-btn" data-close-profile aria-label="Close"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="{{ route('portal.profile.update') }}" class="sp-profile-form">
+            <form method="post" action="{{ route('portal.profile.update') }}" class="sp-profile-form" data-confirm-message="Save your profile changes?">
                 @csrf
                 @method('PUT')
                 <label>
@@ -303,7 +311,7 @@
 
                 const topSearchBox = document.getElementById('spTopSearchBox');
                 if (topSearchBox) {
-                    topSearchBox.style.display = (tab === 'activities' || tab === 'announcements' || tab === 'tosa') ? 'none' : '';
+                    topSearchBox.style.display = tab === 'community' ? '' : 'none';
                 }
 
                 document.getElementById('portalMain')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -365,7 +373,6 @@
 
                 const renderTable = () => {
                     const allRows = getAllRows();
-                    if (!allRows.length) return;
 
                     // 1. Filter rows
                     const filtered = allRows.filter((row) => {
@@ -373,7 +380,7 @@
                         const prio = row.dataset.announcePriority || '';
                         const search = row.dataset.announceSearch || '';
 
-                        const matchCat = activeCat === 'all' || cat === activeCat || cat.includes(activeCat);
+                        const matchCat = activeCat === 'all' || cat === activeCat;
                         const matchPrio = activePriority === 'all' || prio === activePriority;
                         const matchSearch = !searchQuery || search.includes(searchQuery.toLowerCase());
 
@@ -703,6 +710,12 @@
                     if (audiencePopover) audiencePopover.hidden = true;
                 });
             });
+            const initialAudience = Array.from(document.querySelectorAll('.sp-audience-item')).find((item) => item.dataset.audience === audienceInput?.value);
+            if (initialAudience) {
+                document.querySelectorAll('.sp-audience-item').forEach((item) => item.classList.toggle('is-active', item === initialAudience));
+                if (audienceLabel) audienceLabel.textContent = initialAudience.dataset.label;
+                if (audienceIcon) audienceIcon.className = `bi ${initialAudience.dataset.icon}`;
+            }
 
             // Close composer popovers on click outside
             document.addEventListener('click', (e) => {
@@ -731,77 +744,14 @@
             document.querySelectorAll('.sp-sort-opt').forEach((btn) => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    document.querySelectorAll('.sp-sort-opt').forEach((b) => b.classList.remove('is-active'));
-                    btn.classList.add('is-active');
-                    if (feedSortLabel) feedSortLabel.textContent = btn.textContent.trim();
-                    if (feedSortPopover) feedSortPopover.hidden = true;
+                    const url = new URL(@json(route('portal.community')), window.location.origin);
+                    url.searchParams.set('sort', btn.dataset.sort || 'recent');
+                    const query = document.querySelector('#spTopSearchBox [name="community_q"]')?.value || '';
+                    if (query) url.searchParams.set('community_q', query);
+                    window.location.assign(url);
                 });
             });
 
-            // -------------------------------------------------------------
-            // Hold / Hover Reaction Picker (Facebook Style)
-            // -------------------------------------------------------------
-            const closeAllReactionDocks = () => {
-                document.querySelectorAll('.sp-reactions-dock').forEach((d) => (d.hidden = true));
-            };
-
-            let holdTimer = null;
-            let hoverTimer = null;
-
-            // Handle Desktop Hover on Like Action Wrap
-            document.querySelectorAll('.sp-like-action-wrap').forEach((wrap) => {
-                const dock = wrap.querySelector('.sp-reactions-dock');
-
-                wrap.addEventListener('mouseenter', () => {
-                    clearTimeout(hoverTimer);
-                    hoverTimer = setTimeout(() => {
-                        closeAllReactionDocks();
-                        if (dock) dock.hidden = false;
-                    }, 350);
-                });
-
-                wrap.addEventListener('mouseleave', () => {
-                    clearTimeout(hoverTimer);
-                    hoverTimer = setTimeout(() => {
-                        if (dock) dock.hidden = true;
-                    }, 250);
-                });
-            });
-
-            // Handle Hold / Long-press on Like Button (Touch & Mouse)
-            document.addEventListener('mousedown', (e) => {
-                const likeBtn = e.target.closest('.community-like-btn');
-                if (likeBtn) {
-                    const wrap = likeBtn.closest('.sp-like-action-wrap');
-                    const dock = wrap?.querySelector('.sp-reactions-dock');
-                    clearTimeout(holdTimer);
-                    holdTimer = setTimeout(() => {
-                        closeAllReactionDocks();
-                        if (dock) dock.hidden = false;
-                    }, 320);
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                clearTimeout(holdTimer);
-            });
-
-            document.addEventListener('touchstart', (e) => {
-                const likeBtn = e.target.closest('.community-like-btn');
-                if (likeBtn) {
-                    const wrap = likeBtn.closest('.sp-like-action-wrap');
-                    const dock = wrap?.querySelector('.sp-reactions-dock');
-                    clearTimeout(holdTimer);
-                    holdTimer = setTimeout(() => {
-                        closeAllReactionDocks();
-                        if (dock) dock.hidden = false;
-                    }, 300);
-                }
-            }, { passive: true });
-
-            document.addEventListener('touchend', () => {
-                clearTimeout(holdTimer);
-            });
 
             // Single source of truth for likes (one request per tap)
             const likeHeaders = () => ({
@@ -810,44 +760,33 @@
                 'X-Requested-With': 'XMLHttpRequest'
             });
 
-            const paintLikeState = (card, liked, count) => {
+            const paintLikeState = (card, reaction, count) => {
                 const likeBtn = card?.querySelector('.community-like-btn');
                 const textEl = card?.querySelector('[data-likes-count] .sp-reaction-text');
+                const selected = Array.from(card?.querySelectorAll('[data-reaction].sp-dock-reaction') || []).find((option) => option.dataset.reaction === reaction);
                 if (likeBtn) {
-                    likeBtn.classList.toggle('is-liked', liked);
+                    likeBtn.classList.toggle('is-liked', Boolean(reaction));
+                    likeBtn.dataset.reaction = reaction || '';
                     const labelEl = likeBtn.querySelector('.sp-like-label');
                     const iconEl = likeBtn.querySelector('i');
-                    if (labelEl) labelEl.textContent = liked ? (likeBtn.dataset.likedLabel || 'Love') : 'Like';
-                    if (iconEl) {
-                        if (liked) {
-                            iconEl.className = 'bi ' + (likeBtn.dataset.likedIcon || 'bi-heart-fill') + ' sp-action-love-icon';
-                            iconEl.style.color = likeBtn.dataset.likedColor || '#e11d48';
-                        } else {
-                            iconEl.className = 'bi bi-hand-thumbs-up sp-action-love-icon';
-                            iconEl.style.color = '';
-                        }
-                    }
-                    delete likeBtn.dataset.likedLabel;
-                    delete likeBtn.dataset.likedIcon;
-                    delete likeBtn.dataset.likedColor;
+                    if (labelEl) labelEl.textContent = selected?.dataset.label || 'Like';
+                    if (iconEl) iconEl.className = `bi ${selected?.dataset.icon || 'bi-hand-thumbs-up'} sp-action-love-icon`;
                 }
-                if (textEl) {
-                    textEl.textContent = count > 0
-                        ? (liked ? (count === 1 ? 'You' : `You and ${count - 1} other${count - 1 === 1 ? '' : 's'}`) : `${count} like${count === 1 ? '' : 's'}`)
-                        : 'No likes yet';
-                }
+                if (textEl) textEl.textContent = `${count} like${count === 1 ? '' : 's'}`;
             };
 
-            const sendLike = async (card) => {
+            const sendLike = async (card, reaction = null) => {
                 const likeBtn = card?.querySelector('.community-like-btn');
                 const url = likeBtn?.dataset.likeUrl;
                 if (!url || !card || !likeBtn || likeBtn.disabled) return;
                 likeBtn.disabled = true;
                 try {
-                    const res = await fetch(url, { method: 'POST', headers: likeHeaders(), credentials: 'same-origin' });
+                    const payload = new FormData();
+                    payload.set('reaction', reaction || likeBtn.dataset.reaction || 'like');
+                    const res = await fetch(url, { method: 'POST', headers: likeHeaders(), body: payload, credentials: 'same-origin' });
                     if (!res.ok) throw new Error('like failed');
                     const data = await res.json();
-                    paintLikeState(card, !!data.liked, Number(data.likes_count ?? 0));
+                    paintLikeState(card, data.reaction || null, Number(data.likes_count ?? 0));
                 } catch (_) {
                     /* keep current UI on failure */
                 } finally {
@@ -855,39 +794,41 @@
                 }
             };
 
-            // Handle Clicking Individual Reaction Emojis
+            // Hover, focus and long press expose supported server-persisted reactions.
+            const closeReactionDocks = (except = null) => {
+                document.querySelectorAll('.sp-reactions-dock').forEach((dock) => {
+                    if (dock !== except) dock.hidden = true;
+                });
+            };
+            document.querySelectorAll('.sp-like-action-wrap').forEach((wrap) => {
+                const dock = wrap.querySelector('.sp-reactions-dock');
+                if (!dock) return;
+                let holdTimer;
+                let hideTimer;
+                const show = () => {
+                    window.clearTimeout(hideTimer);
+                    closeReactionDocks(dock);
+                    dock.hidden = false;
+                };
+                wrap.addEventListener('mouseenter', show);
+                wrap.addEventListener('mouseleave', () => { hideTimer = window.setTimeout(() => { dock.hidden = true; }, 250); });
+                wrap.addEventListener('focusin', show);
+                wrap.addEventListener('focusout', (event) => {
+                    if (!wrap.contains(event.relatedTarget)) dock.hidden = true;
+                });
+                wrap.addEventListener('touchstart', () => { holdTimer = window.setTimeout(show, 300); }, { passive: true });
+                wrap.addEventListener('touchend', () => window.clearTimeout(holdTimer));
+                wrap.addEventListener('touchcancel', () => window.clearTimeout(holdTimer));
+            });
             document.addEventListener('click', (e) => {
-                const dockReaction = e.target.closest('.sp-dock-reaction');
-                if (dockReaction) {
+                const reaction = e.target.closest('.sp-dock-reaction');
+                if (reaction) {
                     e.stopPropagation();
-                    const wrap = dockReaction.closest('.sp-like-action-wrap');
-                    const card = dockReaction.closest('.community-post');
-                    const likeBtn = wrap?.querySelector('.community-like-btn');
-                    const dock = wrap?.querySelector('.sp-reactions-dock');
-                    if (dock) dock.hidden = true;
-                    if (!likeBtn || !card) return;
-                    if (likeBtn.classList.contains('is-liked')) {
-                        likeBtn.dataset.likedLabel = dockReaction.dataset.label || 'Like';
-                        likeBtn.dataset.likedIcon = dockReaction.dataset.icon || 'bi-hand-thumbs-up-fill';
-                        likeBtn.dataset.likedColor = dockReaction.dataset.color || '#1877f2';
-                        const labelEl = likeBtn.querySelector('.sp-like-label');
-                        const iconEl = likeBtn.querySelector('i');
-                        if (labelEl) labelEl.textContent = likeBtn.dataset.likedLabel;
-                        if (iconEl) {
-                            iconEl.className = 'bi ' + likeBtn.dataset.likedIcon + ' sp-action-love-icon';
-                            iconEl.style.color = likeBtn.dataset.likedColor;
-                        }
-                        delete likeBtn.dataset.likedLabel;
-                        delete likeBtn.dataset.likedIcon;
-                        delete likeBtn.dataset.likedColor;
-                        return;
-                    }
-                    likeBtn.dataset.likedLabel = dockReaction.dataset.label || 'Like';
-                    likeBtn.dataset.likedIcon = dockReaction.dataset.icon || 'bi-hand-thumbs-up-fill';
-                    likeBtn.dataset.likedColor = dockReaction.dataset.color || '#1877f2';
-                    sendLike(card);
+                    closeReactionDocks();
+                    sendLike(reaction.closest('.community-post'), reaction.dataset.reaction);
                     return;
                 }
+                if (!e.target.closest('.sp-like-action-wrap')) closeReactionDocks();
 
                 // Handle standard tap / click on Like Button (Toggle)
                 const likeBtn = e.target.closest('.community-like-btn');
@@ -897,12 +838,6 @@
                 }
             });
 
-            // Close reactions docks on click outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.sp-like-action-wrap')) {
-                    closeAllReactionDocks();
-                }
-            });
 
             // Post Options Menu Trigger
             document.addEventListener('click', (e) => {
@@ -980,60 +915,43 @@
                 if (e.key === 'Escape') closeTopDropdowns();
             });
 
-            // Notifications: render announcements, mark read persists
+            // Notifications reflect persisted announcements and this student's acknowledgments.
             const notifList = document.getElementById('spNotifList');
             const bellDot = document.getElementById('spBellDot');
             const announcementsFeed = @json(($announcements ?? []));
-            const notifReadKey = 'sp_notif_read_at';
-
-            const renderNotifs = () => {
-                if (!notifList) return;
-                if (!announcementsFeed.length) {
-                    notifList.innerHTML = '<div class="sp-notif-empty"><i class="bi bi-bell-slash"></i><span>No announcements yet.</span></div>';
-                    return;
+            const feedbackFeed = @json(($feedbackNotifications ?? []));
+            const notificationFeed = [
+                ...feedbackFeed.map((item) => ({ ...item, feedback: true })),
+                ...announcementsFeed,
+            ];
+            const notifReadKey = 'sp_notif_read_{{ $student->id }}';
+            const notificationVersion = JSON.stringify(notificationFeed.map((item) => [item.id, item.acknowledgedAt || item.published_at || item.time]));
+            if (notifList) {
+                if (!notificationFeed.length) {
+                    notifList.innerHTML = '<div class="sp-notif-empty"><i class="bi bi-bell-slash"></i><span>No notifications yet.</span></div>';
                 }
-                notifList.innerHTML = '';
-                announcementsFeed.slice(0, 8).forEach((a) => {
-                    const item = document.createElement('button');
-                    item.type = 'button';
-                    item.className = 'sp-notif-item' + ((a.priority || '') === 'high' ? ' is-high' : '');
-                    item.innerHTML = `<span class="sp-notif-dot" aria-hidden="true"></span><span class="sp-notif-text"><strong></strong><small></small></span>`;
-                    item.querySelector('strong').textContent = a.title || 'Announcement';
-                    item.querySelector('small').textContent = `${a.author || 'OSO'} · ${a.time || ''}`;
-                    item.addEventListener('click', () => {
-                        closeTopDropdowns();
-                        switchTab('announcements', true);
-                    });
+                notificationFeed.forEach((notice) => {
+                    const item = document.createElement('a');
+                    item.className = 'sp-notif-item' + (notice.priority === 'high' ? ' is-high' : '');
+                    item.href = notice.url || tabUrls.announcements;
+                    item.innerHTML = '<span class="sp-notif-dot" aria-hidden="true"></span><span class="sp-notif-text"><strong></strong><small></small></span>';
+                    item.querySelector('strong').textContent = notice.title || 'Announcement';
+                    item.querySelector('small').textContent = `${notice.author || 'OSO'} · ${notice.time || ''}`;
+                    if (notice.feedback) item.querySelector('small').textContent += ' · Acknowledged';
                     notifList.appendChild(item);
                 });
-            };
-
+            }
             const syncBellDot = () => {
-                if (!bellDot) return;
-                bellDot.hidden = localStorage.getItem(notifReadKey) === 'read';
+                if (bellDot) bellDot.hidden = !notificationFeed.length || localStorage.getItem(notifReadKey) === notificationVersion;
             };
-
             document.getElementById('spMarkReadBtn')?.addEventListener('click', () => {
-                localStorage.setItem(notifReadKey, 'read');
+                localStorage.setItem(notifReadKey, notificationVersion);
                 syncBellDot();
             });
-
-            renderNotifs();
             syncBellDot();
-
-            // Compact view toggle (persists)
-            const compactBtn = document.getElementById('spCompactToggleBtn');
-            const compactKey = 'sp_compact_view';
-            const syncCompact = () => {
-                const on = localStorage.getItem(compactKey) === '1';
-                document.body.classList.toggle('sp-compact', on);
-                compactBtn?.setAttribute('aria-pressed', on ? 'true' : 'false');
-            };
-            compactBtn?.addEventListener('click', () => {
-                localStorage.setItem(compactKey, localStorage.getItem(compactKey) === '1' ? '0' : '1');
-                syncCompact();
+            document.querySelectorAll('[data-success-flash]').forEach((flash) => {
+                window.setTimeout(() => flash.remove(), 4000);
             });
-            syncCompact();
 
             // Profile settings modal
             const profileModal = document.getElementById('spProfileModal');
@@ -1157,7 +1075,8 @@
                     const card = form.closest('.community-post');
                     const input = form.querySelector('input[name="body"]');
                     const submitBtn = form.querySelector('button[type="submit"]');
-                    if (!card || !input || !input.value.trim()) return;
+                    if (!card || !input || !input.value.trim() || submitBtn.disabled) return;
+                    if (!window.OrgActionConfirmations.confirmSubmit(e)) return;
 
                     submitBtn.disabled = true;
                     try {
@@ -1322,6 +1241,14 @@
                 modalEl.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
             };
+            const requestedAnnouncement = new URLSearchParams(window.location.search).get('announcement');
+            if (requestedAnnouncement && /^\d+$/.test(requestedAnnouncement)) {
+                const requestedRow = document.querySelector(`[data-announcement-id="${requestedAnnouncement}"]`);
+                if (requestedRow) {
+                    switchTab('announcements', false);
+                    openAnnouncementModal(requestedRow);
+                }
+            }
 
             const closeAnnouncementModal = () => {
                 if (!modalEl) return;

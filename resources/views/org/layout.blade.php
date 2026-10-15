@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=16">
     <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
 </head>
 @php
     $officeRole = $office->office_role ?? '';
@@ -251,7 +252,7 @@
     @endif
 
     {{-- Hidden Logout Form --}}
-    <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" style="display: none;">
+    <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" data-confirm="off" style="display: none;">
         @csrf
     </form>
 

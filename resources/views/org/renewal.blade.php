@@ -261,7 +261,7 @@
                         </div>
                     </div>
 
-                    <form id="soRenewalSubmissionForm" method="POST" enctype="multipart/form-data" action="{{ route('office.renewal.submit') }}" data-can-submit="{{ ! $isLockedPacket && $canSubmitPacket ? '1' : '0' }}" data-information-save-url="{{ route('office.renewal.information.save') }}">
+                    <form id="soRenewalSubmissionForm" method="POST" enctype="multipart/form-data" action="{{ route('office.renewal.submit') }}" data-confirm="manual" data-can-submit="{{ ! $isLockedPacket && $canSubmitPacket ? '1' : '0' }}" data-information-save-url="{{ route('office.renewal.information.save') }}">
                         @csrf
                         <input type="hidden" name="action" value="submit">
                         <input type="hidden" name="window_id" value="{{ $window->id }}">

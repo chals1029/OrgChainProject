@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CommunityFeedController extends Controller
 {
@@ -21,6 +23,7 @@ class CommunityFeedController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $student = Auth::guard('student')->user();
+        abort_unless($student instanceof UserAccount && $student->isActive(), 401);
 
         $request->merge([
             'body' => trim((string) $request->input('body')),
@@ -37,10 +40,14 @@ class CommunityFeedController extends Controller
             'body.required' => 'Write something about your experience.',
             'photo.max' => 'Photo must be 4MB or smaller.',
         ]);
+        $audience = $validated['audience'] ?? 'public';
+        if ($audience === 'org' && trim((string) $student->org_id) === '') {
+            throw ValidationException::withMessages(['audience' => 'Join an organization before posting to organization members.']);
+        }
 
         $imagePath = null;
         if ($request->hasFile('photo')) {
-            $imagePath = $request->file('photo')->store('community', 'public');
+            $imagePath = $request->file('photo')->store('community', 'local');
         }
 
         CommunityPost::create([
@@ -48,14 +55,30 @@ class CommunityFeedController extends Controller
             'activity_id' => $validated['activity_id'] ?? null,
             'body' => $validated['body'],
             'image_path' => $imagePath,
-            'feeling' => $validated['feeling'] ?: null,
-            'tagged_users' => $validated['tagged_users'] ?: null,
-            'audience' => $validated['audience'] ?? 'public',
+            'feeling' => $validated['feeling'] ?? null,
+            'tagged_users' => $validated['tagged_users'] ?? null,
+            'audience' => $audience,
+            'likes_count' => 0,
+            'comments_count' => 0,
+            'views_count' => 0,
         ]);
 
         return redirect()
             ->route('portal.community')
             ->with('status', 'Your post is live in the community feed.');
+    }
+
+    public function image(CommunityPost $post): BinaryFileResponse
+    {
+        $student = Auth::guard('student')->user();
+        abort_unless($student instanceof UserAccount && $this->canViewPost($post, $student), 404);
+        foreach (['local', 'public'] as $disk) {
+            $path = $this->communityImagePath((string) $post->image_path, $disk);
+            if ($path !== null) {
+                return response()->file($path, ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+            }
+        }
+        abort(404);
     }
 
     public function like(Request $request, CommunityPost $post): JsonResponse|RedirectResponse
@@ -213,9 +236,9 @@ class CommunityFeedController extends Controller
 
         return response()->json([
             'ok' => true,
-            'likes_count' => (int) $post->likes_count,
+            'likes_count' => $post->likes()->count(),
             'views_count' => (int) ($post->views_count ?? 0),
-            'comments_count' => (int) ($post->comments_count ?? 0),
+            'comments_count' => $post->comments()->count(),
             'likers' => $likers,
         ]);
     }
@@ -226,13 +249,35 @@ class CommunityFeedController extends Controller
 
         abort_unless($post->student_id === $student->id, 403);
 
-        if ($post->image_path) {
-            Storage::disk('public')->delete($post->image_path);
+        foreach (['local', 'public'] as $disk) {
+            if ($this->communityImagePath((string) $post->image_path, $disk) !== null) {
+                Storage::disk($disk)->delete($post->image_path);
+                break;
+            }
         }
 
         $post->delete();
 
         return back()->with('status', 'Post removed.');
+    }
+
+    private function communityImagePath(string $relative, string $disk): ?string
+    {
+        if (! str_starts_with($relative, 'community/') || str_contains($relative, '\\')
+            || array_intersect(explode('/', $relative), ['', '.', '..']) !== []
+            || ! in_array(strtolower(pathinfo($relative, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+            return null;
+        }
+        $root = realpath(Storage::disk($disk)->path(''));
+        $directory = realpath(Storage::disk($disk)->path('community'));
+        $path = realpath(Storage::disk($disk)->path($relative));
+        if ($root === false || $directory === false || $path === false || ! is_file($path)
+            || ! str_starts_with($directory, $root.DIRECTORY_SEPARATOR)
+            || ! str_starts_with($path, $directory.DIRECTORY_SEPARATOR)) {
+            return null;
+        }
+
+        return $path;
     }
 
     private function canViewPost(CommunityPost $post, UserAccount $student): bool

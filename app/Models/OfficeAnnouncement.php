@@ -17,4 +17,47 @@ class OfficeAnnouncement extends Model
         'attachment_path',
         'attachment_name',
     ];
+
+    /**
+     * Announcements are campus-wide publications; no office draft rows are stored here.
+     * Keep every student surface on the same persisted publication metadata.
+     *
+     * @return array<string, mixed>
+     */
+    public function studentPublication(): array
+    {
+        $category = match ($this->type) {
+            'General', 'General Announcement' => 'general',
+            'TOSA', 'Call for TOSA' => 'tosa',
+            'Deadline', 'Deadline Notice', 'Reminder', 'Compliance Reminder' => 'deadlines',
+            default => 'oso',
+        };
+        [$tag, $pill] = match ($category) {
+            'general' => ['General Announcements', 'sp-pill-general'],
+            'deadlines' => ['Deadline Reminders', 'sp-pill-deadlines'],
+            'tosa' => ['Call for TOSA', 'sp-pill-tosa'],
+            default => ['OSO Notices', 'sp-pill-oso'],
+        };
+        $date = $this->created_at;
+
+        return [
+            'id' => 'a'.$this->id,
+            'announcement_id' => (int) $this->id,
+            'title' => $this->title,
+            'type' => $this->type,
+            'body' => $this->body,
+            'author' => $this->author ?: 'OSO Admin',
+            'priority' => $this->priority ?: 'normal',
+            'category' => $category,
+            'tag' => $tag,
+            'pill_class' => $pill,
+            'time' => $date?->diffForHumans() ?? '',
+            'published_at' => $date?->toIso8601String(),
+            'date' => $date?->format('M j, Y') ?? '',
+            'day' => $date?->format('d M') ?? '',
+            'year' => $date?->format('Y') ?? '',
+            'sort' => $date?->timestamp ?? 0,
+            'url' => route('portal.home', ['announcement' => $this->id]),
+        ];
+    }
 }

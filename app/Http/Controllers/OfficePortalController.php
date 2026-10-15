@@ -13,6 +13,7 @@ use App\Models\InCampusActivitySubmission;
 use App\Models\OrgActivity;
 use App\Models\OrgFundAccount;
 use App\Models\OfficeAnnouncement;
+use App\Models\OfficeAnnouncementAcknowledgment;
 use App\Models\OfficeTemplate;
 use App\Models\OrgReportDocument;
 use App\Models\OrgRenewalDocument;
@@ -2038,11 +2039,14 @@ class OfficePortalController extends Controller
 
     public function updates(): View
     {
+        $acknowledgments = OfficeAnnouncementAcknowledgment::query()
+            ->where('office_user_id', Auth::guard('office')->id())
+            ->pluck('acknowledged_at', 'office_announcement_id');
         $liveAnnouncements = OfficeAnnouncement::query()
             ->latest()
             ->get()
             ->map(fn (OfficeAnnouncement $a): array => [
-                'id' => 'db-'.$a->id,
+                'id' => (int) $a->id,
                 'title' => $a->title,
                 'type' => $a->type,
                 'body' => $a->body,
@@ -2052,6 +2056,10 @@ class OfficePortalController extends Controller
                 'attachment' => $a->attachment_name,
                 'attachment_size' => null,
                 'attachment_url' => $a->attachment_path ? route('office.updates.announcements.attachment', $a) : null,
+                'url' => route('office.updates', ['announcement' => $a->id]),
+                'document_url' => route('office.updates.announcements.document', $a->id),
+                'acknowledge_url' => route('office.updates.announcements.acknowledge', $a),
+                'acknowledged_at' => $acknowledgments->get($a->id),
             ])->all();
 
         $liveTemplates = OfficeTemplate::query()
@@ -2078,7 +2086,7 @@ class OfficePortalController extends Controller
 
         return view('org.updates', array_merge($this->deskContext(), [
             'activeNav' => 'updates',
-            'announcements' => array_merge($liveAnnouncements, $this->demoAnnouncements()),
+            'announcements' => $liveAnnouncements,
             'templates' => array_merge(
                 $liveTemplates,
                 $this->officialTemplateDocuments(),
@@ -2086,60 +2094,6 @@ class OfficePortalController extends Controller
         ]));
     }
 
-    /**
-     * Demo announcements (also feeds the .docx notice download).
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function demoAnnouncements(): array
-    {
-        return [
-            [
-                'id' => 1,
-                'title' => 'Deadline Extension for Activity Proposals (AY 2026-2027)',
-                'type' => 'Deadline',
-                'body' => 'The deadline for submitting student activity proposals and financial plans for the 2nd Semester has been officially extended to April 15, 2026. All student organizations must comply with the updated clearance requirements and submit via OrgChain portal.',
-                'author' => 'Office of Student Organizations (OSO)',
-                'time' => '2 hours ago',
-                'priority' => 'high',
-                'attachment' => 'Activity_Proposal_Guidelines_AY2526.pdf',
-                'attachment_size' => '1.2 MB',
-            ],
-            [
-                'id' => 2,
-                'title' => 'Revised Budget Allocation & Expense Liquidation Sheet',
-                'type' => 'Guideline',
-                'body' => 'A revised Budget Allocation template is now available for download. All new proposals requiring university student fund utilization must use this updated format with detailed line-item breakdowns.',
-                'author' => 'Office of Student Organizations (OSO)',
-                'time' => '1 day ago',
-                'priority' => 'normal',
-                'attachment' => 'Budget_Allocation_Sheet_v2.xlsx',
-                'attachment_size' => '180 KB',
-            ],
-            [
-                'id' => 3,
-                'title' => 'Mandatory OSO Clearance & Risk Assessment Protocols',
-                'type' => 'Reminder',
-                'body' => 'All campus events, off-campus excursions, and general assemblies must secure verified OSO clearance at least 2 weeks before the scheduled event date. Ensure venue reservations and safety matrices are attached.',
-                'author' => 'Office of Student Organizations (OSO)',
-                'time' => '3 days ago',
-                'priority' => 'high',
-                'attachment' => null,
-                'attachment_size' => null,
-            ],
-            [
-                'id' => 4,
-                'title' => 'Welcome to Academic Year 2026-2027: Accreditation & Calendar',
-                'type' => 'General Announcement',
-                'body' => 'We warmly welcome all student leaders and organizations to the new academic term. Please review the institutional calendar and ensure officer credentials are up-to-date in the system.',
-                'author' => 'Office of Student Organizations (OSO)',
-                'time' => '1 week ago',
-                'priority' => 'normal',
-                'attachment' => 'Accreditation_Notice_AY2026.pdf',
-                'attachment_size' => '850 KB',
-            ],
-        ];
-    }
 
     /**
      * Canonical official templates supplied with the project.
@@ -2282,20 +2236,15 @@ class OfficePortalController extends Controller
      */
     public function downloadAnnouncementDocument(string $id): Response
     {
-        if (str_starts_with($id, 'db-')) {
-            $a = OfficeAnnouncement::query()->findOrFail((int) substr($id, 3));
-            $item = [
-                'title' => $a->title,
-                'type' => $a->type,
-                'body' => $a->body,
-                'author' => $a->author,
-                'time' => optional($a->created_at)->format('M j, Y g:i A') ?? 'Recently',
-                'attachment' => $a->attachment_name,
-            ];
-        } else {
-            $item = collect($this->demoAnnouncements())->firstWhere('id', (int) $id);
-            abort_unless($item, 404);
-        }
+        $a = OfficeAnnouncement::query()->findOrFail($id);
+        $item = [
+            'title' => $a->title,
+            'type' => $a->type,
+            'body' => $a->body,
+            'author' => $a->author,
+            'time' => optional($a->created_at)->format('M j, Y g:i A') ?? '',
+            'attachment' => $a->attachment_name,
+        ];
 
         $doc = (new DocxBuilder())
             ->title($item['title'])
@@ -2450,6 +2399,23 @@ class OfficePortalController extends Controller
         OfficeAnnouncement::query()->create($data);
 
         return redirect()->route('office.updates')->with('success', 'Announcement published.');
+    }
+
+    public function acknowledgeAnnouncement(Request $request, OfficeAnnouncement $announcement): JsonResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless($office && $office->is_active, 403);
+
+        $receipt = OfficeAnnouncementAcknowledgment::query()->firstOrCreate([
+            'office_announcement_id' => $announcement->id,
+            'office_user_id' => $office->id,
+        ], ['acknowledged_at' => now()]);
+
+        return response()->json([
+            'ok' => true,
+            'announcement_id' => (int) $announcement->id,
+            'acknowledged_at' => $receipt->acknowledged_at->toIso8601String(),
+        ]);
     }
 
     /**
@@ -5846,11 +5812,11 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * OSO-only student reports queue (Student Voice submissions to verify).
+     * OSO-only student feedback acknowledgment queue.
      */
     public function studentReports(Request $request): View
     {
-        abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
+        $this->osoOfficer();
 
         $status = trim((string) $request->query('status', ''));
         $college = trim((string) $request->query('college', ''));
@@ -5885,26 +5851,39 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * OSO decision on a student report (verify or dismiss with a note).
+     * Acknowledge or dismiss pending feedback; retain the first decision and its provenance.
      */
     public function reviewStudentReport(Request $request, StudentFeedback $report): RedirectResponse
     {
-        abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
+        $officer = $this->osoOfficer();
 
         $validated = $request->validate([
-            'decision' => ['required', 'in:verified,dismissed'],
+            'decision' => ['required', 'in:acknowledged,dismissed'],
             'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $report->status = $validated['decision'];
-        $report->review_note = $validated['review_note'] ?? null;
-        $report->verified_by = Auth::guard('office')->id();
-        $report->verified_at = now();
-        $report->save();
+        $decision = $validated['decision'] === 'acknowledged' ? 'verified' : 'dismissed';
+        $changed = DB::connection($report->getConnectionName())->transaction(function () use ($report, $validated, $decision, $officer): bool {
+            $locked = StudentFeedback::query()->whereKey($report->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status !== 'pending') {
+                return false;
+            }
 
-        return back()->with('success', $validated['decision'] === 'verified'
-            ? 'Student report verified.'
-            : 'Student report dismissed.');
+            // Keep the historical verified storage value, now presented as acknowledgment.
+            $locked->status = $decision;
+            $locked->review_note = $validated['review_note'] ?? null;
+            if ($decision === 'verified') {
+                $locked->verified_by = $officer->id;
+                $locked->verified_at = now();
+            }
+            $locked->save();
+
+            return true;
+        });
+
+        return back()->with('success', ! $changed
+            ? 'Student feedback was already reviewed; the original decision was retained.'
+            : ($decision === 'verified' ? 'Student feedback acknowledged.' : 'Student feedback dismissed.'));
     }
 
     /**

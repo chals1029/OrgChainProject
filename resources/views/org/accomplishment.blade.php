@@ -140,7 +140,7 @@
     @endif
     @if ($canEdit)
     <dialog class="ar-dialog ar-editor-dialog" id="arEditorDialog" aria-labelledby="arEditorTitle" @if ($editorErrors) data-open-on-load @endif>
-        <form method="post" action="{{ $ad['store_url'] ?? '' }}" enctype="multipart/form-data" id="arEditorForm">
+        <form method="post" action="{{ $ad['store_url'] ?? '' }}" enctype="multipart/form-data" id="arEditorForm" data-confirm="manual">
             @csrf
             <input type="hidden" name="_form" value="accomplishment-report"><input type="hidden" name="_report_id" value=""><input type="hidden" name="academic_year" value="{{ $year }}"><input type="hidden" name="semester" value="{{ $semester }}">
             <header class="ar-dialog-head"><div><span class="ar-eyebrow">{{ $semester }} · AY {{ $year }}</span><h2 id="arEditorTitle">Edit activity report</h2></div><button type="button" class="ar-icon-button" data-ar-close aria-label="Close report editor"><i class="bi bi-x-lg"></i></button></header>

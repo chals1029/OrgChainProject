@@ -61,6 +61,7 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
 
     Route::post('/community/posts', [CommunityFeedController::class, 'store'])->name('community.posts.store');
     Route::get('/community/posts/{post}/likers', [CommunityFeedController::class, 'likers'])->name('community.posts.likers');
+    Route::get('/community/posts/{post}/image', [CommunityFeedController::class, 'image'])->name('community.posts.image');
     Route::post('/community/posts/{post}/like', [CommunityFeedController::class, 'like'])->name('community.posts.like');
     Route::post('/community/posts/{post}/comments', [CommunityFeedController::class, 'comment'])->name('community.posts.comment');
     Route::post('/community/comments/{comment}/like', [CommunityFeedController::class, 'likeComment'])->name('community.comments.like');
@@ -131,6 +132,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/tosa/{applicant}/documents/{key}', [OfficePortalController::class, 'downloadTosaDocument'])->name('tosa.documents.download');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
     Route::post('/updates/announcements', [OfficePortalController::class, 'storeAnnouncement'])->name('updates.announcements.store');
+    Route::post('/updates/announcements/{announcement}/acknowledge', [OfficePortalController::class, 'acknowledgeAnnouncement'])->name('updates.announcements.acknowledge');
     Route::get('/updates/announcements/{announcement}/attachment', [OfficePortalController::class, 'downloadAnnouncementAttachment'])->name('updates.announcements.attachment');
     Route::post('/updates/templates', [OfficePortalController::class, 'storeTemplate'])->name('updates.templates.store');
     Route::get('/updates/templates/{template}/download', [OfficePortalController::class, 'downloadTemplate'])->name('updates.templates.download');

@@ -18,7 +18,7 @@ if (str_contains($uri, "\0") || str_contains($uri, '\\') || in_array('..', explo
 }
 if (str_starts_with($uri, '/storage/')) {
     $category = explode('/', substr($uri, strlen('/storage/')))[0];
-    if (! in_array($category, ['community', 'avatars', 'office-settings', 'templates', 'tosa-templates'], true)) {
+    if (! in_array($category, ['avatars', 'office-settings', 'templates', 'tosa-templates'], true)) {
         http_response_code(404);
         exit;
     }

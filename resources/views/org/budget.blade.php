@@ -1328,7 +1328,7 @@
                 <div class="so-alert"><i class="bi bi-hourglass-split"></i> No final-approved activities are available yet. Budget utilization can be recorded after the activity completes the approval workflow.</div>
             @endif
 
-            <form method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data" id="soExpenseForm" class="so-expense-form" data-org-upload-form>
+            <form method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data" id="soExpenseForm" class="so-expense-form" data-org-upload-form data-confirm="manual">
                 @csrf
                 <input type="hidden" name="batch_request_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                 <input type="hidden" name="receipt_reviewed" value="1">

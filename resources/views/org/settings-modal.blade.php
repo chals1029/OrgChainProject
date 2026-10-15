@@ -163,12 +163,14 @@
                                 </div>
                                 <div style="flex: 1;">
                                     <strong style="font-size: 0.95rem; color: #1a1618; display: block; margin-bottom: 0.2rem;">Official OrgChain Emblem &amp; Seal</strong>
-                                    <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.75rem;">PNG or JPEG, up to 2 MB. Uploads and resets are saved immediately.</p>
+                                    <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.75rem;">PNG or JPEG, up to 2 MB. Choose a file, then upload to save the logo.</p>
                                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                         <button type="button" class="org-settings-btn-outline" onclick="triggerLogoUpload()">
-                                            <i class="bi bi-upload"></i> Upload New Logo
+                                            <i class="bi bi-folder2-open"></i> Choose Logo
                                         </button>
                                         <input type="file" id="settingsLogoFileInput" style="display: none;" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="handleLogoChange(this)">
+                                        <button type="button" id="settingsLogoUploadButton" class="org-settings-btn-outline" onclick="uploadSettingsLogo()" hidden disabled>Upload selected logo</button>
+                                        <span id="settingsLogoSelectedName" class="org-settings-help" aria-live="polite"></span>
                                         <button type="button" class="org-settings-btn-subtle" onclick="resetLogoToDefault()">
                                             <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
                                         </button>
@@ -286,7 +288,7 @@
                             </div>
                         </div>
                         <div class="org-settings-card-body">
-                            <form onsubmit="handlePasswordUpdate(event)" style="display: grid; gap: 1rem;">
+                            <form method="post" data-confirm="manual" onsubmit="handlePasswordUpdate(event)" style="display: grid; gap: 1rem;">
                                 <div class="org-settings-grid-3">
                                     <div class="org-settings-field">
                                         <label for="setCurrentPassword" class="org-settings-label">Current Password</label>
@@ -589,7 +591,7 @@
             </div>
             <button type="button" aria-label="Close account form" onclick="document.getElementById('settingsAddUserModal').close()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
-        <form id="settingsAddUserForm" onsubmit="handleAddUserSubmit(event)" class="org-settings-account-form" autocomplete="off">
+        <form id="settingsAddUserForm" method="post" data-confirm="manual" onsubmit="handleAddUserSubmit(event)" class="org-settings-account-form" autocomplete="off">
             <p id="settingsAddUserError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
             <p class="org-settings-help">Choose a temporary password and share it securely with the officer. No invitation email is sent. The officer must change it on first login before accessing any system actions.</p>
             <div class="org-settings-field">
@@ -662,7 +664,7 @@
         </div>
         <p id="settingsAccountSubject" class="org-settings-account-subject"></p>
         <p id="settingsAccountDescription" class="org-settings-help"></p>
-        <form id="settingsAccountForm" class="org-settings-account-form" autocomplete="off" onsubmit="handleAccountManagementSubmit(event)">
+        <form id="settingsAccountForm" method="post" data-confirm="manual" class="org-settings-account-form" autocomplete="off" onsubmit="handleAccountManagementSubmit(event)">
             <p id="settingsAccountError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
             <div id="settingsAccountImmutable" class="org-settings-field">
                 <strong class="org-settings-label">Assigned role and organization</strong>
@@ -1768,13 +1770,14 @@
         return data;
     }
 
-    async function runSettingsMutation(action) {
+    async function runSettingsMutation(action, confirmationMessage = 'Save these settings changes?') {
         if (settingsMutationPending) {
             showSettingsToast('Please wait for the current settings change to finish.', 'info');
             return;
         }
+        if (!window.OrgActionConfirmations.confirm(confirmationMessage)) return;
         settingsMutationPending = true;
-        const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #orgSettingsModal [data-account-action], #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
+        const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #settingsLogoUploadButton, #orgSettingsModal [data-account-action], #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
             .filter(button => !button.disabled);
         controls.forEach(button => button.disabled = true);
         try {
@@ -1835,7 +1838,7 @@
         return runSettingsMutation(async () => {
             const data = await persistSettingsSection(section);
             showSettingsToast(data.message || `${sectionName} settings saved.`, 'success');
-        });
+        }, `Save ${sectionName.toLowerCase()} settings?`);
     }
 
     async function persistSettingsProfile() {
@@ -1863,7 +1866,7 @@
         return runSettingsMutation(async () => {
             const data = await persistSettingsProfile();
             showSettingsToast(data.message || 'Account profile saved.', 'success');
-        });
+        }, 'Save your account profile changes?');
     }
 
     function saveAllSettings() {
@@ -1881,7 +1884,7 @@
                 }
             }
             showSettingsToast(`${saved.join(' and ')} saved. Passwords were not changed.`, 'success');
-        });
+        }, 'Save all profile and general settings changes?');
     }
 
     // Password Strengths
@@ -1930,7 +1933,7 @@
             ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword'].forEach(clearSettingsCredential);
             checkPasswordStrength('');
             showSettingsToast(data.message || 'Account password updated.', 'success');
-        });
+        }, 'Update your account password?');
     }
 
     // Logo Upload Trigger
@@ -1947,12 +1950,26 @@
 
     function handleLogoChange(input) {
         const file = input.files?.[0];
+        const button = document.getElementById('settingsLogoUploadButton');
+        const name = document.getElementById('settingsLogoSelectedName');
+        button.hidden = true;
+        button.disabled = true;
+        name.textContent = '';
         if (!file) return;
         if (!/\.(png|jpe?g)$/i.test(file.name) || file.size > 2048 * 1024) {
             input.value = '';
             showSettingsToast('Choose a PNG or JPEG logo no larger than 2 MB.', 'error');
             return;
         }
+        name.textContent = file.name;
+        button.hidden = false;
+        button.disabled = false;
+    }
+
+    function uploadSettingsLogo() {
+        const input = document.getElementById('settingsLogoFileInput');
+        const file = input.files?.[0];
+        if (!file) return;
         return runSettingsMutation(async () => {
             try {
                 const formData = new FormData();
@@ -1962,17 +1979,17 @@
                 showSettingsToast(data.message || 'Institutional logo uploaded.', 'success');
             } finally {
                 input.value = '';
+                handleLogoChange(input);
             }
-        });
+        }, 'Upload this logo as the official OrgChain emblem?');
     }
 
     function resetLogoToDefault() {
-        if (!window.confirm('Reset the OSO logo to the default OrgChain emblem?')) return;
         return runSettingsMutation(async () => {
             const data = await osoSettingsRequest(osoSettingsRoutes.logoReset, { method: 'DELETE' });
             applySettingsLogo(@json(asset('Orgchain logo.png')));
             showSettingsToast(data.message || 'Institutional logo reset.', 'success');
-        });
+        }, 'Reset the OSO logo to the default OrgChain emblem?');
     }
 
     // Account metadata is shared by server-rendered rows and confirmed API responses.
@@ -2165,7 +2182,7 @@
             dialog.close();
             showSettingsToast(data.message || 'Officer account created.', 'success');
             filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
-        });
+        }, 'Create this officer account?');
     }
 
     function handleAccountManagementSubmit(event) {
@@ -2198,7 +2215,7 @@
             dialog.close();
             showSettingsToast(data.message || 'Officer account updated.', 'success');
             filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
-        });
+        }, { edit: 'Save these officer account changes?', reset: 'Reset this officer password?', turnover: 'Turn over this officer account? Existing sessions will be revoked.' }[action]);
     }
 
     function toggleOsoUserStatus(id, isActive) {
@@ -2208,12 +2225,11 @@
         }
         const user = settingsAccounts.get(Number(id));
         if (!user || settingsMutationPending) return;
-        if (!window.confirm(isActive ? `Enable ${user.name}? Previously revoked sessions remain invalid.` : `Disable ${user.name}? All existing sessions and remembered login will be revoked. Their identity and records are retained.`)) return;
         return runSettingsMutation(async () => {
             const data = await postSettingsJson(`${osoSettingsRoutes.userStatusBase}/${id}/status`, { is_active: isActive }, 'PATCH');
             upsertOsoUser(data.user);
             showSettingsToast(data.message || 'Officer account status updated.', 'success');
-        });
+        }, isActive ? `Enable ${user.name}?` : `Disable ${user.name}? Existing sessions will be revoked.`);
     }
 
     async function downloadSettingsFile(url, label) {

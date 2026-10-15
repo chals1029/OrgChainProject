@@ -71,7 +71,7 @@
                             <strong>{{ $title }}</strong>
                             <small>{{ $submissionLocked ? 'Locked — SO cannot submit' : 'Open — SO can submit completed reports' }}</small>
                         </div>
-                        <form method="post" action="{{ route('office.reports.submission-lock', ['reportType' => $type]) }}" class="sr-actions" data-sr-submission-form="{{ $type }}">
+                        <form method="post" action="{{ route('office.reports.submission-lock', ['reportType' => $type]) }}" class="sr-actions" data-sr-submission-form="{{ $type }}" data-confirm="manual">
                             @csrf
                             <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
                             <input type="hidden" name="semester" value="{{ $selectedSemester }}">
@@ -278,7 +278,11 @@
                         lockDialog.close();
                         return;
                     }
-                    if (form.elements.namedItem('is_locked').value !== '1') return;
+                    // Locking already has the dedicated period/scope confirmation below.
+                    if (form.elements.namedItem('is_locked').value !== '1') {
+                        window.OrgActionConfirmations.confirmSubmit(event, 'Reopen submissions for this reporting period?');
+                        return;
+                    }
                     event.preventDefault();
                     if (lockDialog.open) return;
                     const submitter = event.submitter || form.querySelector('[data-sr-submission-button]');

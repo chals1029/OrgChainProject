@@ -110,6 +110,7 @@
     save.addEventListener('click', async function () {
         if (saving || form.dataset.submitting === '1' || save.disabled) return;
         if (!details.every(function (input) { return input.reportValidity(); })) return;
+        if (!window.OrgActionConfirmations.confirm('Save these organization information changes?')) return;
         var payload = {
             window_id: form.elements.window_id.value,
             organization_name: form.elements.organization_name.value
@@ -167,6 +168,7 @@
             event.preventDefault();
             return;
         }
+        if (!window.OrgActionConfirmations.confirmSubmit(event, 'Submit this renewal packet for review?')) return;
         form.dataset.submitting = '1';
         submit.setAttribute('aria-busy', 'true');
         details.forEach(function (input) { input.readOnly = true; });

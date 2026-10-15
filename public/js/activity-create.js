@@ -368,6 +368,7 @@
                     : 'Complete the form before submitting for review.', true);
                 return;
             }
+            if (!window.OrgActionConfirmations.confirmSubmit(event, 'Submit this activity proposal for review?')) return;
             if (submitButton) submitButton.disabled = true;
         });
 

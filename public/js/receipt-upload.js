@@ -424,7 +424,10 @@
     });
 
     form.addEventListener('submit', (event) => {
-        if (selectedFiles.length && mainInput?.dataset.uploadInvalid !== 'true') return;
+        if (selectedFiles.length && mainInput?.dataset.uploadInvalid !== 'true') {
+            window.OrgActionConfirmations.confirmSubmit(event, 'Save these expense records and receipts?');
+            return;
+        }
         event.preventDefault();
         setStatus(selectedFiles.length ? 'Choose valid JPG, PNG, WebP, or PDF files up to 5 MB each.' : 'Upload at least one receipt or supporting document.', true);
         mainInput?.focus();

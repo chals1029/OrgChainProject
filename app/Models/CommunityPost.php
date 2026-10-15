@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -50,5 +51,20 @@ class CommunityPost extends Model
         }
 
         return $this->likes()->where('student_id', $student->id)->exists();
+    }
+
+    public function scopeSearchFeed(Builder $query, string $term): Builder
+    {
+        $term = trim($term);
+        if ($term === '') {
+            return $query;
+        }
+        $pattern = '%'.$term.'%';
+
+        return $query->where(function (Builder $matches) use ($pattern): void {
+            $matches->where('body', 'like', $pattern)
+                ->orWhereHas('student', fn (Builder $author) => $author->where('full_name', 'like', $pattern))
+                ->orWhereIn('activity_id', OrgActivity::query()->select('id')->where('title', 'like', $pattern));
+        });
     }
 }

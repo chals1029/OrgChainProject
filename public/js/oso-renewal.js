@@ -460,31 +460,15 @@
         var form = requirement ? requirement.querySelector('[data-or-replace-form]') : null;
         var input = form ? form.querySelector('[data-or-file]') : null;
         if (!input || form.dataset.orSubmitting === '1') return;
-        input.value = '';
-        input.setCustomValidity('');
-        setFileStatus(input, '', '');
         input.click();
     }
 
     function handleReplaceChange(form, input, valid) {
-        if (!valid || form.dataset.orSubmitting === '1') return;
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        form.dataset.orSubmitting = '1';
-        setFileStatus(input, 'Uploading ' + input.files[0].name + '\u2026', 'busy');
-        var requirement = form.closest('.or-requirement');
-        (requirement || form).querySelectorAll('[data-or-replace]').forEach(function (button) {
-            if (button.disabled) return;
-            button.disabled = true;
-            button.dataset.orLocked = '1';
-        });
-        if (typeof form.requestSubmit === 'function') {
-            form.requestSubmit();
-        } else {
-            form.submit();
-        }
+        if (form.dataset.orSubmitting === '1') return;
+        var submit = form.querySelector('[data-or-replace-submit]');
+        submit.hidden = !valid;
+        submit.disabled = !valid;
+        if (valid) setFileStatus(input, input.files[0].name + ' selected. Click Save File to upload.', 'ok');
     }
 
     /* Delete requirement */
@@ -682,6 +666,7 @@
             byId('osoRenewalEditForm'),
             byId('osoRenewalDeleteForm'),
         ].filter(Boolean);
+        forms.push(...root.querySelectorAll('[data-or-replace-form]'));
 
         forms.forEach(function (form) {
             form.addEventListener('submit', function (event) {
@@ -690,13 +675,22 @@
                     return;
                 }
                 form.dataset.orSubmitting = '1';
+                var input = form.querySelector('[data-or-file]');
+                if (form.hasAttribute('data-or-replace-form') && input?.files[0]) {
+                    setFileStatus(input, 'Uploading ' + input.files[0].name + '\u2026', 'busy');
+                    form.querySelectorAll('[data-or-replace]').forEach(function (button) {
+                        if (button.disabled) return;
+                        button.disabled = true;
+                        button.dataset.orLocked = '1';
+                    });
+                }
             });
         });
 
         window.addEventListener('pageshow', function (event) {
             if (!event.persisted) return;
             forms.forEach(function (form) { delete form.dataset.orSubmitting; });
-            root.querySelectorAll('[data-or-replace-form][data-or-submitting="1"]').forEach(function (form) {
+            root.querySelectorAll('[data-or-replace-form]').forEach(function (form) {
                 delete form.dataset.orSubmitting;
                 var requirement = form.closest('.or-requirement');
                 (requirement || form).querySelectorAll('[data-or-replace][data-or-locked="1"]').forEach(function (button) {
@@ -707,6 +701,7 @@
                 if (input) {
                     input.value = '';
                     validateFileInput(input, false);
+                    handleReplaceChange(form, input, false);
                 }
             });
         });

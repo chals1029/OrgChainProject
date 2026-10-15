@@ -266,6 +266,7 @@
         if (!present.length || present.length > 20) {
             event.preventDefault(); evidenceError.textContent = 'Keep or select at least one captioned image (maximum 20).'; evidenceError.hidden = false; evidenceError.scrollIntoView({ block: 'center' }); return;
         }
+        if (!window.OrgActionConfirmations.confirmSubmit(event, 'Save this activity accomplishment report?')) return;
         // Empty picker rows are not evidence and must not create multipart rows.
         cards.filter((card) => !present.includes(card)).forEach((card) => card.remove());
         if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; }

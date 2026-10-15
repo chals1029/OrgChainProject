@@ -164,7 +164,7 @@
                                                 <span class="fin-missing"><i class="bi bi-exclamation-circle"></i> File missing</span>
                                             @endif
                                             @if ($report['can_submit'] && $report['has_file'])
-                                                <form method="post" action="{{ $report['submit_url'] }}" class="fin-submit-form" data-fin-submit-form="{{ $report['id'] }}">
+                                                <form method="post" action="{{ $report['submit_url'] }}" class="fin-submit-form" data-fin-submit-form="{{ $report['id'] }}" data-confirm="manual">
                                                     @csrf
                                                     <input type="hidden" name="reportType" value="fr">
                                                     <button type="submit" class="org-btn org-btn-primary org-btn-sm" data-fin-submit="{{ $report['id'] }}" disabled aria-describedby="finSubmitHelp{{ $report['id'] }}">
@@ -423,7 +423,7 @@
     </div>
 
     <dialog id="finCreateDialog" class="fin-dialog fin-create-dialog" aria-labelledby="finCreateTitle" @if ($createHasErrors) data-open-on-load @endif>
-        <form method="post" action="{{ $fd['create_url'] ?? '' }}" enctype="multipart/form-data" class="fin-create-form" id="finCreateForm" data-org-upload-form>
+        <form method="post" action="{{ $fd['create_url'] ?? '' }}" enctype="multipart/form-data" class="fin-create-form" id="finCreateForm" data-org-upload-form data-confirm="manual">
             @csrf
             <input type="hidden" name="_form" value="financial-create">
             <header class="fin-dialog-head">

@@ -8,6 +8,15 @@
         $completedCount = $recentActivities->count();
         $firstName = trim(explode(' ', $student->name ?? '')[0] ?? '');
         if ($firstName === '') $firstName = 'Student';
+        $communityReactions = [
+            'like' => ['label' => 'Like', 'icon' => 'bi-hand-thumbs-up-fill', 'emoji' => '👍'],
+            'love' => ['label' => 'Love', 'icon' => 'bi-heart-fill', 'emoji' => '❤️'],
+            'care' => ['label' => 'Care', 'icon' => 'bi-emoji-heart-eyes-fill', 'emoji' => '🥰'],
+            'haha' => ['label' => 'Haha', 'icon' => 'bi-emoji-laughing-fill', 'emoji' => '😆'],
+            'wow' => ['label' => 'Wow', 'icon' => 'bi-emoji-surprise-fill', 'emoji' => '😮'],
+            'sad' => ['label' => 'Sad', 'icon' => 'bi-emoji-tear-fill', 'emoji' => '😢'],
+            'angry' => ['label' => 'Angry', 'icon' => 'bi-emoji-angry-fill', 'emoji' => '😡'],
+        ];
     @endphp
 
     {{-- ============================ HOME PANEL ============================ --}}
@@ -106,10 +115,7 @@
             <div class="liquid-glass" style="padding:1rem 1.15rem;border-radius:18px;">
                 <h3 style="margin:0 0 0.5rem;font-size:1rem;"><i class="bi bi-chat-heart"></i> Student voice</h3>
                 <p style="margin:0 0 0.75rem;font-size:0.85rem;color:#786f73;">Say what you want or feel about admin / campus life. OSO can review submissions.</p>
-                @if (session('status'))
-                    <p style="color:#15803d;font-weight:700;">{{ session('status') }}</p>
-                @endif
-                <form method="post" action="{{ route('portal.feedback.store') }}" style="display:grid;gap:0.65rem;">
+                <form method="post" action="{{ route('portal.feedback.store') }}" data-confirm-message="Send this feedback to OSO?" style="display:grid;gap:0.65rem;">
                     @csrf
                     <select name="category" style="padding:0.5rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
                         <option value="campus">Campus life</option>
@@ -117,9 +123,20 @@
                         <option value="activities">Activities</option>
                         <option value="general">General</option>
                     </select>
-                    <textarea name="message" required maxlength="2000" rows="3" placeholder="Your feedback..." style="padding:0.65rem 0.8rem;border-radius:12px;border:1px solid #e8dedf;"></textarea>
+                    <textarea name="message" required maxlength="2000" rows="3" placeholder="Your feedback..." style="padding:0.65rem 0.8rem;border-radius:12px;border:1px solid #e8dedf;">{{ old('message') }}</textarea>
                     <button type="submit" style="justify-self:start;background:#7a1222;color:#fff;border:none;border-radius:999px;padding:0.5rem 1.1rem;font-weight:700;cursor:pointer;">Send feedback</button>
                 </form>
+                <div class="sp-feedback-history" aria-label="Your feedback history">
+                    @forelse (($myFeedback ?? collect()) as $feedback)
+                        <article id="feedback-{{ $feedback->id }}" class="sp-feedback-history-item">
+                            <strong>{{ $feedback->status === 'verified' ? 'Acknowledged' : ucfirst($feedback->status) }}</strong>
+                            <small>{{ $feedback->created_at?->format('M j, Y · g:i A') }}</small>
+                            <p>{{ $feedback->body }}</p>
+                        </article>
+                    @empty
+                        <p>No feedback sent yet.</p>
+                    @endforelse
+                </div>
             </div>
         </section>
 
@@ -198,29 +215,22 @@
                 <div class="sp-budget-chart-card liquid-glass">
                     <div class="sp-chart-card-head">
                         <h3><i class="bi bi-bar-chart-line-fill"></i> Category Breakdown</h3>
-                        <span class="sp-chart-count">{{ $budgetItems->count() }} Categories</span>
+                        <span class="sp-chart-count">In-Campus / Off-Campus</span>
                     </div>
                     <div class="sp-hbar-list">
-                        @forelse ($budgetItems as $item)
+                        @forelse (($budgetCategoryBreakdown ?? []) as $item)
                             @php
-                                $pct = $item->utilizationPercent();
-                                $catLower = strtolower($item->category ?? '');
-                                $catIcon = match(true) {
-                                    str_contains($catLower, 'program') => 'bi-laptop',
-                                    str_contains($catLower, 'operation') => 'bi-gear-fill',
-                                    str_contains($catLower, 'extension') => 'bi-broadcast',
-                                    str_contains($catLower, 'sport') => 'bi-trophy-fill',
-                                    default => 'bi-tag-fill'
-                                };
+                                $pct = $item['allocated'] > 0 ? round(($item['utilized'] / $item['allocated']) * 100, 1) : 0;
+                                $catIcon = $loop->first ? 'bi-buildings' : 'bi-geo-alt';
                             @endphp
                             <div class="sp-hbar-item">
                                 <div class="sp-hbar-meta">
                                     <span class="sp-hbar-label">
                                         <i class="bi {{ $catIcon }}"></i>
-                                        <strong>{{ $item->category ?: $item->title }}</strong>
+                                        <strong>{{ $item['category'] }}</strong>
                                     </span>
                                     <div class="sp-hbar-nums">
-                                        <span class="sp-hbar-amount">₱{{ number_format($item->utilized) }} / ₱{{ number_format($item->allocated) }}</span>
+                                        <span class="sp-hbar-amount">Actual ₱{{ number_format($item['utilized'], 2) }} / Budget ₱{{ number_format($item['allocated'], 2) }}</span>
                                         <strong class="sp-hbar-pct">{{ $pct }}%</strong>
                                     </div>
                                 </div>
@@ -438,50 +448,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse (($announcements ?? [
-                                    [
-                                        'title' => 'Deadline Extension for Activity Proposals',
-                                        'body' => 'The deadline for submitting activity proposals for the 2nd Semester has been extended to April 15, 2026. All organizations must comply with the updated requirements.',
-                                        'author' => 'OSO Admin',
-                                        'time' => '2 hrs ago',
-                                        'priority' => 'high',
-                                    ],
-                                    [
-                                        'title' => 'General Assembly & Org Orientation',
-                                        'body' => 'All student leaders and active members are invited to attend the annual assembly at the University Amphitheater.',
-                                        'author' => 'Student Affairs',
-                                        'time' => 'Yesterday',
-                                        'priority' => 'normal',
-                                    ],
-                                    [
-                                        'title' => 'Budget Liquidation Submission Guidelines',
-                                        'body' => 'Please submit all receipts and liquidation reports within 5 working days following completed events.',
-                                        'author' => 'Finance Desk',
-                                        'time' => '3 days ago',
-                                        'priority' => 'normal',
-                                    ],
-                                    [
-                                        'title' => 'Accreditation Renewal Documents',
-                                        'body' => 'Submission of constitution and by-laws amendments is required for the upcoming accreditation cycle.',
-                                        'author' => 'OSO Admin',
-                                        'time' => '5 days ago',
-                                        'priority' => 'normal',
-                                    ],
-                                    [
-                                        'title' => 'University Week Booth Space Reservation',
-                                        'body' => 'First come, first served booth reservations open on Monday at the student portal kiosk.',
-                                        'author' => 'Events Comm',
-                                        'time' => '1 week ago',
-                                        'priority' => 'normal',
-                                    ],
-                                    [
-                                        'title' => 'Leadership Training Seminar 2026',
-                                        'body' => 'Mandatory leadership seminar for all incoming executive committee officers.',
-                                        'author' => 'OSO Admin',
-                                        'time' => '2 weeks ago',
-                                        'priority' => 'high',
-                                    ],
-                                ]) as $announce)
+                                @forelse (($announcements ?? []) as $announce)
                                     <tr class="sp-act-row">
                                         <td class="sp-col-date">
                                             <div class="sp-tbl-date">
@@ -988,6 +955,10 @@
                     <i class="bi bi-megaphone-fill"></i>
                     <span>All Bulletins</span>
                 </button>
+                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="general">
+                    <i class="bi bi-megaphone"></i>
+                    <span>General Announcements</span>
+                </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="tosa">
                     <i class="bi bi-award-fill"></i>
                     <span>Call for TOSA</span>
@@ -1037,7 +1008,7 @@
                     </select>
                 </div>
                 <div class="sp-ann-count-badge" id="spAnnounceCountBadge">
-                    Showing 1–5 of 9 bulletins
+                    {{ count($bulletins ?? []) }} bulletins
                 </div>
             </div>
 
@@ -1056,141 +1027,15 @@
                     </thead>
                     <tbody id="spAnnouncementsTbody">
                         @php
-                            $announcementsList = [
-                                [
-                                    'id' => 1,
-                                    'tag' => 'Call for TOSA',
-                                    'pill_class' => 'sp-pill-tosa',
-                                    'category' => 'tosa',
-                                    'title' => 'Call for Ten Outstanding Student Award (TOSA) 2026',
-                                    'body' => 'The Office of Student Organizations (OSO) is now accepting applications for the Ten Outstanding Student Award (TOSA) 2026. All interested and qualified student leaders are encouraged to apply.',
-                                    'day' => '10 May',
-                                    'year' => '2026',
-                                    'date' => 'May 10, 2026',
-                                    'order' => 1,
-                                    'author' => 'OSO Admin',
-                                    'priority' => 'high'
-                                ],
-                                [
-                                    'id' => 2,
-                                    'tag' => 'Activities',
-                                    'pill_class' => 'sp-pill-activities',
-                                    'category' => 'activities',
-                                    'title' => 'University Week Pavilion, Exhibits & Cultural Showcase Activities',
-                                    'body' => 'Official schedule of activities, booth floor plans, and stage performance guidelines for the upcoming University Week celebration across all campuses.',
-                                    'day' => '12 May',
-                                    'year' => '2026',
-                                    'date' => 'May 12, 2026',
-                                    'order' => 2,
-                                    'author' => 'Events Committee',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 3,
-                                    'tag' => 'Important Dates',
-                                    'pill_class' => 'sp-pill-dates',
-                                    'category' => 'dates',
-                                    'title' => 'Important Dates for TOSA 2026 & Midterm Schedule',
-                                    'body' => 'Please be guided by the schedule of activities for the TOSA 2026 nomination submissions, pre-qualification screening, and final panel interviews. Mark your calendars and stay updated.',
-                                    'day' => '08 May',
-                                    'year' => '2026',
-                                    'date' => 'May 8, 2026',
-                                    'order' => 3,
-                                    'author' => 'OSO Admin',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 4,
-                                    'tag' => 'Activities',
-                                    'pill_class' => 'sp-pill-activities',
-                                    'category' => 'activities',
-                                    'title' => 'Midterm Leadership & Youth Governance Summit 2026',
-                                    'body' => 'Registration and activity mechanics for the annual 2-day Student Leadership Summit at the University Amphitheater. Participating organizations must send 3 official delegates.',
-                                    'day' => '14 May',
-                                    'year' => '2026',
-                                    'date' => 'May 14, 2026',
-                                    'order' => 4,
-                                    'author' => 'Student Affairs',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 5,
-                                    'tag' => 'Deadline Reminders',
-                                    'pill_class' => 'sp-pill-deadlines',
-                                    'category' => 'deadlines',
-                                    'title' => 'Reminders: Upcoming Deadlines for Activity Proposals & TOSA Requirements',
-                                    'body' => 'Don\'t forget the important deadlines for TOSA 2026 portfolio submissions, project clearance forms, and event liquidation reports. Late submissions will strictly not be accepted.',
-                                    'day' => '15 May',
-                                    'year' => '2026',
-                                    'date' => 'May 15, 2026',
-                                    'order' => 5,
-                                    'author' => 'OSO Admin',
-                                    'priority' => 'high'
-                                ],
-                                [
-                                    'id' => 6,
-                                    'tag' => 'OSO Notices',
-                                    'pill_class' => 'sp-pill-oso',
-                                    'category' => 'oso',
-                                    'title' => 'OSO Notice: Guidelines, Accreditation Renewal and Selection Updates',
-                                    'body' => 'Please review the updated guidelines and policies for the Ten Outstanding Student Award (TOSA) 2026 and semester organization renewals. Your compliance ensures a fair and transparent selection process.',
-                                    'day' => '05 May',
-                                    'year' => '2026',
-                                    'date' => 'May 5, 2026',
-                                    'order' => 6,
-                                    'author' => 'OSO Admin',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 7,
-                                    'tag' => 'Call for TOSA',
-                                    'pill_class' => 'sp-pill-tosa',
-                                    'category' => 'tosa',
-                                    'title' => 'TOSA 2026 Category Guidelines & Scoring Criteria Released',
-                                    'body' => 'Full scoring rubrics and portfolio submission mechanics have been published for Academic Excellence, Leadership, and Community Engagement pillars.',
-                                    'day' => '03 May',
-                                    'year' => '2026',
-                                    'date' => 'May 3, 2026',
-                                    'order' => 7,
-                                    'author' => 'TOSA Secretariat',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 8,
-                                    'tag' => 'Activities',
-                                    'pill_class' => 'sp-pill-activities',
-                                    'category' => 'activities',
-                                    'title' => 'Inter-Campus Esports and Hackathon Championship 2026',
-                                    'body' => 'Official registration details and team brackets for the upcoming university-wide tech challenge and gaming festival at the Central Amphitheater.',
-                                    'day' => '02 May',
-                                    'year' => '2026',
-                                    'date' => 'May 2, 2026',
-                                    'order' => 8,
-                                    'author' => 'CICS Council',
-                                    'priority' => 'normal'
-                                ],
-                                [
-                                    'id' => 9,
-                                    'tag' => 'Deadline Reminders',
-                                    'pill_class' => 'sp-pill-deadlines',
-                                    'category' => 'deadlines',
-                                    'title' => 'Final Clearance for Term 2 Organization Venue Allocations',
-                                    'body' => 'All campus student councils and clubs must finalize facility request slips and security permits before the close of business Friday.',
-                                    'day' => '01 May',
-                                    'year' => '2026',
-                                    'date' => 'May 1, 2026',
-                                    'order' => 9,
-                                    'author' => 'Facilities Management',
-                                    'priority' => 'high'
-                                ]
-                            ];
+                            $announcementsList = $bulletins ?? [];
                         @endphp
 
                         @foreach ($announcementsList as $item)
                             <tr class="sp-announce-tbl-row"
+                                data-announcement-id="{{ $item['announcement_id'] ?? '' }}"
                                 data-announce-cat="{{ $item['category'] }}"
                                 data-announce-priority="{{ $item['priority'] }}"
-                                data-announce-order="{{ $item['order'] }}"
+                                data-announce-order="{{ $item['sort'] ?? 0 }}"
                                 data-announce-search="{{ strtolower($item['title'] . ' ' . $item['body'] . ' ' . $item['author'] . ' ' . $item['tag']) }}"
                                 data-modal-title="{{ $item['title'] }}"
                                 data-modal-body="{{ $item['body'] }}"
@@ -1250,7 +1095,7 @@
             {{-- Pagination Footer Bar --}}
             <div class="sp-announcements-pagination-bar" id="spAnnouncePaginationBar">
                 <div class="sp-ann-page-info">
-                    Showing <span id="spAnnouncePageRange">1–5</span> of <span id="spAnnounceTotalItems">9</span> bulletins
+                    Showing <span id="spAnnouncePageRange">0</span> of <span id="spAnnounceTotalItems">{{ count($bulletins ?? []) }}</span> bulletins
                 </div>
                 <div class="sp-ann-page-controls">
                     <button type="button" class="sp-ann-page-btn" id="spAnnouncePrevBtn" aria-label="Previous page">
@@ -1275,10 +1120,10 @@
             .portal-body[data-portal-tab="tosa"] .sp-flash span { min-width: 0; overflow-wrap: anywhere; }
             [data-panel="tosa"] { min-width: 0; width: 100%; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
             [data-panel="tosa"] [hidden] { display: none !important; }
-            [data-panel="tosa"] .sp-tosa-submissions-view { min-width: 0; max-width: 1040px; margin-inline: auto; padding-bottom: 1rem; }
-            [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .85rem; margin-bottom: .6rem; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-submissions-view { min-width: 0; width: 100%; max-width: 1040px; margin-inline: auto; padding-bottom: .5rem; }
+            [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .65rem; margin-bottom: .5rem; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
             [data-panel="tosa"] .sp-tosa-accordion { padding: 0; }
-            [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .7rem; padding: .75rem .85rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
+            [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
             [data-panel="tosa"] .sp-tosa-section-summary::-webkit-details-marker { display: none; }
             [data-panel="tosa"] .sp-tosa-section-summary:hover { background: #fdf0f2; }
             [data-panel="tosa"] .sp-tosa-section-copy { flex: 1; min-width: 0; }
@@ -1288,7 +1133,7 @@
             [data-panel="tosa"] .sp-tosa-section-chevron { flex: 0 0 auto; color: #8b1828; font-size: .8rem; }
             [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary { border-radius: 12px 12px 0 0; }
             [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary > .sp-tosa-section-chevron { transform: rotate(90deg); }
-            [data-panel="tosa"] .sp-tosa-section-body { padding: .85rem; border-top: 1px solid #ead8de; }
+            [data-panel="tosa"] .sp-tosa-section-body { padding: .65rem; border-top: 1px solid #ead8de; }
             [data-panel="tosa"] .sp-tosa-master-form { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
             [data-panel="tosa"] .sp-tosa-master-copy { display: flex; align-items: flex-start; gap: .7rem; min-width: 0; flex: 1 1 22rem; }
             [data-panel="tosa"] .sp-tosa-master-copy > div { min-width: 0; }
@@ -1297,8 +1142,8 @@
             [data-panel="tosa"] .sp-tosa-card p { margin: .3rem 0; font-size: .8rem; color: #786f73; line-height: 1.5; }
             [data-panel="tosa"] .sp-tosa-card small { display: block; color: #786f73; font-size: .72rem; margin-top: .2rem; }
             [data-panel="tosa"] .sp-tosa-card h3 { margin: 0; font-size: .9rem; }
-            [data-panel="tosa"] .sp-tosa-requirements { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; margin-top: .8rem; }
-            [data-panel="tosa"] .sp-tosa-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 17rem); align-items: start; gap: .8rem; padding: .8rem; border: 1px solid #f0e6e8; border-radius: 11px; }
+            [data-panel="tosa"] .sp-tosa-requirements { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; }
+            [data-panel="tosa"] .sp-tosa-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 17rem); align-items: start; gap: .65rem; padding: .65rem; border: 1px solid #f0e6e8; border-radius: 11px; }
             [data-panel="tosa"] .sp-tosa-row-main { display: flex; align-items: flex-start; gap: .6rem; min-width: 0; }
             [data-panel="tosa"] .sp-tosa-row-copy { min-width: 0; }
             [data-panel="tosa"] .sp-tosa-file-icon { display: grid; place-items: center; flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; }
@@ -1318,7 +1163,6 @@
             [data-panel="tosa"] .sp-tosa-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); border: 0; }
             [data-panel="tosa"] .sp-tosa-file-input:focus-visible + label { outline: 2px solid #8b1828; outline-offset: 3px; }
             [data-panel="tosa"] .sp-tosa-selection { flex-basis: 100%; min-width: 0; padding: .5rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; font-size: .75rem; }
-            [data-panel="tosa"] .sp-tosa-selection strong { display: block; }
             [data-panel="tosa"] .sp-tosa-file-feedback { flex-basis: 100%; margin: 0; color: #a12638; font-size: .75rem; overflow-wrap: anywhere; }
             [data-panel="tosa"] .sp-tosa-reference-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; list-style: none; margin: 0; padding: 0; }
             [data-panel="tosa"] .sp-tosa-reference-list li { min-width: 0; padding: .75rem; border: 1px solid #ead8de; border-radius: 10px; font-size: .8rem; }
@@ -1473,9 +1317,9 @@
                 <div class="sp-tosa-section-body">
                 <div id="tosaRequirementsList" class="sp-tosa-requirements">
                     @foreach ($tosaDocs as $doc)
-                        <article id="tosaRow_{{ $doc['key'] }}" class="sp-tosa-row" data-tosa-key="{{ $doc['key'] }}" data-tosa-saved="{{ $doc['uploaded'] ? '1' : '0' }}" aria-labelledby="tosaTitle_{{ $doc['key'] }}">
+                        <article id="tosaRow_{{ $doc['key'] }}" class="sp-tosa-row" data-tosa-key="{{ $doc['key'] }}" data-tosa-code="{{ $doc['code'] }}" data-tosa-saved="{{ $doc['uploaded'] ? '1' : '0' }}" aria-labelledby="tosaTitle_{{ $doc['key'] }}">
                             <div class="sp-tosa-row-main">
-                                <span class="sp-tosa-file-icon {{ $doc['icon'] }}" aria-hidden="true"><i class="bi {{ $doc['bi'] }}"></i></span>
+                                <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi {{ $doc['bi'] }}"></i></span>
                                 <div class="sp-tosa-row-copy">
                                     <div class="sp-tosa-row-title">
                                         <span class="sp-tosa-section-code">Section {{ $doc['code'] }}</span>
@@ -1489,20 +1333,16 @@
                                             <a href="{{ $doc['can_preview'] ? $doc['preview_url'] : $doc['download_url'] }}" class="sp-tosa-filename" data-document-file
                                                data-document-preview-type="{{ strtolower($doc['file_format'] ?? '') }}" data-document-preview-download="{{ $doc['download_url'] }}"
                                                aria-label="View saved {{ data_get($doc['file'], 'name') }}">{{ data_get($doc['file'], 'name') }}</a>
-                                            <small>Saved format: {{ $doc['file_format'] }}</small>
                                         @elseif ($doc['file'])
                                             <small>{{ data_get($doc['file'], 'name') }}</small>
                                         @else
                                             <small>No file saved for this section.</small>
                                         @endif
-                                        @if (data_get($doc['file'], 'uploaded_at'))
-                                            <small>Saved: <time datetime="{{ data_get($doc['file'], 'uploaded_at') }}">{{ data_get($doc['file'], 'uploaded_at') }}</time></small>
-                                        @endif
                                     </div>
                                 </div>
                             </div>
                             <div class="sp-tosa-row-actions">
-                                <div class="sp-tosa-document-links">
+                                <div class="sp-tosa-document-links" data-tosa-saved-links>
                                     @if ($doc['uploaded'])
                                         <a href="{{ $doc['download_url'] }}" class="sp-tosa-control" aria-label="Download your saved {{ $doc['title'] }}">
                                             <i class="bi bi-download" aria-hidden="true"></i> Download
@@ -1512,11 +1352,11 @@
                                 @unless ($tosaLocked)
                                     <div class="sp-tosa-file-picker">
                                         <input type="file" id="tosaInput_{{ $doc['key'] }}" class="sp-tosa-file-input" name="documents[{{ $doc['key'] }}]" form="tosaSubmitForm" accept="{{ $doc['accept'] }}" aria-describedby="tosaFeedback_{{ $doc['key'] }}" @required(!$doc['uploaded'])>
-                                        <label for="tosaInput_{{ $doc['key'] }}" class="sp-tosa-control">
-                                            <i class="bi bi-folder2-open" aria-hidden="true"></i> {{ $doc['uploaded'] ? 'Choose replacement' : 'Choose file' }}
+                                        <label for="tosaInput_{{ $doc['key'] }}" class="sp-tosa-control" data-tosa-picker-label>
+                                            <i class="bi bi-folder2-open" aria-hidden="true"></i> <span data-tosa-picker-text>{{ $doc['uploaded'] ? 'Replace file' : 'Choose file' }}</span>
                                         </label>
                                         <div class="sp-tosa-selection" data-tosa-selection hidden aria-live="polite">
-                                            <strong>Selected · Not submitted</strong>
+                                            <small data-tosa-selected-meta></small>
                                             <a class="sp-tosa-filename" data-document-file data-tosa-selected-file hidden></a>
                                         </div>
                                         <p id="tosaFeedback_{{ $doc['key'] }}" class="sp-tosa-file-feedback" data-tosa-file-feedback role="status" hidden></p>
@@ -1550,11 +1390,13 @@
                     <strong id="tosaSubmitStatus">{{ $tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit') }}</strong>
                     <p id="tosaSubmitHelp" aria-live="polite">Submit the complete packet for OSO review. Your application locks after submission.</p>
                 </div>
-                    <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}">
+                    <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-confirm="manual" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}" data-confirm-message="Submit your complete A–G packet for OSO review? All files will be saved together and locked. Changes are allowed only if OSO requests Revision.">
                         @csrf
+                        <span data-tosa-submit-wrapper tabindex="0" aria-describedby="tosaSubmitHelp" title="Complete all required A–G sections before submitting.">
                         <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete)>
                             <i class="bi bi-send-check" aria-hidden="true"></i> {{ $tosaRevision ? 'Resubmit for Review' : 'Submit for Review' }}
                         </button>
+                        </span>
                     </form>
             </div>
             @endif
@@ -1597,7 +1439,7 @@
                 </div>
             </div>
 
-            <form class="sp-composer liquid-glass" method="post" action="{{ route('portal.community.posts.store') }}" enctype="multipart/form-data">
+            <form class="sp-composer liquid-glass" method="post" action="{{ route('portal.community.posts.store') }}" enctype="multipart/form-data" data-confirm-message="Publish this post to your selected audience?">
                 @csrf
                 <div class="sp-composer-row">
                     <div class="sp-avatar sp-avatar-sm" aria-hidden="true">
@@ -1642,7 +1484,7 @@
                     @endforeach
                 </select>
                 <input type="hidden" name="feeling" id="spComposerFeelingInput" value="">
-                <input type="hidden" name="audience" id="spComposerAudienceInput" value="public">
+                <input type="hidden" name="audience" id="spComposerAudienceInput" value="{{ old('audience', 'public') }}">
                 <input type="hidden" name="tagged_users" id="spComposerTaggedInput" value="">
 
                 {{-- Modern Composer Bottom Toolbar (Picture 1) --}}
@@ -1788,13 +1630,13 @@
                 <div class="sp-feed-controls">
                     <div class="sp-feed-sort-dropdown-wrap">
                         <button type="button" class="sp-feed-sort-btn" id="spFeedSortBtn" title="Sort feed">
-                            <span id="spFeedSortLabel">Most recent</span>
+                            <span id="spFeedSortLabel">{{ ['recent' => 'Most recent', 'top' => 'Top comments', 'popular' => 'Most liked'][$feedSort ?? 'recent'] }}</span>
                             <i class="bi bi-chevron-down"></i>
                         </button>
                         <div class="sp-action-popover sp-sort-popover liquid-glass" id="spFeedSortPopover" hidden>
-                            <button type="button" class="sp-sort-opt is-active" data-sort="recent">Most recent</button>
-                            <button type="button" class="sp-sort-opt" data-sort="top">Top comments</button>
-                            <button type="button" class="sp-sort-opt" data-sort="popular">Most liked</button>
+                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'recent' ? 'is-active' : '' }}" data-sort="recent">Most recent</button>
+                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'top' ? 'is-active' : '' }}" data-sort="top">Top comments</button>
+                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'popular' ? 'is-active' : '' }}" data-sort="popular">Most liked</button>
                         </div>
                     </div>
                     <button type="button" class="sp-feed-filter-toggle-btn" id="spFeedFilterToggle" title="Feed filters">
@@ -1811,12 +1653,19 @@
                                 @if (!empty($post->student->avatar_path))
                                     <img src="{{ asset('storage/'.$post->student->avatar_path) }}" alt="">
                                 @else
-                                    <span>{{ $post->student->initials() ?? 'MV' }}</span>
+                                    <span>{{ $post->student?->initials() ?? '?' }}</span>
                                 @endif
                             </div>
                             <div class="sp-post-meta">
-                                <strong class="sp-post-author-name">{{ $post->student->name ?? 'Michelle Vivas' }}</strong>
-                                <span class="sp-post-time-meta">{{ $post->created_at->diffForHumans() }} · <i class="bi bi-globe-americas"></i></span>
+                                <strong class="sp-post-author-name">{{ $post->student->name ?? 'Student' }}</strong>
+                                @php
+                                    [$audienceIcon, $audienceLabel] = match ($post->audience) {
+                                        'department' => ['bi-building', 'Department'],
+                                        'org' => ['bi-shield-shaded', 'Org Members'],
+                                        default => ['bi-globe-americas', 'Public'],
+                                    };
+                                @endphp
+                                <span class="sp-post-time-meta">{{ $post->created_at->diffForHumans() }} · <i class="bi {{ $audienceIcon }}" aria-hidden="true"></i> {{ $audienceLabel }}</span>
                             </div>
                             <div class="sp-post-top-actions">
                                 <span class="sp-post-badge-new">New</span>
@@ -1826,7 +1675,7 @@
                                     </button>
                                     <div class="sp-action-popover sp-post-options-menu liquid-glass" hidden>
                                         @if ($post->student_id === $student->id)
-                                            <form method="post" action="{{ route('portal.community.posts.destroy', $post) }}" onsubmit="return confirm('Delete this post?')" class="sp-post-delete-form">
+                                            <form method="post" action="{{ route('portal.community.posts.destroy', $post) }}" data-confirm-message="Delete this post and its comments?" class="sp-post-delete-form">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="sp-post-menu-item is-danger">
@@ -1848,81 +1697,54 @@
 
                         <p class="sp-post-body">{{ $post->body }}</p>
 
-                        @if ($post->activity || empty($post->activity_id))
+                        @if ($post->activity)
                             <div class="sp-post-linked-activity">
                                 <i class="bi bi-calendar2-event-fill"></i>
-                                <span>{{ $post->activity->title ?? 'General Assembly 2026' }}</span>
+                                <span>{{ $post->activity->title }}</span>
                             </div>
                         @endif
 
                         @if ($post->image_path)
                             <div class="sp-post-photo">
-                                <img src="{{ asset('storage/'.$post->image_path) }}" alt="Post photo">
+                                <img src="{{ route('portal.community.posts.image', $post) }}" alt="Post photo">
                             </div>
                         @endif
 
                         {{-- Dual Reaction & Comments Summary Row (Picture 1) --}}
                         <div class="sp-post-stats">
                             <div class="sp-post-reactions-left" data-likes-count>
-                                <span class="sp-reaction-icons-stack">
-                                    <i class="bi bi-hand-thumbs-up-fill sp-react-like"></i>
-                                    <i class="bi bi-heart-fill sp-react-love"></i>
-                                </span>
                                 <button type="button" class="sp-reaction-text sp-likers-btn" data-likers-url="{{ route('portal.community.posts.likers', $post) }}" title="View likes">
-                                    @if ($post->likes_count > 0)
-                                        {{ $post->liked_by_me ? 'You and ' . max(0, $post->likes_count - 1) . ($post->likes_count - 1 === 1 ? ' other' : ' others') : $post->likes_count . ($post->likes_count === 1 ? ' like' : ' likes') }}
-                                    @else
-                                        No likes yet
-                                    @endif
+                                    {{ $post->actual_likes_count ?? $post->likes_count ?? 0 }} {{ ($post->actual_likes_count ?? $post->likes_count ?? 0) === 1 ? 'like' : 'likes' }}
                                 </button>
                             </div>
                             <div class="sp-post-comments-count-right" data-comments-count>
-                                <button type="button" class="sp-comments-count-btn" data-scroll-comments="{{ $post->id }}">{{ $post->comments_count ?? $post->comments->count() }} {{ ($post->comments_count ?? $post->comments->count()) === 1 ? 'comment' : 'comments' }}</button>
+                                <button type="button" class="sp-comments-count-btn" data-scroll-comments="{{ $post->id }}">{{ $post->actual_comments_count ?? $post->comments_count ?? $post->comments->count() }} {{ ($post->actual_comments_count ?? $post->comments_count ?? $post->comments->count()) === 1 ? 'comment' : 'comments' }}</button>
                             </div>
                         </div>
 
-                        {{-- Action Buttons Bar (Love/Like with Hold Reactions Flyout, Comment, Share) --}}
+                        {{-- Persisted likes, comments and sharing --}}
                         <div class="sp-post-actions">
                             <div class="sp-like-action-wrap">
-                                {{-- Floating Reactions Dock (Hold / Long-press or Hover Flyout) --}}
-                                <div class="sp-reactions-dock liquid-glass" role="toolbar" aria-label="Reactions" hidden>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="like" data-label="Like" data-icon="bi-hand-thumbs-up-fill" data-color="#1877f2" title="Like">
-                                        <span class="sp-dock-emoji">👍</span>
-                                        <span class="sp-dock-label">Like</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="love" data-label="Love" data-icon="bi-heart-fill" data-color="#e11d48" title="Love">
-                                        <span class="sp-dock-emoji">❤️</span>
-                                        <span class="sp-dock-label">Love</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="care" data-label="Care" data-icon="bi-emoji-heart-eyes-fill" data-color="#f59e0b" title="Care">
-                                        <span class="sp-dock-emoji">🥰</span>
-                                        <span class="sp-dock-label">Care</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="haha" data-label="Haha" data-icon="bi-emoji-laughing-fill" data-color="#f59e0b" title="Haha">
-                                        <span class="sp-dock-emoji">😆</span>
-                                        <span class="sp-dock-label">Haha</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="wow" data-label="Wow" data-icon="bi-emoji-surprise-fill" data-color="#f59e0b" title="Wow">
-                                        <span class="sp-dock-emoji">😮</span>
-                                        <span class="sp-dock-label">Wow</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="sad" data-label="Sad" data-icon="bi-emoji-tear-fill" data-color="#f59e0b" title="Sad">
-                                        <span class="sp-dock-emoji">😢</span>
-                                        <span class="sp-dock-label">Sad</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="angry" data-label="Angry" data-icon="bi-emoji-angry-fill" data-color="#ea580c" title="Angry">
-                                        <span class="sp-dock-emoji">😡</span>
-                                        <span class="sp-dock-label">Angry</span>
-                                    </button>
+                                @php
+                                    $myReaction = $post->liked_by_me ? ($post->likes->first()?->reaction ?? 'like') : null;
+                                @endphp
+                                <div class="sp-reactions-dock liquid-glass" role="toolbar" aria-label="Choose a reaction" hidden>
+                                    @foreach ($communityReactions as $reaction => $reactionDisplay)
+                                        <button type="button" class="sp-dock-reaction" data-reaction="{{ $reaction }}" data-label="{{ $reactionDisplay['label'] }}" data-icon="{{ $reactionDisplay['icon'] }}" title="{{ $reactionDisplay['label'] }}">
+                                            <span class="sp-dock-emoji" aria-hidden="true">{{ $reactionDisplay['emoji'] }}</span>
+                                            <span class="sp-dock-label">{{ $reactionDisplay['label'] }}</span>
+                                        </button>
+                                    @endforeach
                                 </div>
 
                                 <button
                                     type="button"
                                     class="sp-post-action community-like-btn {{ $post->liked_by_me ? 'is-liked' : '' }}"
                                     data-like-url="{{ route('portal.community.posts.like', $post) }}"
+                                    data-reaction="{{ $myReaction ?? '' }}" aria-haspopup="true"
                                 >
-                                    <i class="bi {{ $post->liked_by_me ? 'bi-heart-fill' : 'bi-hand-thumbs-up' }} sp-action-love-icon"></i>
-                                    <span class="sp-like-label">{{ $post->liked_by_me ? 'Love' : 'Like' }}</span>
+                                    <i class="bi {{ $myReaction ? ($communityReactions[$myReaction]['icon'] ?? 'bi-hand-thumbs-up-fill') : 'bi-hand-thumbs-up' }} sp-action-love-icon"></i>
+                                    <span class="sp-like-label">{{ $myReaction ? ($communityReactions[$myReaction]['label'] ?? 'Like') : 'Like' }}</span>
                                 </button>
                             </div>
 
@@ -1946,7 +1768,7 @@
                                         </div>
                                         <div class="sp-comment-content">
                                             <div class="sp-comment-bubble">
-                                                <strong>{{ $comment->student->name ?? 'John Dela Cruz' }}</strong>
+                                                <strong>{{ $comment->student->name ?? 'Student' }}</strong>
                                                 <p>{{ $comment->body }}</p>
                                             </div>
                                             <div class="sp-comment-subactions">
@@ -1962,31 +1784,11 @@
                                 @if ($post->comments->count() > 5)
                                     <button type="button" class="sp-view-all-comments" data-view-comments>View all {{ $post->comments->count() }} comments</button>
                                 @endif
-                            @else
-                                {{-- Picture 1 Mockup Comment Item --}}
-                                <div class="sp-comment-thread">
-                                    <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
-                                        <img src="{{ asset('voting-assets/img/candidate-sample.jpg') }}" alt="" onerror="this.outerHTML='<span>JC</span>'">
-                                    </div>
-                                    <div class="sp-comment-content">
-                                        <div class="sp-comment-bubble">
-                                            <strong>John Dela Cruz</strong>
-                                            <p>Looking forward to it! 🙌</p>
-                                        </div>
-                                        <div class="sp-comment-subactions">
-                                            <button type="button" class="sp-sub-btn">Like</button>
-                                            <span class="sp-sub-dot">·</span>
-                                            <button type="button" class="sp-sub-btn" onclick="document.getElementById('comment-{{ $post->id }}')?.focus()">Reply</button>
-                                            <span class="sp-sub-dot">·</span>
-                                            <span class="sp-sub-time">1m</span>
-                                        </div>
-                                    </div>
-                                </div>
                             @endif
                         </div>
 
                         {{-- Modern Comment Composer Capsule Input (Picture 1) --}}
-                        <form class="sp-comment-form" method="post" data-comment-form action="{{ route('portal.community.posts.comment', $post) }}">
+                        <form class="sp-comment-form" method="post" data-comment-form action="{{ route('portal.community.posts.comment', $post) }}" data-confirm="manual" data-confirm-message="Post this comment?">
                             @csrf
                             <div class="sp-avatar sp-avatar-sm sp-comment-composer-avatar">
                                 @if (!empty($student->avatar_path))
@@ -2008,140 +1810,18 @@
                         </form>
                     </article>
                 @empty
-                    <article class="sp-post liquid-glass community-post">
-                        <header class="sp-post-head">
-                            <div class="sp-avatar sp-avatar-sm sp-feed-avatar">
-                                <span>MV</span>
-                            </div>
-                            <div class="sp-post-meta">
-                                <strong class="sp-post-author-name">Michelle Vivas</strong>
-                                <span class="sp-post-time-meta">Just now · <i class="bi bi-globe-americas"></i></span>
-                            </div>
-                            <div class="sp-post-top-actions">
-                                <span class="sp-post-badge-new">New</span>
-                                <div class="sp-post-menu-wrap">
-                                    <button type="button" class="sp-post-menu-trigger" aria-label="Post options">
-                                        <i class="bi bi-three-dots"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </header>
-
-                        <p class="sp-post-body">I'm excited for the General Assembly 2026! This is a chance for all of us to be heard and work together for better initiatives. See you there, BatStateU! ❤️</p>
-
-                        <div class="sp-post-linked-activity">
-                            <i class="bi bi-calendar2-event-fill"></i>
-                            <span>General Assembly 2026</span>
-                        </div>
-
-                        {{-- Reactions Stats Row --}}
-                        <div class="sp-post-stats">
-                            <div class="sp-post-reactions-left">
-                                <span class="sp-reaction-icons-stack">
-                                    <i class="bi bi-hand-thumbs-up-fill sp-react-like"></i>
-                                    <i class="bi bi-heart-fill sp-react-love"></i>
-                                </span>
-                                <span class="sp-reaction-text">You and 12 others</span>
-                            </div>
-                            <div class="sp-post-comments-count-right">
-                                <span>3 comments</span>
-                            </div>
-                        </div>
-
-                        {{-- Action Buttons with Hold Reactions Flyout --}}
-                        <div class="sp-post-actions">
-                            <div class="sp-like-action-wrap">
-                                {{-- Floating Reactions Dock --}}
-                                <div class="sp-reactions-dock liquid-glass" role="toolbar" aria-label="Reactions" hidden>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="like" data-label="Like" data-icon="bi-hand-thumbs-up-fill" data-color="#1877f2" title="Like">
-                                        <span class="sp-dock-emoji">👍</span>
-                                        <span class="sp-dock-label">Like</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="love" data-label="Love" data-icon="bi-heart-fill" data-color="#e11d48" title="Love">
-                                        <span class="sp-dock-emoji">❤️</span>
-                                        <span class="sp-dock-label">Love</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="care" data-label="Care" data-icon="bi-emoji-heart-eyes-fill" data-color="#f59e0b" title="Care">
-                                        <span class="sp-dock-emoji">🥰</span>
-                                        <span class="sp-dock-label">Care</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="haha" data-label="Haha" data-icon="bi-emoji-laughing-fill" data-color="#f59e0b" title="Haha">
-                                        <span class="sp-dock-emoji">😆</span>
-                                        <span class="sp-dock-label">Haha</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="wow" data-label="Wow" data-icon="bi-emoji-surprise-fill" data-color="#f59e0b" title="Wow">
-                                        <span class="sp-dock-emoji">😮</span>
-                                        <span class="sp-dock-label">Wow</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="sad" data-label="Sad" data-icon="bi-emoji-tear-fill" data-color="#f59e0b" title="Sad">
-                                        <span class="sp-dock-emoji">😢</span>
-                                        <span class="sp-dock-label">Sad</span>
-                                    </button>
-                                    <button type="button" class="sp-dock-reaction" data-reaction="angry" data-label="Angry" data-icon="bi-emoji-angry-fill" data-color="#ea580c" title="Angry">
-                                        <span class="sp-dock-emoji">😡</span>
-                                        <span class="sp-dock-label">Angry</span>
-                                    </button>
-                                </div>
-
-                                <button type="button" class="sp-post-action community-like-btn is-liked">
-                                    <i class="bi bi-heart-fill sp-action-love-icon"></i>
-                                    <span class="sp-like-label">Love</span>
-                                </button>
-                            </div>
-
-                            <button type="button" class="sp-post-action">
-                                <i class="bi bi-chat"></i>
-                                <span>Comment</span>
-                            </button>
-                            <button type="button" class="sp-post-action">
-                                <i class="bi bi-share"></i>
-                                <span>Share</span>
-                            </button>
-                        </div>
-
-                        {{-- Comments Thread --}}
-                        <div class="sp-comments">
-                            <div class="sp-comment-thread">
-                                <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
-                                    <img src="{{ asset('voting-assets/img/candidate-sample.jpg') }}" alt="" onerror="this.outerHTML='<span>JC</span>'">
-                                </div>
-                                <div class="sp-comment-content">
-                                    <div class="sp-comment-bubble">
-                                        <strong>John Dela Cruz</strong>
-                                        <p>Looking forward to it! 🙌</p>
-                                    </div>
-                                    <div class="sp-comment-subactions">
-                                        <button type="button" class="sp-sub-btn">Like</button>
-                                        <span class="sp-sub-dot">·</span>
-                                        <button type="button" class="sp-sub-btn">Reply</button>
-                                        <span class="sp-sub-dot">·</span>
-                                        <span class="sp-sub-time">1m</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Comment Composer Bar --}}
-                        <form class="sp-comment-form" onsubmit="event.preventDefault();">
-                            <div class="sp-avatar sp-avatar-sm sp-comment-composer-avatar">
-                                <span>{{ $student->initials() ?? 'MV' }}</span>
-                            </div>
-                            <div class="sp-comment-input-capsule">
-                                <input type="text" placeholder="Write a comment…" autocomplete="off">
-                                <div class="sp-comment-inline-tools">
-                                    <button type="button" class="sp-comment-tool-btn" title="Emoji"><i class="bi bi-emoji-smile"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="Attach Photo"><i class="bi bi-camera"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="GIF"><i class="bi bi-filetype-gif"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="Sticker"><i class="bi bi-sticky"></i></button>
-                                </div>
-                            </div>
-                        </form>
-                    </article>
+                    <div class="sp-post liquid-glass" role="status">
+                        <h3>{{ ($communitySearch ?? '') !== '' ? 'No matching posts' : 'No posts yet' }}</h3>
+                        <p>{{ ($communitySearch ?? '') !== '' ? 'Try another search term or clear the search.' : 'Posts shared with you will appear here.' }}</p>
+                        @if (($communitySearch ?? '') !== '')
+                            <a href="{{ route('portal.community') }}">Clear search</a>
+                        @endif
+                    </div>
                 @endforelse
             </div>
 
             <div class="sp-pagination">
-                {{ $posts->links() }}
+                {{ $posts->appends(['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent'])->links() }}
             </div>
         </section>
     </div>

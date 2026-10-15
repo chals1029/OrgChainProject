@@ -268,7 +268,7 @@
                         <h3 class="tosa-heading">Application documents</h3>
                         <div id="revDocListContainer"></div>
                     </div>
-                    <form id="tosaReviewForm" method="post" onsubmit="saveApplicantReview(event)">
+                    <form id="tosaReviewForm" method="post" data-confirm-message="Save this applicant qualification review?" onsubmit="saveApplicantReview(event)">
                         @csrf
                         <h3 class="tosa-heading">Qualification review</h3>
                         @unless ($tosaCanReview ?? false)<p class="tosa-note">Your TOSA clearance allows viewing only.</p>@endunless
@@ -300,7 +300,7 @@
                         <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookPreview" target="_blank" rel="noopener">View computed workbook</a>
                         <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookDownload">Download computed XLSX</a>
                     </div>
-                    <form id="tosaScoringForm">
+                    <form id="tosaScoringForm" method="post">
                         @csrf
                         <fieldset id="tosaScoringFields" @disabled(!($tosaCanReview ?? false))>
                             <legend class="tosa-heading">Verified inputs</legend>
@@ -319,8 +319,8 @@
                             <div id="tosaEvidenceCategories"></div>
                             @if ($tosaCanReview ?? false)
                                 <div class="tosa-actions">
-                                    <button type="submit" class="org-btn org-btn-ghost org-btn-sm" value="draft">Save provisional</button>
-                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm" value="finalize">Finalize verified</button>
+                                    <button type="submit" class="org-btn org-btn-ghost org-btn-sm" value="draft" data-confirm-message="Save provisional scoring? This removes rank eligibility.">Save provisional</button>
+                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm" value="finalize" data-confirm-message="Finalize this verified evaluation?">Finalize verified</button>
                                 </div>
                             @endif
                         </fieldset>

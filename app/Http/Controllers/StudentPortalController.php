@@ -451,15 +451,22 @@ class StudentPortalController extends Controller
 
         // Use the approved activity ledger once; legacy category rows must
         // not duplicate new per-activity budget allocations.
-        $budgetActivities = OrgActivity::query()->visibleToStudents()->get();
-        $budgetItems = $budgetActivities->groupBy('activity_scope')->map(function ($rows, $scope) {
-            return new BudgetItem([
-                'title' => str_contains($scope, 'off') ? 'Off-Campus' : 'In-Campus',
-                'category' => str_contains($scope, 'off') ? 'Off-Campus' : 'In-Campus',
+        $budgetActivities = OrgActivity::query()->visibleToStudents()
+            ->whereIn('activity_scope', ['in_campus', 'off_campus'])->get();
+        $budgetCategoryBreakdown = collect([
+            'in_campus' => 'In-Campus',
+            'off_campus' => 'Off-Campus',
+        ])->map(function (string $label, string $scope) use ($budgetActivities): array {
+            $rows = $budgetActivities->where('activity_scope', $scope);
+
+            return [
+                'category' => $label,
                 'allocated' => round((float) $rows->sum('approved_budget'), 2),
                 'utilized' => round((float) $rows->sum('implemented_budget'), 2),
-            ]);
-        })->values();
+            ];
+        })->values()->all();
+        $budgetItems = collect($budgetCategoryBreakdown)
+            ->map(fn (array $row) => new BudgetItem($row + ['title' => $row['category']]));
         $totalAllocated = (float) $budgetActivities->sum('approved_budget');
         $totalUtilized = (float) $budgetActivities->sum('implemented_budget');
 
@@ -507,6 +514,7 @@ class StudentPortalController extends Controller
             ->get();
 
         $feedSort = (string) $request->query('sort', 'recent');
+        $communitySearch = trim((string) $request->query('community_q', ''));
         if (! in_array($feedSort, ['recent', 'top', 'popular'], true)) {
             $feedSort = 'recent';
         }
@@ -542,6 +550,8 @@ class StudentPortalController extends Controller
                     // Authors can always see their own posts while profile data is incomplete.
                     ->orWhere('student_id', $student->id);
             })
+            ->searchFeed($communitySearch)
+            ->withCount(['likes as actual_likes_count', 'comments as actual_comments_count'])
             ->with([
                 'student',
                 'activity',
@@ -562,8 +572,8 @@ class StudentPortalController extends Controller
             ]);
 
         match ($feedSort) {
-            'popular' => $postsQuery->orderByDesc('likes_count')->orderByDesc('created_at'),
-            'top' => $postsQuery->orderByDesc('comments_count')->orderByDesc('created_at'),
+            'popular' => $postsQuery->orderByDesc('actual_likes_count')->orderByDesc('created_at'),
+            'top' => $postsQuery->orderByDesc('actual_comments_count')->orderByDesc('created_at'),
             default => $postsQuery->latest(),
         };
 
@@ -629,17 +639,8 @@ class StudentPortalController extends Controller
         }
 
         $announcements = OfficeAnnouncement::query()
-            ->latest()
-            ->limit(12)
-            ->get()
-            ->map(fn (OfficeAnnouncement $a) => [
-                'title' => $a->title,
-                'body' => $a->body,
-                'author' => $a->author ?: 'OSO Admin',
-                'time' => optional($a->created_at)->diffForHumans() ?? '',
-                'priority' => $a->priority ?: 'normal',
-            ])
-            ->values()
+            ->latest()->orderByDesc('id')->get()
+            ->map(fn (OfficeAnnouncement $announcement): array => $announcement->studentPublication())
             ->all();
 
         $tosaApplicant = $this->myTosaApplication($student);
@@ -692,35 +693,7 @@ class StudentPortalController extends Controller
         $tosaComplete = $tosaApplicant !== null && collect($tosaDocs)->every(fn (array $document): bool => $document['uploaded']);
 
         // Live bulletins feed: office announcements + upcoming activities + open renewal window.
-        $bulletinTypeMap = [
-            'Deadline Notice' => ['deadlines', 'Deadline Reminders', 'sp-pill-deadlines'],
-            'Compliance Reminder' => ['deadlines', 'Deadline Reminders', 'sp-pill-deadlines'],
-            'Policy & Guideline' => ['oso', 'OSO Notices', 'sp-pill-oso'],
-            'Official Notice' => ['oso', 'OSO Notices', 'sp-pill-oso'],
-            'General Announcement' => ['oso', 'OSO Notices', 'sp-pill-oso'],
-        ];
-        $feedItems = OfficeAnnouncement::query()->latest()->limit(15)->get()->map(function (OfficeAnnouncement $a) use ($bulletinTypeMap) {
-            $cat = $bulletinTypeMap[$a->type] ?? ['oso', 'OSO Notices', 'sp-pill-oso'];
-            if (stripos(($a->title ?? '').' '.($a->body ?? ''), 'tosa') !== false) {
-                $cat = ['tosa', 'Call for TOSA', 'sp-pill-tosa'];
-            }
-            $date = $a->created_at ?? now();
-
-            return [
-                'id' => 'a'.$a->id,
-                'category' => $cat[0],
-                'priority' => $a->priority ?: 'normal',
-                'title' => $a->title,
-                'body' => $a->body,
-                'author' => $a->author ?: 'OSO Admin',
-                'tag' => $cat[1],
-                'pill_class' => $cat[2],
-                'day' => $date->format('d M'),
-                'year' => $date->format('Y'),
-                'date' => $date->format('M j, Y'),
-                'sort' => $date->timestamp,
-            ];
-        });
+        $feedItems = collect($announcements);
         $activityItems = OrgActivity::query()
             ->visibleToStudents()
             ->whereIn('status', ['upcoming', 'ongoing'])
@@ -786,15 +759,28 @@ class StudentPortalController extends Controller
 
         // Budget items grouped by org for the activity detail modal.
         $budgetByOrg = BudgetItem::query()->get()->groupBy(fn ($i) => trim((string) $i->organization_name))->all();
-        // Student's own reports with OSO verification statuses.
-        $myFeedback = $student
-            ? StudentFeedback::query()->where('student_id', $student->id)->latest()->limit(5)->get()
+        // Feedback ownership uses the authenticated OrgChain UserAccount ID, including anonymous reports.
+        $ownFeedback = $student
+            ? StudentFeedback::query()->where('student_id', $student->id)->latest()->get()
             : collect();
+        $myFeedback = $ownFeedback;
+        $feedbackNotifications = $ownFeedback
+            ->where('status', 'verified')
+            ->map(fn (StudentFeedback $feedback): array => [
+                'id' => 'feedback-'.$feedback->id,
+                'title' => 'Feedback acknowledged',
+                'body' => $feedback->review_note ?: 'OSO has acknowledged your feedback.',
+                'author' => 'Office of Student Organizations',
+                'time' => $feedback->verified_at?->diffForHumans() ?? '',
+                'url' => route('portal.home').'#feedback-'.$feedback->id,
+                'acknowledgedAt' => $feedback->verified_at?->toIso8601String(),
+            ])->values()->all();
 
         return view('portal.index', [
             'student' => $student,
             'tab' => $tab,
             'budgetItems' => $budgetItems,
+            'budgetCategoryBreakdown' => $budgetCategoryBreakdown,
             'totalAllocated' => $totalAllocated,
             'totalUtilized' => $totalUtilized,
             'upcoming' => $upcoming,
@@ -815,9 +801,11 @@ class StudentPortalController extends Controller
             'budgetByOrg' => $budgetByOrg,
             'publicExpenseItemsByActivity' => $publicExpenseItemsByActivity,
             'myFeedback' => $myFeedback,
+            'feedbackNotifications' => $feedbackNotifications,
             'sdgHighlights' => $sdgHighlights,
             'colleges' => $colleges,
             'feedSort' => $feedSort,
+            'communitySearch' => $communitySearch,
             'selectedCollege' => $collegeFilter,
             'collegeFilterExplicit' => $request->has('college'),
             'selectedStatus' => $statusFilter,

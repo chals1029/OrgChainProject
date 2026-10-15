@@ -449,7 +449,7 @@
     </div>
 
     <dialog class="rs-dialog" id="rsRemarksDialog" aria-labelledby="rsRemarksHeading" aria-describedby="rsRemarksSubject">
-        <form method="POST" action="" id="rsRemarksForm">
+        <form method="POST" action="" id="rsRemarksForm" data-confirm="manual">
             @csrf
             <input type="hidden" name="decision" value="" id="rsRemarksDecision">
             <input type="hidden" name="file_version" value="" id="rsRemarksFileVersion" disabled>
@@ -569,7 +569,9 @@
                     event.preventDefault();
                     remarksInput.setCustomValidity('Enter remarks for the SO desk.');
                     remarksInput.reportValidity();
+                    return;
                 }
+                window.OrgActionConfirmations.confirmSubmit(event);
             });
         })();
     </script>
