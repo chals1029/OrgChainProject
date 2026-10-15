@@ -437,6 +437,7 @@
                     <span>Batangas State University — The National Engineering University</span>
                 </div>
             </div>
+            <a class="footer-copy" href="https://status.orgchain.tech/" target="_blank" rel="noopener noreferrer">System status</a>
             <p class="footer-copy">&copy; {{ date('Y') }} OrgChain. All rights reserved.</p>
         </div>
     </footer>

@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Added the independent HTTPS status website at `status.orgchain.tech`, backed by a separate GitHub Pages/Upptime repository, and linked it from the public landing-page footer. Scheduled public website/application-health checks drive availability, response history and incident reporting; maintenance notices and retained short incidents are supported. Private workflows are not falsely reported as end-to-end tested, and no application secrets or student data are published.
 - Added public Open Graph sharing metadata and the existing OrgChain logo for Messenger/Facebook link previews. Crawler requests and the image return HTTP 200; previously cached 403 previews require a separate Meta rescrape rather than weakening private-document access or changing crawler security.
 - Removed the temporary deployment-only network allowlist that caused 403 responses outside the operator's connection. Public pilot pages are reachable from other networks; authentication, role/ownership checks, private-storage denial and no-store response headers remain enforced.
 - Fixed the student email-login modal initialization race: Send Verification Code now opens the code-entry step automatically after navigation and focuses the visible input, rather than requiring another Login click. The full SR Code format and six-digit email verification, expiry, attempt limits and anti-enumeration behavior are unchanged; production and fallback frontend bundles are refreshed.

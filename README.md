@@ -239,6 +239,19 @@ Preserve `APP_KEY`, use a separate database account scoped to the two restored s
 
 The public landing page supplies Open Graph title, description, canonical URL and the existing logo for Messenger/Facebook previews. A previously shared 403 card can remain in Meta's separate scraper cache after origin access is corrected. Use [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/), enter `https://orgchain.tech/` and request Scrape Again; a Cloudflare cache purge does not invalidate Meta's stored preview, and old chat cards may not update.
 
+### Independent public status website
+
+[status.orgchain.tech](https://status.orgchain.tech/) is hosted on GitHub Pages, independently of the application VPS, from [chals1029/orgchain-status](https://github.com/chals1029/orgchain-status). The landing-page footer links to it. Its logo is hosted with the status site, not fetched from the VPS.
+
+Upptime checks the public landing page (HTTP 200 and OrgChain content) and Laravel's existing `/up` endpoint (HTTP 200). These checks measure public availability, not successful sign-in, institutional email delivery, database readiness or private document submission. Monitoring history starts on 15 October 2026; percentages reflect observations since monitoring began, not historical measurements from before deployment.
+
+The `OrgChain Status` workflow schedules availability checks every five minutes; GitHub schedules can be delayed. Response-time recording, graph generation and the static-site build run daily or on manual dispatch. The site reads the latest public monitoring records from GitHub. If results appear stale, inspect that repository's Actions runs rather than assuming the application is healthy. No VPS task or additional VPS is needed.
+
+Monitoring uses only the repository-scoped, short-lived `GITHUB_TOKEN`, with separate permissions for monitoring, site building and Pages deployment. No application credentials, SMTP/OAuth secrets, private documents, student records or broad personal access token are stored in the public status repository. Cloudflare DNS has a DNS-only CNAME from `status` to `chals1029.github.io`; GitHub Pages enforces HTTPS.
+
+Detected outages open `status` issues and recovery closes them; short incidents are retained. Publish planned maintenance through an issue labeled `maintenance`, using Upptime's UTC `start`/`end` comment metadata and `expectedDown`/`expectedDegraded` component slugs (`website`, `application-health`) where appropriate. Keep incident text public-safe; never paste raw application logs or student information.
+
+
 
 ### Safe regression and browser checks
 
