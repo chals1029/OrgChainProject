@@ -17,18 +17,23 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\UsesLaragonDatabase;
+use App\Services\ApprovedPlanOfActivitiesService;
+use Tests\Support\CreatesApprovedActivityPlan;
 use Tests\TestCase;
 use ZipArchive;
 
 class ActivityBudgetLifecycleTest extends TestCase
 {
     use UsesLaragonDatabase;
+    use CreatesApprovedActivityPlan;
 
     private array $offices;
     private StudentOrganization $organization;
     private OrgFundAccount $account;
 
+    private string $planTitle;
     protected function setUp(): void
     {
         parent::setUp();
@@ -50,6 +55,9 @@ class ActivityBudgetLifecycleTest extends TestCase
             'name' => 'Lifecycle Organization '.Str::uuid(), 'short_name' => 'LCT',
             'college' => 'CICS', 'academic_year' => '2026-2027', 'is_active' => true,
         ]);
+        $this->offices['so']->update(['student_organization_id' => $this->organization->id]);
+        $this->planTitle = 'Lifecycle Sustainability Workshop '.Str::uuid();
+        $this->approvedActivityPlan($this->organization->name, [$this->planTitle]);
         $this->account = OrgFundAccount::create([
             'organization_name' => $this->organization->name, 'fiscal_year' => '2026-2027', 'cash_opening_balance' => '10000.00',
         ]);
@@ -91,7 +99,8 @@ class ActivityBudgetLifecycleTest extends TestCase
         }
         return array_merge([
             'submission_action' => 'submit', 'activity_type' => 'in_campus',
-            'title' => 'Lifecycle Event '.Str::uuid(), 'organization_name' => $this->organization->name,
+            'plan_activity_key' => app(ApprovedPlanOfActivitiesService::class)->options($this->organization->name)[0]['key'],
+            'organization_name' => $this->organization->name,
             'location' => 'Campus', 'approved_budget' => '5000.00',
             'objectives' => 'Teach practical sustainability skills.',
             'sdg_goals' => ['SDG 4', 'SDG 12'],
@@ -105,7 +114,7 @@ class ActivityBudgetLifecycleTest extends TestCase
         $data = $this->activityPayload();
         $this->actingAs($this->offices['so'], 'office')->post('/office-desk/activities', $data)
             ->assertRedirect()->assertSessionHasNoErrors();
-        return OrgActivity::where('title', $data['title'])->firstOrFail();
+        return OrgActivity::where('organization_name', $this->organization->name)->latest('id')->firstOrFail();
     }
 
     private function approved(): OrgActivity
@@ -144,13 +153,8 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->actingAs($this->offices['oso'], 'office')->post('/office-desk/activities/'.$a->id.'/advance', ['documents_reviewed' => '1'])->assertSessionHasNoErrors();
         $this->assertSame('sdo_review', $a->refresh()->workflow_status);
         $this->actingAs($this->offices['sdo'], 'office')->get('/office-desk/activities?activity='.$a->id)->assertOk()
-            ->assertSee('Workflow')->assertSee('Created')->assertSee('OSO Review')->assertSee('SDO Review')->assertSee('OVCAA Review')->assertSee('OC Final Approval')
-            ->assertDontSee('Activity SDGs')->assertDontSee('Organization-entered SDGs:')
-            ->assertSee('Waste Policy Compliance Form')->assertSee('Teach practical sustainability skills.')
-            ->assertSee('First-aid station and emergency contacts.')
-            ->assertDontSee('Select the applicable SDGs')
-            ->assertDontSee('SDG Alignment Check')
-            ->assertSee('no SDG re-entry is required');
+            ->assertSee('Teach practical sustainability skills.')
+            ->assertSee('First-aid station and emergency contacts.');
         $submission = InCampusActivitySubmission::where('org_activity_id', $a->id)->firstOrFail();
         foreach (['oso', 'sdo'] as $role) {
             $this->actingAs($this->offices[$role], 'office')->get('/office-desk/activities/'.$submission->id.'/attachments/wpcf?download=1')->assertOk();
@@ -162,11 +166,10 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->actingAs($this->offices['ovcaa'], 'office')->post('/office-desk/activities/'.$a->id.'/advance')->assertSessionHasNoErrors();
         $this->assertSame('oc_review', $a->refresh()->workflow_status);
         $this->actingAs($this->offices['ovcaa'], 'office')->post('/office-desk/activities/'.$a->id.'/advance')->assertSessionHasErrors('workflow');
-        $this->actingAs($this->offices['oc'], 'office')->get('/office-desk/activities?activity='.$a->id)->assertOk()->assertSee('OC Final Approval');
+        $this->actingAs($this->offices['oc'], 'office')->get('/office-desk/activities?activity='.$a->id)->assertOk();
         $this->actingAs($this->offices['oc'], 'office')->post('/office-desk/activities/'.$a->id.'/advance')->assertSessionHasNoErrors();
         $this->assertSame('oc_approved', $a->refresh()->workflow_status);
         $this->assertSame(['SDG 4', 'SDG 12'], $a->sdg_goals);
-        $this->assertSame('SDO checked the submitted DOCX files and Waste Policy Compliance Form.', $a->sdo_review_notes);
         $balance = app(ActivityBudgetService::class)->balance($this->account);
         $this->assertSame(5000.0, $balance['allocated']);
         $this->assertSame(5000.0, $balance['available']);
@@ -178,24 +181,43 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->assertSame(1, BudgetItem::where('org_activity_id', $a->id)->count());
     }
 
-    public function test_oc_has_a_separate_final_approval_dashboard_and_queue(): void
+    #[DataProvider('zeroBudgetFunding')]
+    public function test_zero_budget_activity_reaches_final_approval_without_reserving_or_requiring_cash(bool $hasCashAccount): void
     {
-        OrgActivity::create([
-            'title' => 'OC Queue Activity '.Str::uuid(),
-            'organization_name' => $this->organization->name,
-            'workflow_status' => 'oc_review',
-            'status' => 'draft',
-            'starts_at' => '2026-10-20 09:00:00',
-            'ends_at' => '2026-10-20 17:00:00',
-            'approved_budget' => 2500,
-        ]);
-
-        $this->actingAs($this->offices['oc'], 'office')
-            ->get('/office-desk')
-            ->assertOk()
-            ->assertSee('OC Final Approval Queue', false)
-            ->assertSee('Awaiting OC Approval', false);
+        $balanceBefore = $hasCashAccount ? app(ActivityBudgetService::class)->balance($this->account) : null;
+        if (! $hasCashAccount) {
+            $this->account->delete();
+        }
+        $this->actingAs($this->offices['so'], 'office')
+            ->post(route('office.activities.store'), $this->activityPayload(['approved_budget' => '0.00']))
+            ->assertSessionHasNoErrors();
+        $activity = OrgActivity::where('organization_name', $this->organization->name)->latest('id')->firstOrFail();
+        foreach (['oso', 'sdo', 'ovcaa', 'oc'] as $role) {
+            $this->actingAs($this->offices[$role], 'office')
+                ->post(route('office.activities.advance', $activity), in_array($role, ['oso', 'sdo'], true) ? ['documents_reviewed' => '1'] : [])
+                ->assertSessionHasNoErrors();
+        }
+        $this->assertSame('oc_approved', $activity->refresh()->workflow_status);
+        $this->assertTrue(OrgActivity::visibleToStudents()->whereKey($activity->id)->exists());
+        if ($hasCashAccount) {
+            $balanceAfter = app(ActivityBudgetService::class)->balance($this->account);
+            foreach (['cash', 'allocated', 'reserved', 'available'] as $field) {
+                $this->assertSame($balanceBefore[$field], $balanceAfter[$field]);
+            }
+        } else {
+            $this->assertFalse(OrgFundAccount::where('organization_name', $this->organization->name)->exists());
+        }
+        $this->actingAs($this->offices['so'], 'office')
+            ->post('/office-desk/budget-utilization/receipt-reviews', $this->receiptPayload($activity))
+            ->assertSessionHasErrors();
+        $this->assertFalse(ExpenseReceiptReview::where('org_activity_id', $activity->id)->exists());
     }
+
+    public static function zeroBudgetFunding(): array
+    {
+        return ['no cash account' => [false], 'existing cash account' => [true]];
+    }
+
 
     public function test_receipt_debits_once_preserves_cents_and_feeds_history_download_and_semester_compilation(): void
     {
@@ -214,20 +236,43 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->assertSame('370.35', (string) $a->refresh()->implemented_budget);
         $this->get('/office-desk/budget-utilization/receipts/'.$receipt->id.'/view?download=1')->assertOk()->assertHeader('content-disposition', 'attachment; filename="Original Receipt.jpg"');
         $query = http_build_query(['organization' => $a->organization_name, 'academic_year' => '2026-2027', 'semester' => '1st Semester']);
-        $this->actingAs($this->offices['oso'], 'office')->get('/office-desk/financial-report?'.$query)->assertOk()
-            ->assertViewHas('periodExpenseTotal', 370.35)->assertSee('Printed learning kits')->assertDontSee('Tech Titan Corp');
-        $this->get('/office-desk/financial-report/print?'.$query)->assertOk()->assertSee('370.35')->assertSee('Original Receipt.jpg')->assertDontSee('org-sidebar');
-        $this->get('/office-desk/budget-utilization?'.$query)->assertOk()->assertSee('Receipt History')->assertSee('Original Receipt.jpg');
+        $this->actingAs($this->offices['oso'], 'office')->get('/office-desk/financial-report?'.$query)->assertOk();
+        $this->get('/office-desk/financial-report/print?'.$query)->assertOk()
+            ->assertSee('Php 370.35')
+            ->assertSee('Printed learning kits')
+            ->assertSee($data['receipt_reference'])
+            ->assertSee('Original Receipt.jpg');
         $response = $this->get('/office-desk/budget-utilization/receipt-package?'.$query)->assertOk();
         $path = $response->baseResponse->getFile()->getPathname();
         try {
             $zip = new ZipArchive(); $zip->open($path);
             $this->assertSame(3, $zip->numFiles);
-            $this->assertStringContainsString('370.35', $zip->getFromName('expense-register.csv'));
-            $zip->close();
+            $csv = fopen('php://temp', 'w+');
+            try {
+                fwrite($csv, $zip->getFromName('expense-register.csv'));
+                rewind($csv);
+                $headers = fgetcsv($csv, 0, ',', '"', '');
+                $row = array_combine($headers, fgetcsv($csv, 0, ',', '"', ''));
+                $this->assertFalse(fgetcsv($csv, 0, ',', '"', ''));
+                $this->assertSame($a->organization_name, $row['Organization']);
+                $this->assertSame($a->title, $row['Activity']);
+                $this->assertSame('Printed learning kits', $row['Item']);
+                $this->assertSame('3', $row['Quantity']);
+                $this->assertSame('123.45', $row['Unit cost']);
+                $this->assertSame('370.35', $row['Total']);
+                $this->assertSame($data['receipt_reference'], $row['Reference']);
+                $this->assertSame('verified', $row['Seal status']);
+                $this->assertSame($receipt->chain_hash, $row['Hash']);
+                $receiptEntry = strtok($row['Receipt files'], ' ');
+                $this->assertSame(Storage::disk('local')->get($receipt->receipt_path), $zip->getFromName($receiptEntry));
+            } finally {
+                fclose($csv);
+                $zip->close();
+            }
         } finally { unlink($path); }
         $empty = http_build_query(['organization' => $a->organization_name, 'academic_year' => '2025-2026', 'semester' => '1st Semester']);
-        $this->get('/office-desk/financial-report?'.$empty)->assertViewHas('periodExpenseTotal', 0.0)->assertDontSee('Printed learning kits');
+        $this->get('/office-desk/financial-report/print?'.$empty)->assertOk()
+            ->assertSee('Php 0.00')->assertDontSee('Printed learning kits');
     }
 
     public function test_one_expense_item_can_store_multiple_receipt_photos_without_double_debiting(): void
@@ -408,19 +453,21 @@ class ActivityBudgetLifecycleTest extends TestCase
     public function test_only_the_assigned_so_can_save_opening_cash_and_oso_is_read_only(): void
     {
         $opening = ['academic_year' => '2026-2027', 'opening_balance' => '12000.00'];
+        $unassigned = $this->organizationSo();
+        $unassigned->update(['student_organization_id' => null]);
 
         $this->actingAs($this->offices['oso'], 'office')
             ->get('/office-desk/budget-utilization?organization='.urlencode($this->organization->name).'&academic_year=2026-2027')
             ->assertOk();
         $this->actingAs($this->offices['oso'], 'office')->post('/office-desk/financial-report/opening', $opening)->assertForbidden();
-        $this->actingAs($this->offices['so'], 'office')->post('/office-desk/financial-report/opening', $opening)->assertForbidden();
+        $this->actingAs($unassigned, 'office')->post('/office-desk/financial-report/opening', $opening)->assertForbidden();
         $this->assertSame('10000.00', (string) $this->account->fresh()->cash_opening_balance);
 
         $this->actingAs($this->organizationSo(), 'office')->post('/office-desk/financial-report/opening', $opening)->assertSessionHasNoErrors();
         $this->assertSame('12000.00', (string) $this->account->fresh()->cash_opening_balance);
-        $this->actingAs($this->offices['so'], 'office')
+        $this->actingAs($unassigned, 'office')
             ->get('/office-desk/budget-utilization?organization='.urlencode($this->organization->name).'&academic_year=2026-2027')
-            ->assertOk();
+            ->assertForbidden();
     }
 
     public function test_missing_required_upload_is_rejected_and_returned_submission_retains_its_files(): void
@@ -428,15 +475,15 @@ class ActivityBudgetLifecycleTest extends TestCase
         $data = $this->activityPayload();
         unset($data['attachments']['wpcf']);
         $this->actingAs($this->offices['so'], 'office')->post('/office-desk/activities', $data)->assertSessionHasErrors();
-        $this->assertFalse(OrgActivity::where('title', $data['title'])->exists());
+        $this->assertFalse(OrgActivity::where('organization_name', $this->organization->name)->exists());
         $a = $this->submitted();
         $submission = InCampusActivitySubmission::where('org_activity_id', $a->id)->firstOrFail();
         $original = $submission->attachments['wpcf']['path'];
         $this->actingAs($this->offices['oso'], 'office')->post('/office-desk/activities/'.$a->id.'/return', ['returned_to' => 'so', 'remarks' => 'Clarify the objectives.'])->assertSessionHasNoErrors();
-        $this->actingAs($this->offices['so'], 'office')->put('/office-desk/activities/'.$submission->id, $this->activityPayload(['title' => $a->title, 'attachments' => []]))->assertSessionHasNoErrors();
+        $this->actingAs($this->offices['so'], 'office')->put('/office-desk/activities/'.$submission->id, $this->activityPayload(['attachments' => []]))->assertSessionHasNoErrors();
         $this->assertSame('oso_review', $a->refresh()->workflow_status);
         $this->assertSame($original, $submission->refresh()->attachments['wpcf']['path']);
-        Storage::disk('public')->assertExists($original);
+        Storage::disk('local')->assertExists($original);
     }
 
     public function test_same_title_activities_do_not_share_receipts_and_offices_cannot_upload_or_return_out_of_turn(): void

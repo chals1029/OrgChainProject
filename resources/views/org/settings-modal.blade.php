@@ -2,7 +2,6 @@
     $isOso = ($office->office_role ?? '') === 'oso';
     $settings = $officeSettings ?? [];
     $general = $settings['general'] ?? [];
-    $security = $settings['security'] ?? [];
     $settingsUsers = $officeUsers ?? collect();
     $settingsLogoUrl = !empty($general['logo_path'])
         ? asset('storage/'.$general['logo_path'])
@@ -57,14 +56,6 @@
                     <div class="org-settings-nav-text">
                         <strong>Account</strong>
                         <small>Profile, Password</small>
-                    </div>
-                </button>
-
-                <button type="button" class="org-settings-nav-item" id="setNavBtn-security" onclick="switchSettingsTab('security')">
-                    <div class="org-settings-nav-icon"><i class="bi bi-shield-lock-fill"></i></div>
-                    <div class="org-settings-nav-text">
-                        <strong>Security</strong>
-                        <small>TOSA PIN access</small>
                     </div>
                 </button>
 
@@ -333,74 +324,6 @@
 
                 </section>
 
-                @if ($isOso)
-                {{-- TOSA access controls --}}
-                <section class="org-settings-panel" id="setPanel-security">
-                    <div class="org-settings-panel-header">
-                        <div>
-                            <h3 class="org-settings-panel-title">TOSA Access Controls</h3>
-                            <p class="org-settings-panel-desc">Manage the TOSA PIN gateway and its timed re-lock.</p>
-                        </div>
-                        <button type="button" class="org-settings-save-btn" onclick="saveSettingsSection('Security')">
-                            <i class="bi bi-floppy2-fill"></i> Save Changes
-                        </button>
-                    </div>
-
-                    {{-- Card: TOSA Module Access & TOSA PIN --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon" style="background: #fdf0f2; color: #8b1828;"><i class="bi bi-award-fill"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">TOSA Module Access &amp; TOSA PIN</h4>
-                                <p class="org-settings-card-desc">Restricted governance controls for the Ten Outstanding Students Awards executive module.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-toggle-row">
-                                <div>
-                                    <strong class="org-settings-toggle-title">Require a TOSA PIN</strong>
-                                    <p class="org-settings-toggle-desc">Require 4-digit security PIN unlock before displaying TOSA candidate dossiers.</p>
-                                </div>
-                                <label class="org-settings-switch">
-                                    <input type="checkbox" id="setTosaGateToggle" aria-label="Require a TOSA PIN" @checked($security['tosa_gate'] ?? true) onchange="toggleSettingState('TOSA PIN requirement', this.checked)">
-                                    <span class="org-settings-slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="org-settings-grid-2" style="margin-top: 1rem;">
-                                <div class="org-settings-field">
-                                    <label for="setTosaPinField" class="org-settings-label">New TOSA Access PIN</label>
-                                    <div class="org-settings-input-group">
-                                        <input type="password" id="setTosaPinField" class="org-settings-input" value="" inputmode="numeric" maxlength="4" placeholder="Enter new PIN" style="letter-spacing: 3px; font-weight: 800;">
-                                        <button type="button" class="org-settings-pw-toggle" onclick="togglePwVisibility('setTosaPinField', this)"><i class="bi bi-eye"></i></button>
-                                    </div>
-                                    <small class="org-settings-help" id="settingsTosaPinStatus">
-                                        @if (!empty($security['tosa_pin_configured']))
-                                            Current PIN is configured and stored as a one-way hash. Enter a new 4-digit PIN to replace it.
-                                        @else
-                                            No PIN is configured yet. Configure one before enabling PIN-protected TOSA access.
-                                        @endif
-                                    </small>
-                                    <button type="button" class="org-settings-btn-outline" style="margin-top: 0.6rem;" onclick="saveOsoPin('tosa')"><i class="bi bi-shield-lock"></i> Save TOSA PIN</button>
-                                </div>
-
-                                <div class="org-settings-field">
-                                    <label for="setSessionTimeout" class="org-settings-label">TOSA PIN Unlock Duration</label>
-                                    <select id="setSessionTimeout" class="org-settings-select">
-                                        <option value="15" @selected((int) ($security['session_timeout'] ?? 15) === 15)>15 Minutes</option>
-                                        <option value="30" @selected((int) ($security['session_timeout'] ?? 15) === 30)>30 Minutes</option>
-                                        <option value="60" @selected((int) ($security['session_timeout'] ?? 15) === 60)>1 Hour</option>
-                                        <option value="120" @selected((int) ($security['session_timeout'] ?? 15) === 120)>2 Hours</option>
-                                        <option value="0" @selected((int) ($security['session_timeout'] ?? 15) === 0)>No timed re-lock</option>
-                                    </select>
-                                    <small class="org-settings-help">Re-locks the TOSA view when the duration expires. This does not sign you out.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                @endif
-
                 {{-- =============================================================
                      TAB 5: USERS & ROLES
                      ============================================================= --}}
@@ -526,8 +449,7 @@
                                     <strong>OSO Office Accounts</strong>
                                     <ul>
                                         <li><i class="bi bi-check-circle-fill text-success"></i> Office settings and account management</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> TOSA access depends on assigned clearance</li>
-                                        <li><i class="bi bi-info-circle"></i> No Access blocks TOSA access</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> Automatic Level 3 Master TOSA access for active OSO accounts</li>
                                     </ul>
                                 </div>
                                 <div class="org-settings-perm-card">
@@ -615,9 +537,9 @@
                                     <i class="bi bi-award text-primary" style="font-size: 1.75rem;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">TOSA Applicant Manifest</strong>
-                                        <span style="font-size: 0.74rem; color: #64748b;">Applicants, stage, and requirement counts (.CSV). Requires TOSA clearance; unlock TOSA first when PIN protection is enabled.</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Applicants, stage, and requirement counts (.CSV). Available to authorized TOSA accounts.</span>
                                     </div>
-                                    <button type="button" class="org-settings-btn-subtle" title="Requires TOSA clearance and an unlocked TOSA session when PIN protection is enabled" onclick="exportDataPackage('TOSA Manifest')">Export</button>
+                                    <button type="button" class="org-settings-btn-subtle" title="Requires TOSA clearance" onclick="exportDataPackage('TOSA Manifest')">Export</button>
                                 </div>
 
                                 <div class="org-settings-export-box">
@@ -641,7 +563,7 @@
         <div class="org-settings-footer">
             <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b;">
                 <i class="bi bi-info-circle"></i>
-                <span>{{ $isOso ? 'Save All saves General, Profile, and TOSA controls only. Passwords, PINs, logos, and user actions save separately.' : 'Profile changes and passwords use their own save buttons.' }}</span>
+                <span>{{ $isOso ? 'Save All saves General and Profile only. Passwords, logos, and user actions save separately.' : 'Profile changes and passwords use their own save buttons.' }}</span>
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <button type="button" class="org-settings-btn-subtle" onclick="closeSettingsModal()">Close</button>
@@ -722,7 +644,7 @@
                     <option value="Level 2 Evaluator">Level 2 Evaluator</option>
                     <option value="Level 3 Master">Level 3 Master</option>
                 </select>
-                <small class="org-settings-help">TOSA access is limited to OSO and OVCAA accounts. No invitation email is sent.</small>
+                <small class="org-settings-help">OSO automatically receives Level 3 Master access. OVCAA may receive read-only or evaluator access; other offices have no TOSA access. No invitation email is sent.</small>
             </div>
             <div class="org-settings-dialog-actions">
                 <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAddUserModal').close()">Cancel</button>
@@ -1264,79 +1186,6 @@
     transition: width 0.3s ease, background 0.3s ease;
 }
 
-/* Switch Toggle Row */
-.org-settings-toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid #f1f5f9;
-    gap: 1rem;
-}
-
-.org-settings-toggle-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.org-settings-toggle-title {
-    font-size: 0.86rem;
-    color: #1a1618;
-    font-weight: 700;
-    display: block;
-}
-
-.org-settings-toggle-desc {
-    margin: 0.15rem 0 0;
-    font-size: 0.76rem;
-    color: #64748b;
-}
-
-/* Switch Toggle */
-.org-settings-switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-    flex-shrink: 0;
-}
-
-.org-settings-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.org-settings-slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: #cbd5e1;
-    transition: .3s;
-    border-radius: 9999px;
-}
-
-.org-settings-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .3s;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-
-.org-settings-switch input:checked + .org-settings-slider {
-    background-color: #8b1828;
-}
-
-.org-settings-switch input:checked + .org-settings-slider:before {
-    transform: translateX(20px);
-}
-
 /* Buttons */
 .org-settings-save-btn {
     padding: 0.6rem 1.25rem;
@@ -1792,7 +1641,7 @@
     let settingsMutationPending = false;
 
     function availableSettingsTabs() {
-        return settingsIsOso ? ['general', 'account', 'security', 'users', 'records'] : ['account'];
+        return settingsIsOso ? ['general', 'account', 'users', 'records'] : ['account'];
     }
 
     function switchSettingsTab(tabKey, keepSearch = false) {
@@ -1834,7 +1683,7 @@
         const button = input.parentElement.querySelector('.org-settings-pw-toggle');
         if (button) {
             button.innerHTML = '<i class="bi bi-eye"></i>';
-            button.setAttribute('aria-label', 'Show password or PIN');
+            button.setAttribute('aria-label', 'Show password');
             button.setAttribute('aria-pressed', 'false');
         }
     }
@@ -1846,10 +1695,9 @@
         modal.style.display = 'none';
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = settingsBodyOverflow;
-        ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword', 'setTosaPinField'].forEach(clearSettingsCredential);
+        ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword'].forEach(clearSettingsCredential);
         checkPasswordStrength('');
         if (settingsReturnFocus?.isConnected) settingsReturnFocus.focus();
-        window.dispatchEvent(new CustomEvent('oso-settings-closed'));
     }
 
     function filterSettingsSearch(query) {
@@ -1878,7 +1726,6 @@
         update: @json(route('office.settings.update')),
         account: @json(route('office.settings.account')),
         password: @json(route('office.settings.password')),
-        pin: @json(url('/office-desk/settings/pin')),
         logo: @json(route('office.settings.logo')),
         logoReset: @json(route('office.settings.logo.reset')),
         users: @json(route('office.settings.users.store')),
@@ -1954,10 +1801,6 @@
         return document.getElementById(id)?.value ?? '';
     }
 
-    function settingsChecked(id) {
-        return Boolean(document.getElementById(id)?.checked);
-    }
-
     function collectOsoSection(section) {
         const values = {
             general: {
@@ -1968,10 +1811,6 @@
                 contact_email: settingsInputValue('setContactEmail'),
                 contact_phone: settingsInputValue('setContactPhone'),
                 contact_location: settingsInputValue('setContactLocation'),
-            },
-            security: {
-                session_timeout: Number(settingsInputValue('setSessionTimeout')),
-                tosa_gate: settingsChecked('setTosaGateToggle'),
             },
         };
 
@@ -1987,7 +1826,6 @@
             const separator = document.title.lastIndexOf(' | ');
             if (separator >= 0) document.title = `${document.title.slice(0, separator)} | ${name}`;
         }
-        window.dispatchEvent(new CustomEvent('oso-settings-saved', { detail: { section, settings: data.settings } }));
         return data;
     }
 
@@ -2031,23 +1869,19 @@
     function saveAllSettings() {
         return runSettingsMutation(async () => {
             const saved = [];
-            const sections = settingsIsOso ? ['general', 'account', 'security'] : ['account'];
+            const sections = settingsIsOso ? ['general', 'account'] : ['account'];
             for (const section of sections) {
                 try {
                     if (section === 'account') await persistSettingsProfile();
                     else await persistSettingsSection(section);
-                    saved.push(section === 'account' ? 'Profile' : section === 'general' ? 'General' : 'TOSA controls');
+                    saved.push(section === 'account' ? 'Profile' : 'General');
                 } catch (error) {
                     const prefix = saved.length ? `Partially saved: ${saved.join(', ')}. ` : 'No settings were saved. ';
                     throw new Error(`${prefix}${section === 'account' ? 'Profile' : section} was not saved: ${error.message} Remaining sections were not saved.`);
                 }
             }
-            showSettingsToast('General settings, profile, and TOSA controls saved. Passwords and PINs were not changed.', 'success');
+            showSettingsToast(`${saved.join(' and ')} saved. Passwords were not changed.`, 'success');
         });
-    }
-
-    function toggleSettingState(settingName, isChecked) {
-        showSettingsToast(`${settingName} will be ${isChecked ? 'enabled' : 'disabled'} after saving TOSA access controls.`, 'info');
     }
 
     // Password Strengths
@@ -2077,7 +1911,7 @@
         const reveal = input.type === 'password';
         input.type = reveal ? 'text' : 'password';
         btnEl.innerHTML = `<i class="bi ${reveal ? 'bi-eye-slash' : 'bi-eye'}"></i>`;
-        btnEl.setAttribute('aria-label', reveal ? 'Hide password or PIN' : 'Show password or PIN');
+        btnEl.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
         btnEl.setAttribute('aria-pressed', String(reveal));
     }
 
@@ -2096,22 +1930,6 @@
             ['setCurrentPassword', 'setNewPassword', 'setConfirmPassword'].forEach(clearSettingsCredential);
             checkPasswordStrength('');
             showSettingsToast(data.message || 'Account password updated.', 'success');
-        });
-    }
-
-    function saveOsoPin(type = 'tosa') {
-        if (type !== 'tosa') return;
-        const pin = settingsInputValue('setTosaPinField');
-        if (!/^\d{4}$/.test(pin)) {
-            showSettingsToast('Please enter a valid 4-digit TOSA PIN.', 'error');
-            return;
-        }
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(`${osoSettingsRoutes.pin}/tosa`, { pin });
-            clearSettingsCredential('setTosaPinField');
-            document.getElementById('settingsTosaPinStatus').textContent = 'Current PIN is configured and stored as a one-way hash. Enter a new 4-digit PIN to replace it.';
-            window.dispatchEvent(new CustomEvent('oso-settings-saved', { detail: { section: 'pin' } }));
-            showSettingsToast(data.message || 'TOSA PIN updated.', 'success');
         });
     }
 
@@ -2180,12 +1998,17 @@
         organization.disabled = !isSo;
         document.getElementById('newOfficerOrganizationField').hidden = !isSo;
         const select = document.getElementById('newOfficerTosaClearance');
-        [...select.options].forEach((option, index) => {
-            option.disabled = index > (role === 'oso' ? 3 : role === 'ovcaa' ? 2 : 0);
+        [...select.options].forEach(option => {
+            option.disabled = role === 'oso'
+                ? option.value !== 'Level 3 Master'
+                : role === 'ovcaa'
+                    ? option.value === 'Level 3 Master'
+                    : option.value !== 'No Access';
             option.hidden = option.disabled;
         });
-        if (select.selectedOptions[0]?.disabled || isSo) select.value = 'No Access';
-        select.disabled = isSo;
+        if (role === 'oso') select.value = 'Level 3 Master';
+        else if (role !== 'ovcaa' || select.selectedOptions[0]?.disabled) select.value = 'No Access';
+        select.disabled = role !== 'ovcaa';
         document.getElementById('newOfficerClearanceField').hidden = isSo;
     }
 
@@ -2331,7 +2154,7 @@
             employee_id: settingsInputValue('newOfficerEmployeeId'),
             password: settingsInputValue('newOfficerPassword'),
             password_confirmation: settingsInputValue('newOfficerPasswordConfirmation'),
-            tosa_clearance: role === 'so' ? 'No Access' : settingsInputValue('newOfficerTosaClearance'),
+            tosa_clearance: role === 'oso' ? 'Level 3 Master' : role === 'ovcaa' ? settingsInputValue('newOfficerTosaClearance') : 'No Access',
         };
         if (role === 'so') values.student_organization_id = settingsInputValue('newOfficerOrganization');
         return runSettingsMutation(async () => {
@@ -2464,7 +2287,7 @@
     }
 
     document.querySelectorAll('#orgSettingsModal .org-settings-pw-toggle').forEach(button => {
-        button.setAttribute('aria-label', 'Show password or PIN');
+        button.setAttribute('aria-label', 'Show password');
         button.setAttribute('aria-pressed', 'false');
     });
 

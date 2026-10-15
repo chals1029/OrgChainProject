@@ -377,24 +377,16 @@
             const label = row.querySelector('.so-item-number');
             if (label) label.textContent = 'Item ' + (position + 1);
         });
-        if (items) {
-            items.classList.toggle('is-scrollable', currentRows.length >= 3);
-        }
         const countBadge = document.getElementById('soItemsCountBadge');
         if (countBadge) {
-            countBadge.textContent = currentRows.length === 1
-                ? '1 item'
-                : `${currentRows.length} items${currentRows.length >= 3 ? ' · Scrollable' : ''}`;
+            countBadge.textContent = currentRows.length === 1 ? '1 item' : `${currentRows.length} items`;
         }
+        const addButton = document.getElementById('soAddExpenseRow');
+        if (addButton) addButton.disabled = currentRows.length >= 20;
     };
 
-    rows().forEach(bindRow);
-    syncItemLabels();
-
-    document.getElementById('soAddExpenseRow')?.addEventListener('click', () => {
-        const currentRows = rows();
-        if (!items || !rowTemplate || currentRows.length >= 20) return;
-        const index = currentRows.reduce((max, row) => Math.max(max, Number(row.dataset.rowIndex) || 0), 0) + 1;
+    const addExpenseRow = (index) => {
+        if (!items || !rowTemplate) return null;
         const key = window.crypto?.randomUUID
             ? window.crypto.randomUUID()
             : String(Date.now()) + '-' + Math.random().toString(16).slice(2);
@@ -408,12 +400,27 @@
         if (!row) return;
         items.appendChild(row);
         bindRow(row);
+        return row;
+    };
+
+    const oldItems = JSON.parse(document.getElementById('soExpenseOldItems')?.textContent || '[]');
+    Object.entries(oldItems).forEach(([index, values]) => {
+        const row = Number(index) === 0 ? rows()[0] : addExpenseRow(Number(index));
+        if (!row || !values) return;
+        row.querySelectorAll('[data-field]').forEach((input) => {
+            if (Object.hasOwn(values, input.dataset.field)) input.value = values[input.dataset.field] ?? '';
+        });
+    });
+    rows().filter((row) => row.dataset.rowIndex === '0').forEach(bindRow);
+    syncItemLabels();
+
+    document.getElementById('soAddExpenseRow')?.addEventListener('click', () => {
+        const currentRows = rows();
+        if (currentRows.length >= 20) return;
+        const index = currentRows.reduce((max, row) => Math.max(max, Number(row.dataset.rowIndex) || 0), 0) + 1;
+        const row = addExpenseRow(index);
         syncItemLabels();
-        if (rows().length >= 3) {
-            items.scrollTo({ top: items.scrollHeight, behavior: 'smooth' });
-        } else {
-            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+        row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     form.addEventListener('submit', (event) => {

@@ -182,7 +182,7 @@ class OrgWorkflowService
         foreach ($requirements as $requirement) {
             if (empty($requirement['required_on_submit'])) continue;
             $file = $files[$requirement['key']] ?? null;
-            if (! is_array($file) || empty($file['path']) || ! \Illuminate\Support\Facades\Storage::disk('public')->exists($file['path'])) {
+            if (! is_array($file) || empty($file['path']) || ! \Illuminate\Support\Facades\Storage::disk('local')->exists($file['path'])) {
                 throw new \RuntimeException('Missing required upload: '.$requirement['title'].'. Ask SO to upload it to the matching checklist slot.');
             }
         }
@@ -242,7 +242,7 @@ class OrgWorkflowService
 
             return true;
         } catch (\Throwable $e) {
-            Log::warning('OSO SLA reminder failed: '.$e->getMessage());
+            Log::warning('OSO SLA reminder failed.', ['exception' => $e::class]);
 
             return false;
         }

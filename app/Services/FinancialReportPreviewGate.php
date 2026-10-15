@@ -44,7 +44,7 @@ class FinancialReportPreviewGate
             return false;
         }
 
-        $handle = @fopen(Storage::disk('public')->path($document->file_path), 'rb');
+        $handle = @fopen(Storage::disk('local')->path($document->file_path), 'rb');
         if ($handle === false) {
             return false;
         }
@@ -72,7 +72,7 @@ class FinancialReportPreviewGate
             return null;
         }
 
-        $contentHash = hash_file('sha256', Storage::disk('public')->path($document->file_path));
+        $contentHash = hash_file('sha256', Storage::disk('local')->path($document->file_path));
         if ($contentHash === false) {
             return null;
         }

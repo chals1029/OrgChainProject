@@ -111,19 +111,23 @@ class OfficeUser extends Authenticatable
 
     public function tosaClearanceLevel(): int
     {
-        if (! in_array($this->office_role, ['oso', 'ovcaa'], true)) {
+        if ($this->office_role === 'oso') {
+            return 3;
+        }
+
+        if ($this->office_role !== 'ovcaa') {
             return 0;
         }
 
         $level = match ($this->tosa_clearance) {
-            null, '' => $this->office_role === 'oso' ? 3 : 1,
+            null, '' => 1,
             'Level 1 Read-only' => 1,
             'Level 2 Evaluator' => 2,
             'Level 3 Master' => 3,
             default => 0,
         };
 
-        return min($level, $this->office_role === 'oso' ? 3 : 2);
+        return min($level, 2);
     }
 
     public function effectiveTosaClearance(): string

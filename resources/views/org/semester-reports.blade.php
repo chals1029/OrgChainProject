@@ -28,7 +28,7 @@
             'download_url' => route('office.reports.documents.view', ['document' => $document, 'download' => 1]),
         ]];
     });
-    $previewData = ['reports' => $previewReports, 'reviewer_mode' => true];
+    $previewData = ['reports' => $previewReports, 'reviewer_mode' => true, 'conversion_url' => route('office.documents.preview.convert')];
 @endphp
 
 @section('title', 'AR & FR Reports')
@@ -46,13 +46,12 @@
         @endif
         @if (session('success'))<div class="sr-notice" role="status">{{ session('success') }}</div>@endif
         <section class="sr-card" aria-labelledby="srPeriodTitle">
-            <div class="sr-head"><div><h2 id="srPeriodTitle">Reporting period</h2><p class="sr-muted">Choose an academic year and semester. Both report statuses are shown for that period.</p></div></div>
-            <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters">
+            <div class="sr-head"><div><h2 id="srPeriodTitle">Reporting period</h2><p class="sr-muted">Organization reports for the selected period.</p></div></div>
+            <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters" data-report-period-form>
                 <input type="hidden" name="tab" value="{{ $selectedTab }}">
                 <label>Organization<select name="organization"><option value="">All organizations</option>@foreach (($organizations ?? []) as $name)<option value="{{ $name }}" @selected($selectedOrganization === $name)>{{ $name }}</option>@endforeach</select></label>
                 <label>Academic year<select name="academic_year">@foreach (($reportingYears ?? []) as $year)<option value="{{ $year }}" @selected($selectedYear === (string) $year)>{{ $year }}</option>@endforeach</select></label>
                 <label>Semester<select name="semester">@foreach (($reportingSemesters ?? []) as $semester)<option value="{{ $semester }}" @selected($selectedSemester === $semester)>{{ $semester }}</option>@endforeach</select></label>
-                <button type="submit" class="org-btn org-btn-primary"><i class="bi bi-funnel"></i> View period</button>
             </form>
         </section>
 
@@ -63,7 +62,7 @@
                     <p class="sr-muted">AY {{ $selectedYear }} · {{ $selectedSemester }} · Applies to all organizations in this period.</p>
                 </div>
             </div>
-            <p class="sr-muted">Lock AR and FR independently to prevent accidental submissions. SO can still prepare, preview and download reports. Reports already submitted remain available for review.</p>
+            <p class="sr-muted">Lock AR and FR separately. Existing submissions remain available for review.</p>
             <div class="sr-documents">
                 @foreach (['ar' => 'Accomplishment Report (AR)', 'fr' => 'Financial Report (FR)'] as $type => $title)
                     @php($submissionLocked = (bool) ($submissionLocks[$type] ?? false))
@@ -72,14 +71,14 @@
                             <strong>{{ $title }}</strong>
                             <small>{{ $submissionLocked ? 'Locked — SO cannot submit' : 'Open — SO can submit completed reports' }}</small>
                         </div>
-                        <form method="post" action="{{ route('office.reports.submission-lock', ['reportType' => $type]) }}" class="sr-actions">
+                        <form method="post" action="{{ route('office.reports.submission-lock', ['reportType' => $type]) }}" class="sr-actions" data-sr-submission-form="{{ $type }}">
                             @csrf
                             <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
                             <input type="hidden" name="semester" value="{{ $selectedSemester }}">
                             <input type="hidden" name="organization" value="{{ $selectedOrganization }}">
                             <input type="hidden" name="tab" value="{{ $selectedTab }}">
                             <input type="hidden" name="is_locked" value="{{ $submissionLocked ? '0' : '1' }}">
-                            <button type="submit" class="org-btn {{ $submissionLocked ? 'org-btn-outline' : 'org-btn-primary' }} org-btn-sm">
+                            <button type="submit" class="org-btn {{ $submissionLocked ? 'org-btn-outline' : 'org-btn-primary' }} org-btn-sm" data-sr-submission-button @if (!$submissionLocked) aria-haspopup="dialog" aria-controls="srLockDialog" @endif>
                                 <i class="bi {{ $submissionLocked ? 'bi-unlock' : 'bi-lock' }}"></i> {{ $submissionLocked ? 'Reopen' : 'Lock' }} {{ strtoupper($type) }} submissions
                             </button>
                         </form>
@@ -101,8 +100,7 @@
                                 @foreach (['ar', 'fr'] as $type)
                                     @php($directoryReport = $entry['reports'][$type] ?? [])
                                     <td data-label="{{ strtoupper($type) }} status">
-                                        <span class="sr-status is-{{ $directoryReport['state'] ?? 'draft' }}">{{ $directoryReport['state_label'] ?? 'Draft — not submitted' }}</span>
-                                        <small>Submitted: {{ $reportDate($directoryReport['submitted_at'] ?? null) }}</small>
+                                        <span class="sr-status is-{{ $directoryReport['state'] ?? 'draft' }}">{{ empty($directoryReport['can_view']) ? 'Not submitted' : ($directoryReport['state_label'] ?? 'Submitted') }}</span>
                                         @if (!empty($directoryReport['notes']))<small>{{ $directoryReport['notes'] }}</small>@endif
                                     </td>
                                 @endforeach
@@ -139,10 +137,10 @@
                 <nav class="sr-tabs" aria-label="Report type">
                     @foreach (['ar' => 'Accomplishment Report (AR)', 'fr' => 'Financial Report (FR)'] as $type => $title)
                         @php($tabReport = $bundle['reports'][$type] ?? [])
-                        <a class="sr-tab" href="{{ route('office.reports.index', array_merge($periodQuery, ['tab' => $type])) }}#srSelectedReport" @if ($selectedTab === $type) aria-current="page" @endif>{{ $title }}<span class="sr-status is-{{ $tabReport['state'] ?? 'draft' }}">{{ $tabReport['state_label'] ?? 'Draft — not submitted' }}</span></a>
+                        <a class="sr-tab" href="{{ route('office.reports.index', array_merge($periodQuery, ['tab' => $type])) }}#srSelectedReport" @if ($selectedTab === $type) aria-current="page" @endif>{{ $title }}<span class="sr-status is-{{ $tabReport['state'] ?? 'draft' }}">{{ empty($tabReport['can_view']) ? 'Not submitted' : ($tabReport['state_label'] ?? 'Submitted') }}</span></a>
                     @endforeach
                 </nav>
-                <div class="sr-head"><h3>{{ $reportTitle }}</h3><span class="sr-status is-{{ $record['state'] ?? 'draft' }}">{{ $record['state_label'] ?? 'Draft — not submitted' }}</span></div>
+                <div class="sr-head"><h3>{{ $reportTitle }}</h3><span class="sr-status is-{{ $record['state'] ?? 'draft' }}">{{ empty($record['can_view']) ? 'Not submitted' : ($record['state_label'] ?? 'Submitted') }}</span></div>
                 <dl class="sr-dates">
                     <div><dt>Submitted to OSO</dt><dd>{{ $reportDate($record['submitted_at'] ?? null) }}</dd></div>
                     <div><dt>Opened by OSO</dt><dd>{{ $reportDate($record['opened_at'] ?? null) }}</dd></div>
@@ -168,7 +166,7 @@
                         @endforelse
                     </div>
                 @else
-                    <p class="sr-notice">@if (($record['state'] ?? '') === 'returned')This {{ strtoupper($selectedTab) }} was returned for revision. Its documents will be available after SO resubmits.@else This {{ strtoupper($selectedTab) }} has not been submitted. Draft documents are not available to OSO.@endif</p>
+                    <p class="sr-notice">@if (($record['state'] ?? '') === 'returned')Returned for revision. Documents become available after resubmission.@else Not submitted. Draft documents are private.@endif</p>
                 @endif
                 @if (!empty($record['can_review']))
                     <h3>Review {{ strtoupper($selectedTab) }}</h3>
@@ -204,6 +202,22 @@
         </section>
     </div>
 
+    <dialog id="srLockDialog" class="sr-lock-dialog" aria-labelledby="srLockTitle" aria-describedby="srLockPeriod srLockDescription">
+        <div class="sr-lock-box">
+            <span class="sr-lock-icon" aria-hidden="true"><i class="bi bi-lock"></i></span>
+            <h2 id="srLockTitle">Lock submissions?</h2>
+            <p id="srLockPeriod" class="sr-lock-period"></p>
+            <div id="srLockDescription">
+                <p>This applies to <strong>ALL organizations</strong> in this reporting period and prevents new submissions of this report type.</p>
+                <p>SO may still prepare, view and download reports. Existing submitted reports are unaffected and remain available for review.</p>
+            </div>
+            <div class="sr-lock-actions">
+                <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="srLockCancel" autofocus>Cancel</button>
+                <button type="button" class="org-btn org-btn-primary org-btn-sm" id="srLockConfirm"><i class="bi bi-lock" aria-hidden="true"></i> Yes, lock submissions</button>
+            </div>
+        </div>
+    </dialog>
+
     <dialog id="finPreviewDialog" class="fin-dialog fin-preview-dialog" aria-labelledby="finPreviewTitle">
         <div class="fin-preview-box">
             <header class="fin-dialog-head">
@@ -222,13 +236,88 @@
             </div>
         </div>
     </dialog>
+    @include('org.partials.document-preview')
     <script type="application/json" id="soFinancialData">@json($previewData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)</script>
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/so-financial.js') }}?v={{ filemtime(public_path('js/so-financial.js')) }}"></script>
+    <script src="{{ asset('js/semester-reports.js') }}?v={{ filemtime(public_path('js/semester-reports.js')) }}" defer></script>
     <script>
         (() => {
+            const lockDialog = document.getElementById('srLockDialog');
+            const lockConfirm = document.getElementById('srLockConfirm');
+            let pendingLock = null;
+            let confirmedForm = null;
+            let lockSubmitted = false;
+            const lockFormState = form => JSON.stringify({
+                action: form.action,
+                method: form.method,
+                reportType: form.dataset.srSubmissionForm,
+                fields: Array.from(new FormData(form).entries()),
+            });
+            function closeLockDialog() {
+                const opener = pendingLock?.submitter;
+                pendingLock = null;
+                confirmedForm = null;
+                if (lockDialog.open) lockDialog.close();
+                if (opener?.isConnected) opener.focus({ preventScroll: true });
+            }
+            document.querySelectorAll('[data-sr-submission-form]').forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (lockSubmitted) {
+                        event.preventDefault();
+                        return;
+                    }
+                    if (form === confirmedForm) {
+                        confirmedForm = null;
+                        lockSubmitted = true;
+                        pendingLock = null;
+                        lockConfirm.disabled = true;
+                        form.querySelector('[data-sr-submission-button]').disabled = true;
+                        lockDialog.close();
+                        return;
+                    }
+                    if (form.elements.namedItem('is_locked').value !== '1') return;
+                    event.preventDefault();
+                    if (lockDialog.open) return;
+                    const submitter = event.submitter || form.querySelector('[data-sr-submission-button]');
+                    pendingLock = { form, submitter, state: lockFormState(form) };
+                    document.getElementById('srLockTitle').textContent = `Lock ${form.dataset.srSubmissionForm.toUpperCase()} submissions?`;
+                    document.getElementById('srLockPeriod').textContent = `AY ${form.elements.namedItem('academic_year').value} · ${form.elements.namedItem('semester').value}`;
+                    lockConfirm.disabled = false;
+                    lockDialog.showModal();
+                });
+            });
+            document.getElementById('srLockCancel').addEventListener('click', closeLockDialog);
+            lockDialog.addEventListener('cancel', event => {
+                event.preventDefault();
+                closeLockDialog();
+            });
+            lockDialog.addEventListener('click', event => {
+                if (event.target !== lockDialog) return;
+                const bounds = lockDialog.getBoundingClientRect();
+                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeLockDialog();
+            });
+            lockDialog.addEventListener('close', () => {
+                if (!lockDialog.open && pendingLock) closeLockDialog();
+            });
+            lockConfirm.addEventListener('click', () => {
+                if (!pendingLock || !lockDialog.open || lockSubmitted || lockConfirm.disabled) return;
+                const { form, submitter, state } = pendingLock;
+                if (!form.isConnected || submitter.form !== form || lockFormState(form) !== state) {
+                    closeLockDialog();
+                    return;
+                }
+                lockConfirm.disabled = true;
+                confirmedForm = form;
+                form.requestSubmit(submitter);
+                if (!lockSubmitted) {
+                    confirmedForm = null;
+                    lockConfirm.disabled = false;
+                }
+            });
+
             const search = document.getElementById('srDirectorySearch');
             const rows = Array.from(document.querySelectorAll('[data-sr-directory-row]'));
             const pageSize = 5;

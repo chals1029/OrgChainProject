@@ -51,6 +51,9 @@
 @endsection
 
 @section('content')
+    @if ($isSo)
+        <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
+    @endif
     <style>
         .rn-card { background:#fff; border:1.5px solid #f0e6e8; border-radius:20px; padding:1.35rem 1.5rem; box-shadow:0 4px 16px rgba(90,15,30,.03); margin-bottom:1.1rem; }
         .rn-card h3 { margin:0 0 0.35rem; font-size:1.02rem; font-weight:800; color:#1a1618; display:flex; align-items:center; gap:0.45rem; }
@@ -100,6 +103,11 @@
         .so-renewal-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:0.7rem; padding:0.6rem 0.65rem; margin-top:0.45rem; border:1px solid #f0e6e8; border-radius:11px; background:#fff; scroll-margin-bottom:6.5rem; }
         .so-renewal-row-main { display:flex; align-items:flex-start; gap:0.55rem; min-width:0; }
         .so-renewal-file-icon { display:grid; place-items:center; width:1.55rem; height:1.55rem; flex:0 0 auto; border-radius:7px; background:#fdf0f2; color:#8b1828; font-size:0.82rem; }
+        .so-renewal-row.is-ready { border-color:#bbf7d0; background:#f0fdf4; }
+        .so-renewal-row.is-ready .so-renewal-file-icon { background:#dcfce7; color:#15803d; }
+        .so-renewal-info-actions { display:flex; gap:0.4rem; flex-wrap:wrap; }
+        #soRenewalInformationStatus.ok { color:#15803d; }
+        #soRenewalInformationStatus.err { color:#b91c1c; }
         .so-renewal-row-copy { min-width:0; }
         .so-renewal-row-title { display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap; }
         .so-renewal-row-title strong { font-size:0.72rem; }
@@ -125,28 +133,6 @@
         .so-renewal-footer .org-btn[disabled]::after { display:none; }
         .so-renewal [hidden] { display:none !important; }
         @media (prefers-reduced-motion: reduce) { .org-content > .so-renewal { animation:none; } }
-        .rn-preview-dialog { box-sizing:border-box; position:fixed; inset:0; margin:auto; border:0; border-radius:16px; padding:0; width:min(1040px,calc(100vw - 2rem)); height:min(88dvh,calc(100dvh - 2rem)); overflow:hidden; background:#fff; box-shadow:0 25px 50px -12px rgba(0,0,0,.25); animation:none; transform:none; }
-        .rn-preview-box { display:flex; flex-direction:column; height:100%; min-height:0; }
-        .rn-preview-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.7rem; padding:0.85rem 1.25rem; border-bottom:1.5px solid #f0e6e8; background:#fffcfd; }
-        .rn-preview-heading { display:flex; align-items:center; gap:0.75rem; min-width:0; flex:1 1 18rem; }
-        .rn-preview-icon { display:grid; place-items:center; width:36px; height:36px; flex:0 0 auto; border-radius:9px; background:#fdf0f2; color:#8b1828; font-size:1.2rem; }
-        .rn-preview-title { min-width:0; overflow-wrap:anywhere; }
-        .rn-preview-title strong { font-size:0.95rem; color:#1a1618; display:block; }
-        .rn-preview-title small { color:#786f73; font-size:0.75rem; }
-        .rn-preview-actions { display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem; }
-        .rn-preview-actions .org-btn { padding:0.35rem 0.75rem; font-size:0.76rem; }
-        .rn-preview-body { flex:1 1 auto; min-height:0; overflow:auto; background:#e9e6e5; }
-        .rn-preview-body > iframe { display:block; width:100%; height:100%; border:0; }
-        .rn-preview-body:has(> img) { display:flex; align-items:center; justify-content:center; }
-        .rn-preview-body > img { display:block; max-width:100%; max-height:100%; object-fit:contain; }
-        .rn-preview-body .docx-wrapper { min-width:fit-content; padding:1rem !important; background:transparent !important; }
-        .rn-preview-body section.docx { margin:0 auto 1rem !important; box-shadow:0 7px 24px rgba(42,27,30,.16); }
-        .rn-preview-message { display:grid; place-items:center; height:100%; margin:0; padding:1.5rem; text-align:center; color:#675a5e; }
-        @media (max-width:640px) {
-            .rn-preview-dialog { width:calc(100vw - 1rem); height:calc(100dvh - 1rem); }
-            .rn-preview-head { padding:0.7rem 0.8rem; }
-            .rn-preview-body .docx-wrapper { padding:0.6rem !important; }
-        }
         @media (min-width:901px) and (min-height:560px) {
             .org-main:has(.so-renewal-footer) { display:flex; flex-direction:column; overflow:hidden; }
             .org-main:has(.so-renewal-footer) > .org-topbar { flex:0 0 auto; }
@@ -238,14 +224,21 @@
                 $remainingCount = max(0, count($docs) - $completedCount);
                 $adviserName = old('adviser_name', $my->adviser_name ?? '');
                 $deanName = old('dean_name', $my->dean_name ?? '');
-                $isTerminalPacket = $my && in_array($my->status, ['approved', 'rejected'], true);
-                $isDetailsEditable = ! $isTerminalPacket && (! $my || $errors->any());
+                $isLockedPacket = $my?->submissionLocked() ?? false;
             @endphp
 
-            @if ($isTerminalPacket)
-                <div class="rn-alert {{ $my->status === 'approved' ? 'ok' : 'err' }}" role="status" style="margin-bottom:0.75rem;">
-                    <i class="bi {{ $my->status === 'approved' ? 'bi-check-all' : 'bi-x-octagon' }}" aria-hidden="true"></i>
-                    Renewal packet {{ $my->status === 'approved' ? 'approved' : 'rejected' }} by OSO{{ $my->reviewed_at ? ' on '.$my->reviewed_at->format('M j, Y g:i A') : '' }}. This packet is final and can no longer be edited or resubmitted.
+            @if ($isLockedPacket)
+                <div class="rn-alert ok" role="status" style="margin-bottom:0.75rem;">
+                    <i class="bi {{ $my->status === 'approved' ? 'bi-check-all' : 'bi-hourglass-split' }}" aria-hidden="true"></i>
+                    {{ $my->status === 'approved' ? 'Renewal packet approved by OSO. This packet can no longer be edited or resubmitted.' : 'Renewal packet submitted for OSO review. Changes are locked unless OSO returns or rejects the packet for revision.' }}
+                    @if ($my->review_remarks)
+                        <div style="margin-top:0.35rem;font-weight:600;"><strong>OSO remarks:</strong> {{ $my->review_remarks }}</div>
+                    @endif
+                </div>
+            @endif
+            @if ($my && in_array($my->status, ['returned', 'rejected'], true))
+                <div class="rn-alert err" role="status" style="margin-bottom:0.75rem;">
+                    Renewal packet {{ $my->status }} by OSO. Correct the packet and resubmit while the renewal window is open.
                     @if ($my->review_remarks)
                         <div style="margin-top:0.35rem;font-weight:600;"><strong>OSO remarks:</strong> {{ $my->review_remarks }}</div>
                     @endif
@@ -258,12 +251,17 @@
                             <h3><i class="bi bi-building"></i> Organization Information</h3>
                             <p class="rn-muted">Fields marked with an asterisk (*) are required.</p>
                         </div>
-                        <button type="button" id="soRenewalEditInfo" class="org-btn org-btn-ghost org-btn-sm" @disabled($isTerminalPacket || ! $canSubmitPacket)>
-                            <i class="bi bi-pencil-square"></i> Edit information
-                        </button>
+                        <div class="so-renewal-info-actions">
+                            <button type="button" id="soRenewalEditInfo" class="org-btn org-btn-ghost org-btn-sm" @disabled($isLockedPacket || ! $canSubmitPacket)>
+                                <i class="bi bi-pencil-square"></i> Edit information
+                            </button>
+                            <button type="button" id="soRenewalSaveInfo" class="org-btn org-btn-primary org-btn-sm" @disabled($isLockedPacket || ! $canSubmitPacket)>
+                                <i class="bi bi-check-lg"></i> Save changes
+                            </button>
+                        </div>
                     </div>
 
-                    <form id="soRenewalSubmissionForm" method="POST" enctype="multipart/form-data" action="{{ route('office.renewal.submit') }}" data-can-submit="{{ ! $isTerminalPacket && $canSubmitPacket ? '1' : '0' }}">
+                    <form id="soRenewalSubmissionForm" method="POST" enctype="multipart/form-data" action="{{ route('office.renewal.submit') }}" data-can-submit="{{ ! $isLockedPacket && $canSubmitPacket ? '1' : '0' }}" data-information-save-url="{{ route('office.renewal.information.save') }}">
                         @csrf
                         <input type="hidden" name="action" value="submit">
                         <input type="hidden" name="window_id" value="{{ $window->id }}">
@@ -277,15 +275,16 @@
                             </label>
                             <label>
                                 Organizational adviser *
-                                <input type="text" name="adviser_name" value="{{ $adviserName }}" placeholder="Full name of adviser" @if (! $isDetailsEditable) readonly @endif required data-so-renewal-editable>
+                                <input type="text" name="adviser_name" value="{{ $adviserName }}" placeholder="Full name of adviser" @if ($isLockedPacket || ! $canSubmitPacket || filled($adviserName)) readonly @endif required data-so-renewal-editable>
                             </label>
                             <label>
                                 College dean *
-                                <input type="text" name="dean_name" value="{{ $deanName }}" placeholder="Full name of dean" @if (! $isDetailsEditable) readonly @endif required data-so-renewal-editable>
+                                <input type="text" name="dean_name" value="{{ $deanName }}" placeholder="Full name of dean" @if ($isLockedPacket || ! $canSubmitPacket || filled($deanName)) readonly @endif required data-so-renewal-editable>
                             </label>
                         </div>
-                        @unless ($isTerminalPacket)
-                            <p class="rn-muted">Details and selected files stay in this page until you click Submit for Review. Leaving or reloading the page discards unsubmitted changes.</p>
+                        <p id="soRenewalInformationStatus" class="rn-muted" role="status" aria-live="polite"></p>
+                        @unless ($isLockedPacket)
+                            <p class="rn-muted">Save changes records only the adviser and dean names. Selected files stay on this page until Submit for Review; leaving or reloading discards files that have not been submitted.</p>
                         @endunless
                     </form>
                 </section>
@@ -299,10 +298,10 @@
                         </div>
                     </div>
                     <div class="so-renewal-banner-actions">
-                        <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-renewal-preview
-                                data-renewal-preview-url="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).pdf"
-                                data-renewal-preview-title="BatStateU-FO-SOA-01 Master Application Form" data-renewal-preview-type="pdf"
-                                data-renewal-preview-download="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx">
+                        <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-document-preview
+                                data-document-preview-url="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).pdf"
+                                data-document-preview-title="BatStateU-FO-SOA-01 Master Application Form" data-document-preview-type="pdf"
+                                data-document-preview-download="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx">
                             <i class="bi bi-eye"></i> View
                         </button>
                         <a href="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx" download class="org-btn org-btn-ghost org-btn-sm">
@@ -334,9 +333,9 @@
                             $tmplPdfUrl = $officialFile['preview_url'] ?? null;
                             $label = $officialFile['code'] ?? ('Attachment '.chr(64 + $loop->iteration));
                         @endphp
-                        <article class="so-renewal-row">
+                        <article class="so-renewal-row {{ $hasUploadedFile ? 'is-ready' : '' }}">
                             <div class="so-renewal-row-main">
-                                <span class="so-renewal-file-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                <span class="so-renewal-file-icon"><i class="bi {{ $hasUploadedFile ? 'bi-check-circle-fill' : 'bi-file-earmark-text' }}" data-so-readiness-icon></i></span>
                                 <div class="so-renewal-row-copy">
                                     <div class="so-renewal-row-title">
                                         <span class="so-renewal-attachment">{{ $label }} *</span>
@@ -344,9 +343,9 @@
                                     </div>
                                     <div class="so-renewal-template-links">
                                         @if ($tmplPdf)
-                                            <a href="{{ $tmplPdfUrl }}" class="rn-link" data-renewal-preview
-                                               data-renewal-preview-url="{{ $tmplPdfUrl }}" data-renewal-preview-download="{{ $tmplDocxUrl }}"
-                                               data-renewal-preview-title="{{ $label }}: {{ $doc['title'] }}" data-renewal-preview-type="{{ $officialFile['preview_type'] ?? '' }}"><i class="bi bi-eye"></i> View</a>
+                                            <a href="{{ $tmplPdfUrl }}" class="rn-link" data-document-preview
+                                               data-document-preview-url="{{ $tmplPdfUrl }}" data-document-preview-download="{{ $tmplDocxUrl }}"
+                                               data-document-preview-title="{{ $label }}: {{ $doc['title'] }}" data-document-preview-type="{{ $officialFile['preview_type'] ?? '' }}"><i class="bi bi-eye"></i> View</a>
                                         @endif
                                         @if ($tmplDocx)
                                             <a href="{{ $tmplDocxUrl }}" download class="rn-link"><i class="bi bi-download"></i> Download</a>
@@ -373,17 +372,18 @@
                             <div class="so-renewal-row-actions">
                                 <span class="org-upload-status" data-so-file-status aria-live="polite" @if ($hasUploadedFile) hidden @endif>No file selected.</span>
                                 <a class="org-upload-status is-selected so-renewal-file-link"
-                                   data-so-file-link data-saved-name="{{ $hasUploadedFile ? ($uploaded->file_name ?: basename($uploaded->file_path)) : '' }}"
+                                   data-so-file-link data-document-file data-saved-name="{{ $hasUploadedFile ? ($uploaded->file_name ?: basename($uploaded->file_path)) : '' }}"
                                    data-saved-url="{{ $hasUploadedFile ? route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion()]) : '' }}"
                                    data-saved-type="{{ $hasUploadedFile ? strtolower(pathinfo($uploaded->file_name ?: $uploaded->file_path, PATHINFO_EXTENSION)) : '' }}"
                                    data-saved-download="{{ $hasUploadedFile ? route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion(), 'download' => 1]) : '' }}"
-                                   data-renewal-preview-type="{{ $hasUploadedFile ? strtolower(pathinfo($uploaded->file_name ?: $uploaded->file_path, PATHINFO_EXTENSION)) : '' }}"
-                                   data-renewal-preview-download="{{ $hasUploadedFile ? route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion(), 'download' => 1]) : '' }}"
+                                   data-document-preview-type="{{ $hasUploadedFile ? strtolower(pathinfo($uploaded->file_name ?: $uploaded->file_path, PATHINFO_EXTENSION)) : '' }}"
+                                   data-document-preview-download="{{ $hasUploadedFile ? route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion(), 'download' => 1]) : '' }}"
+                                   data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
                                    @if ($hasUploadedFile) href="{{ route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion()]) }}" @else hidden @endif
                                    >{{ $hasUploadedFile ? ($uploaded->file_name ?: basename($uploaded->file_path)) : '' }}</a>
-                                @if ($isTerminalPacket)
-                                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" disabled title="This packet is final">
-                                        <i class="bi bi-lock"></i> Packet {{ $my->status === 'approved' ? 'approved' : 'rejected' }}
+                                @if ($isLockedPacket)
+                                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" disabled title="This packet is locked">
+                                        <i class="bi bi-lock"></i> Packet {{ $my->status }}
                                     </button>
                                 @else
                                     <div class="so-renewal-file-form">
@@ -401,16 +401,16 @@
 
                 <div class="so-renewal-footer">
                     <div>
-                        @if ($isTerminalPacket)
-                            <strong>Renewal packet {{ $my->status === 'approved' ? 'approved' : 'rejected' }}</strong>
-                            <small>OSO has recorded a final decision. Uploads, edits and resubmission are closed for this packet.</small>
+                        @if ($isLockedPacket)
+                            <strong>Renewal packet {{ $my->status }}</strong>
+                            <small>{{ $my->status === 'approved' ? 'OSO has approved this packet. Uploads, edits and resubmission are closed.' : 'Awaiting OSO review. Uploads, edits and resubmission are locked until returned or rejected.' }}</small>
                         @else
                             <strong id="soRenewalRemaining">{{ $remainingCount }} requirement{{ $remainingCount === 1 ? '' : 's' }} remaining</strong>
-                            <small id="soRenewalHelp">Files are not uploaded and details are not saved until you submit for review.</small>
+                            <small id="soRenewalHelp">Files are uploaded only when you submit for review. Save changes records names only.</small>
                         @endif
                     </div>
-                    <button id="soRenewalSubmit" type="submit" form="soRenewalSubmissionForm" class="org-btn org-btn-primary" @disabled($isTerminalPacket || $remainingCount > 0 || ! $canSubmitPacket)>
-                        <i class="bi {{ $isTerminalPacket ? 'bi-lock-fill' : 'bi-send-fill' }}"></i> {{ $isTerminalPacket ? 'Packet Final' : 'Submit for Review' }}
+                    <button id="soRenewalSubmit" type="submit" form="soRenewalSubmissionForm" class="org-btn org-btn-primary" @disabled($isLockedPacket || $remainingCount > 0 || ! $canSubmitPacket)>
+                        <i class="bi {{ $isLockedPacket ? 'bi-lock-fill' : 'bi-send-fill' }}"></i> {{ $isLockedPacket ? 'Packet Locked' : 'Submit for Review' }}
                     </button>
                 </div>
             </div>
@@ -517,34 +517,34 @@
     </script>
 
     @if ($isSo)
-    <dialog id="renewalDocViewerModal" class="rn-preview-dialog" aria-labelledby="renewalDocViewerTitle">
-        <div class="rn-preview-box">
-            <header class="rn-preview-head">
-                <div class="rn-preview-heading">
-                    <span class="rn-preview-icon" aria-hidden="true"><i class="bi bi-file-earmark-richtext"></i></span>
-                    <div class="rn-preview-title">
-                        <strong id="renewalDocViewerTitle">Document Preview</strong>
+    <dialog id="renewalDocViewerModal" class="document-preview-dialog" data-document-preview-dialog aria-labelledby="renewalDocViewerTitle">
+        <div class="document-preview-box">
+            <header class="document-preview-head">
+                <div class="document-preview-heading">
+                    <span class="document-preview-icon" aria-hidden="true"><i class="bi bi-file-earmark-richtext"></i></span>
+                    <div class="document-preview-title">
+                        <strong id="renewalDocViewerTitle" data-document-preview-title>Document Preview</strong>
                         <small>{{ $targetOrg ?: 'Student Organization' }} · Renewal Packet</small>
                     </div>
                 </div>
-                <div class="rn-preview-actions">
-                    <a id="renewalDocViewerDownloadBtn" href="#" download class="org-btn org-btn-ghost org-btn-sm">
+                <div class="document-preview-actions">
+                    <a id="renewalDocViewerDownloadBtn" href="#" download class="document-preview-action" data-document-preview-download>
                         <i class="bi bi-download"></i> Download
                     </a>
-                    <a id="renewalDocViewerNewTabBtn" href="#" target="_blank" rel="noopener" class="org-btn org-btn-ghost org-btn-sm">
+                    <a id="renewalDocViewerNewTabBtn" href="#" target="_blank" rel="noopener" class="document-preview-action" data-document-preview-external hidden>
                         <i class="bi bi-box-arrow-up-right"></i> Open in Tab
                     </a>
-                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-renewal-preview-close aria-label="Close document preview">
+                    <button type="button" class="document-preview-action" data-document-preview-close aria-label="Close document preview">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             </header>
-            <div id="renewalDocViewerBody" class="rn-preview-body"></div>
+            <div id="renewalDocViewerBody" class="document-preview-body" data-document-preview-body></div>
         </div>
     </dialog>
     <script src="{{ asset('js/vendor/jszip.min.js') }}" defer></script>
     <script src="{{ asset('js/vendor/docx-preview.min.js') }}" defer></script>
-    <script src="{{ asset('js/so-renewal-preview.js') }}?v={{ filemtime(public_path('js/so-renewal-preview.js')) }}" defer></script>
+    <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}" defer></script>
     @endif
 
     @if ($isOso)

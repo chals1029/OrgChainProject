@@ -30,7 +30,7 @@ class DatabaseBackendTest extends TestCase
         $this->assertNotNull($pdo);
 
         $db = DB::connection('mysql')->selectOne('select database() as db');
-        $this->assertSame('votingsystem', $db->db);
+        $this->assertSame(config('database.connections.mysql.database'), $db->db);
     }
 
     public function test_orgchain_connection_works(): void
@@ -39,7 +39,7 @@ class DatabaseBackendTest extends TestCase
         $this->assertNotNull($pdo);
 
         $db = DB::connection('orgchain')->selectOne('select database() as db');
-        $this->assertSame('orgchain', $db->db);
+        $this->assertSame(config('database.connections.orgchain.database'), $db->db);
     }
 
     public function test_required_votingsystem_tables_exist(): void
@@ -101,6 +101,12 @@ class DatabaseBackendTest extends TestCase
 
         $this->assertSame('active', $student->account_status);
         $this->assertSame('21-00001', $student->sr_code);
+        $this->assertGreaterThan(0, $student->user_id);
+        $this->assertSame($student->user_id, $this->ensureActiveStudent('21-00001')->user_id);
+        $this->assertDatabaseHas('user_accounts', [
+            'user_id' => $student->user_id,
+            'sr_code' => '21-00001',
+        ], 'orgchain');
         $this->assertGreaterThanOrEqual(
             1,
             UserAccount::query()->where('account_status', 'active')->count()

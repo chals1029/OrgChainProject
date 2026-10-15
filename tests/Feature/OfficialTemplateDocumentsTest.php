@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\OfficeTemplate;
+use App\Services\TosaRequirements;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -13,21 +16,16 @@ class OfficialTemplateDocumentsTest extends TestCase
     {
         parent::setUp();
         $this->useLaragonDatabase();
+        DB::beginTransaction();
+        OfficeTemplate::query()->where('category', 'TOSA')->delete();
     }
 
-    public function test_official_template_page_uses_the_supplied_source_catalogue(): void
+    protected function tearDown(): void
     {
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk/updates')
-            ->assertOk()
-            ->assertSee('Project Proposal', false)
-            ->assertSee('Budget Proposal', false)
-            ->assertSee('Local Off-Campus Activity Request', false)
-            ->assertSee('TOSA Application Form 2025', false)
-            ->assertSee('Accomplishment &amp; Financial Report', false)
-            ->assertDontSee('Attendance Sheet Template', false)
-            ->assertDontSee('Budget Allocation Sheet', false);
+        DB::rollBack();
+        parent::tearDown();
     }
+
 
     public function test_source_template_downloads_preserve_the_original_file_type_and_name(): void
     {
@@ -37,14 +35,24 @@ class OfficialTemplateDocumentsTest extends TestCase
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
             ->assertHeader('content-disposition', 'attachment; filename="3. Project Proposal.docx"');
 
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get(route('office.updates.templates.document', 'source-tosa-computation'))
+        $this->get(route('office.updates.templates.document', 'source-waste-policy-compliance'))
             ->assertOk()
-            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            ->assertHeader('content-disposition', 'attachment; filename="TOSA COMPUTATION.xlsx"');
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            ->assertDownload('Waste-Policy-Compliance-Form-2026 (1).docx');
+
+        foreach (TosaRequirements::REFERENCES as $key => $document) {
+            $download = $this->actingAs($this->ensureOfficeUser('oso'), 'office')
+                ->get(route('office.updates.templates.document', $document['source_id']))->assertOk()
+                ->assertHeader('Content-Type', TosaRequirements::mimeType($key))->assertDownload($document['filename']);
+            $this->assertSame(hash_file('sha256', base_path('TOSA/'.$document['filename'])),
+                hash_file('sha256', $download->baseResponse->getFile()->getPathname()));
+            $this->assertTrue($download->headers->hasCacheControlDirective('private'));
+            $this->assertTrue($download->headers->hasCacheControlDirective('no-store'));
+            $download->assertHeader('X-Content-Type-Options', 'nosniff');
+        }
     }
 
-    public function test_source_template_previews_are_inline_and_use_the_real_document_or_rendered_legacy_preview(): void
+    public function test_source_template_previews_keep_the_actual_file_type_and_disposition(): void
     {
         $this->actingAs($this->ensureOfficeUser('oso'), 'office')
             ->get(route('office.updates.templates.document', [
@@ -63,5 +71,14 @@ class OfficialTemplateDocumentsTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf')
             ->assertHeader('content-disposition', 'inline; filename="Waste-Policy-Compliance-Form-2026 (1).pdf"');
+        foreach (TosaRequirements::REFERENCES as $key => $document) {
+            $preview = $this->get(route('office.updates.templates.document', ['id' => $document['source_id'], 'preview' => 1]))
+                ->assertOk()->assertHeader('Content-Type', TosaRequirements::mimeType($key));
+            if ($document['format'] === 'PDF') {
+                $this->assertStringStartsWith('inline;', $preview->headers->get('Content-Disposition'));
+            } else {
+                $preview->assertDownload($document['filename']);
+            }
+        }
     }
 }

@@ -221,17 +221,17 @@ class AccomplishmentReportService
                 }
                 $packet = $this->packet($organization, $data['semester'], $data['academic_year'], $entries->map(fn ($row) => $this->report($row, false))->all());
                 $path = 'semester-reports/ar/'.$actor->student_organization_id.'/'.str_replace('-', '_', $data['academic_year']).'/'.Str::slug($data['semester']).'/'.Str::uuid().'.docx';
-                $newPaths[] = ['public', $path];
-                $this->documents->generate($packet, Storage::disk('public')->path($path));
+                $newPaths[] = ['local', $path];
+                $this->documents->generate($packet, Storage::disk('local')->path($path));
                 $document = $this->nativeDocument($organization, $data['semester'], $data['academic_year']) ?? new OrgReportDocument;
                 if ($document->exists && $document->file_path) {
-                    $oldPaths[] = ['public', $document->file_path];
+                    $oldPaths[] = ['local', $document->file_path];
                 }
                 $name = $organization.' – '.$data['semester'].' AY '.$data['academic_year'].' Accomplishment Report';
                 $document->fill(['org_report_status_id' => $status->id, 'report_type' => 'ar',
                     'organization_name' => $organization, 'semester' => $data['semester'], 'academic_year' => $data['academic_year'],
                     'name' => Str::limit($name, 255, ''), 'original_name' => Str::substr(Str::slug($name), 0, 220).'.docx', 'file_path' => $path,
-                    'mime_type' => AccomplishmentDocumentService::MIME_TYPE, 'file_size' => filesize(Storage::disk('public')->path($path)),
+                    'mime_type' => AccomplishmentDocumentService::MIME_TYPE, 'file_size' => filesize(Storage::disk('local')->path($path)),
                     'accomplishment_summary' => $packet, 'uploaded_by' => $actor->name,
                 ])->save();
                 return $entry->refresh();
@@ -267,7 +267,7 @@ class AccomplishmentReportService
                 'quantity' => (int) $receipt->quantity, 'unit_cost' => OrganizationCashLedger::decimal($unit), 'total' => OrganizationCashLedger::decimal($amount),
                 'reference' => (string) $receipt->receipt_reference, 'posting_reference' => 'EXP-'.$receipt->id];
             foreach ($receipt->receiptFiles() as $file) {
-                if (! in_array($file['disk'], ['local', 'public'], true) || ! $this->safeRelative($file['path'])) {
+                if ($file['disk'] !== 'local' || ! $this->safeRelative($file['path'])) {
                     continue;
                 }
                 $source = Storage::disk($file['disk'])->path($file['path']);
@@ -398,7 +398,7 @@ class AccomplishmentReportService
                 $this->refuse('report', 'A native entry differs from the generated packet. Save it again before submitting.');
             }
         }
-        $this->documents->assertReadable(Storage::disk('public')->path($document->file_path));
+        $this->documents->assertReadable(Storage::disk('local')->path($document->file_path));
     }
 
     public function assertComplete(OrgActivityAccomplishment $entry): void
@@ -490,8 +490,8 @@ class AccomplishmentReportService
     private function deleteOwned(array $files): void
     {
         foreach ($files as [$disk, $path]) {
-            if (($disk === 'local' && $this->ownedEvidencePath($path)) || ($disk === 'public' && str_starts_with($path, 'semester-reports/ar/') && $this->safeRelative($path))) {
-                if ($disk === 'public' && (OrgReportDocument::query()->where('file_path', $path)->exists()
+            if ($disk === 'local' && ($this->ownedEvidencePath($path) || (str_starts_with($path, 'semester-reports/ar/') && $this->safeRelative($path)))) {
+                if (str_starts_with($path, 'semester-reports/ar/') && (OrgReportDocument::query()->where('file_path', $path)->exists()
                     || \App\Models\ArchiveDocument::query()->where('file_path', $path)->exists())) {
                     continue;
                 }

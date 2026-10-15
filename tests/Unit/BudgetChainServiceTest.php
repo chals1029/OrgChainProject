@@ -13,6 +13,7 @@ class BudgetChainServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['besu.driver' => 'file', 'besu.enabled' => false]);
         $this->budgetRoot = storage_path('app/orgchain/budget');
         File::deleteDirectory($this->budgetRoot);
     }

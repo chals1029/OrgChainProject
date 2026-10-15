@@ -96,22 +96,40 @@ class DocxBuilder
             .'</w:body></w:document>';
 
         $zip = new \ZipArchive();
-        $tmp = tempnam(sys_get_temp_dir(), 'docx').'.zip';
-        // tempnam creates the file; ZipArchive::CREATE needs a non-existing path.
-        @unlink($tmp);
-        if ($zip->open($tmp, \ZipArchive::CREATE) !== true) {
+        $tmp = tempnam(sys_get_temp_dir(), 'docx');
+        if ($tmp === false) {
             throw new \RuntimeException('Could not create temp docx file.');
         }
-        $zip->addFromString('[Content_Types].xml', $this->contentTypes());
-        $zip->addFromString('_rels/.rels', $this->rels());
-        $zip->addFromString('word/document.xml', $document);
-        $zip->addFromString('word/styles.xml', $this->styles());
-        $zip->close();
+        $opened = false;
+        try {
+            if ($zip->open($tmp, \ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException('Could not create temp docx file.');
+            }
+            $opened = true;
+            $zip->addFromString('[Content_Types].xml', $this->contentTypes());
+            $zip->addFromString('_rels/.rels', $this->rels());
+            $zip->addFromString('word/document.xml', $document);
+            $zip->addFromString('word/styles.xml', $this->styles());
+            $closed = $zip->close();
+            $opened = false;
+            if (! $closed) {
+                throw new \RuntimeException('Could not finish temp docx file.');
+            }
+            $binary = file_get_contents($tmp);
+            if ($binary === false) {
+                throw new \RuntimeException('Could not read temp docx file.');
+            }
 
-        $binary = file_get_contents($tmp);
-        @unlink($tmp);
-
-        return $binary === false ? '' : $binary;
+            return $binary;
+        } finally {
+            try {
+                if ($opened) {
+                    $zip->close();
+                }
+            } finally {
+                @unlink($tmp);
+            }
+        }
     }
 
     private function esc(string $s): string

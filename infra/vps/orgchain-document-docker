@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+# The application config uses this launcher only for private document conversion.
+# Serialize converter containers while leaving inspect/cleanup commands available.
+if [ "${1:-}" = run ]; then
+    exec /usr/bin/flock --timeout 5 /run/orgchain-converter/convert.lock /usr/bin/docker "$@"
+fi
+
+exec /usr/bin/docker "$@"

@@ -31,60 +31,39 @@ class StudentAuthController extends Controller
             ->where('account_status', 'active')
             ->first();
 
-        if (! $student) {
-            return $this->codeStepBack($request, [
-                'sr_code' => 'No active student found with this SR Code.',
-            ]);
-        }
-
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $request->session()->put('student_login_code', [
-            'sr_code' => $student->sr_code,
+            'sr_code' => $validated['sr_code'],
             'code' => password_hash($code, PASSWORD_DEFAULT),
             'expires_at' => time() + 600, // 10 minutes
             'attempts' => 0,
         ]);
 
-        // Testing / local E2E only — never used in production responses unless EXPOSE_TEST_OTP=true
-        if (app()->environment('testing')) {
-            $request->session()->put('_testing_otp_plain', $code);
-        }
-        if (config('orgchain.expose_test_otp')) {
-            \Illuminate\Support\Facades\Cache::put('auth_e2e_otp:'.$student->sr_code, $code, 600);
-        }
+        // Keep active and unknown accounts indistinguishable to the requester.
+        $message = 'If this SR Code belongs to an active account, a verification code has been sent to its institutional email.';
 
-        // Mask the email so the user knows where to look without exposing it fully.
-        $maskedEmail = $this->maskEmail($student->email);
-
-        try {
-            Mail::raw(
-                "Your OrgChain verification code is: {$code}\n\nThis code expires in 10 minutes.",
-                function ($message) use ($student): void {
-                    $message->to($student->email)->subject('OrgChain Login Verification Code');
-                }
-            );
-        } catch (Throwable $e) {
-            report($e);
-            // Even if mail fails, keep going — the code is in the log for dev.
+        if ($student) {
+            try {
+                Mail::raw(
+                    "Your OrgChain verification code is: {$code}\n\nThis code expires in 10 minutes.",
+                    function ($message) use ($student): void {
+                        $message->to($student->email)->subject('OrgChain Login Verification Code');
+                    }
+                );
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         if ($request->expectsJson() || $request->ajax()) {
-            $payload = [
-                'ok' => true,
-                'email' => $maskedEmail,
-            ];
-            if (config('orgchain.expose_test_otp')) {
-                $payload['debug_code'] = $code;
-            }
-
-            return response()->json($payload);
+            return response()->json(['ok' => true, 'message' => $message]);
         }
 
         return $this->codeStepBack($request, [], [
             'code_sent' => true,
-            'code_email' => $maskedEmail,
-            'code_sr' => $student->sr_code,
+            'code_email' => 'your institutional email',
+            'code_sr' => $validated['sr_code'],
         ]);
     }
 
@@ -340,24 +319,6 @@ class StudentAuthController extends Controller
             'student_google_oauth_nonce',
             'student_google_oauth_started_at',
         ]);
-    }
-
-    private function maskEmail(string $email): string
-    {
-        $parts = explode('@', $email);
-        if (count($parts) !== 2 || $parts[0] === '') {
-            return $email;
-        }
-        $name = $parts[0];
-        $domain = $parts[1];
-        $len = strlen($name);
-        if ($len <= 2) {
-            $masked = $name[0].'*';
-        } else {
-            $masked = substr($name, 0, 2).str_repeat('*', min($len - 2, 4));
-        }
-
-        return $masked.'@'.$domain;
     }
 
     private function codeStepBack(Request $request, array $errors = [], array $with = []): RedirectResponse

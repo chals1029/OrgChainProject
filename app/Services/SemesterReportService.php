@@ -124,7 +124,7 @@ class SemesterReportService
             if ($guard !== null) {
                 $guard($status, $document);
             }
-            if ($reportType === 'ar') {
+            if ($reportType === 'ar' && $document->accomplishment_summary !== null) {
                 try {
                     app(AccomplishmentReportService::class)->assertSubmittable($organization, $semester, $academicYear);
                 } catch (ValidationException $invalid) {

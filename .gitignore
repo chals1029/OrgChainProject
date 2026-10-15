@@ -42,6 +42,7 @@ votingsystem*.sql
 
 # Private reports, credentials and local session artifacts
 /storage/Template/1st Semester Accomplishment Report.pdf
+/storage/charles.pdf
 /database/seeders/TosaApplicantRealDataSeeder.php
 /public/templates/renewal/CARS RENEWAL APPLICATION.pdf
 /public/templates/renewal/CARS RENEWAL APPLICATION.docx
@@ -58,6 +59,9 @@ storage/app/*-report.json
 storage/app/test-reports/
 storage/app/_*.php
 storage/app/chain-node/
+/.cloudflared/
+/.ssh/
+/backups/
 
 
 

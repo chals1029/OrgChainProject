@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OfficeUser;
+use App\Models\OrgActivity;
 use App\Services\ActivityBudgetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,13 +16,30 @@ class ReceiptPackageController extends Controller
 {
     public function __invoke(Request $request, ActivityBudgetService $budget)
     {
-        abort_unless(in_array(Auth::guard('office')->user()?->office_role, ['so', 'oso'], true), 403);
+        $office = Auth::guard('office')->user();
+        abort_unless($office instanceof OfficeUser && $office->is_active
+            && in_array($office->office_role, ['so', 'oso'], true), 403);
+        $organization = null;
+        if ($office->office_role === 'so') {
+            $assigned = $office->studentOrganization;
+            abort_unless($assigned && $assigned->is_active && trim((string) $assigned->name) !== '', 403);
+            $organization = $assigned->name;
+        }
         $filters = $request->validate([
             'organization' => ['nullable', 'string', 'max:255'],
             'activity_id' => ['nullable', 'integer', 'exists:mysql.org_activities,id'],
             'academic_year' => ['nullable', 'string'], 'semester' => ['nullable', 'string'],
         ]);
+        if ($organization !== null) {
+            $filters['organization'] = $organization;
+            if (! empty($filters['activity_id'])) {
+                abort_unless(OrgActivity::query()->whereKey($filters['activity_id'])
+                    ->where('organization_name', $organization)->exists(), 403);
+            }
+        }
         $query = $budget->receipts($filters['organization'] ?? null)
+            ->when($organization !== null, fn ($q) => $q->whereIn('org_activity_id',
+                OrgActivity::query()->where('organization_name', $organization)->select('id')))
             ->when(! empty($filters['activity_id']), fn ($q) => $q->where('org_activity_id', $filters['activity_id']));
         if (! empty($filters['academic_year'])) {
             $query->whereBetween('expense_date', $budget->dates($filters['academic_year'], $filters['semester'] ?? 'Annual'));
@@ -41,8 +60,8 @@ class ReceiptPackageController extends Controller
             foreach ($rows as $row) {
                 $zipNames = [];
                 foreach ($row->receiptFiles() as $index => $file) {
-                    $disk = Storage::disk($file['disk'] ?: $row->receipt_disk ?: 'public');
-                    $fileKey = ($file['disk'] ?: $row->receipt_disk ?: 'public').'|'.$file['path'];
+                    $disk = Storage::disk('local');
+                    $fileKey = 'local|'.$file['path'];
                     if (array_key_exists($fileKey, $archiveByFile)) {
                         $zipNames[] = $archiveByFile[$fileKey].' (shared: '.$file['name'].')';
                         continue;

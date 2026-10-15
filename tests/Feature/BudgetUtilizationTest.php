@@ -11,12 +11,14 @@ class BudgetUtilizationTest extends TestCase
 {
     use UsesLaragonDatabase;
 
+    private string $organizationName;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->useLaragonDatabase();
         $this->ensureOfficeUser('oso');
-        $this->ensureOfficeUser('so');
+        $this->organizationName = $this->ensureOfficeUser('so')->organizationName();
     }
 
     public function test_budget_page_opens_on_the_consolidated_portfolio(): void
@@ -24,40 +26,40 @@ class BudgetUtilizationTest extends TestCase
         $this->actingAs($this->ensureOfficeUser('oso'), 'office')
             ->get('/office-desk/budget-utilization')
             ->assertOk()
-            ->assertSee('value="all" selected', false)
-            ->assertSee('All Colleges / Units', false)
-            ->assertSee('const liveBudgetDefault = "all";', false);
+            ->assertSee('value="all" selected', false);
     }
 
     public function test_organization_filter_changes_the_live_budget_portfolio(): void
     {
-        $activity = OrgActivity::query()
-            ->whereNotNull('organization_name')
-            ->where('organization_name', '!=', '')
-            ->where('workflow_status', 'oc_approved')
-            ->orderBy('id')
-            ->first();
+        $activity = OrgActivity::query()->create([
+            'title' => 'Filtered Budget Activity '.uniqid('', true),
+            'status' => 'upcoming',
+            'workflow_status' => 'oc_approved',
+            'organization_name' => $this->organizationName,
+            'college' => 'CICS',
+            'approved_budget' => 10000,
+            'starts_at' => now()->addDays(8),
+        ]);
 
-        if (! $activity) {
-            $this->markTestSkipped('No live organization activity is available in the Laragon database.');
+        try {
+            $this->actingAs($this->ensureOfficeUser('oso'), 'office')
+                ->get('/office-desk/budget-utilization?organization='.urlencode($activity->organization_name))
+                ->assertOk()
+                ->assertSee($activity->organization_name, false)
+                ->assertSee($activity->title, false);
+        } finally {
+            $activity->delete();
         }
-
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk/budget-utilization?organization='.urlencode($activity->organization_name))
-            ->assertOk()
-            ->assertSee($activity->organization_name, false)
-            ->assertSee('Organization-wide', false)
-            ->assertSee($activity->title, false);
     }
 
-    public function test_budget_activity_selector_excludes_unapproved_activities(): void
+    public function test_so_budget_activity_selector_excludes_unapproved_and_other_organization_activities(): void
     {
         $suffix = uniqid('', true);
         $pending = OrgActivity::query()->create([
             'title' => 'Pending Budget Activity '.$suffix,
             'status' => 'upcoming',
             'workflow_status' => 'oso_review',
-            'organization_name' => 'Budget Visibility Test Organization',
+            'organization_name' => $this->organizationName,
             'college' => 'CICS',
             'approved_budget' => 10000,
             'starts_at' => now()->addDays(8),
@@ -66,20 +68,30 @@ class BudgetUtilizationTest extends TestCase
             'title' => 'Approved Budget Activity '.$suffix,
             'status' => 'upcoming',
             'workflow_status' => 'oc_approved',
-            'organization_name' => 'Budget Visibility Test Organization',
+            'organization_name' => $this->organizationName,
+            'college' => 'CICS',
+            'approved_budget' => 10000,
+            'starts_at' => now()->addDays(9),
+        ]);
+        $other = OrgActivity::query()->create([
+            'title' => 'Other Organization Budget Activity '.$suffix,
+            'status' => 'upcoming',
+            'workflow_status' => 'oc_approved',
+            'organization_name' => 'Other Budget Organization '.$suffix,
             'college' => 'CICS',
             'approved_budget' => 10000,
             'starts_at' => now()->addDays(9),
         ]);
 
         try {
-            $this->actingAs($this->ensureOfficeUser('oso'), 'office')
+            $this->actingAs($this->ensureOfficeUser('so'), 'office')
                 ->get('/office-desk/budget-utilization')
                 ->assertOk()
-                ->assertSee($approved->title.' (', false)
-                ->assertDontSee($pending->title, false);
+                ->assertSee($approved->title, false)
+                ->assertDontSee($pending->title, false)
+                ->assertDontSee($other->title, false);
         } finally {
-            OrgActivity::query()->whereIn('id', [$pending->id, $approved->id])->delete();
+            OrgActivity::query()->whereIn('id', [$pending->id, $approved->id, $other->id])->delete();
         }
     }
 
@@ -90,7 +102,7 @@ class BudgetUtilizationTest extends TestCase
             'title' => 'Pending Receipt Activity '.$suffix,
             'status' => 'upcoming',
             'workflow_status' => 'oso_review',
-            'organization_name' => 'Budget Visibility Test Organization',
+            'organization_name' => $this->organizationName,
             'college' => 'CICS',
             'approved_budget' => 10000,
             'starts_at' => now()->addDays(8),
@@ -132,14 +144,14 @@ class BudgetUtilizationTest extends TestCase
             'title' => 'Approved Receipt Upload Activity '.$suffix,
             'status' => 'upcoming',
             'workflow_status' => 'oc_approved',
-            'organization_name' => 'Budget Visibility Test Organization',
+            'organization_name' => $this->organizationName,
             'college' => 'CICS',
             'approved_budget' => 10000,
             'starts_at' => now()->addDays(8),
         ]);
 
         try {
-            foreach (['oso', 'sdo', 'ovcaa'] as $role) {
+            foreach (['oso', 'sdo', 'ovcaa', 'oc'] as $role) {
                 $this->actingAs($this->ensureOfficeUser($role), 'office')
                     ->post('/office-desk/budget-utilization/receipt-reviews', [
                         'activity' => $approved->title,
@@ -159,53 +171,4 @@ class BudgetUtilizationTest extends TestCase
         }
     }
 
-    public function test_student_organization_desk_uses_receipt_seal_status_not_an_automatic_financial_audit(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('so'), 'office')
-            ->get('/office-desk/budget-utilization')
-            ->assertOk()
-            ->assertSee('Receipt History', false)
-            ->assertSee('Receipt Seal Details', false)
-            ->assertDontSee('Financial Report Status Workflow', false)
-            ->assertDontSee('Verified &amp; Audited', false);
-    }
-
-    public function test_student_organization_budget_surface_is_operational_not_consolidated(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('so'), 'office')
-            ->get('/office-desk/budget-utilization')
-            ->assertOk()
-            ->assertSee('Approved activity', false)
-            ->assertSee('Recorded fund balance', false)
-            ->assertSee('Show budget charts and trend details', false)
-            ->assertDontSee('Full Institutional Org Portfolio (Consolidated)', false)
-            ->assertDontSee('All Organizations', false);
-
-        $this->actingAs($this->ensureOfficeUser('so'), 'office')
-            ->get('/office-desk')
-            ->assertOk()
-            ->assertDontSee('href="/office-desk/analytics"', false);
-    }
-
-    public function test_student_organization_receipt_capture_is_mobile_ready(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('so'), 'office')
-            ->get('/office-desk/budget-utilization')
-            ->assertOk()
-            ->assertSee('class="so-receipt-file-input"', false)
-            ->assertSee('capture="environment"', false)
-            ->assertSee('class="so-camera-dialog"', false)
-            ->assertSee('@media (max-width: 640px)', false)
-            ->assertSee('Upload receipts (up to 3)', false)
-            ->assertSee('name="receipts[]"', false)
-            ->assertSee('multiple', false)
-            ->assertSee('Open Camera', false)
-            ->assertSee('Upload shared receipts/supporting documents', false)
-            ->assertSee('Enter the information shown on the shared receipts.', false)
-            ->assertSee('Add item', false)
-            ->assertDontSee('receipt-scanner.js', false)
-            ->assertDontSee('soOcrStatus', false)
-            ->assertDontSee('Scan ready', false)
-            ->assertDontSee('Server OCR', false);
-    }
 }

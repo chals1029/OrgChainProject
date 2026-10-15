@@ -393,7 +393,7 @@ async function buildDocx(payload) {
     }
     children.push(
       p(
-        'Full OTP verify in the browser needs EXPOSE_TEST_OTP=true in .env (local only) and a server restart. Backend PHPUnit covers send/verify/lockout without that flag.',
+        'Browser OTP verification requires an interactive code from the institutional mailbox. Backend PHPUnit captures synthetic mail in memory to cover send/verify/lockout without exposing codes over HTTP.',
         { size: 18, italics: true, color: '7A7074' }
       )
     );
@@ -461,7 +461,7 @@ async function buildDocx(payload) {
   children.push(
     new Paragraph({
       numbering: { reference: 'bullets', level: 0 },
-      children: [new TextRun({ text: 'Auth UI: Playwright — office bad/good login + student OTP JSON send/verify (needs EXPOSE_TEST_OTP for verify).', font: 'Arial', size: 20 })],
+      children: [new TextRun({ text: 'Auth UI: Playwright — office bad/good login, generic student OTP response and no-code-exposure check; interactive mailbox code for verification.', font: 'Arial', size: 20 })],
     })
   );
   children.push(
@@ -482,7 +482,7 @@ async function buildDocx(payload) {
   children.push(p('npm run test:report:backend'));
   children.push(p('node scripts/auth-otp-smoke.mjs'));
   children.push(p('php artisan test --filter=AuthAndOtpTest'));
-  children.push(p('For full browser OTP verify: set EXPOSE_TEST_OTP=true in .env, restart serve, then re-run auth smoke.'));
+  children.push(p('For browser OTP verification: run the auth smoke interactively and enter the code delivered to the institutional mailbox.'));
 
   if (backend && !backend.skipped) {
     children.push(h1('Appendix A — Backend Raw Output (trimmed)'));

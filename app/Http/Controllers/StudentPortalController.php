@@ -10,29 +10,27 @@ use App\Models\OfficeAnnouncement;
 use App\Models\OrgActivity;
 use App\Models\StudentFeedback;
 use App\Models\TosaApplicant;
+use App\Models\UserAccount;
 use App\Services\BudgetChainService;
+use App\Services\OfficeDocumentConverter;
+use App\Services\TosaRequirements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class StudentPortalController extends Controller
 {
-    private const TOSA_TEMPLATE_PATH = 'TOSA/TOSA Application Form 2025.docx';
-
-    private const TOSA_TEMPLATE_NAME = 'TOSA Application Form 2025.docx';
-
-    private const TOSA_DOCS = [
-        'cv' => 'Curriculum Vitae',
-        'good_moral' => 'Good Moral Certificate',
-        'scholastic' => 'Scholastic Record (copy of grades from Registration Services)',
-        'certificates' => 'Certificates with proof of legitimacy (Records Office certified)',
-        'application_docs' => 'Complete application documents (scanned)',
-    ];
 
     public function home(Request $request): View
     {
@@ -178,7 +176,7 @@ class StudentPortalController extends Controller
         }
 
         try {
-            $disk = Storage::disk((string) ($file['disk'] ?? $receipt->receipt_disk ?: 'local'));
+            $disk = Storage::disk('local');
             if (! $disk->exists((string) $file['path'])) {
                 return ['matches' => false, 'status' => 'file-missing', 'stored_hash' => $storedHash, 'current_hash' => null];
             }
@@ -209,138 +207,229 @@ class StudentPortalController extends Controller
             : null;
     }
 
-    /**
-     * Serve the original university TOSA DOCX to authenticated students.
-     * Preview requests stay inline; the explicit download action preserves
-     * the official filename and file contents.
-     */
-    public function downloadTosaTemplate(Request $request): BinaryFileResponse
+    public function downloadTosaTemplate(Request $request, string $key): BinaryFileResponse|StreamedResponse|JsonResponse
     {
-        $path = base_path(self::TOSA_TEMPLATE_PATH);
-        abort_unless(is_file($path), 404, 'The official TOSA application form is unavailable.');
+        abort_unless(Auth::guard('student')->check(), 401);
+        $template = TosaRequirements::resolveTemplate($key);
+        abort_unless($template, 404, 'This official TOSA template is unavailable.');
+        if ($request->boolean('preview') && $template['format'] === 'DOC') {
+            $converter = app(OfficeDocumentConverter::class);
+            try {
+                $result = $converter->toPdf($template['path']);
+            } catch (Throwable $error) {
+                return response()->json([
+                    'message' => $error instanceof RuntimeException ? $error->getMessage() : 'The official document preview could not be prepared.',
+                ], 503)->header('Cache-Control', 'private, no-store')->header('X-Content-Type-Options', 'nosniff');
+            }
 
-        $headers = [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ];
-
-        if ($request->boolean('download')) {
-            return response()->download($path, self::TOSA_TEMPLATE_NAME, $headers);
+            return response()->stream(function () use ($result, $converter): void {
+                $stream = null;
+                try {
+                    $previous = ignore_user_abort(true);
+                    $stream = fopen($result['path'], 'rb');
+                    if ($stream !== false) fpassthru($stream);
+                } finally {
+                    if (is_resource($stream)) fclose($stream);
+                    $converter->release($result);
+                    if (isset($previous)) ignore_user_abort((bool) $previous);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="document-preview.pdf"',
+                'Content-Length' => (string) filesize($result['path']),
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
         }
 
-        return response()->file($path, [
-            ...$headers,
-            'Content-Disposition' => 'inline; filename="'.self::TOSA_TEMPLATE_NAME.'"',
-        ]);
+        return TosaRequirements::fileResponse($key, $template['path'], $template['name'], $request->boolean('preview'));
     }
 
-    /**
-     * Upload (or replace) one TOSA requirement PDF for the logged-in student.
-     */
-    public function uploadTosaDocument(Request $request): RedirectResponse
+    public function downloadTosaDocument(Request $request, string $key): BinaryFileResponse
     {
-        $student = Auth::guard('student')->user();
-
-        $validator = Validator::make($request->all(), [
-            'doc_key' => ['required', 'in:'.implode(',', array_keys(self::TOSA_DOCS))],
-            'document' => ['required', 'file', 'mimes:pdf', 'max:25600'],
-        ]);
-
-        if ($validator->fails()) {
-            return $this->tosaRedirect()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $validated = $validator->validated();
-
-        $srCode = trim((string) ($student?->sr_code ?? ''));
-        abort_unless($srCode !== '', 403, 'Your student record has no SR code.');
-
-        $applicant = TosaApplicant::query()->firstOrCreate(
-            ['sr_code' => $srCode],
-            [
-                'full_name' => $student->full_name ?? $student->name ?? 'Student',
-                'email' => $student->email,
-                'college' => $student->college,
-                'program' => $student->program ?? null,
-                'subsection' => 'pending',
-                'status' => 'draft',
-            ]
-        );
-
-        if (in_array($applicant->subsection, ['accepted'], true)) {
-            return $this->tosaRedirect()->withErrors(['tosa' => 'Your application is already accepted; documents are locked.']);
-        }
-
-        $file = $validated['document'];
-        $path = $file->storeAs('tosa/'.$srCode, $validated['doc_key'].'.'.$file->getClientOriginalExtension(), 'public');
-
-        $requirements = is_array($applicant->requirements) ? $applicant->requirements : [];
-        $requirements[$validated['doc_key']] = [
-            'title' => self::TOSA_DOCS[$validated['doc_key']],
-            'name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'uploaded_at' => now()->toIso8601String(),
-        ];
-        $applicant->requirements = $requirements;
-        $applicant->save();
-
-        return $this->tosaRedirect()->with('status', self::TOSA_DOCS[$validated['doc_key']].' uploaded.');
-    }
-
-    /**
-     * Remove one uploaded TOSA requirement.
-     */
-    public function removeTosaDocument(Request $request, string $key): RedirectResponse
-    {
-        abort_unless(array_key_exists($key, self::TOSA_DOCS), 404);
-
+        abort_unless(Auth::guard('student')->check(), 401);
+        abort_unless(array_key_exists($key, TosaRequirements::SUBMISSIONS), 404);
         $applicant = $this->myTosaApplication(Auth::guard('student')->user());
         abort_unless($applicant, 404);
-
-        if (in_array($applicant->subsection, ['accepted'], true)) {
-            return $this->tosaRedirect()->withErrors(['tosa' => 'Your application is already accepted; documents are locked.']);
-        }
-
-        $requirements = is_array($applicant->requirements) ? $applicant->requirements : [];
-        if (isset($requirements[$key]['path'])) {
-            Storage::disk('public')->delete($requirements[$key]['path']);
-        }
-        unset($requirements[$key]);
-        $applicant->requirements = $requirements;
-        $applicant->save();
-
-        return $this->tosaRedirect()->with('status', self::TOSA_DOCS[$key].' removed.');
+        $absolute = $applicant->requirementFile($key);
+        abort_unless($absolute, 404, 'This requirement document is unavailable.');
+        return TosaRequirements::submissionFileResponse(
+            $absolute, (string) data_get($applicant->requirements, $key.'.name', basename($absolute)),
+            ! $request->boolean('download'),
+        );
     }
 
     /**
-     * Submit the TOSA application once all 5 requirements are uploaded.
+     * Persist the complete selected packet and submit it in one operation.
      */
     public function submitTosaApplication(Request $request): RedirectResponse
     {
-        $applicant = $this->myTosaApplication(Auth::guard('student')->user());
-        abort_unless($applicant, 404, 'Upload your requirements first.');
+        $validator = Validator::make($request->all(), [
+            'documents' => ['sometimes', 'array:'.implode(',', array_keys(TosaRequirements::SUBMISSIONS))],
+            'documents.*' => ['bail', 'required', 'file', 'max:25600', function ($attribute, $file, $fail): void {
+                $key = substr($attribute, strlen('documents.'));
+                $definition = TosaRequirements::SUBMISSIONS[$key] ?? null;
+                if (! $definition || ! TosaRequirements::validSubmissionFile($key, $file->getPathname(), $file->getClientOriginalName())) {
+                    $fail('Choose a valid '.($definition['format'] ?? 'requirement').' file for this packet section.');
+                }
+            }],
+        ]);
+        if ($validator->fails()) {
+            return $this->tosaRedirect()->withErrors($validator)->withInput();
+        }
+        $documents = $validator->validated()['documents'] ?? [];
+        $student = Auth::guard('student')->user();
+        $newPaths = [];
+        $replacedPaths = [];
+        $srCode = '';
+        $committed = false;
 
-        $requirements = is_array($applicant->requirements) ? $applicant->requirements : [];
-        $missing = array_diff(array_keys(self::TOSA_DOCS), array_keys($requirements));
-        if ($missing !== []) {
-            return $this->tosaRedirect()->withErrors(['tosa' => 'Upload all '.count($missing).' remaining requirement(s) before submitting.']);
+        try {
+            // An applicant may not exist yet, so lock the persisted student identity
+            // on orgchain before taking the mysql applicant lock. Only mysql writes.
+            DB::connection('orgchain')->transaction(function () use ($student, $documents, &$newPaths, &$replacedPaths, &$srCode, &$committed): void {
+                $ownerStudent = UserAccount::query()->whereKey($student->getAuthIdentifier())->lockForUpdate()->first();
+                abort_unless($ownerStudent, 403, 'Your student record is unavailable.');
+                $srCode = trim((string) $ownerStudent->sr_code);
+                abort_unless($srCode !== '' && ! in_array($srCode, ['.', '..'], true)
+                    && strpbrk($srCode, "/\\:\0") === false, 403, 'Your student record has no valid SR code.');
+
+                $replacedPaths = DB::connection('mysql')->transaction(function () use ($ownerStudent, $srCode, $documents, &$newPaths): array {
+                    $applicant = TosaApplicant::query()->where('sr_code', $srCode)->lockForUpdate()->first();
+                    if ($applicant?->studentSubmissionLocked()) {
+                        throw ValidationException::withMessages(['tosa' => 'Your submitted application is locked. Only OSO returning it for revision allows changes or resubmission.']);
+                    }
+                    foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
+                        $available = isset($documents[$key])
+                            ? TosaRequirements::validSubmissionFile($key, $documents[$key]->getPathname(), $documents[$key]->getClientOriginalName())
+                            : $applicant?->requirementFile($key) !== null;
+                        if (! $available) {
+                            throw ValidationException::withMessages(['tosa' => 'Choose every required packet section or keep its available saved original before submitting.']);
+                        }
+                    }
+
+                    $candidate = $applicant ?? new TosaApplicant([
+                        'sr_code' => $srCode,
+                        'full_name' => $ownerStudent->full_name ?? $ownerStudent->name ?? 'Student',
+                        'email' => $ownerStudent->email,
+                        'college' => $ownerStudent->college,
+                        'program' => $ownerStudent->program,
+                        'year_level' => $ownerStudent->year_level,
+                    ]);
+                    $requirements = is_array($candidate->requirements) ? $candidate->requirements : [];
+                    $oldPaths = [];
+                    $disk = Storage::disk('local');
+                    if ($documents !== []) {
+                        $disk->makeDirectory('tosa/'.$srCode);
+                        $root = realpath($disk->path(''));
+                        $owner = realpath($disk->path('tosa/'.$srCode));
+                        abort_unless($root && $owner && $owner === $root.DIRECTORY_SEPARATOR.'tosa'.DIRECTORY_SEPARATOR.$srCode,
+                            403, 'The private upload location is unavailable.');
+
+                        foreach ($documents as $key => $file) {
+                            $oldPath = $candidate->requirementPath($key);
+                            $oldFile = $candidate->ownedRequirementFile($key);
+                            if ($oldPath && $oldFile && ! is_link($disk->path($oldPath))) {
+                                $oldPaths[$oldPath] = $oldFile;
+                            }
+                            $filename = $key.'-'.Str::uuid().'.'.strtolower($file->getClientOriginalExtension());
+                            $path = 'tosa/'.$srCode.'/'.$filename;
+                            abort_if($disk->exists($path) || is_link($disk->path($path)), 403, 'The private upload location is unavailable.');
+                            // Record the intended path before a write, including writes
+                            // that leave partial bytes and then return false or throw.
+                            $newPaths[$path] = $owner.DIRECTORY_SEPARATOR.$filename;
+                            $stored = $file->storeAs('tosa/'.$srCode, $filename, 'local');
+                            if ($stored !== $path) {
+                                throw new \RuntimeException('The selected packet file could not be stored.');
+                            }
+                            $requirements[$key] = [
+                                'title' => TosaRequirements::SUBMISSIONS[$key]['title'],
+                                'name' => $file->getClientOriginalName(),
+                                'path' => $path,
+                                'uploaded_at' => now()->toIso8601String(),
+                            ];
+                        }
+                    }
+                    $candidate->requirements = $requirements;
+                    foreach (array_keys(TosaRequirements::SUBMISSIONS) as $key) {
+                        if ($candidate->requirementFile($key) === null) {
+                            throw ValidationException::withMessages(['tosa' => 'Every packet section must have a readable, nonempty private original before submitting.']);
+                        }
+                    }
+                    $candidate->status = 'submitted';
+                    $candidate->subsection = 'screening';
+                    if ($documents !== []) {
+                        $candidate->gwa = null;
+                        $candidate->gwa_verified = false;
+                        $candidate->remarks = null;
+                        $candidate->score_evaluation = null;
+                    }
+                    if (! $candidate->save()) {
+                        throw new \RuntimeException('The selected packet could not be committed.');
+                    }
+
+                    // An old path still referenced by any retained historical or
+                    // active metadata must not be deleted after replacement.
+                    foreach ($requirements as $document) {
+                        if (is_array($document) && is_string($document['path'] ?? null)) {
+                            unset($oldPaths[$document['path']]);
+                        }
+                    }
+
+                    return $oldPaths;
+                });
+                $committed = true;
+            });
+        } catch (Throwable $exception) {
+            if (! $committed) {
+                $this->deleteOwnedTosaFiles($srCode, $newPaths);
+                if ($exception instanceof ValidationException) {
+                    return $this->tosaRedirect()->withErrors($exception->errors())->withInput();
+                }
+                if ($exception instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    throw $exception;
+                }
+                report($exception);
+
+                return $this->tosaRedirect()->withErrors(['tosa' => 'The packet could not be saved. Your previous application was not changed. Try again.']);
+            }
+            // The outer transaction only held an identity lock; mysql has already
+            // committed. Never remove newly published originals if that lock's
+            // read-only transaction fails while releasing.
+            report($exception);
         }
 
-        $applicant->subsection = in_array($applicant->subsection, ['pending', 'returned', 'rejected'], true)
-            ? 'screening'
-            : $applicant->subsection;
-        $applicant->status = 'submitted';
-        $applicant->save();
+        $this->deleteOwnedTosaFiles($srCode, $replacedPaths);
 
         return $this->tosaRedirect()->with('status', 'TOSA application submitted for OSO evaluation.');
     }
 
+    private function deleteOwnedTosaFiles(string $srCode, array $paths): void
+    {
+        if ($paths === [] || $srCode === '') {
+            return;
+        }
+        $disk = Storage::disk('local');
+        $root = realpath($disk->path(''));
+        $owner = realpath($disk->path('tosa/'.$srCode));
+        if (! $root || ! $owner || $owner !== $root.DIRECTORY_SEPARATOR.'tosa'.DIRECTORY_SEPARATOR.$srCode) {
+            return;
+        }
+        foreach ($paths as $relative => $expected) {
+            try {
+                $absolute = realpath($disk->path($relative));
+                if ($absolute === $expected && str_starts_with($absolute, $owner.DIRECTORY_SEPARATOR)
+                    && is_file($absolute) && ! is_link($disk->path($relative))) {
+                    $disk->delete($relative);
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+    }
+
     /**
-     * Return to the TOSA workspace after a server-side mutation.
-     *
-     * The portal tabs are client-side, so the hash must be restored explicitly
-     * after uploads, removals, validation errors, and final submission.
+     * Restore the TOSA tab after validation errors or packet submission.
      */
     private function tosaRedirect(): RedirectResponse
     {
@@ -555,59 +644,52 @@ class StudentPortalController extends Controller
 
         $tosaApplicant = $this->myTosaApplication($student);
         $tosaRequirements = is_array($tosaApplicant?->requirements) ? $tosaApplicant->requirements : [];
-        $tosaComplete = count(array_intersect(array_keys(self::TOSA_DOCS), array_keys($tosaRequirements))) === count(self::TOSA_DOCS);
-        $tosaSubmitted = (bool) ($tosaApplicant && ($tosaApplicant->status === 'submitted'));
-        $tosaSub = $tosaApplicant?->subsection ?? 'pending';
-        $tosaLocked = (bool) ($tosaSubmitted && in_array($tosaSub, ['screening', 'interview', 'accepted'], true));
+        $tosaLocked = (bool) $tosaApplicant?->studentSubmissionLocked();
+        $tosaRevision = (bool) ($tosaApplicant && $tosaApplicant->status === 'submitted' && $tosaApplicant->subsection === 'returned');
 
-        $tosaDocMeta = [
-            'cv' => ['icon' => 'is-blue', 'bi' => 'bi-person-lines-fill', 'desc' => 'Upload your comprehensive Curriculum Vitae (CV) with academic and leadership records.'],
-            'good_moral' => ['icon' => 'is-green', 'bi' => 'bi-shield-check', 'desc' => 'Upload your Certificate of Good Moral Character from Student Affairs / Guidance.'],
-            'scholastic' => ['icon' => 'is-orange', 'bi' => 'bi-file-earmark-ruled', 'desc' => 'Upload official copy of grades or Scholastic Record certified by Registration Services.'],
-            'certificates' => ['icon' => 'is-purple', 'bi' => 'bi-award', 'desc' => 'Upload certificates with proof of legitimacy duly certified by the Records Office.'],
-            'application_docs' => ['icon' => 'is-teal', 'bi' => 'bi-folder-check', 'desc' => 'Complete the official TOSA application form, then upload the signed or scanned PDF dossier.'],
-        ];
-        $tosaDocs = collect(self::TOSA_DOCS)->map(fn ($title, $key) => [
-            'key' => $key,
-            'title' => $title,
-            'desc' => $tosaDocMeta[$key]['desc'],
-            'icon' => $tosaDocMeta[$key]['icon'],
-            'bi' => $tosaDocMeta[$key]['bi'],
-            'file' => $tosaRequirements[$key] ?? null,
-        ])->values()->all();
+        $tosaDocs = collect(TosaRequirements::SUBMISSIONS)->map(function (array $document, string $key) use ($tosaApplicant, $tosaRequirements): array {
+            $path = $tosaApplicant?->requirementFile($key);
+            $uploaded = $path !== null;
+            $fileFormat = $path ? strtoupper(pathinfo($path, PATHINFO_EXTENSION)) : null;
+            $canPreview = in_array($fileFormat, ['PDF', 'DOCX'], true);
 
-        // Server-driven 5-step tracker from the applicant's real pipeline stage.
-        $tosaUploadedCount = count(array_intersect(array_keys(self::TOSA_DOCS), array_keys($tosaRequirements)));
-        $tosaStep = fn (string $state, string $pill, string $time, string $line) => [
-            'state' => $state, 'pill' => $pill, 'time' => $time, 'line' => $line,
-        ];
-        $pend = $tosaStep('is-pending', 'Pending', '', 'is-dashed');
-        $tosaSteps = [
-            1 => $pend, 2 => $pend, 3 => $pend, 4 => $pend, 5 => $pend,
-        ];
-        if ($tosaSubmitted || $tosaSub !== 'pending') {
-            $tosaSteps[1] = $tosaStep('is-completed', 'Submitted', optional($tosaApplicant?->updated_at)->format('M j, Y') ?? '', 'is-green');
-        } elseif ($tosaUploadedCount > 0) {
-            $tosaSteps[1] = $tosaStep('is-inprogress', $tosaUploadedCount.'/5 Uploaded', 'Ready to submit below', 'is-dashed');
-        } else {
-            $tosaSteps[1] = $tosaStep('is-pending', 'Pending', 'Awaiting documents', 'is-dashed');
-        }
-        if ($tosaSub === 'screening') {
-            $tosaSteps[2] = $tosaStep('is-inprogress', 'In Progress', 'Under Evaluators Review...', 'is-blue');
-        } elseif (in_array($tosaSub, ['interview', 'accepted'], true)) {
-            $tosaSteps[2] = $tosaStep('is-completed', 'Completed', '', 'is-green');
-        } elseif ($tosaSub === 'returned') {
-            $tosaSteps[2] = $tosaStep('is-inprogress', 'Returned', 'Revise and resubmit below', 'is-blue');
-        } elseif ($tosaSub === 'rejected') {
-            $tosaSteps[2] = $tosaStep('is-pending', 'Rejected', '', 'is-dashed');
-        }
-        if ($tosaSub === 'interview') {
-            $tosaSteps[3] = $tosaStep('is-inprogress', 'In Progress', 'Panel interview stage', 'is-blue');
-        } elseif ($tosaSub === 'accepted') {
-            $tosaSteps[3] = $tosaStep('is-completed', 'Completed', '', 'is-green');
-            $tosaSteps[4] = $tosaStep('is-completed', 'Completed', '', 'is-green');
-            $tosaSteps[5] = $tosaStep('is-completed', 'Approved', optional($tosaApplicant?->updated_at)->format('M j, Y') ?? '', 'is-green');
-        }
+            return [
+                'key' => $key,
+                'code' => $document['code'],
+                'title' => $document['title'],
+                'desc' => $document['description'],
+                'icon' => 'is-'.$document['color'],
+                'bi' => 'bi-'.$document['icon'],
+                'file' => $tosaRequirements[$key] ?? null,
+                'uploaded' => $uploaded,
+                'format' => $document['format'],
+                'file_format' => $fileFormat,
+                'accept' => '.'.implode(',.', $document['extensions']),
+                'download_url' => route('portal.tosa.documents.show', ['key' => $key, 'download' => 1]),
+                'preview_url' => $canPreview ? route('portal.tosa.documents.show', ['key' => $key]) : null,
+                'can_preview' => $canPreview,
+            ];
+        })->values()->all();
+        $tosaReferences = collect(TosaRequirements::REFERENCES)->map(function (array $document, string $key): array {
+            $template = TosaRequirements::resolveTemplate($key);
+            $canPreview = $template !== null && in_array($document['format'], ['PDF', 'DOCX', 'DOC'], true);
+
+            return [
+                'key' => $key,
+                'title' => $document['title'],
+                'description' => $document['description'],
+                'name' => $template['name'] ?? $document['filename'],
+                'available' => $template !== null,
+                'format' => $document['format'],
+                'preview_format' => $document['format'] === 'DOC' ? 'PDF' : $document['format'],
+                'source' => $template['source'] ?? 'bundled',
+                'download_url' => route('portal.tosa.templates.show', ['key' => $key]),
+                'preview_url' => $canPreview ? route('portal.tosa.templates.show', ['key' => $key, 'preview' => 1]) : null,
+                'can_preview' => $canPreview,
+            ];
+        })->values()->all();
+
+        $tosaComplete = $tosaApplicant !== null && collect($tosaDocs)->every(fn (array $document): bool => $document['uploaded']);
 
         // Live bulletins feed: office announcements + upcoming activities + open renewal window.
         $bulletinTypeMap = [
@@ -721,17 +803,11 @@ class StudentPortalController extends Controller
             'activities' => $activities,
             'announcements' => $announcements,
             'tosaDocs' => $tosaDocs,
-            'tosaTemplate' => [
-                'name' => self::TOSA_TEMPLATE_NAME,
-                'available' => is_file(base_path(self::TOSA_TEMPLATE_PATH)),
-                'preview_url' => route('portal.tosa.template', ['preview' => 1]),
-                'download_url' => route('portal.tosa.template', ['download' => 1]),
-            ],
+            'tosaReferences' => $tosaReferences,
             'tosaApplicant' => $tosaApplicant,
             'tosaComplete' => $tosaComplete,
-            'tosaSubmitted' => $tosaSubmitted,
             'tosaLocked' => $tosaLocked,
-            'tosaSteps' => $tosaSteps,
+            'tosaRevision' => $tosaRevision,
             'bulletins' => $bulletins,
             'regCounts' => $regCounts,
             'myRsvps' => $myRsvps,

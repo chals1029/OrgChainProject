@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Never serve confidential or unclassified storage files as static content.
+    RewriteRule ^storage/(?!(?:community|avatars|office-settings|templates|tosa-templates)/) - [R=404,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

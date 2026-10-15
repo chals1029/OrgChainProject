@@ -1,0 +1,8 @@
+[Unit]
+Description=OrgChain pilot swap reserve
+
+[Swap]
+What=/swapfile
+
+[Install]
+WantedBy=swap.target

@@ -60,6 +60,7 @@
     $clientData = [
         'activities' => $activities,
         'reports' => $reportPayload,
+        'conversion_url' => route('office.documents.preview.convert'),
     ];
 @endphp
 
@@ -99,134 +100,16 @@
         @if (!empty($submissionLocks['fr']))
             <div class="fin-alert" role="status" data-report-submission-locked="fr">
                 <i class="bi bi-lock"></i>
-                <span>OSO has locked FR submissions for AY {{ $yearFilter }} · {{ $semesterFilter }}. You can still create, preview and download reports. Wait for OSO to reopen submissions.</span>
+                <span>FR submissions are locked for AY {{ $yearFilter }} · {{ $semesterFilter }}. Preparation and preview remain available.</span>
             </div>
         @endif
 
-        <section class="fin-card" aria-labelledby="finCashFlowTitle">
-            <div class="fin-card-head">
-                <div>
-                    <h2 id="finCashFlowTitle"><i class="bi bi-cash-stack"></i> Cash Flow</h2>
-                    <p class="fin-muted">{{ $fd['period_label'] ?? '' }}</p>
-                </div>
-                <div class="fin-header-actions">
-                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-fin-open="finOpeningDialog">
-                        <i class="bi bi-wallet2"></i> {{ $hasAccount ? 'Edit AY '.$managementYear.' opening' : 'Save AY '.$managementYear.' opening' }}
-                    </button>
-                    <button type="button" class="org-btn org-btn-primary org-btn-sm" data-fin-open="finIncomeDialog">
-                        <i class="bi bi-plus-circle"></i> Record cash inflow
-                    </button>
-                </div>
-            </div>
-            <form method="get" action="{{ route('office.financial') }}" class="fin-filters fin-overview-filters" id="finFilterForm">
-                <label>
-                    <span>Academic year</span>
-                    <select name="academic_year" data-fin-autosubmit>
-                        <option value="all" @selected($yearFilter === 'all')>All years (combined)</option>
-                        @foreach ($years as $year)
-                            <option value="{{ $year }}" @selected($yearFilter === (string) $year)>{{ $year }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label>
-                    <span>Semester</span>
-                    <select name="semester" data-fin-autosubmit>
-                        <option value="all" @selected($semesterFilter === 'all')>All semesters</option>
-                        @foreach ($semesters as $semester)
-                            <option value="{{ $semester }}" @selected($semesterFilter === $semester)>{{ $semester }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <button type="submit" class="org-btn org-btn-ghost org-btn-sm" data-fin-filter-apply>Apply</button>
-            </form>
-
-            <div class="fin-stats">
-                <article class="fin-stat is-beginning">
-                    <span class="fin-stat-icon"><i class="bi bi-wallet2"></i></span>
-                    <div>
-                        <small>Beginning balance</small>
-                        <strong>{{ $money($fd['beginning_balance'] ?? 0) }}</strong>
-                        <em>{{ match (true) {
-                            $yearFilter === 'all' => 'Sum of separate annual openings',
-                            $semesterFilter === 'all' => 'Saved annual opening',
-                            default => 'Annual opening + earlier semester postings',
-                        } }}</em>
-                    </div>
-                </article>
-                <article class="fin-stat is-in">
-                    <span class="fin-stat-icon"><i class="bi bi-arrow-down-left"></i></span>
-                    <div>
-                        <small>Incoming cash</small>
-                        <strong>{{ $money($fd['cash_inflow'] ?? 0) }}</strong>
-                        <em>Recorded cash inflows</em>
-                    </div>
-                </article>
-                <article class="fin-stat is-out">
-                    <span class="fin-stat-icon"><i class="bi bi-arrow-up-right"></i></span>
-                    <div>
-                        <small>Outgoing cash</small>
-                        <strong>{{ $money($fd['cash_outflow'] ?? 0) }}</strong>
-                        <em>Posted receipt expenses</em>
-                    </div>
-                </article>
-                <article class="fin-stat is-ending">
-                    <span class="fin-stat-icon"><i class="bi bi-piggy-bank"></i></span>
-                    <div>
-                        <small>Ending balance</small>
-                        <strong>{{ $money($fd['ending_balance'] ?? 0) }}</strong>
-                        <em>Beginning + incoming − outgoing</em>
-                    </div>
-                </article>
-            </div>
-            @if ($yearFilter === 'all')
-                <p class="fin-muted fin-stats-note">All years adds up each saved annual account. Each one is a separate yearly allocation, nothing is carried between academic years, and the total is not a live bank balance.</p>
-            @endif
-
-            <div class="fin-chart-block">
-                <div class="fin-chart-head">
-                    <h3>Cash flow by event</h3>
-                    @if (count($activities))
-                        <div class="fin-legend" aria-hidden="true">
-                            <span><i class="is-in"></i> Incoming</span>
-                            <span><i class="is-out"></i> Outgoing</span>
-                        </div>
-                    @endif
-                </div>
-                @if (count($activities))
-                    <div class="fin-chart-canvas" id="finChartWrap">
-                        <canvas id="finEventChart" role="img" aria-label="Grouped bar chart of incoming and outgoing cash for {{ count($activities) }} recorded events. Figures are listed in the table that follows."></canvas>
-                    </div>
-                    <p class="fin-muted fin-chart-fallback-note" id="finChartFallbackNote" hidden>The chart library could not be loaded; event figures are shown as a table.</p>
-                    <table class="fin-chart-table fin-sr-only" id="finChartTable">
-                        <caption>Incoming and outgoing cash per event · {{ $fd['period_label'] ?? '' }}</caption>
-                        <thead>
-                            <tr><th scope="col">Event</th><th scope="col">Incoming</th><th scope="col">Outgoing</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($activities as $activity)
-                                <tr>
-                                    <th scope="row">{{ $activity['name'] }}</th>
-                                    <td>{{ $money($activity['inflow']) }}</td>
-                                    <td>{{ $money($activity['outflow']) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @else
-                    <div class="fin-empty">
-                        <i class="bi bi-bar-chart"></i>
-                        <strong>No event cash flows recorded</strong>
-                        <span>No cash inflows or receipt expenses are recorded for {{ $fd['period_label'] ?? 'this period' }}.</span>
-                    </div>
-                @endif
-            </div>
-        </section>
 
         <section class="fin-card" aria-labelledby="finCurrentTitle">
             <div class="fin-card-head">
                 <div>
                     <h2 id="finCurrentTitle"><i class="bi bi-file-earmark-spreadsheet"></i> Current Reports</h2>
-                    <p class="fin-muted">Open the latest Financial Report with View before submitting FR to OSO.</p>
+                    <p class="fin-muted">View a report before submitting it to OSO.</p>
                 </div>
             </div>
 
@@ -307,8 +190,9 @@
             @else
                 <div class="fin-empty">
                     <i class="bi bi-file-earmark-plus"></i>
-                    <strong>No current financial reports</strong>
-                    <span>Use Create Report to upload a completed Financial Report workbook (.xlsx).</span>
+                    <strong>No current Financial Report</strong>
+                    <span>Create a report for the selected academic year and semester.</span>
+                    <button type="button" class="org-btn org-btn-primary org-btn-sm" data-fin-open-create><i class="bi bi-plus-lg"></i> Create report</button>
                 </div>
             @endif
         </section>
@@ -316,36 +200,33 @@
         <section class="fin-card" aria-labelledby="finHistoryTitle">
             <div class="fin-card-head">
                 <div>
-                    <h2 id="finHistoryTitle"><i class="bi bi-clock-history"></i> Report History</h2>
-                    <p class="fin-muted">Reports submitted more than a year ago, most recent first.</p>
+                    <h2 id="finHistoryTitle">Financial Report History</h2>
+                    <p class="fin-muted">Reports submitted more than a year ago.</p>
                 </div>
-                @if (count($historyReports))
                     <div class="fin-filters fin-history-filters">
                         <label class="fin-search">
-                            <span class="fin-sr-only">Search history</span>
-                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <span>Search history</span>
                             <input type="search" id="finHistorySearch" placeholder="Search reports" autocomplete="off">
                         </label>
                         <label>
-                            <span class="fin-sr-only">History academic year</span>
+                            <span>Academic year</span>
                             <select id="finHistoryYear">
                                 <option value="">All years</option>
-                                @foreach ($historyYears as $year)
+                                @foreach ($academicYearOptions->merge($historyYears)->unique() as $year)
                                     <option value="{{ $year }}">{{ $year }}</option>
                                 @endforeach
                             </select>
                         </label>
                         <label>
-                            <span class="fin-sr-only">History semester</span>
+                            <span>Semester</span>
                             <select id="finHistorySemester">
                                 <option value="">All semesters</option>
-                                @foreach ($historySemesters as $semester)
+                                @foreach (collect($semesters)->merge($historySemesters)->unique() as $semester)
                                     <option value="{{ $semester }}">{{ $semester }}</option>
                                 @endforeach
                             </select>
                         </label>
                     </div>
-                @endif
             </div>
 
             @if (count($historyReports))
@@ -415,12 +296,129 @@
                 </div>
                 <p class="fin-sr-only" id="finHistoryCount" aria-live="polite"></p>
             @else
-                <div class="fin-empty">
-                    <i class="bi bi-archive"></i>
-                    <strong>No report history yet</strong>
-                    <span>Reports move here one year after they are submitted.</span>
+                <div class="fin-empty" id="finHistoryEmpty">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <strong>No Financial Report history yet</strong>
+                    <span>Reports appear here one year after submission.</span>
                 </div>
             @endif
+        </section>
+        <section class="fin-card" aria-labelledby="finCashFlowTitle">
+            <div class="fin-card-head">
+                <div>
+                    <h2 id="finCashFlowTitle"><i class="bi bi-cash-stack"></i> Cash Flow</h2>
+                    <p class="fin-muted">{{ $fd['period_label'] ?? '' }}</p>
+                </div>
+                <div class="fin-header-actions">
+                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-fin-open="finOpeningDialog">
+                        <i class="bi bi-wallet2"></i> {{ $hasAccount ? 'Edit AY '.$managementYear.' opening' : 'Save AY '.$managementYear.' opening' }}
+                    </button>
+                    <button type="button" class="org-btn org-btn-primary org-btn-sm" data-fin-open="finIncomeDialog">
+                        <i class="bi bi-plus-circle"></i> Record cash inflow
+                    </button>
+                </div>
+            </div>
+            <form method="get" action="{{ route('office.financial') }}" class="fin-filters fin-overview-filters" id="finFilterForm">
+                <label>
+                    <span>Academic year</span>
+                    <select name="academic_year" data-fin-autosubmit>
+                        <option value="all" @selected($yearFilter === 'all')>All years (combined)</option>
+                        @foreach ($years as $year)
+                            <option value="{{ $year }}" @selected($yearFilter === (string) $year)>{{ $year }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label>
+                    <span>Semester</span>
+                    <select name="semester" data-fin-autosubmit>
+                        <option value="all" @selected($semesterFilter === 'all')>All semesters</option>
+                        @foreach ($semesters as $semester)
+                            <option value="{{ $semester }}" @selected($semesterFilter === $semester)>{{ $semester }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </form>
+
+            <div class="fin-stats">
+                <article class="fin-stat is-beginning">
+                    <span class="fin-stat-icon"><i class="bi bi-wallet2"></i></span>
+                    <div>
+                        <small>Beginning balance</small>
+                        <strong>{{ $money($fd['beginning_balance'] ?? 0) }}</strong>
+                        <em>{{ match (true) {
+                            $yearFilter === 'all' => 'Sum of separate annual openings',
+                            $semesterFilter === 'all' => 'Saved annual opening',
+                            default => 'Annual opening + earlier semester postings',
+                        } }}</em>
+                    </div>
+                </article>
+                <article class="fin-stat is-in">
+                    <span class="fin-stat-icon"><i class="bi bi-arrow-down-left"></i></span>
+                    <div>
+                        <small>Incoming cash</small>
+                        <strong>{{ $money($fd['cash_inflow'] ?? 0) }}</strong>
+                        <em>Recorded cash inflows</em>
+                    </div>
+                </article>
+                <article class="fin-stat is-out">
+                    <span class="fin-stat-icon"><i class="bi bi-arrow-up-right"></i></span>
+                    <div>
+                        <small>Outgoing cash</small>
+                        <strong>{{ $money($fd['cash_outflow'] ?? 0) }}</strong>
+                        <em>Posted receipt expenses</em>
+                    </div>
+                </article>
+                <article class="fin-stat is-ending">
+                    <span class="fin-stat-icon"><i class="bi bi-piggy-bank"></i></span>
+                    <div>
+                        <small>Ending balance</small>
+                        <strong>{{ $money($fd['ending_balance'] ?? 0) }}</strong>
+                        <em>Beginning + incoming − outgoing</em>
+                    </div>
+                </article>
+            </div>
+            @if ($yearFilter === 'all')
+                <p class="fin-muted fin-stats-note">Combined annual accounts; not a live bank balance.</p>
+            @endif
+
+            <div class="fin-chart-block">
+                <div class="fin-chart-head">
+                    <h3>Cash flow by event</h3>
+                    @if (count($activities))
+                        <div class="fin-legend" aria-hidden="true">
+                            <span><i class="is-in"></i> Incoming</span>
+                            <span><i class="is-out"></i> Outgoing</span>
+                        </div>
+                    @endif
+                </div>
+                @if (count($activities))
+                    <div class="fin-chart-canvas" id="finChartWrap">
+                        <canvas id="finEventChart" role="img" aria-label="Grouped bar chart of incoming and outgoing cash for {{ count($activities) }} recorded events. Figures are listed in the table that follows."></canvas>
+                    </div>
+                    <p class="fin-muted fin-chart-fallback-note" id="finChartFallbackNote" hidden>The chart library could not be loaded; event figures are shown as a table.</p>
+                    <table class="fin-chart-table fin-sr-only" id="finChartTable">
+                        <caption>Incoming and outgoing cash per event · {{ $fd['period_label'] ?? '' }}</caption>
+                        <thead>
+                            <tr><th scope="col">Event</th><th scope="col">Incoming</th><th scope="col">Outgoing</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($activities as $activity)
+                                <tr>
+                                    <th scope="row">{{ $activity['name'] }}</th>
+                                    <td>{{ $money($activity['inflow']) }}</td>
+                                    <td>{{ $money($activity['outflow']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <div class="fin-empty">
+                        <i class="bi bi-bar-chart"></i>
+                        <strong>No event cash flows recorded</strong>
+                        <span>No cash inflows or receipt expenses are recorded for {{ $fd['period_label'] ?? 'this period' }}.</span>
+                    </div>
+                @endif
+            </div>
         </section>
     </div>
 
@@ -526,7 +524,7 @@
                     </div>
                 @endif
 
-                <p class="fin-muted fin-dialog-note">Enter the actual cash the organization held on August 1, the start of AY {{ $managementYear }}. This annual opening, plus recorded cash inflows, sets how much activity budget can be approved and spent. It is not carried into other academic years and is not filled in from uploaded workbooks. It cannot be lowered below what is already spent or reserved. To edit another year, choose that year in the Cash Flow filter first.</p>
+                <p class="fin-muted fin-dialog-note">Enter actual cash held on August 1 for AY {{ $managementYear }}. Openings are separate for each year and must cover spent or reserved funds. Choose another year in Cash Flow to edit its opening.</p>
                 <div class="fin-field-row">
                     <div class="fin-field">
                         <span>Academic year</span>
@@ -580,7 +578,7 @@
                 @endif
 
                 @if ($hasAccount)
-                    <p class="fin-muted fin-dialog-note">Record cash actually received (collections, contributions, sponsorships). Each official receipt or reference number can be recorded once. To record for another academic year, choose that year in the Cash Flow filter first.</p>
+                    <p class="fin-muted fin-dialog-note">Record cash actually received. Each receipt or reference can be used once.</p>
                     <div class="fin-field-row">
                         <label class="fin-field">
                             <span>Date received</span>
@@ -665,6 +663,7 @@
             </div>
         </div>
     </dialog>
+    @include('org.partials.document-preview')
 
     <script type="application/json" id="soFinancialData">@json($clientData)</script>
 @endsection

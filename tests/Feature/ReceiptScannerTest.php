@@ -6,6 +6,7 @@ use App\Models\ExpenseReceiptReview;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
 use App\Models\OrgFundAccount;
+use App\Models\StudentOrganization;
 use App\Services\BudgetChainService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,12 @@ class ReceiptScannerTest extends TestCase
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
         Storage::fake('local');
+        $organization = StudentOrganization::create([
+            'name' => 'Scanner Test '.Str::uuid(),
+            'college' => 'Fixture College',
+            'academic_year' => '2026-2027',
+            'is_active' => true,
+        ]);
         $this->actor = OfficeUser::create([
             'name' => 'Scanner Test',
             'email' => Str::uuid().'@example.test',
@@ -36,9 +43,10 @@ class ReceiptScannerTest extends TestCase
             'password' => Str::random(30),
             'office_role' => 'so',
             'office_title' => 'Scanner test desk',
+            'student_organization_id' => $organization->id,
             'is_active' => true,
         ]);
-        $org = 'Scanner Test '.Str::uuid();
+        $org = $organization->name;
         OrgFundAccount::create(['organization_name' => $org, 'fiscal_year' => '2026-2027', 'cash_opening_balance' => 5000]);
         $this->activity = OrgActivity::create([
             'title' => 'ACTIVITY RECEIPT QA',

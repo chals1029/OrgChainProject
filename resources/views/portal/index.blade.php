@@ -1015,25 +1015,6 @@
             </div>
         </div>
 
-        @if (!empty($tosaTemplate['available']))
-            <div class="sp-tosa-download-strip" style="background: #fff8f8; border: 1px solid #fecdd3; border-radius: 10px; padding: 0.75rem 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                    <i class="bi bi-file-earmark-word-fill" style="color: #8b1828; font-size: 1.35rem;"></i>
-                    <div>
-                        <strong style="color: #8b1828; font-size: 0.9rem;">Official TOSA Application Form</strong>
-                        <div style="color: #6b7280; font-size: 0.76rem;">Download or preview the official nomination document (AY 2025–2026).</div>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <a href="{{ $tosaTemplate['preview_url'] }}" target="_blank" class="sp-btn sp-btn-xs" style="background: #ffffff; border: 1px solid #d1d5db; color: #374151; font-weight: 600; text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-                        <i class="bi bi-eye"></i> Preview DOCX
-                    </a>
-                    <a href="{{ $tosaTemplate['download_url'] }}" class="sp-btn sp-btn-xs" style="background: #8b1828; color: #ffffff; border: none; font-weight: 600; text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-                        <i class="bi bi-download"></i> Download DOCX
-                    </a>
-                </div>
-            </div>
-        @endif
 
         {{-- Announcements Table Card --}}
         <div class="sp-announcements-table-card liquid-glass">
@@ -1284,306 +1265,325 @@
         </div>
     </div>
 
-    {{-- ============================ TOSA APPLICATIONS (SUBMISSIONS) PANEL ============================ --}}
+    {{-- ============================ TOSA APPLICATIONS PANEL ============================ --}}
     <div class="portal-panel {{ ($tab ?? '') === 'tosa' ? 'is-active' : '' }}" data-panel="tosa" @if(($tab ?? '') !== 'tosa') hidden @endif>
+        <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}">
+        <style>
+            .portal-body[data-portal-tab="tosa"] .sp-main,
+            .portal-body[data-portal-tab="tosa"] #portalMain { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+            .portal-body[data-portal-tab="tosa"] .sp-flash,
+            .portal-body[data-portal-tab="tosa"] .sp-flash span { min-width: 0; overflow-wrap: anywhere; }
+            [data-panel="tosa"] { min-width: 0; width: 100%; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
+            [data-panel="tosa"] [hidden] { display: none !important; }
+            [data-panel="tosa"] .sp-tosa-submissions-view { min-width: 0; max-width: 1040px; margin-inline: auto; padding-bottom: 1rem; }
+            [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .85rem; margin-bottom: .6rem; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-accordion { padding: 0; }
+            [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .7rem; padding: .75rem .85rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
+            [data-panel="tosa"] .sp-tosa-section-summary::-webkit-details-marker { display: none; }
+            [data-panel="tosa"] .sp-tosa-section-summary:hover { background: #fdf0f2; }
+            [data-panel="tosa"] .sp-tosa-section-copy { flex: 1; min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-section-heading { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; color: #33272c; font-size: .9rem; }
+            [data-panel="tosa"] .sp-tosa-section-copy > small { margin-top: .15rem; line-height: 1.4; }
+            [data-panel="tosa"] .sp-tosa-section-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .45rem; border-radius: 999px; background: #f5e5e9; color: #8b1828; font-size: .65rem; font-weight: 700; }
+            [data-panel="tosa"] .sp-tosa-section-chevron { flex: 0 0 auto; color: #8b1828; font-size: .8rem; }
+            [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary { border-radius: 12px 12px 0 0; }
+            [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary > .sp-tosa-section-chevron { transform: rotate(90deg); }
+            [data-panel="tosa"] .sp-tosa-section-body { padding: .85rem; border-top: 1px solid #ead8de; }
+            [data-panel="tosa"] .sp-tosa-master-form { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+            [data-panel="tosa"] .sp-tosa-master-copy { display: flex; align-items: flex-start; gap: .7rem; min-width: 0; flex: 1 1 22rem; }
+            [data-panel="tosa"] .sp-tosa-master-copy > div { min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-master-label { display: block; color: #8b1828; font-size: .65rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+            [data-panel="tosa"] .sp-tosa-master-copy strong { display: block; margin-top: .15rem; font-size: .9rem; }
+            [data-panel="tosa"] .sp-tosa-card p { margin: .3rem 0; font-size: .8rem; color: #786f73; line-height: 1.5; }
+            [data-panel="tosa"] .sp-tosa-card small { display: block; color: #786f73; font-size: .72rem; margin-top: .2rem; }
+            [data-panel="tosa"] .sp-tosa-card h3 { margin: 0; font-size: .9rem; }
+            [data-panel="tosa"] .sp-tosa-requirements { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; margin-top: .8rem; }
+            [data-panel="tosa"] .sp-tosa-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 17rem); align-items: start; gap: .8rem; padding: .8rem; border: 1px solid #f0e6e8; border-radius: 11px; }
+            [data-panel="tosa"] .sp-tosa-row-main { display: flex; align-items: flex-start; gap: .6rem; min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-row-copy { min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-file-icon { display: grid; place-items: center; flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; }
+            [data-panel="tosa"] .sp-tosa-row-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
+            [data-panel="tosa"] .sp-tosa-section-code { color: #8b1828; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
+            [data-panel="tosa"] .sp-tosa-saved-file { margin-top: .5rem; font-size: .78rem; color: #786f73; }
+            [data-panel="tosa"] .sp-tosa-saved-file.is-uploaded > strong { color: #8b1828; }
+            [data-panel="tosa"] .sp-tosa-filename { display: block; max-width: 100%; margin-top: .2rem; color: #8b1828; font-size: .78rem; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-row-actions { display: grid; gap: .55rem; min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-document-links { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+            [data-panel="tosa"] .sp-tosa-control { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .4rem .65rem; border: 1px solid #e6d5d9; border-radius: 8px; background: #fff; color: #8b1828; font: inherit; font-size: .75rem; font-weight: 700; text-decoration: none; cursor: pointer; box-sizing: border-box; max-width: 100%; }
+            [data-panel="tosa"] .sp-tosa-control:hover { background: #fdf0f2; }
+            [data-panel="tosa"] .sp-tosa-control-primary { background: #8b1828; border-color: #8b1828; color: #fff; }
+            [data-panel="tosa"] .sp-tosa-control-primary:hover { background: #701321; }
+            [data-panel="tosa"] .sp-tosa-control:disabled { opacity: .55; cursor: not-allowed; }
+            [data-panel="tosa"] .sp-tosa-file-picker { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; position: relative; }
+            [data-panel="tosa"] .sp-tosa-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); border: 0; }
+            [data-panel="tosa"] .sp-tosa-file-input:focus-visible + label { outline: 2px solid #8b1828; outline-offset: 3px; }
+            [data-panel="tosa"] .sp-tosa-selection { flex-basis: 100%; min-width: 0; padding: .5rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; font-size: .75rem; }
+            [data-panel="tosa"] .sp-tosa-selection strong { display: block; }
+            [data-panel="tosa"] .sp-tosa-file-feedback { flex-basis: 100%; margin: 0; color: #a12638; font-size: .75rem; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-reference-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; list-style: none; margin: 0; padding: 0; }
+            [data-panel="tosa"] .sp-tosa-reference-list li { min-width: 0; padding: .75rem; border: 1px solid #ead8de; border-radius: 10px; font-size: .8rem; }
+            [data-panel="tosa"] .sp-tosa-reference-heading { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+            [data-panel="tosa"] .sp-tosa-reference-heading > strong { min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-reference-list .sp-tosa-document-links { margin-top: .5rem; }
+            [data-panel="tosa"] .sp-tosa-submit-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; }
+            [data-panel="tosa"] .sp-tosa-submit-banner > div { min-width: 0; flex: 1 1 22rem; }
+            [data-panel="tosa"] #tosaSubmitForm { min-width: 0; margin: 0; }
+            [data-panel="tosa"] a:focus-visible, [data-panel="tosa"] button:focus-visible, [data-panel="tosa"] summary:focus-visible { outline: 2px solid #8b1828; outline-offset: 3px; }
+            @media (max-width: 760px) {
+                [data-panel="tosa"] .sp-tosa-row { grid-template-columns: minmax(0, 1fr); }
+                [data-panel="tosa"] .sp-tosa-card:not(.sp-tosa-accordion) { padding: .8rem; }
+                [data-panel="tosa"] .sp-tosa-row-actions { gap: .6rem; }
+            }
+            @media (max-width: 520px) {
+                [data-panel="tosa"] .sp-tosa-reference-list { grid-template-columns: minmax(0, 1fr); }
+                [data-panel="tosa"] .sp-tosa-section-summary { gap: .5rem; padding: .7rem; }
+                [data-panel="tosa"] .sp-tosa-section-body { padding: .7rem; }
+                [data-panel="tosa"] .sp-tosa-section-heading { font-size: .85rem; }
+            }
+        </style>
         <div class="sp-tosa-submissions-view">
-            {{-- Header Title --}}
-            <div class="sp-tosa-sub-header">
+
+            @if ($errors->any())
+                <div role="alert" style="color: #a12638; margin-bottom: 1rem;">
+                    <strong>Your application could not be submitted.</strong>
+                    <p>{{ $tosaLocked ? 'Your submitted application and saved files remain unchanged.' : 'Previously saved files remain unchanged. Reselect any local files before trying to submit.' }}</p>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @php
+                $tosaMasterForm = collect($tosaReferences)->firstWhere('key', 'application_form');
+                $tosaOtherReferences = collect($tosaReferences)->reject(fn ($reference) => $reference['key'] === 'application_form');
+            @endphp
+
+            @if ($tosaMasterForm)
+                <details class="sp-tosa-card sp-tosa-accordion" open aria-labelledby="tosaSubmissionsTitle">
+                    <summary class="sp-tosa-section-summary">
+                        <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                        <span class="sp-tosa-section-copy">
+                            <strong id="tosaSubmissionsTitle" class="sp-tosa-section-heading">Submissions</strong>
+                            <small>{{ $tosaLocked ? 'View and download your submitted documents.' : 'Prepare your application and supporting credentials for OSO review.' }}</small>
+                        </span>
+                        <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                    </summary>
+                    <div class="sp-tosa-section-body sp-tosa-master-form" data-tosa-reference="{{ $tosaMasterForm['key'] }}" aria-labelledby="tosaMasterFormTitle">
+                    <div class="sp-tosa-master-copy">
+                        <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-word"></i></span>
+                        <div>
+                            <span class="sp-tosa-master-label">Official master application / nomination form</span>
+                            <strong id="tosaMasterFormTitle">{{ $tosaMasterForm['title'] }}</strong>
+                            <p>Complete the form with the required photo and signatures, then upload it in section B.</p>
+                        </div>
+                    </div>
+                    <div class="sp-tosa-document-links">
+                        @if ($tosaMasterForm['available'])
+                            @if ($tosaMasterForm['can_preview'])
+                                <a href="{{ $tosaMasterForm['preview_url'] }}" class="sp-tosa-control" data-document-preview
+                                   data-document-preview-url="{{ $tosaMasterForm['preview_url'] }}" data-document-preview-title="{{ $tosaMasterForm['name'] }}"
+                                   data-document-preview-type="{{ strtolower($tosaMasterForm['preview_format']) }}" data-document-preview-download="{{ $tosaMasterForm['download_url'] }}">
+                                    <i class="bi bi-eye" aria-hidden="true"></i> View
+                                </a>
+                            @endif
+                            <a href="{{ $tosaMasterForm['download_url'] }}" class="sp-tosa-control" aria-label="Download original {{ $tosaMasterForm['name'] }}">
+                                <i class="bi bi-download" aria-hidden="true"></i> Download
+                            </a>
+                        @else
+                            <span>Official file unavailable.</span>
+                        @endif
+                    </div>
+                    </div>
+                </details>
+            @endif
+
+            <details class="sp-tosa-card sp-tosa-accordion" @if ($tosaRevision) open @endif aria-labelledby="tosaStatusTitle">
+                <summary class="sp-tosa-section-summary">
+                    <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+                    <span class="sp-tosa-section-copy">
+                        <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'Revision' : ($tosaApplicant ? ucfirst($tosaApplicant->status) : 'Not started') }}</span></span>
+                        <small>{{ $tosaApplicant ? 'Review stage: '.($tosaApplicant->subsection === 'returned' ? 'Revision' : ucfirst($tosaApplicant->subsection)).'.' : 'Choose your completed files to start your application.' }}</small>
+                    </span>
+                    <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="sp-tosa-section-body">
+                @if ($tosaApplicant)
+                    <p>Review stage: {{ $tosaApplicant->subsection === 'returned' ? 'Revision' : ucfirst($tosaApplicant->subsection) }}.</p>
+                    @if ($tosaApplicant->remarks)
+                        <p>Reviewer remarks: {{ $tosaApplicant->remarks }}</p>
+                    @endif
+                @endif
+                <p>{{ $tosaLocked ? 'Only an OSO Revision request allows changes.' : ($tosaRevision ? 'Update the requested files, then Resubmit for Review.' : 'Choose files, then Submit for Review. Files are saved together.') }}</p>
+                </div>
+            </details>
+
+
+            <details class="sp-tosa-card sp-tosa-accordion" open aria-labelledby="tosaReferencesTitle">
+                <summary class="sp-tosa-section-summary">
+                    <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-book"></i></span>
+                    <span class="sp-tosa-section-copy">
+                        <span class="sp-tosa-section-heading"><strong id="tosaReferencesTitle">Preparation guides &amp; workbook</strong><span class="sp-tosa-section-badge">{{ $tosaOtherReferences->count() }} references</span></span>
+                        <small>Official guides and the reference workbook—not required uploads.</small>
+                    </span>
+                    <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="sp-tosa-section-body">
+                <ul class="sp-tosa-reference-list" id="tosaReferenceList">
+                    @foreach ($tosaOtherReferences as $reference)
+                        <li data-tosa-reference="{{ $reference['key'] }}">
+                            <div class="sp-tosa-reference-heading">
+                                <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                                <strong>{{ $reference['title'] }}</strong>
+                            </div>
+                            <div class="sp-tosa-document-links">
+                                @if ($reference['available'])
+                                    @if ($reference['key'] === 'computation')
+                                        <a href="{{ route('portal.tosa.workbook.reference') }}" class="sp-tosa-control" target="_blank" rel="noopener"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
+                                    @elseif ($reference['can_preview'])
+                                        <a href="{{ $reference['preview_url'] }}" class="sp-tosa-control" data-document-preview
+                                           data-document-preview-url="{{ $reference['preview_url'] }}" data-document-preview-title="{{ $reference['name'] }}"
+                                           data-document-preview-type="{{ strtolower($reference['preview_format']) }}" data-document-preview-download="{{ $reference['download_url'] }}">
+                                            <i class="bi bi-eye" aria-hidden="true"></i> View
+                                        </a>
+                                    @endif
+                                    <a href="{{ $reference['download_url'] }}" class="sp-tosa-control" aria-label="Download official {{ $reference['title'] }} {{ $reference['format'] }} reference">
+                                        <i class="bi bi-download" aria-hidden="true"></i> Download
+                                    </a>
+                                @else
+                                    <span>Official file unavailable.</span>
+                                @endif
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+                </div>
+            </details>
+
+            <details id="tosaCredentialsSection" class="sp-tosa-card sp-tosa-accordion" @if ($errors->any() || $tosaRevision) open @endif aria-labelledby="tosaRequirementsTitle">
+                <summary class="sp-tosa-section-summary">
+                    <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-cloud-upload"></i></span>
+                    <span class="sp-tosa-section-copy">
+                        <strong id="tosaRequirementsTitle" class="sp-tosa-section-heading">Required supporting credentials · A–G</strong>
+                        <small>{{ $tosaLocked ? 'View your submitted application and supporting credentials.' : 'Upload your completed form and supporting credentials.' }}</small>
+                    </span>
+                    <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="sp-tosa-section-body">
+                <div id="tosaRequirementsList" class="sp-tosa-requirements">
+                    @foreach ($tosaDocs as $doc)
+                        <article id="tosaRow_{{ $doc['key'] }}" class="sp-tosa-row" data-tosa-key="{{ $doc['key'] }}" data-tosa-saved="{{ $doc['uploaded'] ? '1' : '0' }}" aria-labelledby="tosaTitle_{{ $doc['key'] }}">
+                            <div class="sp-tosa-row-main">
+                                <span class="sp-tosa-file-icon {{ $doc['icon'] }}" aria-hidden="true"><i class="bi {{ $doc['bi'] }}"></i></span>
+                                <div class="sp-tosa-row-copy">
+                                    <div class="sp-tosa-row-title">
+                                        <span class="sp-tosa-section-code">Section {{ $doc['code'] }}</span>
+                                        <h3 id="tosaTitle_{{ $doc['key'] }}">{{ $doc['title'] }}</h3>
+                                    </div>
+                                    <p>{{ $doc['desc'] }}</p>
+                                    <small>{{ $doc['format'] }} · Required · Up to 25 MB</small>
+                                    <div class="sp-tosa-saved-file {{ $doc['uploaded'] ? 'is-uploaded' : '' }}" data-tosa-saved-file>
+                                        <strong><i class="bi {{ $doc['uploaded'] ? 'bi-check-circle-fill' : 'bi-clock' }}" aria-hidden="true"></i> {{ $doc['uploaded'] ? 'Uploaded · Saved' : ($doc['file'] ? 'File unavailable' : 'Not uploaded') }}</strong>
+                                        @if ($doc['uploaded'])
+                                            <a href="{{ $doc['can_preview'] ? $doc['preview_url'] : $doc['download_url'] }}" class="sp-tosa-filename" data-document-file
+                                               data-document-preview-type="{{ strtolower($doc['file_format'] ?? '') }}" data-document-preview-download="{{ $doc['download_url'] }}"
+                                               aria-label="View saved {{ data_get($doc['file'], 'name') }}">{{ data_get($doc['file'], 'name') }}</a>
+                                            <small>Saved format: {{ $doc['file_format'] }}</small>
+                                        @elseif ($doc['file'])
+                                            <small>{{ data_get($doc['file'], 'name') }}</small>
+                                        @else
+                                            <small>No file saved for this section.</small>
+                                        @endif
+                                        @if (data_get($doc['file'], 'uploaded_at'))
+                                            <small>Saved: <time datetime="{{ data_get($doc['file'], 'uploaded_at') }}">{{ data_get($doc['file'], 'uploaded_at') }}</time></small>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sp-tosa-row-actions">
+                                <div class="sp-tosa-document-links">
+                                    @if ($doc['uploaded'])
+                                        <a href="{{ $doc['download_url'] }}" class="sp-tosa-control" aria-label="Download your saved {{ $doc['title'] }}">
+                                            <i class="bi bi-download" aria-hidden="true"></i> Download
+                                        </a>
+                                    @endif
+                                </div>
+                                @unless ($tosaLocked)
+                                    <div class="sp-tosa-file-picker">
+                                        <input type="file" id="tosaInput_{{ $doc['key'] }}" class="sp-tosa-file-input" name="documents[{{ $doc['key'] }}]" form="tosaSubmitForm" accept="{{ $doc['accept'] }}" aria-describedby="tosaFeedback_{{ $doc['key'] }}" @required(!$doc['uploaded'])>
+                                        <label for="tosaInput_{{ $doc['key'] }}" class="sp-tosa-control">
+                                            <i class="bi bi-folder2-open" aria-hidden="true"></i> {{ $doc['uploaded'] ? 'Choose replacement' : 'Choose file' }}
+                                        </label>
+                                        <div class="sp-tosa-selection" data-tosa-selection hidden aria-live="polite">
+                                            <strong>Selected · Not submitted</strong>
+                                            <a class="sp-tosa-filename" data-document-file data-tosa-selected-file hidden></a>
+                                        </div>
+                                        <p id="tosaFeedback_{{ $doc['key'] }}" class="sp-tosa-file-feedback" data-tosa-file-feedback role="status" hidden></p>
+                                        <button type="button" class="sp-tosa-control" data-tosa-cancel hidden>Cancel selection</button>
+                                    </div>
+                                @endunless
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+                </div>
+            </details>
+
+            @if ($tosaLocked)
+                <details class="sp-tosa-card sp-tosa-accordion" aria-labelledby="tosaSubmitStatus">
+                    <summary class="sp-tosa-section-summary">
+                        <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-lock"></i></span>
+                        <span class="sp-tosa-section-copy">
+                            <strong id="tosaSubmitStatus" class="sp-tosa-section-heading">Application submitted · Locked</strong>
+                            <small>Your files are read-only unless OSO requests Revision.</small>
+                        </span>
+                        <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                    </summary>
+                    <div class="sp-tosa-section-body">
+                        <p id="tosaSubmitHelp">Your packet is with OSO. View and Download remain available. Only Revision allows editing and resubmission.</p>
+                    </div>
+                </details>
+            @else
+            <div class="sp-tosa-card sp-tosa-submit-banner">
                 <div>
-                    <h1>Submissions</h1>
-                    <p>Upload all the required documents for your TOSA application.</p>
+                    <strong id="tosaSubmitStatus">{{ $tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit') }}</strong>
+                    <p id="tosaSubmitHelp" aria-live="polite">Submit the complete packet for OSO review. Your application locks after submission.</p>
                 </div>
-                <div class="sp-tosa-readonly-pill">
-                    <i class="bi bi-lock-fill"></i>
-                    <span>Read Only</span>
-                </div>
+                    <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}">
+                        @csrf
+                        <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete)>
+                            <i class="bi bi-send-check" aria-hidden="true"></i> {{ $tosaRevision ? 'Resubmit for Review' : 'Submit for Review' }}
+                        </button>
+                    </form>
             </div>
-
-            {{-- Application Progress - 5-Step Timeline Stepper (Exact Mockup Match) --}}
-            <div class="sp-tosa-stepper-container">
-                <div class="sp-tosa-stepper-row">
-                    {{-- Step 1: Submitted --}}
-                    <div class="sp-tosa-timeline-step is-inprogress" id="tosaStepNode_1">
-                        <div class="sp-tosa-node-circle" id="tosaStepCircle_1">
-                            <i class="bi bi-file-earmark-text"></i>
-                        </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_1">1. Submitted</h5>
-                        <span class="sp-tosa-node-pill pill-inprogress" id="tosaStepPill_1">In Progress</span>
-                        <div class="sp-tosa-node-time" id="tosaStepTime_1">
-                            <span>Pending Documents</span>
-                        </div>
-                    </div>
-
-                    {{-- Connector Line 1 to 2 --}}
-                    <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_1"></div>
-
-                    {{-- Step 2: OSO, OGC & OSD Evaluation --}}
-                    <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_2">
-                        <div class="sp-tosa-node-circle" id="tosaStepCircle_2">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_2">2. OSO, OGC &amp; OSD<br>Evaluation</h5>
-                        <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_2">Pending</span>
-                        <div class="sp-tosa-node-time" id="tosaStepTime_2"></div>
-                    </div>
-
-                    {{-- Connector Line 2 to 3 --}}
-                    <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_2"></div>
-
-                    {{-- Step 3: Evaluation Results Forwarded --}}
-                    <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_3">
-                        <div class="sp-tosa-node-circle" id="tosaStepCircle_3">
-                            <i class="bi bi-send-check-fill"></i>
-                        </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_3">3. Evaluation<br>Results Forwarded</h5>
-                        <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_3">Pending</span>
-                        <div class="sp-tosa-node-time" id="tosaStepTime_3"></div>
-                    </div>
-
-                    {{-- Connector Line 3 to 4 --}}
-                    <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_3"></div>
-
-                    {{-- Step 4: OVCAA Review --}}
-                    <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_4">
-                        <div class="sp-tosa-node-circle" id="tosaStepCircle_4">
-                            <i class="bi bi-building-check"></i>
-                        </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_4">4. OVCAA<br>Review</h5>
-                        <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_4">Pending</span>
-                        <div class="sp-tosa-node-time" id="tosaStepTime_4"></div>
-                    </div>
-
-                    {{-- Connector Line 4 to 5 --}}
-                    <div class="sp-tosa-timeline-line is-dashed" id="tosaStepLine_4"></div>
-
-                    {{-- Step 5: Chancellor Final Approval --}}
-                    <div class="sp-tosa-timeline-step is-pending" id="tosaStepNode_5">
-                        <div class="sp-tosa-node-circle" id="tosaStepCircle_5">
-                            <i class="bi bi-award-fill"></i>
-                        </div>
-                        <h5 class="sp-tosa-node-title" id="tosaStepTitle_5">5. Chancellor<br>Final Approval</h5>
-                        <span class="sp-tosa-node-pill pill-pending" id="tosaStepPill_5">Pending</span>
-                        <div class="sp-tosa-node-time" id="tosaStepTime_5"></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Important Reminder Box (Blue) --}}
-            <div class="sp-tosa-notice-box">
-                <div class="sp-tosa-info-icon">
-                    <i class="bi bi-info-lg"></i>
-                </div>
-                <div class="sp-tosa-notice-content">
-                    <h4>Important Reminder</h4>
-                    <p>Please upload clear and complete documents in PDF format only.<br>Ensure that all files follow the required guidelines.</p>
-                </div>
-            </div>
-
-            {{-- Submissions Table Card --}}
-            <div class="sp-tosa-table-card">
-                <div class="sp-table-responsive">
-                    <table class="sp-tosa-table">
-                        <thead>
-                            <tr>
-                                <th class="sp-col-num">#</th>
-                                <th class="sp-col-req">Requirement</th>
-                                <th class="sp-col-status">Status</th>
-                                <th class="sp-col-actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="spTosaSubmissionsTbody">
-                            {{-- Row 1: Curriculum Vitae --}}
-                            <tr id="tosaRow_1" data-tosa-id="1">
-                                <td class="sp-col-num">1</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-blue">
-                                            <i class="bi bi-person-lines-fill"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Curriculum Vitae</strong>
-                                            <p>Upload your comprehensive Curriculum Vitae (CV) with academic and leadership records.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_1">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
-                                        </div>
-                                        <small id="tosaTime_1">Not uploaded yet</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_1" style="display:none;" onchange="window.handleTosaDocUpload?.(1, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_1">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_1')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 2: Good Moral Certificate --}}
-                            <tr id="tosaRow_2" data-tosa-id="2">
-                                <td class="sp-col-num">2</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-green">
-                                            <i class="bi bi-shield-check"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Good Moral Certificate</strong>
-                                            <p>Upload your Certificate of Good Moral Character from Student Affairs / Guidance.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_2">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
-                                        </div>
-                                        <small id="tosaTime_2">Not uploaded yet</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_2" style="display:none;" onchange="window.handleTosaDocUpload?.(2, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_2">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_2')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 3: Scholastic Record or a copy of all grades issued by Registration Services --}}
-                            <tr id="tosaRow_3" data-tosa-id="3">
-                                <td class="sp-col-num">3</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-orange">
-                                            <i class="bi bi-file-earmark-ruled"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Scholastic Record or a copy of all grades issued by Registration Services</strong>
-                                            <p>Upload official copy of grades or Scholastic Record certified by Registration Services.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_3">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
-                                        </div>
-                                        <small id="tosaTime_3">Not uploaded yet</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_3" style="display:none;" onchange="window.handleTosaDocUpload?.(3, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_3">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_3')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 4: Copies of certificates, together with proof of legitimacy duly certified by the Records Office --}}
-                            <tr id="tosaRow_4" data-tosa-id="4">
-                                <td class="sp-col-num">4</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-purple">
-                                            <i class="bi bi-award"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Copies of certificates, together with proof of legitimacy duly certified by the Records Office</strong>
-                                            <p>Upload certified copies of certificates, honors, and proof of legitimacy certified by the Records Office.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-pending" id="tosaStatus_4">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-clock"></i>
-                                            <strong>Pending</strong>
-                                        </div>
-                                        <small id="tosaTime_4">Not uploaded yet</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_4" style="display:none;" onchange="window.handleTosaDocUpload?.(4, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_4">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_4')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            {{-- Row 5: Electronic or scanned copies of the complete application documents --}}
-                            <tr id="tosaRow_5" data-tosa-id="5">
-                                <td class="sp-col-num">5</td>
-                                <td class="sp-col-req">
-                                    <div class="sp-req-flex">
-                                        <div class="sp-req-icon is-teal">
-                                            <i class="bi bi-folder-check"></i>
-                                        </div>
-                                        <div class="sp-req-info">
-                                            <strong>Electronic or scanned copies of the complete application documents</strong>
-                                            <p>Upload electronic or scanned complete application dossier and supporting documents.</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="sp-col-status">
-                                    <div class="sp-status-wrap is-missing" id="tosaStatus_5">
-                                        <div class="sp-status-heading">
-                                            <i class="bi bi-x-circle"></i>
-                                            <strong>Missing</strong>
-                                        </div>
-                                        <small id="tosaTime_5">Required</small>
-                                    </div>
-                                </td>
-                                <td class="sp-col-actions">
-                                    <input type="file" accept=".pdf" id="tosaInput_5" style="display:none;" onchange="window.handleTosaDocUpload?.(5, this)">
-                                    <div class="sp-actions-wrap" id="tosaActions_5">
-                                        <button type="button" class="sp-tosa-btn-upload" onclick="document.getElementById('tosaInput_5')?.click()">
-                                            <i class="bi bi-upload"></i>
-                                            <span>Upload</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {{-- Bottom Yellow Notice Banner --}}
-            <div class="sp-tosa-bottom-banner">
-                <div class="sp-tosa-bottom-left">
-                    <div class="sp-tosa-bulb-icon">
-                        <i class="bi bi-lightbulb"></i>
-                    </div>
-                    <div class="sp-tosa-bottom-text">
-                        <strong>Before you submit</strong>
-                        <p>Make sure all required documents are uploaded and follow the file guidelines to avoid delays in your application.</p>
-                    </div>
-                </div>
-                <button type="button" class="sp-tosa-btn-guidelines" id="spTosaGuidelinesBtn">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>View File Guidelines</span>
-                </button>
-            </div>
+            @endif
         </div>
     </div>
+
+    <dialog id="tosaStudentDocViewerModal" class="document-preview-dialog" data-document-preview-dialog aria-labelledby="tosaStudentDocViewerTitle">
+        <div class="document-preview-box">
+            <header class="document-preview-head">
+                <div class="document-preview-heading">
+                    <span class="document-preview-icon" aria-hidden="true"><i class="bi bi-file-earmark-richtext"></i></span>
+                    <div class="document-preview-title">
+                        <strong id="tosaStudentDocViewerTitle" data-document-preview-title>Document Preview</strong>
+                        <small>TOSA · Student application documents</small>
+                    </div>
+                </div>
+                <div class="document-preview-actions">
+                    <a href="#" download class="document-preview-action" data-document-preview-download><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                    <a href="#" target="_blank" rel="noopener" class="document-preview-action" data-document-preview-external><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open in Tab</a>
+                    <button type="button" class="document-preview-action" data-document-preview-close aria-label="Close document preview"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button>
+                </div>
+            </header>
+            <div class="document-preview-body" data-document-preview-body></div>
+        </div>
+    </dialog>
+    <script src="{{ asset('js/vendor/jszip.min.js') }}" defer></script>
+    <script src="{{ asset('js/vendor/docx-preview.min.js') }}" defer></script>
+    <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}" defer></script>
+    <script src="{{ asset('js/tosa-documents.js') }}?v={{ filemtime(public_path('js/tosa-documents.js')) }}" defer></script>
 
     {{-- ============================ COMMUNITY PANEL ============================ --}}
     <div class="portal-panel {{ ($tab ?? '') === 'community' ? 'is-active' : '' }}" data-panel="community" @if(($tab ?? '') !== 'community') hidden @endif>

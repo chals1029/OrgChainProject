@@ -5,12 +5,16 @@ use App\Http\Controllers\AccomplishmentReportController;
 use App\Http\Controllers\OfficeAuthController;
 use App\Http\Controllers\OfficeAccountController;
 use App\Http\Controllers\OfficePortalController;
+use App\Http\Controllers\OrgRenewalInformationController;
+use App\Http\Controllers\OfficeDocumentPreviewController;
 use App\Http\Controllers\ReportSubmissionWindowController;
 use App\Http\Controllers\SoFinancialReportController;
 use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentPortalController;
 use App\Http\Controllers\SystemAdminAuthController;
 use App\Http\Controllers\SystemAdminController;
+use App\Http\Controllers\TosaScoringController;
+use App\Http\Controllers\TosaWorkbookController;
 use App\VotingSystem\Kernel as VotingKernel;
 use Illuminate\Support\Facades\Route;
 
@@ -18,8 +22,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::post('/student/login/code', [StudentAuthController::class, 'sendCode'])->name('student.code.send');
-Route::post('/student/login/verify', [StudentAuthController::class, 'verifyCode'])->name('student.code.verify');
+Route::post('/student/login/code', [StudentAuthController::class, 'sendCode'])->middleware('throttle:student-code')->name('student.code.send');
+Route::post('/student/login/verify', [StudentAuthController::class, 'verifyCode'])->middleware('throttle:student-verify')->name('student.code.verify');
 Route::post('/student/logout', [StudentAuthController::class, 'logout'])->name('student.logout');
 Route::get('/student/auth/google', [StudentAuthController::class, 'redirectToGoogle'])->name('student.auth.google');
 Route::get('/student/auth/google/callback', [StudentAuthController::class, 'handleGoogleCallback'])->name('student.auth.google.callback');
@@ -31,7 +35,7 @@ Route::match(['GET', 'POST'], $officeLoginPath, function (\Illuminate\Http\Reque
     return $request->isMethod('post')
         ? $controller->login($request)
         : $controller->showLogin();
-})->name('office.login');
+})->middleware('throttle:office-login')->name('office.login');
 
 Route::post('/office/logout', [OfficeAuthController::class, 'logout'])->name('office.logout');
 
@@ -42,7 +46,7 @@ Route::match(['GET', 'POST'], $systemAdminLoginPath, function (\Illuminate\Http\
     return $request->isMethod('post')
         ? $controller->login($request)
         : $controller->showLogin();
-})->name('system-admin.login');
+})->middleware('throttle:system-admin-login')->name('system-admin.login');
 
 Route::middleware('system_admin.auth')->prefix('system-admin')->name('system-admin.')->group(function () {
     Route::get('/', [SystemAdminController::class, 'dashboard'])->name('dashboard');
@@ -65,10 +69,12 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::post('/feedback', [StudentPortalController::class, 'storeFeedback'])->name('feedback.store');
     Route::post('/activities/{activity}/rsvp', [StudentPortalController::class, 'toggleRsvp'])->name('activities.rsvp');
     Route::get('/expenses/{receipt}/verify', [StudentPortalController::class, 'verifyExpenseSeal'])->name('expenses.verify');
-    Route::get('/tosa/template', [StudentPortalController::class, 'downloadTosaTemplate'])->name('tosa.template');
-    Route::post('/tosa/documents', [StudentPortalController::class, 'uploadTosaDocument'])->name('tosa.documents.store');
-    Route::delete('/tosa/documents/{key}', [StudentPortalController::class, 'removeTosaDocument'])->name('tosa.documents.destroy');
+    Route::get('/tosa/templates/{key}', [StudentPortalController::class, 'downloadTosaTemplate'])->name('tosa.templates.show');
+    Route::get('/tosa/documents/{key}', [StudentPortalController::class, 'downloadTosaDocument'])->name('tosa.documents.show');
     Route::post('/tosa/submit', [StudentPortalController::class, 'submitTosaApplication'])->name('tosa.submit');
+    Route::get('/tosa/workbook/reference', [TosaWorkbookController::class, 'reference'])->name('tosa.workbook.reference');
+    Route::get('/tosa/workbook', [TosaWorkbookController::class, 'student'])->name('tosa.workbook.show');
+    Route::get('/tosa/workbook/download', [TosaWorkbookController::class, 'studentDownload'])->name('tosa.workbook.download');
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {
@@ -80,6 +86,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/activities', [OfficePortalController::class, 'activities'])->name('activities');
     Route::get('/activities/create', [OfficePortalController::class, 'createActivity'])->name('activities.create');
     Route::get('/activities/templates/download', [OfficePortalController::class, 'downloadActivityTemplates'])->name('activities.templates.download');
+    Route::post('/documents/preview/convert', [OfficeDocumentPreviewController::class, 'convert'])->name('documents.preview.convert');
     Route::post('/activities', [OfficePortalController::class, 'storeActivity'])->name('activities.store');
     Route::get('/activities/{submission}/edit', [OfficePortalController::class, 'editActivity'])->name('activities.edit');
     Route::put('/activities/{submission}', [OfficePortalController::class, 'updateActivity'])->name('activities.update');
@@ -104,7 +111,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/accomplishment-report/activities/{report}/preview', [AccomplishmentReportController::class, 'preview'])->name('accomplishment.reports.preview');
     Route::get('/accomplishment-report/activities/{report}/evidence/{evidence}', [AccomplishmentReportController::class, 'evidence'])->name('accomplishment.evidence');
     Route::get('/accomplishment-report/template', [AccomplishmentReportController::class, 'template'])->name('accomplishment.template');
-    Route::post('/oso/remind/{activity}', [OfficePortalController::class, 'sendOrgReminder'])->name('oso.remind');
+    Route::post('/oso/remind/{activity}', [OfficePortalController::class, 'sendOrgReminder'])->middleware('throttle:5,1')->name('oso.remind');
     Route::get('/calendar', [OfficePortalController::class, 'calendar'])->name('calendar');
     Route::get('/budget-utilization', [OfficePortalController::class, 'budget'])->name('budget');
     Route::get('/budget-utilization/receipts/{review}/view', [OfficePortalController::class, 'viewReceipt'])->name('budget.receipts.view');
@@ -121,6 +128,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/financial-report/reports/{document}/preview', [SoFinancialReportController::class, 'preview'])->name('financial.reports.preview');
     Route::post('/financial-report/reports/{document}/submit', [SoFinancialReportController::class, 'submit'])->name('financial.reports.submit');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
+    Route::get('/tosa/{applicant}/documents/{key}', [OfficePortalController::class, 'downloadTosaDocument'])->name('tosa.documents.download');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
     Route::post('/updates/announcements', [OfficePortalController::class, 'storeAnnouncement'])->name('updates.announcements.store');
     Route::get('/updates/announcements/{announcement}/attachment', [OfficePortalController::class, 'downloadAnnouncementAttachment'])->name('updates.announcements.attachment');
@@ -131,9 +139,6 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/settings', [OfficePortalController::class, 'updateOsoSettings'])->name('settings.update');
     Route::post('/settings/account', [OfficePortalController::class, 'updateOsoAccount'])->name('settings.account');
     Route::post('/settings/password', [OfficePortalController::class, 'updateOsoPassword'])->name('settings.password');
-    Route::post('/settings/pin/{type?}', [OfficePortalController::class, 'updateOsoPin'])->name('settings.pin');
-    Route::post('/settings/tosa-pin/verify', [OfficePortalController::class, 'verifyOsoTosaPin'])->name('tosa.pin.verify');
-    Route::post('/settings/tosa-pin/lock', [OfficePortalController::class, 'lockOsoTosa'])->name('tosa.pin.lock');
     Route::post('/settings/logo', [OfficePortalController::class, 'storeOsoLogo'])->name('settings.logo');
     Route::delete('/settings/logo', [OfficePortalController::class, 'resetOsoLogo'])->name('settings.logo.reset');
     Route::post('/settings/users', [OfficeAccountController::class, 'store'])->name('settings.users.store');
@@ -151,14 +156,19 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::delete('/renewal/requirements/{docKey}', [OfficePortalController::class, 'destroyRenewalRequirement'])->name('renewal.requirements.destroy');
     Route::get('/renewal/requirements/{docKey}/file', [OfficePortalController::class, 'renewalRequirementFile'])->name('renewal.requirements.file');
     Route::post('/renewal/submit', [OfficePortalController::class, 'storeRenewalSubmission'])->name('renewal.submit');
+    Route::post('/renewal/information', [OrgRenewalInformationController::class, 'save'])->name('renewal.information.save');
     Route::get('/renewal/submissions/{submission}', [OfficePortalController::class, 'showRenewalSubmission'])->name('renewal.submissions.show');
     Route::post('/renewal/submissions/{submission}/review', [OfficePortalController::class, 'reviewRenewalSubmission'])->name('renewal.review');
     Route::post('/renewal/documents/{document}/review', [OfficePortalController::class, 'reviewRenewalDocument'])->name('renewal.documents.review');
     Route::get('/renewal/documents/{document}/file', [OfficePortalController::class, 'renewalDocumentFile'])->name('renewal.documents.file');
     Route::post('/renewal/organizations/{organization}/status', [OfficePortalController::class, 'updateOrganizationQualification'])->name('renewal.organization.status');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
-    Route::post('/tosa/requirements/template', [OfficePortalController::class, 'storeTosaRequirementTemplate'])->name('tosa.requirements.template');
+    Route::get('/tosa/workbook/reference', [TosaWorkbookController::class, 'officeReference'])->name('tosa.workbook.reference');
+    Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
     Route::post('/tosa/{applicant}/subsection', [OfficePortalController::class, 'updateTosaSubsection'])->name('tosa.subsection');
+    Route::post('/tosa/{applicant}/scoring', [TosaScoringController::class, 'save'])->name('tosa.scoring.save');
+    Route::get('/tosa/{applicant}/workbook', [TosaWorkbookController::class, 'office'])->name('tosa.workbook.show');
+    Route::get('/tosa/{applicant}/workbook/download', [TosaWorkbookController::class, 'officeDownload'])->name('tosa.workbook.download');
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
     Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');

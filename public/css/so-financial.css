@@ -24,6 +24,9 @@
 .fin-search { position:relative; }
 .fin-search i { position:absolute; left:0.7rem; top:50%; transform:translateY(-50%); color:#9a8f93; font-size:0.8rem; }
 .fin-search input { padding-left:2rem; width:15rem; max-width:100%; }
+.fin-history-filters { flex-basis:100%; display:grid; grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr)); width:100%; gap:.8rem; }
+.fin-history-filters .fin-search input { width:100%; padding-left:.8rem; }
+.fin-history-filters select { width:100%; }
 
 .fin-field-error { color:#b91c1c; font-size:0.76rem; font-weight:700; }
 
@@ -62,9 +65,11 @@
 .fin-chart-table th, .fin-chart-table td { padding:0.5rem 0.7rem; border-bottom:1px solid #f3eaec; text-align:left; }
 .fin-chart-table td { text-align:right; font-variant-numeric:tabular-nums; }
 
-.fin-empty { display:grid; justify-items:center; gap:0.3rem; padding:2rem 1rem; border:1px dashed #eadde0; border-radius:14px; background:#fffcfd; text-align:center; color:#6f6569; font-size:0.82rem; }
-.fin-empty i { font-size:1.7rem; color:#c9a6ad; }
+.fin-empty { display:grid; justify-items:center; gap:.5rem; padding:2rem 1rem; border:1px solid #f0e6e8; border-radius:14px; background:#fdf8fa; text-align:center; color:#6f6569; font-size:0.82rem; }
+.fin-empty>i { display:grid; place-items:center; width:46px; height:46px; border-radius:12px; background:#f9eaf0; font-size:1.35rem; color:#a82445; }
 .fin-empty strong { color:#1a1618; font-size:0.9rem; }
+.fin-empty>.org-btn { margin-top:.65rem; }
+.fin-empty>.org-btn i { font-size:inherit; color:inherit; }
 
 .fin-table-wrap { overflow-x:auto; border:1px solid #f3eaec; border-radius:14px; }
 .fin-table { width:100%; border-collapse:collapse; font-size:0.83rem; }
@@ -224,4 +229,11 @@
 
 @media (prefers-reduced-motion: reduce) {
     .fin-dialog::backdrop { backdrop-filter:none; }
+}
+@media (max-width:760px) {
+    .fin-history-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .fin-history-filters .fin-search { grid-column:1/-1; }
+}
+@media (max-width:420px) {
+    .fin-history-filters { grid-template-columns:1fr; }
 }

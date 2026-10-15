@@ -92,6 +92,9 @@
                     required: row.dataset.required === '1',
                     existing: row.dataset.existingFile === '1',
                     currentName: status ? (status.dataset.currentName || '') : '',
+                    currentLink: status ? status.querySelector('[data-current-file]')?.cloneNode(true) : null,
+                    selectedFile: null,
+                    selectedUrl: null,
                     title: titleEl ? cleanText(titleEl.textContent) : fieldLabel(input),
                     error: '',
                 };
@@ -123,6 +126,31 @@
             return state.existing;
         };
 
+        var clearSelectedPreview = function (state) {
+            if (!state.selectedUrl) return;
+            window.OfficeDocumentPreview?.closeForUrl(state.selectedUrl);
+            URL.revokeObjectURL(state.selectedUrl);
+            state.selectedUrl = null;
+            state.selectedFile = null;
+        };
+
+        var selectedLink = function (state, file) {
+            if (state.selectedFile !== file) {
+                clearSelectedPreview(state);
+                state.selectedFile = file;
+                state.selectedUrl = URL.createObjectURL(file);
+            }
+            var link = document.createElement('a');
+            link.href = state.selectedUrl;
+            link.textContent = file.name;
+            link.setAttribute('data-document-file', '');
+            link.dataset.documentPreviewType = file.name.split('.').pop().toLowerCase();
+            link.dataset.documentOriginalName = file.name;
+            link.dataset.documentConversionUrl = form.dataset.documentConversionUrl;
+            link.download = file.name;
+            return link;
+        };
+
         var renderRow = function (state) {
             var active = rowIsActive(state);
             var file = state.input.files.length ? state.input.files[0] : null;
@@ -143,12 +171,19 @@
                 state.uploadLabel.textContent = file || state.existing ? 'Replace file' : 'Upload file';
             }
             if (state.status) {
-                var text;
-                if (invalid) text = state.error;
-                else if (file) text = file.name + ' (' + formatSize(file.size) + ') — uploads when you submit';
-                else if (state.existing) text = state.currentName ? 'Current file: ' + state.currentName : 'Current file on record';
-                else text = 'No file selected';
-                state.status.textContent = text;
+                if (invalid) {
+                    clearSelectedPreview(state);
+                    state.status.textContent = state.error;
+                } else if (file) {
+                    state.status.replaceChildren(selectedLink(state, file), document.createTextNode(' (' + formatSize(file.size) + ') — uploads when you submit'));
+                } else {
+                    clearSelectedPreview(state);
+                    if (state.existing && state.currentLink) {
+                        state.status.replaceChildren(document.createTextNode('Current file: '), state.currentLink.cloneNode(true));
+                    } else {
+                        state.status.textContent = state.existing ? state.currentName || 'Current file on record' : 'No file selected';
+                    }
+                }
                 state.status.classList.toggle('is-error', invalid);
             }
         };
@@ -340,6 +375,9 @@
             if (event.persisted) updateReadiness();
         });
 
+        window.addEventListener('pagehide', function (event) {
+            if (!event.persisted) rows.forEach(clearSelectedPreview);
+        });
 
         var heightFrame = 0;
         var syncHeight = function () {

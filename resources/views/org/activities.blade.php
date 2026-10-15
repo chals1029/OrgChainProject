@@ -10,17 +10,14 @@
 @endphp
 
 @section('title', $selectedActivity
-    ? ($selectedActivity['title'] . ($isOso ? ' - Proposal Details' : ($isSdo ? ' - Document Review' : (($isOvcaa || $isOc) ? ' - Approval Details' : ' - Activity Details'))))
-    : ($isOso ? 'Proposals & Activity Reviews' : ($isSdo ? 'SDO Document Review' : ($isOvcaa ? 'OVCAA Review Queue' : ($isOc ? 'OC Final Approval Queue' : 'Activities')))))
+    ? ($selectedActivity['title'] . ($isSo ? ' - Activity Details' : ' - Proposal Details'))
+    : ($isOso ? 'Proposals & Activity Reviews' : ($isSo ? 'Activities' : 'Proposals')))
 
 @section('header')
     @if ($selectedActivity)
         <a href="{{ route('office.activities') }}" class="org-back-link">
             <i class="bi bi-arrow-left"></i>
-            @if ($isOso) Back to Proposals
-            @elseif ($isSdo) Back to SDO Document Review Queue
-            @elseif ($isOvcaa) Back to Final Approval Queue
-            @elseif ($isOc) Back to OC Final Approval Queue
+            @if (!$isSo) Back to Proposals
             @else Back to Activities
             @endif
         </a>
@@ -55,13 +52,13 @@
             <h1><strong>Proposals &amp; Activity Reviews</strong></h1>
             <p class="org-welcome">Review submitted student organization activity proposals, evaluate compliance documents, endorse workflows, or return for revision.</p>
         @elseif ($isSdo)
-            <h1><strong>SDO Document Review</strong></h1>
+            <h1><strong>Proposals</strong></h1>
             <p class="org-welcome">Review the organization-submitted DOCX files and Waste Policy Compliance Form (WPCF), then endorse the complete package to OVCAA. Objectives and SDGs are entered by the organization.</p>
         @elseif ($isOvcaa)
-            <h1><strong>OVCAA Review Queue</strong></h1>
+            <h1><strong>Proposals</strong></h1>
             <p class="org-welcome">Review SDO-verified activity proposals and endorse compliant packages to the Office of the Chancellor.</p>
         @elseif ($isOc)
-            <h1><strong>OC Final Approval Queue</strong></h1>
+            <h1><strong>Proposals</strong></h1>
             <p class="org-welcome">Review the complete OSO, SDO, and OVCAA-cleared activity package before granting the final university approval.</p>
         @else
             <h1><strong>Activities</strong></h1>
@@ -1190,14 +1187,30 @@
             background: #ffffff;
         }
 
-        .activity-document-preview-head,
-        .activity-document-preview-foot {
+        .activity-document-preview-head {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
             padding: 0.95rem 1.15rem;
             background: #ffffff;
+        }
+        .activity-document-preview-foot {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.65rem;
+            padding: 0.95rem 1.15rem;
+            background: #ffffff;
+        }
+        .activity-document-preview-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+        .activity-document-preview-foot [hidden] {
+            display: none;
         }
 
         .activity-document-preview-head {
@@ -1271,8 +1284,7 @@
             object-fit: contain;
         }
 
-        .activity-document-preview-loading,
-        .activity-document-preview-error {
+        .activity-document-preview-body .document-preview-message {
             display: grid;
             min-height: 330px;
             place-items: center;
@@ -1283,13 +1295,6 @@
             text-align: center;
         }
 
-        .activity-document-preview-loading i,
-        .activity-document-preview-error i {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #8b1828;
-            font-size: 1.4rem;
-        }
 
         .activity-document-preview-download {
             display: inline-flex;
@@ -1320,9 +1325,9 @@
             }
 
             .activity-document-preview-foot {
-                flex-wrap: wrap;
-                justify-content: flex-end;
+                padding: 0.65rem;
             }
+
         }
 
         /* Yellow Warning Box */
@@ -1601,15 +1606,6 @@
             }
         }
 
-        /* Responsive helpers for detail grids (SDO checklist, OVCAA trail) */
-        .org-sdo-checklist-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.65rem;
-            font-size: 0.82rem;
-            color: #44403c;
-        }
-
         .org-ovcaa-trail-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1617,10 +1613,6 @@
         }
 
         @media (max-width: 640px) {
-            .org-sdo-checklist-grid {
-                grid-template-columns: 1fr;
-            }
-
             .org-ovcaa-trail-grid {
                 grid-template-columns: 1fr;
             }
@@ -1798,23 +1790,22 @@
             </section>
 
             {{-- Section 2: Review Endorsement Section --}}
-            @if (($isOso || $isSdo) && $canAdvanceActivity)
-                <section class="org-detail-card" style="border: 1.5px solid {{ $isOso ? '#8b1828' : '#15803d' }}; background: #fffcfd;">
+            @if ($isOso && $canAdvanceActivity)
+                <section class="org-detail-card" style="border: 1.5px solid #8b1828; background: #fffcfd;">
                     <div class="org-card-title-row" style="margin-bottom: 1.15rem;">
-                        <div class="org-card-icon" style="background: {{ $isOso ? '#fdf0f2' : '#dcfce7' }}; color: {{ $isOso ? '#8b1828' : '#15803d' }};">
-                            <i class="bi {{ $isOso ? 'bi-shield-check' : 'bi-leaf-fill' }}"></i>
+                        <div class="org-card-icon" style="background: #fdf0f2; color: #8b1828;">
+                            <i class="bi bi-shield-check"></i>
                         </div>
                         <div>
                             <h2 style="font-size: 1.05rem; margin: 0; color: #1a1618;">
-                                {{ $isOso ? 'OSO Verification & Endorsement Checklist' : 'SDO Waste Policy & Environmental Review' }}
+                                OSO Verification &amp; Endorsement Checklist
                             </h2>
                             <span style="font-size: 0.78rem; color: #786f73;">
-                                {{ $isOso ? 'Mandatory compliance checks before advancing activity to SDO' : 'Verify waste management protocols before advancing to OVCAA' }}
+                                Mandatory compliance checks before advancing activity to SDO
                             </span>
                         </div>
                     </div>
 
-                    @if ($isOso)
                         {{-- Policy 1: Plan of Activities (Attachment I) Verification Box --}}
                         <div style="background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 14px; padding: 1.15rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
                             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 0.65rem;">
@@ -1822,16 +1813,22 @@
                                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #ea580c; color: #fff; font-size: 0.78rem; font-weight: 800;">1</span>
                                     <strong style="font-size: 0.92rem; color: #9a3412;">Plan of Activities Verification (Renewal Attachment I)</strong>
                                 </div>
+                                @if (!empty($selectedActivity['plan_document_url']))
                                 <button type="button"
                                     class="org-btn org-btn-ghost org-btn-sm"
                                     style="border-color: #fdba74; color: #c2410c; background: #fff7ed;"
-                                    data-activity-document-preview
-                                    data-doc-preview-url="{{ $selectedActivity['plan_document_url'] ?? '/templates/renewal/Attachment I_ Plan of Activities.pdf' }}"
-                                    data-doc-preview-title="{{ $selectedActivity['organization'] }} — Approved Plan of Activities (Attachment I)"
-                                    data-doc-preview-type="PDF"
-                                    data-doc-preview-download-url="{{ $selectedActivity['plan_document_url'] ?? '/templates/renewal/Attachment I_ Plan of Activities.pdf' }}">
+                                    data-document-preview
+                                    data-document-preview-url="{{ $selectedActivity['plan_document_url'] }}"
+                                    data-document-preview-title="{{ $selectedActivity['organization'] }} — Approved Plan of Activities (Attachment I)"
+                                    data-document-preview-type="{{ strtolower($selectedActivity['plan_document_type'] ?? '') }}"
+                                    data-document-original-name="{{ $selectedActivity['plan_document_name'] ?? '' }}"
+                                    data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
+                                    data-document-preview-download="{{ $selectedActivity['plan_document_url'] }}">
                                     <i class="bi bi-eye"></i> View Approved Plan of Activities (Attachment I)
                                 </button>
+                                @else
+                                    <span class="org-muted">No approved Attachment I document is available for this activity.</span>
+                                @endif
                             </div>
 
                             <div style="padding: 0.65rem 0.85rem; background: #fff7ed; border-radius: 8px; margin-bottom: 0.85rem; font-size: 0.84rem;">
@@ -1872,15 +1869,6 @@
                             OSO Review Notes / Endorsement Remarks (optional)
                             <textarea name="review_notes" form="activityAdvanceForm" rows="2" style="display: block; width: 100%; margin-top: 0.35rem; border-radius: 10px; border: 1.5px solid #e8dedf; padding: 0.65rem; font-size: 0.86rem; font-family: inherit;" maxlength="5000" placeholder="e.g., Verified against AY 2026-2027 Attachment I Item #2. Endorsed for environmental compliance check."></textarea>
                         </label>
-                    @else
-                        {{-- SDO Desk --}}
-                        <label style="display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.88rem; color: #1e293b; cursor: pointer;">
-                            <input type="checkbox" name="documents_reviewed" value="1" required form="activityAdvanceForm" style="margin-top: 0.2rem; transform: scale(1.15);">
-                            <span>
-                                I have opened and checked the submitted DOCX files and Waste Policy Compliance Form (WPCF), confirming environmental compliance.
-                            </span>
-                        </label>
-                    @endif
                 </section>
             @endif
             <section class="org-detail-card">
@@ -1934,11 +1922,13 @@
                                         <button
                                             type="button"
                                             class="doc-action-btn"
-                                            data-activity-document-preview
-                                            data-doc-preview-url="{{ $doc['url'] }}"
-                                            data-doc-preview-title="{{ $doc['name'] }}"
-                                            data-doc-preview-type="{{ strtoupper($doc['type']) }}"
-                                            data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"
+                                            data-document-preview
+                                            data-document-preview-url="{{ $doc['url'] }}"
+                                            data-document-preview-title="{{ $doc['name'] }}"
+                                            data-document-preview-type="{{ strtolower($doc['type']) }}"
+                                            data-document-original-name="{{ $doc['filename'] ?? $doc['name'] }}"
+                                            data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
+                                            data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"
                                             aria-label="Preview {{ $doc['name'] }}"
                                         >
                                             <i class="bi bi-eye-fill"></i> Preview
@@ -1982,198 +1972,54 @@
                 </div>
             </section>
 
+            @if ($isSdo && $canAdvanceActivity)
+                <section class="org-detail-card" id="sdoReviewChecklist" aria-labelledby="sdoReviewChecklistTitle" style="background:#f0fdf4;border-color:#bbf7d0;">
+                    <div class="org-card-title-row">
+                        <div class="org-card-icon" style="background:#dcfce7;color:#15803d;">
+                            <i class="bi bi-file-earmark-check-fill"></i>
+                        </div>
+                        <div>
+                            <h2 id="sdoReviewChecklistTitle">SDO Waste Policy &amp; Environmental Review</h2>
+                            <p style="margin:.25rem 0 0;font-size:.78rem;color:#64748b;">Verify the submitted documents before endorsing to OVCAA.</p>
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:flex-start;gap:.65rem;font-size:.88rem;color:#1e293b;cursor:pointer;">
+                        <input type="checkbox" name="documents_reviewed" value="1" required form="activityAdvanceForm" style="margin-top:.2rem;">
+                        <span>I have opened and checked the submitted DOCX files and Waste Policy Compliance Form (WPCF), confirming environmental compliance.</span>
+                    </label>
+                </section>
+            @endif
+
         </div>
 
         {{-- Document preview modal. The original response is fetched as a blob
              so Word files render here instead of navigating to a download. --}}
-        <dialog class="activity-document-preview-dialog" id="activityDocumentPreviewModal" aria-labelledby="activityDocumentPreviewTitle">
+        <dialog class="activity-document-preview-dialog" id="activityDocumentPreviewModal" data-document-preview-dialog aria-labelledby="activityDocumentPreviewTitle">
             <div class="activity-document-preview-box">
                 <div class="activity-document-preview-head">
                     <div>
-                        <strong id="activityDocumentPreviewTitle"><i class="bi bi-file-earmark-richtext"></i> Document preview</strong>
-                        <small id="activityDocumentPreviewStatus" aria-live="polite">Loading the original submitted document…</small>
+                        <strong id="activityDocumentPreviewTitle" data-document-preview-title>Document preview</strong>
+                        <small id="activityDocumentPreviewStatus" data-document-preview-status aria-live="polite">Loading the original submitted document…</small>
                     </div>
-                    <button type="button" class="activity-document-preview-close" data-activity-document-preview-close aria-label="Close document preview">&times;</button>
+                    <button type="button" class="activity-document-preview-close" data-document-preview-close aria-label="Close document preview">&times;</button>
                 </div>
-                <div class="activity-document-preview-body" id="activityDocumentPreviewBody">
-                    <div class="activity-document-preview-loading"><div><i class="bi bi-hourglass-split"></i>Loading document…</div></div>
+                <div class="activity-document-preview-body" id="activityDocumentPreviewBody" data-document-preview-body>
                 </div>
                 <div class="activity-document-preview-foot">
-                    <button type="button" class="org-btn org-btn-outline" data-activity-document-preview-close>Close</button>
-                    <a class="activity-document-preview-download" id="activityDocumentPreviewDownload" href="#" download>
-                        <i class="bi bi-download"></i> Download original
-                    </a>
+                    <a class="org-btn org-btn-outline" data-document-preview-external href="#" target="_blank" rel="noopener" hidden>Open in Tab</a>
+                    <div class="activity-document-preview-actions">
+                        <button type="button" class="org-btn org-btn-outline" data-document-preview-close>Close</button>
+                        <a class="activity-document-preview-download" id="activityDocumentPreviewDownload" data-document-preview-download href="#" download>
+                            <i class="bi bi-download"></i> Download original
+                        </a>
+                    </div>
                 </div>
             </div>
         </dialog>
 
         <script src="{{ asset('js/vendor/jszip.min.js') }}"></script>
         <script src="{{ asset('js/vendor/docx-preview.min.js') }}"></script>
-        <script>
-            (function () {
-                const modal = document.getElementById('activityDocumentPreviewModal');
-                const body = document.getElementById('activityDocumentPreviewBody');
-                const title = document.getElementById('activityDocumentPreviewTitle');
-                const status = document.getElementById('activityDocumentPreviewStatus');
-                const download = document.getElementById('activityDocumentPreviewDownload');
-                let activeTrigger = null;
-                let objectUrl = null;
-                let requestId = 0;
-
-                if (!modal || !body || !title || !status || !download) return;
-
-                const revokeObjectUrl = () => {
-                    if (objectUrl) {
-                        URL.revokeObjectURL(objectUrl);
-                        objectUrl = null;
-                    }
-                };
-
-                const extensionFrom = (url, fallback = '') => {
-                    try {
-                        const pathname = new URL(url, window.location.href).pathname;
-                        return pathname.split('.').pop().toLowerCase() || fallback.toLowerCase();
-                    } catch (error) {
-                        return fallback.toLowerCase();
-                    }
-                };
-
-                const showMessage = (message, error = false) => {
-                    body.replaceChildren();
-                    const wrapper = document.createElement('div');
-                    wrapper.className = `activity-document-preview-${error ? 'error' : 'loading'}`;
-                    const content = document.createElement('div');
-                    const icon = document.createElement('i');
-                    icon.className = `bi ${error ? 'bi-exclamation-triangle' : 'bi-hourglass-split'}`;
-                    const text = document.createElement('span');
-                    text.textContent = message;
-                    content.append(icon, text);
-                    wrapper.appendChild(content);
-                    body.appendChild(wrapper);
-                };
-
-                const renderDocument = async (url, type) => {
-                    revokeObjectUrl();
-                    body.replaceChildren();
-
-                    const response = await fetch(url, {
-                        credentials: 'same-origin',
-                        headers: {
-                            Accept: 'application/octet-stream, application/pdf, image/*, application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        },
-                    });
-                    if (!response.ok) throw new Error(`Preview request failed (${response.status}).`);
-
-                    const blob = await response.blob();
-                    const contentType = (response.headers.get('content-type') || '').split(';')[0].toLowerCase();
-                    const extension = extensionFrom(url, type);
-                    const isPdf = contentType === 'application/pdf' || extension === 'pdf';
-                    const isImage = contentType.startsWith('image/');
-                    const isDocx = contentType.includes('wordprocessingml') || extension === 'docx';
-                    const isLegacyDoc = !isDocx && (extension === 'doc' || contentType.includes('msword'));
-
-                    if (isPdf) {
-                        objectUrl = URL.createObjectURL(blob);
-                        const frame = document.createElement('iframe');
-                        frame.src = objectUrl;
-                        frame.title = 'PDF document preview';
-                        frame.loading = 'lazy';
-                        body.appendChild(frame);
-                        return 'PDF';
-                    }
-
-                    if (isImage) {
-                        objectUrl = URL.createObjectURL(blob);
-                        const image = document.createElement('img');
-                        image.src = objectUrl;
-                        image.alt = 'Submitted document preview';
-                        body.appendChild(image);
-                        return 'image';
-                    }
-
-                    if (isLegacyDoc) {
-                        throw new Error('Legacy .doc files cannot be rendered in the browser.');
-                    }
-
-                    if (!isDocx || !window.docx || typeof window.docx.renderAsync !== 'function') {
-                        throw new Error('This file type is download-only in the browser.');
-                    }
-
-                    await window.docx.renderAsync(blob, body, null, {
-                        breakPages: true,
-                        ignoreWidth: false,
-                        ignoreHeight: false,
-                        renderHeaders: true,
-                        renderFooters: true,
-                        renderFootnotes: true,
-                        useBase64URL: true,
-                    });
-                    return 'DOCX';
-                };
-
-                const closePreview = () => {
-                    requestId += 1;
-                    revokeObjectUrl();
-                    if (modal.open) modal.close();
-                    if (activeTrigger) activeTrigger.focus();
-                    activeTrigger = null;
-                };
-
-                const openPreview = async (trigger) => {
-                    const url = trigger.dataset.docPreviewUrl;
-                    if (!url) return;
-
-                    activeTrigger = trigger;
-                    const currentRequestId = ++requestId;
-                    const documentName = trigger.dataset.docPreviewTitle || 'Submitted document';
-                    const documentType = trigger.dataset.docPreviewType || '';
-                    title.replaceChildren();
-                    const icon = document.createElement('i');
-                    icon.className = 'bi bi-file-earmark-richtext';
-                    title.append(icon, document.createTextNode(` ${documentName}`));
-                    status.textContent = `Loading ${documentType || 'file'} from the original submission…`;
-                    download.href = trigger.dataset.docPreviewDownloadUrl || url;
-                    download.setAttribute('download', '');
-                    showMessage('Loading document…');
-                    if (!modal.open) modal.showModal();
-
-                    try {
-                        const renderedType = await renderDocument(url, documentType);
-                        if (currentRequestId !== requestId) return;
-                        status.textContent = renderedType === 'DOCX'
-                            ? 'Rendered from the original DOCX submission.'
-                            : 'Rendered from the original submitted file.';
-                    } catch (error) {
-                        if (currentRequestId !== requestId) return;
-                        status.textContent = 'Preview is not available for this file type.';
-                        showMessage(`${error.message} Use Download original below to open it in the appropriate app.`, true);
-                    }
-                };
-
-                document.addEventListener('click', (event) => {
-                    const trigger = event.target.closest?.('[data-activity-document-preview]');
-                    if (trigger) {
-                        event.preventDefault();
-                        openPreview(trigger);
-                        return;
-                    }
-
-                    if (event.target.closest?.('[data-activity-document-preview-close]')) {
-                        closePreview();
-                    }
-                });
-
-                modal.addEventListener('click', (event) => {
-                    if (event.target === modal) closePreview();
-                });
-
-                modal.addEventListener('close', () => {
-                    requestId += 1;
-                    revokeObjectUrl();
-                    body.replaceChildren();
-                });
-            })();
-        </script>
+        <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}"></script>
 
         {{-- Return For Revision Modal --}}
         <div id="returnRevisionModal" class="org-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">

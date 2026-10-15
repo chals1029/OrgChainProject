@@ -7,6 +7,8 @@ use App\Models\InCampusActivitySubmission;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
 use App\Models\StudentOrganization;
+use App\Services\ApprovedPlanOfActivitiesService;
+use Tests\Support\CreatesApprovedActivityPlan;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,9 +20,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 class ActivityChecklistSubmissionTest extends TestCase
 {
     use UsesLaragonDatabase;
+    use CreatesApprovedActivityPlan;
 
     private StudentOrganization $organization;
     private array $offices;
+    private array $planFiles = [];
 
     protected function setUp(): void
     {
@@ -30,6 +34,7 @@ class ActivityChecklistSubmissionTest extends TestCase
             DB::connection($connection)->beginTransaction();
         }
         Storage::fake('public');
+        Storage::fake('local');
         $this->organization = StudentOrganization::create([
             'name' => 'Checklist Fixture '.Str::uuid(),
             'college' => 'Checklist Test College',
@@ -103,7 +108,8 @@ class ActivityChecklistSubmissionTest extends TestCase
             $this->assertStoredDocument($submission->attachments[$key]['path']);
             $this->assertSame($key.'.pdf', $submission->attachments[$key]['name']);
         }
-        $this->assertCount(count($coreKeys), Storage::disk('public')->allFiles());
+        $this->assertCount(count($coreKeys) + count($this->planFiles), Storage::disk('local')->allFiles());
+        $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertEqualsCanonicalizing(
             $coreKeys,
             ActivityComplianceDoc::where('org_activity_id', $activity->id)->pluck('doc_key')->all(),
@@ -152,8 +158,8 @@ class ActivityChecklistSubmissionTest extends TestCase
         $submission = InCampusActivitySubmission::where('org_activity_id', $activity->id)->sole();
         $lostKey = $coreKeys[0];
         $lostPath = $submission->attachments[$lostKey]['path'];
-        $disk = Storage::disk('public');
-        $revised = ['title' => $title.' revised', 'location' => 'Revised venue'] + $payload;
+        $disk = Storage::disk('local');
+        $revised = ['location' => 'Revised venue'] + $this->payload($type, $title.' revised');
         $corruptions = [
             'missing' => function () use ($disk, $lostPath): void {
                 $disk->delete($lostPath);
@@ -247,7 +253,7 @@ class ActivityChecklistSubmissionTest extends TestCase
             'resolution' => 'Resolution of the Organization.docx',
             'faculty_in_charge' => 'Faculty-in-Charge.docx',
             'sample_letter' => 'Sample Letter.docx',
-            'wpcf' => 'Waste Policy Compliance Form (WPCF).doc',
+            'wpcf' => 'Waste Policy Compliance Form (WPCF).docx',
         ] : [
             'course_activities' => 'Course Activities.docx',
             'off_campus_req' => 'Request for Conduct of Local Off-Campus Activities (FO-REQ-09).docx',
@@ -290,12 +296,96 @@ class ActivityChecklistSubmissionTest extends TestCase
         ]))->assertNotFound();
     }
 
+    public function test_zero_budget_and_server_derived_title_reference_are_saved(): void
+    {
+        $title = 'Approved Sustainability Workshop';
+        $payload = $this->payload('in_campus', $title);
+        $option = app(ApprovedPlanOfActivitiesService::class)->resolve($this->organization->name, $payload['plan_activity_key']);
+        $this->actingAs($this->offices['so'], 'office')->post(route('office.activities.store'), [
+            'title' => 'Unapproved spoofed title', 'plan_reference' => 'Unapproved spoofed reference',
+            'approved_budget' => '0',
+        ] + $payload + ['attachments' => $this->checklistFiles(array_keys(self::documentChecklists()['in-campus'][1]))])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $activity = OrgActivity::where('organization_name', $this->organization->name)->sole();
+        $this->assertSame($title, $activity->title);
+        $this->assertEquals(0, $activity->approved_budget);
+        $attachments = InCampusActivitySubmission::where('org_activity_id', $activity->id)->sole()->attachments;
+        $this->assertSame($option['reference'], $attachments['plan_reference']);
+        $this->assertSame($option['key'], $attachments['plan_activity_key']);
+        $this->assertSame($option['document_id'], $attachments['plan_source_document_id']);
+        $this->assertSame($option['document_version'], $attachments['plan_source_version']);
+    }
+
+    public function test_oversized_authoritative_title_returns_validation_without_saving_an_activity(): void
+    {
+        $title = str_repeat('É', 256);
+        $payload = $this->payload('in_campus', $title);
+        $this->actingAs($this->offices['so'], 'office')
+            ->post(route('office.activities.store'), $payload + [
+                'attachments' => $this->checklistFiles(array_keys(self::documentChecklists()['in-campus'][1])),
+            ])
+            ->assertSessionHasErrors('plan_activity_key');
+        $this->assertFalse(OrgActivity::where('organization_name', $this->organization->name)->exists());
+        $this->assertFalse(InCampusActivitySubmission::where('organization_name', $this->organization->name)->exists());
+    }
+
+    public function test_negative_budget_foreign_stale_and_tampered_plan_keys_save_nothing(): void
+    {
+        $title = 'Approved Budget Validation Workshop';
+        $payload = $this->payload('in_campus', $title);
+        $files = $this->checklistFiles(array_keys(self::documentChecklists()['in-campus'][1]));
+        $this->actingAs($this->offices['so'], 'office')->post(route('office.activities.store'), ['approved_budget' => '-0.01'] + $payload + ['attachments' => $files])
+            ->assertSessionHasErrors('approved_budget');
+        $this->assertNothingSaved($title);
+        $window = \App\Models\OrgRenewalWindow::latest('id')->firstOrFail();
+        $foreign = $this->approvedActivityPlan('Another organization', ['Foreign Workshop'], $window);
+        foreach ([$foreign['options'][0]['key'], str_repeat('f', 64), ''] as $key) {
+            $this->post(route('office.activities.store'), ['plan_activity_key' => $key] + $payload + ['attachments' => $files])
+                ->assertSessionHasErrors('plan_activity_key');
+        }
+        $document = \App\Models\OrgRenewalDocument::where('doc_key', 'plan_of_activities')
+            ->whereHas('submission', fn ($query) => $query->where('organization_name', $this->organization->name))->sole();
+        Storage::disk('local')->put($document->file_path, $this->activityPlanDocx([$title.' changed']));
+        $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+            ->assertSessionHasErrors('plan_activity_key');
+        $this->approvedActivityPlan($this->organization->name, [$title]);
+        $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+            ->assertSessionHasErrors('plan_activity_key');
+        $this->assertFalse(OrgActivity::where('organization_name', $this->organization->name)->exists());
+    }
+
+    public function test_real_table_rows_join_multiline_titles_keep_duplicates_and_reject_blank_templates(): void
+    {
+        $plan = $this->approvedActivityPlan($this->organization->name, ["Sustainability\nWorkshop", 'Sustainability Workshop']);
+        $this->assertSame(['Sustainability Workshop', 'Sustainability Workshop'], array_column($plan['options'], 'title'));
+        $this->assertNotSame($plan['options'][0]['key'], $plan['options'][1]['key']);
+        Storage::disk('local')->put($plan['document']->file_path, file_get_contents(public_path('templates/renewal/Attachment I_ Plan of Activities.docx')));
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(ApprovedPlanOfActivitiesService::class)->options($this->organization->name);
+    }
+
+    public function test_pdf_plan_uses_actual_table_titles_and_a_textless_pdf_has_no_fallback(): void
+    {
+        $plan = $this->approvedActivityPlan($this->organization->name, ['Initial DOCX Activity']);
+        $path = 'renewal-fixtures/'.$plan['submission']->id.'/Attachment I.pdf';
+        Storage::disk('local')->put($path, $this->activityPlanPdf(["Sustainability\nWorkshop", 'Sustainability Workshop']));
+        $plan['document']->update(['file_path' => $path, 'file_name' => 'Attachment I.pdf']);
+        $options = app(ApprovedPlanOfActivitiesService::class)->options($this->organization->name);
+        $this->assertSame(['Sustainability Workshop', 'Sustainability Workshop'], array_column($options, 'title'));
+        $this->assertNotSame($options[0]['key'], $options[1]['key']);
+        Storage::disk('local')->put($path, $this->activityPlanPdf([], false));
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(ApprovedPlanOfActivitiesService::class)->options($this->organization->name);
+    }
+
     private function payload(string $type, string $title): array
     {
+        $plan = $this->approvedActivityPlan($this->organization->name, [$title]);
+        $this->planFiles = Storage::disk('local')->allFiles();
         return [
             'submission_action' => 'submit',
             'activity_type' => $type,
-            'title' => $title,
+            'plan_activity_key' => $plan['options'][0]['key'],
             'location' => 'Campus',
             'approved_budget' => '1000.00',
             'starts_at' => now()->addWeek()->format('Y-m-d').' 09:00:00',
@@ -324,7 +414,7 @@ class ActivityChecklistSubmissionTest extends TestCase
 
     private function assertStoredDocument(string $path): void
     {
-        $disk = Storage::disk('public');
+        $disk = Storage::disk('local');
         $disk->assertExists($path);
         $this->assertTrue($disk->fileExists($path), "{$path} is not a stored file.");
         $this->assertGreaterThan(0, $disk->size($path), "{$path} is empty.");
@@ -335,7 +425,7 @@ class ActivityChecklistSubmissionTest extends TestCase
         $this->assertFalse(OrgActivity::where('title', $title)->exists());
         $this->assertFalse(OrgActivity::where('organization_name', $this->organization->name)->exists());
         $this->assertFalse(InCampusActivitySubmission::where('organization_name', $this->organization->name)->exists());
-        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertEqualsCanonicalizing($this->planFiles, Storage::disk('local')->allFiles());
     }
 
     public static function documentChecklists(): array
@@ -351,7 +441,7 @@ class ActivityChecklistSubmissionTest extends TestCase
                 'resolution' => '7. Resolution of the Organization .docx',
                 'faculty_in_charge' => '14. Faculty-In-Charge.docx',
                 'sample_letter' => 'Sample Letter.docx',
-                'wpcf' => 'Waste-Policy-Compliance-Form-2026 (1).doc',
+                'wpcf' => 'Waste-Policy-Compliance-Form-2026 (1).docx',
             ]],
             'off-campus' => ['local_off_campus', [
                 'course_activities' => '13. Course Activities (1).docx',

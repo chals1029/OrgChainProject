@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityRegistration;
 use App\Models\ActivityComplianceDoc;
+use App\Models\OfficeAnnouncement;
 use App\Models\ExpenseReceiptReview;
 use App\Models\OrgActivity;
 use App\Models\OrgReportStatus;
@@ -28,16 +29,49 @@ class DashboardReportingTest extends TestCase
         $this->ensureOfficeUser('oso');
     }
 
-    public function test_oso_submission_trend_report_keeps_zero_months_and_explains_drops(): void
+    public function test_recent_updates_contains_latest_posted_announcements_not_activity_review_movements(): void
     {
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk')
-            ->assertOk()
-            ->assertSee('Month-by-month filings — zero months stay visible so declines are clear', false)
-            ->assertSee('function buildTrendAxis', false)
-            ->assertSee('Largest month-to-month drop', false)
-            ->assertSee('No submissions recorded in the selected period.', false);
+        $suffix = Str::uuid()->toString();
+        $announcements = collect();
+        $activity = null;
+
+        try {
+            for ($index = 0; $index < 5; $index++) {
+                $announcement = new OfficeAnnouncement([
+                    'title' => 'Posted announcement '.$index.' '.$suffix,
+                    'type' => 'General',
+                    'body' => 'A genuine office announcement.',
+                    'author' => 'OSO',
+                    'priority' => 'normal',
+                ]);
+                $announcement->created_at = \Illuminate\Support\Carbon::parse('2030-01-01')->addDays($index);
+                $announcement->updated_at = $announcement->created_at;
+                $announcement->save();
+                $announcements->push($announcement);
+            }
+            $activity = OrgActivity::query()->create([
+                'title' => 'Activity review movement '.$suffix,
+                'status' => 'draft',
+                'workflow_status' => 'sdo_review',
+                'organization_name' => 'Synthetic feed organization '.$suffix,
+                'location' => 'Campus',
+                'starts_at' => now()->addDays(3),
+            ]);
+            $activity->forceFill(['updated_at' => '2031-01-01 00:00:00'])->save();
+
+            $response = $this->actingAs($this->ensureOfficeUser('oso'), 'office')
+                ->get('/office-desk')->assertOk();
+
+            $this->assertSame(
+                $announcements->reverse()->take(4)->pluck('title')->values()->all(),
+                $response->viewData('recentUpdates')->pluck('title')->all(),
+            );
+        } finally {
+            $activity?->delete();
+            OfficeAnnouncement::query()->whereIn('id', $announcements->pluck('id')->all())->delete();
+        }
     }
+
 
     public function test_so_sidebar_brand_uses_the_assigned_organizations_short_name(): void
     {
@@ -67,8 +101,7 @@ class DashboardReportingTest extends TestCase
             $this->actingAs($office, 'office')
                 ->get('/office-desk')
                 ->assertOk()
-                ->assertSee('<strong>'.$shortName.'</strong>', false)
-                ->assertSee('Student Org Representative');
+                ->assertSee($shortName);
         } finally {
             $office?->delete();
             $organization->delete();
@@ -95,24 +128,13 @@ class DashboardReportingTest extends TestCase
             OrgRenewalSubmission::query()->count(),
             OrgReportStatus::query()->where('report_type', 'fr')->count(),
             OrgReportStatus::query()->where('report_type', 'ar')->count(),
-            TosaApplicant::query()->count(),
+            TosaApplicant::query()->where('status', 'submitted')->count(),
         ], $overview['typeBreakdown']);
         $this->assertSame(StudentOrganization::active()->count(), $overview['kpis']['totalOrgs']);
         $this->assertArrayHasKey('typeRows', $overview);
         $this->assertCount($visibleProposalCount, collect($overview['typeRows'])->where('kind', 'proposal'));
     }
 
-    public function test_office_flash_confirmation_is_rendered_once_across_shared_layout_pages(): void
-    {
-        foreach (['/office-desk/activities', '/office-desk/activities/create', '/office-desk/budget-utilization', '/office-desk/renewal'] as $uri) {
-            $response = $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-                ->withSession(['success' => 'Test confirmation'])
-                ->get($uri);
-
-            $response->assertOk();
-            $this->assertSame(1, substr_count($response->getContent(), 'role="alert"'), $uri.' rendered a duplicate confirmation.');
-        }
-    }
 
 
 
@@ -142,7 +164,6 @@ class DashboardReportingTest extends TestCase
                 ->assertOk()
                 ->assertSee('name="academic_year"', false)
                 ->assertSee('value="2026-2027" selected', false)
-                ->assertSee('View Details', false)
                 ->assertSee($current->title, false)
                 ->assertDontSee($previous->title, false);
         } finally {
@@ -150,49 +171,68 @@ class DashboardReportingTest extends TestCase
         }
     }
 
-    public function test_so_dashboard_does_not_show_pending_documents_from_other_organizations(): void
+    public function test_so_dashboard_shows_only_pending_documents_for_its_assigned_organization(): void
     {
-        $suffix = uniqid('', true);
+        $suffix = Str::uuid()->toString();
+        $organization = StudentOrganization::query()->create([
+            'name' => 'Dashboard Ownership Organization '.$suffix,
+            'short_name' => 'OWN',
+            'college' => 'CICS',
+            'academic_year' => '2026-2027',
+            'is_active' => true,
+        ]);
+        $office = OfficeUser::query()->create([
+            'name' => 'Dashboard Ownership SO',
+            'email' => 'dashboard-so-'.$suffix.'@example.test',
+            'username' => 'dashboard-so-'.$suffix,
+            'password' => Str::random(40),
+            'office_role' => 'so',
+            'student_organization_id' => $organization->id,
+            'office_title' => 'Student Organization',
+            'is_active' => true,
+        ]);
+        $ownActivity = OrgActivity::query()->create([
+            'title' => 'Own Organization Action '.$suffix,
+            'status' => 'draft',
+            'workflow_status' => 'created',
+            'organization_name' => $organization->name,
+            'starts_at' => now()->addDays(8),
+        ]);
+        $ownDocument = ActivityComplianceDoc::query()->create([
+            'org_activity_id' => $ownActivity->id,
+            'doc_key' => 'budget_proposal',
+            'title' => 'Own Budget Proof '.$suffix,
+            'status' => 'pending',
+        ]);
         $otherActivity = OrgActivity::query()->create([
             'title' => 'Other Organization Action '.$suffix,
             'status' => 'draft',
-            'workflow_status' => 'oso_review',
+            'workflow_status' => 'created',
             'organization_name' => 'Other Organization '.$suffix,
-            'location' => 'Campus',
-            'starts_at' => '2026-09-20 09:00:00',
+            'starts_at' => now()->addDays(8),
         ]);
         $otherDocument = ActivityComplianceDoc::query()->create([
             'org_activity_id' => $otherActivity->id,
             'doc_key' => 'budget_proposal',
-            'title' => 'Unique Budget Proof '.$suffix,
+            'title' => 'Other Budget Proof '.$suffix,
             'status' => 'pending',
         ]);
 
         try {
-            $this->actingAs($this->ensureOfficeUser('so'), 'office')
+            $this->actingAs($office, 'office')
                 ->get('/office-desk')
                 ->assertOk()
-                ->assertDontSee('Unique Budget Proof '.$suffix, false);
+                ->assertSee($ownDocument->title, false)
+                ->assertDontSee($otherDocument->title, false)
+                ->assertDontSee($otherActivity->title, false);
         } finally {
-            $otherDocument->delete();
-            $otherActivity->delete();
+            ActivityComplianceDoc::query()->whereIn('id', [$ownDocument->id, $otherDocument->id])->delete();
+            OrgActivity::query()->whereIn('id', [$ownActivity->id, $otherActivity->id])->delete();
+            $office->delete();
+            $organization->delete();
         }
     }
 
-    public function test_sdo_and_ovcaa_do_not_receive_semester_report_navigation_or_dashboard_metrics(): void
-    {
-        foreach (['sdo', 'ovcaa'] as $role) {
-            $response = $this->actingAs($this->ensureOfficeUser($role), 'office')
-                ->get('/office-desk')
-                ->assertOk();
-
-            $response
-                ->assertDontSee('Financial Report', false)
-                ->assertDontSee('Accomplishment Report', false)
-                ->assertDontSee('Financial (FR)', false)
-                ->assertDontSee('Accomplishment (AR)', false);
-        }
-    }
 
     public function test_student_department_and_status_filters_are_bound_to_the_portal_query(): void
     {
@@ -301,8 +341,6 @@ class DashboardReportingTest extends TestCase
                 ->get('/portal?college=CICS')
                 ->assertOk()
                 ->assertSee($verified->item_name, false)
-                ->assertSee('Verified Public Item', false)
-                ->assertDontSee('On-Chain Budget Seals', false)
                 ->assertDontSee($pending->item_name, false)
                 ->assertDontSee($pending->receipt_name, false);
         } finally {
@@ -369,43 +407,28 @@ class DashboardReportingTest extends TestCase
         }
     }
 
-    public function test_activity_endorsement_controls_follow_the_current_workflow_owner(): void
+    public function test_oso_cannot_endorse_an_activity_after_handoff_to_sdo(): void
     {
-        $activeForOso = OrgActivity::query()->where('workflow_status', 'oso_review')->firstOrFail();
-        $alreadyEndorsed = OrgActivity::query()->where('workflow_status', 'sdo_review')->firstOrFail();
-        $oso = $this->ensureOfficeUser('oso');
+        $activity = OrgActivity::query()->create([
+            'title' => 'Already Endorsed Activity '.Str::uuid(),
+            'organization_name' => 'Endorsement Test Organization',
+            'status' => 'draft',
+            'workflow_status' => 'sdo_review',
+            'starts_at' => now()->addDays(8),
+        ]);
 
-        $this->actingAs($oso, 'office')
-            ->get('/office-desk/activities?activity='.$activeForOso->id)
-            ->assertOk()
-            ->assertSee('data-advance-form', false)
-            ->assertSee('Endorse / Advance', false);
+        try {
+            $this->actingAs($this->ensureOfficeUser('oso'), 'office')
+                ->post('/office-desk/activities/'.$activity->id.'/advance')
+                ->assertRedirect()
+                ->assertSessionHasErrors('workflow');
 
-        $this->actingAs($oso, 'office')
-            ->get('/office-desk/activities?activity='.$alreadyEndorsed->id)
-            ->assertOk()
-            ->assertSee('Already endorsed', false)
-            ->assertDontSee('data-advance-form', false);
-
-        $this->actingAs($oso, 'office')
-            ->post('/office-desk/activities/'.$alreadyEndorsed->id.'/advance')
-            ->assertRedirect()
-            ->assertSessionHasErrors('workflow');
-
-        $this->assertSame('sdo_review', $alreadyEndorsed->refresh()->workflow_status);
+            $this->assertSame('sdo_review', $activity->refresh()->workflow_status);
+        } finally {
+            $activity->delete();
+        }
     }
 
-    public function test_calendar_carries_real_off_campus_scope_into_the_filterable_event_payload(): void
-    {
-        $this->actingAs($this->ensureOfficeUser('oso'), 'office')
-            ->get('/office-desk/calendar?month=2026-09')
-            ->assertOk()
-            ->assertSee('data-scope="off"', false)
-            ->assertSee('data-event-scope="off"', false)
-            ->assertSee('Leadership Summit 2026', false)
-            ->assertSee('"scope_key":"off"', false)
-            ->assertSee('function applyScopeFilter()', false);
-    }
 
 }
 

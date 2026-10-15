@@ -1,0 +1,34 @@
+# Use with the existing infra/besu/docker-compose.yml and its private .env.
+# Only RPC on loopback is published; validator P2P remains inside Docker.
+x-vps-node: &vps-node
+  image: hyperledger/besu@sha256:6f3f21ce533383fcc8db3bce02252b59d5a9e776b72b5a1c8ecd2db011600042
+  user: '1000:1000'
+  environment:
+    JAVA_OPTS: -Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m
+  mem_limit: 1g
+  memswap_limit: 1280m
+  cpus: 0.5
+  cpu_shares: 256
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+
+services:
+  node-1:
+    <<: *vps-node
+    ports: !override
+      - '127.0.0.1:8545:8545'
+  node-2:
+    <<: *vps-node
+    ports: !override
+      - '127.0.0.1:8546:8545'
+  node-3:
+    <<: *vps-node
+    ports: !override
+      - '127.0.0.1:8547:8545'
+  node-4:
+    <<: *vps-node
+    ports: !override
+      - '127.0.0.1:8548:8545'

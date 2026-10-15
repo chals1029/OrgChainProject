@@ -24,6 +24,29 @@ class RenewalAccessTest extends TestCase
         $this->get('/office-desk/renewal')->assertRedirect();
     }
 
+    public function test_guest_cannot_save_renewal_information(): void
+    {
+        $this->postJson(route('office.renewal.information.save'), [
+            'window_id' => 1,
+            'organization_name' => 'Unassigned organization',
+            'adviser_name' => 'Adviser',
+            'dean_name' => 'Dean',
+        ])->assertUnauthorized();
+    }
+
+    public function test_only_so_can_save_renewal_information(): void
+    {
+        foreach (['oso', 'sdo'] as $role) {
+            $this->actingAs($this->ensureOfficeUser($role), 'office')
+                ->postJson(route('office.renewal.information.save'), [
+                    'window_id' => 1,
+                    'organization_name' => 'Unassigned organization',
+                    'adviser_name' => 'Adviser',
+                    'dean_name' => 'Dean',
+                ])->assertForbidden();
+        }
+    }
+
     public function test_sdo_receives_forbidden_on_renewal(): void
     {
         $user = $this->ensureOfficeUser('sdo');

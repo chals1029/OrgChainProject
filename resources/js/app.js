@@ -259,7 +259,7 @@ function openLogin() {
     modal.hidden = false;
     loginOpen = true;
     document.body.style.overflow = 'hidden';
-    setTimeout(() => qs('#sr_code')?.focus(), 50);
+    setTimeout(() => modal.querySelector('input:not([type="hidden"])')?.focus(), 50);
 }
 
 function closeLogin() {
@@ -302,6 +302,8 @@ function initLoginModal() {
         if (v.length > 8) v = v.slice(0, 8);
         sr.value = v;
     });
+
+    if (modal?.dataset.autoOpen === 'true') openLogin();
 }
 
 /**

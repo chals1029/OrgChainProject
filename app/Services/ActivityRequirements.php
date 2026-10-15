@@ -16,7 +16,7 @@ class ActivityRequirements
             ['key' => 'resolution', 'title' => 'Resolution of the Organization', 'description' => 'Officer-signed resolution for the activity.', 'group' => 'before', 'phase' => 'Before activity', 'required_on_submit' => true, 'tokens' => ['resolution'], 'source_file' => '7. Resolution of the Organization .docx'],
             ['key' => 'faculty_in_charge', 'title' => 'Faculty-in-Charge', 'description' => 'Signed designation of the faculty member in charge.', 'group' => 'before', 'phase' => 'Before activity', 'required_on_submit' => true, 'tokens' => ['faculty', 'charge', 'designation'], 'source_file' => '14. Faculty-In-Charge.docx'],
             ['key' => 'sample_letter', 'title' => 'Sample Letter', 'description' => 'Signed activity request letter addressed to the appropriate university office.', 'group' => 'before', 'phase' => 'Before activity', 'required_on_submit' => true, 'tokens' => ['sample', 'letter', 'request'], 'source_file' => 'Sample Letter.docx'],
-            ['key' => 'wpcf', 'title' => 'Waste Policy Compliance Form (WPCF)', 'description' => 'Complete the official waste policy compliance form.', 'group' => 'before', 'phase' => 'Before activity', 'required_on_submit' => true, 'tokens' => ['wpcf', 'waste', 'policy'], 'source_file' => 'Waste-Policy-Compliance-Form-2026 (1).doc'],
+            ['key' => 'wpcf', 'title' => 'Waste Policy Compliance Form (WPCF)', 'description' => 'Complete the official waste policy compliance form.', 'group' => 'before', 'phase' => 'Before activity', 'required_on_submit' => true, 'tokens' => ['wpcf', 'waste', 'policy'], 'source_file' => 'Waste-Policy-Compliance-Form-2026 (1).docx'],
         ];
     }
 

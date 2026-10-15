@@ -105,7 +105,6 @@ class BesuChainService
      */
     public function verifyAnchor(string $recordHash, ?string $transactionHash = null): array
     {
-        $this->signer->ensureDependencies();
         $nodes = [];
         $validatorCount = (int) config('besu.validator_count', 4);
         $recordHash = strtolower($this->stripHexPrefix(trim($recordHash)));
@@ -170,6 +169,34 @@ class BesuChainService
             ];
         }
 
+        $publicReceipt = [
+            'reference_code' => $receipt['reference_code'] ?? null,
+            'block_hash' => $blockHash,
+            'previous_hash' => (string) ($receipt['previous_hash'] ?? ''),
+            'ballot_root' => $receipt['ballot_root'] ?? null,
+            'nodes_confirmed' => (int) ($receipt['nodes_confirmed'] ?? 0),
+            'chain_tx_hash' => $receipt['chain_tx_hash'] ?? null,
+            'chain_contract_address' => $receipt['chain_contract_address'] ?? null,
+        ];
+        $storedContract = strtolower(trim((string) ($receipt['chain_contract_address'] ?? '')));
+        try {
+            $currentContract = strtolower($this->contractAddress());
+        } catch (RuntimeException) {
+            // The existing verification response below reports unavailable configuration.
+            $currentContract = null;
+        }
+        if ($storedContract !== '' && $currentContract !== null && $storedContract !== $currentContract) {
+            return [
+                'ok' => false,
+                'status' => 'historical',
+                'message' => 'Historical proof: this receipt belongs to a different blockchain deployment. Its original transaction is retained, but it is not verified on the current chain.',
+                'receipt' => $publicReceipt,
+                'nodes' => [],
+                'nodes_matched' => 0,
+                'hash_link_ok' => null,
+            ];
+        }
+
         $anchor = $this->verifyAnchor($blockHash, $receipt['chain_tx_hash'] ?? null);
         $previousHash = (string) ($receipt['previous_hash'] ?? '');
         $expectedPrevious = self::GENESIS_HASH;
@@ -202,14 +229,7 @@ class BesuChainService
             'message' => $ok
                 ? 'Ballot seal verified on the Besu QBFT network. Hash link is intact.'
                 : 'Integrity check failed — the Besu anchor or hash link could not be verified.',
-            'receipt' => [
-                'reference_code' => $receipt['reference_code'] ?? null,
-                'block_hash' => $blockHash,
-                'previous_hash' => $previousHash,
-                'ballot_root' => $receipt['ballot_root'] ?? null,
-                'nodes_confirmed' => (int) ($receipt['nodes_confirmed'] ?? 0),
-                'chain_tx_hash' => $receipt['chain_tx_hash'] ?? null,
-            ],
+            'receipt' => $publicReceipt,
             'nodes' => $anchor['nodes'] ?? [],
             'nodes_matched' => (int) ($anchor['nodes_confirmed'] ?? 0),
             'hash_link_ok' => $linkOk,

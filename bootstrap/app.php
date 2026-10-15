@@ -13,7 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // ngrok / Cloudflare Tunnel terminate HTTPS in front of php artisan serve
-        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         // Voting module uses its own CSRF tokens in legacy forms.
         $middleware->validateCsrfTokens(except: [
@@ -29,6 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontFlash(['new_password', 'new_password_confirmation']);
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->expectsJson() || $request->is('api/*'),
         );
     })->create();

@@ -140,9 +140,10 @@ class AccomplishmentReportTest extends TestCase
             ->sole();
 
         $this->assertTrue($document->hasStoredFile());
-        $this->assertTrue(Storage::disk('public')->exists($document->file_path));
+        $this->assertTrue(Storage::disk('local')->exists($document->file_path));
+        Storage::disk('public')->assertMissing($document->file_path);
 
-        $fullDocxPath = Storage::disk('public')->path($document->file_path);
+        $fullDocxPath = Storage::disk('local')->path($document->file_path);
         $zip = new ZipArchive();
         $this->assertTrue($zip->open($fullDocxPath), 'The generated Accomplishment Report must open as a valid Zip/DOCX archive.');
 
@@ -204,7 +205,7 @@ class AccomplishmentReportTest extends TestCase
         ]);
 
         $receiptImagePath = 'receipts/hackathon_boards.png';
-        Storage::disk('public')->put($receiptImagePath, $this->validPngBytes(150, 150));
+        Storage::disk('local')->put($receiptImagePath, $this->validPngBytes(150, 150));
 
         $targetReceipt = ExpenseReceiptReview::query()->create([
             'org_activity_id' => $targetActivity->id,
@@ -218,7 +219,7 @@ class AccomplishmentReportTest extends TestCase
             'receipt_reference' => 'SI-9941',
             'receipt_path' => $receiptImagePath,
             'receipt_name' => 'hackathon_boards.png',
-            'receipt_disk' => 'public',
+            'receipt_disk' => 'local',
             'verification_status' => 'approved',
         ]);
 
@@ -234,7 +235,7 @@ class AccomplishmentReportTest extends TestCase
             'receipt_reference' => 'SI-OTHER-10',
             'receipt_path' => 'receipts/unrelated_seminar_snacks_missing.png',
             'receipt_name' => 'unrelated_seminar_snacks_missing.png',
-            'receipt_disk' => 'public',
+            'receipt_disk' => 'local',
             'verification_status' => 'approved',
         ]);
 
@@ -272,7 +273,7 @@ class AccomplishmentReportTest extends TestCase
         $this->assertSame($initialIncomeCount, OrgCashIncome::query()->count(), 'Accomplishment report saving must NEVER write income rows.');
         $this->assertSame($initialReceiptCount, ExpenseReceiptReview::query()->count(), 'Accomplishment report saving must NEVER write receipt rows.');
         $this->assertEquals($initialAccountState, $account->fresh()->toArray(), 'Accomplishment report saving must NEVER modify fund accounts.');
-        $this->assertTrue(Storage::disk('public')->exists($receiptImagePath), 'Source receipt image must remain untouched in its original storage.');
+        $this->assertTrue(Storage::disk('local')->exists($receiptImagePath), 'Source receipt image must remain untouched in its original storage.');
     }
 
     public function test_actual_participant_counts_entered_by_so_never_copy_proposed_attendance(): void
@@ -426,7 +427,7 @@ class AccomplishmentReportTest extends TestCase
         ]);
 
         $receiptPathA = 'receipts/cohort_a_badges_'.Str::uuid().'.png';
-        Storage::disk('public')->put($receiptPathA, $this->validPngBytes(100, 100));
+        Storage::disk('local')->put($receiptPathA, $this->validPngBytes(100, 100));
 
         ExpenseReceiptReview::query()->create([
             'org_activity_id' => $activityA->id,
@@ -440,7 +441,7 @@ class AccomplishmentReportTest extends TestCase
             'receipt_reference' => 'SI-A-01',
             'receipt_path' => $receiptPathA,
             'receipt_name' => basename($receiptPathA),
-            'receipt_disk' => 'public',
+            'receipt_disk' => 'local',
             'verification_status' => 'approved',
         ]);
 
@@ -457,7 +458,7 @@ class AccomplishmentReportTest extends TestCase
         ]);
 
         $receiptPathB = 'receipts/cohort_b_badges_'.Str::uuid().'.png';
-        Storage::disk('public')->put($receiptPathB, $this->validPngBytes(100, 100));
+        Storage::disk('local')->put($receiptPathB, $this->validPngBytes(100, 100));
 
         ExpenseReceiptReview::query()->create([
             'org_activity_id' => $activityB->id,
@@ -471,7 +472,7 @@ class AccomplishmentReportTest extends TestCase
             'receipt_reference' => 'SI-B-02',
             'receipt_path' => $receiptPathB,
             'receipt_name' => basename($receiptPathB),
-            'receipt_disk' => 'public',
+            'receipt_disk' => 'local',
             'verification_status' => 'approved',
         ]);
 
@@ -509,7 +510,7 @@ class AccomplishmentReportTest extends TestCase
             ->sole();
 
         $zip = new ZipArchive();
-        $zip->open(Storage::disk('public')->path($document->file_path));
+        $zip->open(Storage::disk('local')->path($document->file_path));
         $xml = (string) $zip->getFromName('word/document.xml');
         $zip->close();
 
@@ -833,6 +834,34 @@ class AccomplishmentReportTest extends TestCase
         $this->assertNull(OrgReportStatus::query()->where('organization_name', $legacyOrg->name)->where('report_type', 'fr')->value('status'));
     }
 
+    public function test_uploaded_completed_ar_is_independent_of_stale_native_evidence_and_locks_after_submission(): void
+    {
+        $activity = $this->createEndedApprovedActivity('Earlier native draft');
+        $this->actingAs($this->so, 'office')->post(route('office.accomplishment.reports.store'), $this->validReportPayload($activity->id))
+            ->assertSessionHas('success');
+        $native = OrgActivityAccomplishment::query()->where('org_activity_id', $activity->id)->sole();
+        Storage::disk('local')->delete($native->evidence[0]['path']);
+        $bytes = (new \App\Services\DocxBuilder())->title('Completed independent report')->p('Final completed accomplishment report.')->build();
+        $period = [
+            'organization_name' => $this->organization->name,
+            'academic_year' => '2025-2026', 'semester' => '1st Semester',
+        ];
+        $this->post(route('office.reports.documents.store', ['reportType' => 'ar']), $period + [
+            '_form' => 'accomplishment-upload',
+            'document' => UploadedFile::fake()->createWithContent('Completed report.docx', $bytes),
+        ])->assertSessionHas('success');
+        $uploaded = OrgReportDocument::query()->where('organization_name', $this->organization->name)->where('report_type', 'ar')->latest('id')->firstOrFail();
+        $this->assertNull($uploaded->accomplishment_summary);
+        $this->assertSame($bytes, Storage::disk('local')->get($uploaded->file_path));
+        $this->post(route('office.reports.submit', ['reportType' => 'ar']), $period)->assertSessionHas('success');
+        $this->assertSame('oso_review', $uploaded->reportStatus()->firstOrFail()->status);
+        $this->post(route('office.reports.documents.store', ['reportType' => 'ar']), $period + [
+            '_form' => 'accomplishment-upload',
+            'document' => UploadedFile::fake()->createWithContent('Replacement report.docx', $bytes),
+        ])->assertSessionHasErrors('report')->assertSessionHasInput('_form', 'accomplishment-upload');
+        $this->assertSame($uploaded->id, OrgReportDocument::query()->where('organization_name', $this->organization->name)->where('report_type', 'ar')->latest('id')->value('id'));
+    }
+
     public function test_snapshot_preview_after_submission_and_return_archive_paths(): void
     {
         $activity = $this->createEndedApprovedActivity('Lifecycle Activity');
@@ -1115,7 +1144,7 @@ class AccomplishmentReportTest extends TestCase
 
         $pdfBytes = $this->validPdfBytes();
         $filePath = 'semester-reports/'.$reportType.'/'.Str::slug($orgName).'/2025_2026/1st-semester/'.Str::uuid().'.pdf';
-        Storage::disk('public')->put($filePath, $pdfBytes);
+        Storage::disk('local')->put($filePath, $pdfBytes);
 
         return OrgReportDocument::query()->create([
             'org_report_status_id' => $status->id,

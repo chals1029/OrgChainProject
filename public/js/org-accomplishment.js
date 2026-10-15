@@ -119,6 +119,31 @@
         } catch (_) { previewStatus.hidden = false; previewStatus.textContent = 'The preview could not be loaded. Please reopen the saved report.'; }
     });
     previewPrint.addEventListener('click', printPreview);
+    const upload = document.getElementById('arUploadDialog');
+    const uploadForm = document.getElementById('arUploadForm');
+    const uploadFile = document.getElementById('arUploadFile');
+    if (upload && uploadForm) {
+        document.querySelectorAll('[data-ar-upload]').forEach((button) => button.addEventListener('click', () => openDialog(upload, button)));
+        uploadFile.addEventListener('change', () => {
+            const file = uploadFile.files[0];
+            const message = file && !/\.(docx?|pdf)$/i.test(file.name) ? 'Choose a DOC, DOCX or PDF report.' : file && file.size > 20 * 1024 * 1024 ? 'The report must be no larger than 20 MB.' : '';
+            uploadFile.setCustomValidity(message);
+            document.getElementById('arUploadFilename').textContent = file ? file.name : 'No file selected';
+            if (message) uploadFile.reportValidity();
+        });
+        uploadForm.addEventListener('submit', (event) => {
+            if (!data.canEdit || uploadForm.dataset.submitting) { event.preventDefault(); return; }
+            uploadForm.dataset.submitting = 'true';
+            uploadForm.setAttribute('aria-busy', 'true');
+            const save = document.getElementById('arUploadSave');
+            save.disabled = true;
+            save.textContent = 'Uploading report…';
+        });
+        if (upload.hasAttribute('data-open-on-load')) {
+            openDialog(upload);
+            document.getElementById('arUploadErrors')?.focus();
+        }
+    }
     if (!form || !data.canEdit) return;
 
     const field = (name) => form.elements.namedItem(name);
@@ -223,12 +248,12 @@
         if (!evidenceList.children.length) evidenceCard(null);
         const finances = document.getElementById('arFinancialContext');
         finances.hidden = !report;
-        finances.textContent = report ? `Saved activity totals: collections ₱${Number(report.financial?.total_collection || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · expenses ₱${Number(report.financial?.total_expenses || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. The ledger snapshot will refresh on Save.` : '';
+        finances.textContent = report ? `Recorded collections ₱${Number(report.financial?.total_collection || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · expenses ₱${Number(report.financial?.total_expenses || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
         const errors = document.getElementById('arEditorErrors');
         if (errors) errors.hidden = !old;
         total();
     };
-    document.querySelectorAll('[data-ar-create]').forEach((button) => button.addEventListener('click', () => { initializeEditor(null, null); openDialog(editor, button); }));
+    // Native editors remain reachable from existing activity cards.
     document.querySelectorAll('[data-ar-edit]').forEach((button) => button.addEventListener('click', () => {
         const report = data.reports.find((entry) => String(entry.id) === button.dataset.arEdit);
         if (!report) return;
@@ -245,7 +270,7 @@
         cards.filter((card) => !present.includes(card)).forEach((card) => card.remove());
         if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; }
         form.dataset.submitting = 'true'; form.setAttribute('aria-busy', 'true');
-        const save = document.getElementById('arSave'); save.disabled = true; save.textContent = 'Saving report & generating Word…';
+        const save = document.getElementById('arSave'); save.disabled = true; save.textContent = 'Saving changes…';
     });
     // Native submit validation runs before submit handlers. Empty optional picker
     // captions must not block a retained-image edit; selected images still require captions.

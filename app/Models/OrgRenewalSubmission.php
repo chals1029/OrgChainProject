@@ -9,8 +9,6 @@ use Illuminate\Support\Collection;
 
 class OrgRenewalSubmission extends Model
 {
-    public const TERMINAL_STATUSES = ['approved', 'rejected'];
-
     protected $connection = 'mysql';
 
     protected $fillable = [
@@ -33,6 +31,11 @@ class OrgRenewalSubmission extends Model
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function submissionLocked(): bool
+    {
+        return in_array($this->status, ['submitted', 'approved'], true);
     }
 
     public function window(): BelongsTo

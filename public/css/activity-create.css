@@ -1327,6 +1327,7 @@
     box-sizing: border-box;
     width: min(1120px, calc(100vw - 2rem));
     max-width: none;
+    height: min(90dvh, calc(100dvh - 2rem));
     max-height: calc(100dvh - 2rem);
     margin: auto;
     padding: 0;
@@ -1346,7 +1347,8 @@
 .org-doc-preview-box {
     display: flex;
     flex-direction: column;
-    max-height: calc(100dvh - 2rem);
+    height: 100%;
+    max-height: 100%;
     overflow: hidden;
     border-radius: 18px;
     background: #fff;
@@ -1434,8 +1436,8 @@
 .org-doc-preview-body iframe {
     display: block;
     width: 100%;
-    height: calc(100dvh - 12rem);
-    min-height: 260px;
+    height: 100%;
+    min-height: 0;
     border: 0;
     border-radius: 10px;
     background: #fff;
@@ -1519,12 +1521,10 @@
 @media (max-width: 640px) {
     .org-doc-preview-dialog {
         width: calc(100vw - 1rem);
+        height: calc(100dvh - 1rem);
         max-height: calc(100dvh - 1rem);
     }
 
-    .org-doc-preview-box {
-        max-height: calc(100dvh - 1rem);
-    }
 
     .org-doc-preview-head,
     .org-doc-preview-foot {
@@ -1535,9 +1535,6 @@
         padding: 0.6rem;
     }
 
-    .org-doc-preview-body iframe {
-        height: calc(100dvh - 11rem);
-    }
 
     .org-doc-preview-foot > * {
         flex: 1 1 auto;

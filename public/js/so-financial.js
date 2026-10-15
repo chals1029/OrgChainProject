@@ -21,9 +21,10 @@
     /* Dashboard GET filters */
     const filterForm = byId('finFilterForm');
     if (filterForm) {
-        filterForm.querySelector('[data-fin-filter-apply]')?.setAttribute('hidden', '');
         filterForm.querySelectorAll('[data-fin-autosubmit]').forEach((select) => {
-            select.addEventListener('change', () => filterForm.requestSubmit());
+            select.addEventListener('change', () => {
+                if (filterForm.method.toLowerCase() === 'get') filterForm.requestSubmit();
+            });
         });
     }
 
@@ -94,8 +95,8 @@
                 if (match) shown += 1;
             });
             if (tableWrap) tableWrap.hidden = shown === 0;
-            noMatch.hidden = shown !== 0;
-            count.textContent = `${shown} of ${rows.length} history reports shown.`;
+            if (noMatch) noMatch.hidden = shown !== 0;
+            if (count) count.textContent = `${shown} of ${rows.length} history reports shown.`;
         };
 
         historySearch.addEventListener('input', filterHistory);
@@ -441,9 +442,23 @@
         }
     };
 
-    const openPreview = (id) => {
+    const openPreview = async (id, trigger) => {
         const report = reports[String(id)];
         if (!report || !report.has_file) return;
+        const extension = String(report.original_name || '').split('.').pop().toLowerCase();
+        if (!report.is_native_ar && !report.is_workbook && ['doc', 'docx'].includes(extension) && window.OfficeDocumentPreview) {
+            const url = new URL(report.download_url, window.location.href);
+            url.searchParams.delete('download');
+            trigger.dataset.documentPreviewUrl = url.href;
+            trigger.dataset.documentPreviewTitle = report.title;
+            trigger.dataset.documentOriginalName = report.original_name;
+            trigger.dataset.documentPreviewType = extension;
+            trigger.dataset.documentPreviewDownload = report.download_url;
+            trigger.dataset.documentConversionUrl = data.conversion_url;
+            const rendered = await window.OfficeDocumentPreview.open(trigger);
+            if (rendered && data.reviewer_mode) markViewed(report.id);
+            return;
+        }
         resetPreview();
         const token = previewToken;
         previewTitle.textContent = report.title;
@@ -468,7 +483,6 @@
             loadWorkbook(report, token);
             return;
         }
-        const extension = String(report.original_name || '').split('.').pop().toLowerCase();
         if (extension === 'pdf') loadFile(report, token, 'pdf');
         else if (imageExtensions.includes(extension)) loadFile(report, token, 'image');
         else showDownloadOnly(report);
@@ -476,7 +490,7 @@
 
     document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-fin-view]');
-        if (button) openPreview(button.dataset.finView);
+        if (button) openPreview(button.dataset.finView, button);
     });
     previewDialog.addEventListener('click', (event) => {
         if (event.target === previewDialog) previewDialog.close();

@@ -1,9 +1,11 @@
-# OrgChain Hyperledger Besu test network
+# OrgChain Hyperledger Besu network
 
-This directory replaces the old custom Node.js JSONL validator network with a
-local Hyperledger Besu network. It is a development/thesis network only: the
-generated keys are deterministic test keys and must not be reused in a real
-institutional deployment.
+This directory runs four private QBFT validators. The generator creates independent
+cryptographically random validator and application keys, uses the production
+Composer ECC dependencies, and refuses to overwrite an existing network or
+Compose environment. Older thesis networks used published deterministic keys;
+copying their files does not rotate those keys. Archive an old network before
+explicitly generating a replacement, and back up new keys privately.
 
 The network has four QBFT validators. Laravel remains the application and
 MySQL remains the source of business data. Laravel writes only SHA-256 record
@@ -30,6 +32,13 @@ The first command generates `infra/besu/networkFiles/`, including the local
 validator keys and the application signer key. The second command starts the
 four QBFT nodes. The third deploys `OrgChainAnchor` and writes
 `storage/app/besu/deployment.json`.
+
+Generation is a one-time operation, not a startup step for an existing network.
+An optional `--chain-id=<positive integer>` selects a new network ID. For the VPS
+pilot, see `infra/vps/` and the root README: the old test chain is archived and
+the approved replacement uses chain ID `20261015`. Existing database receipts
+from another contract remain historical proofs; they are not rewritten or
+misreported as verified on the new deployment.
 
 The checked-in contract artifacts are compiled for the `paris` EVM schedule so
 they work with the local Besu genesis. If the Solidity source changes, rebuild

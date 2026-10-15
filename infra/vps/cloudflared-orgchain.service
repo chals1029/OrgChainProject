@@ -1,0 +1,26 @@
+[Unit]
+Description=OrgChain Cloudflare Tunnel
+Wants=network-online.target
+After=network-online.target nginx.service php8.5-fpm.service mysql.service docker.service
+
+[Service]
+Type=simple
+User=cloudflared
+Group=cloudflared
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/orgchain.yml tunnel run
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

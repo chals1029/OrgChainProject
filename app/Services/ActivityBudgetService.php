@@ -51,15 +51,20 @@ class ActivityBudgetService
      */
     public function reserve(OrgActivity $activity): void
     {
+        $approved = OrganizationCashLedger::cents($activity->approved_budget);
+        if ($activity->approved_budget === null || $approved < 0) {
+            throw ValidationException::withMessages(['budget' => 'Enter an allocated budget of 0 or more before final approval.']);
+        }
+        if ($approved === 0) {
+            $activity->approved_at = now();
+            $this->syncBudgetItem($activity);
+            return;
+        }
         $ledger = $this->ledger();
         $year = $this->period($activity->starts_at)['academic_year'];
         $account = $ledger->lockAccountFor($activity);
         if (! $account) {
             throw ValidationException::withMessages(['budget' => 'Save the organization’s AY '.$year.' opening cash balance in Financial Report before final approval.']);
-        }
-        $approved = OrganizationCashLedger::cents($activity->approved_budget);
-        if ($approved <= 0) {
-            throw ValidationException::withMessages(['budget' => 'Enter the activity’s approved budget before final approval.']);
         }
         $snapshot = $ledger->snapshot($account, (int) $activity->id);
         $unspent = max(0, $approved - $ledger->activitySpentCents($activity));

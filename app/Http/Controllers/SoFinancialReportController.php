@@ -254,7 +254,7 @@ class SoFinancialReportController extends Controller
                 $frStatus = $locked->last()
                     ?? $this->semesterReports->ensure('fr', $organization, $validated['semester'], $validated['academic_year']);
 
-                $storedPath = $file->store($folder, 'public') ?: null;
+                $storedPath = $file->store($folder, 'local') ?: null;
                 if ($storedPath === null) {
                     throw ValidationException::withMessages([$fileField => 'The workbook could not be stored. Try again.']);
                 }
@@ -276,7 +276,7 @@ class SoFinancialReportController extends Controller
             });
         } catch (Throwable $exception) {
             if ($storedPath !== null) {
-                Storage::disk('public')->delete($storedPath);
+                Storage::disk('local')->delete($storedPath);
             }
             throw $exception;
         }
@@ -298,7 +298,7 @@ class SoFinancialReportController extends Controller
 
         try {
             $preview = $this->workbooks->preview(
-                Storage::disk('public')->path($document->file_path),
+                Storage::disk('local')->path($document->file_path),
                 is_array($document->financial_summary) ? $document->financial_summary : null
             );
         } catch (InvalidArgumentException $exception) {
@@ -475,7 +475,7 @@ class SoFinancialReportController extends Controller
         }
 
         try {
-            return $this->workbooks->summarize(Storage::disk('public')->path($document->file_path));
+            return $this->workbooks->summarize(Storage::disk('local')->path($document->file_path));
         } catch (Throwable) {
             return null;
         }

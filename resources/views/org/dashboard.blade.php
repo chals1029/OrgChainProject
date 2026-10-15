@@ -27,17 +27,9 @@
 @endsection
 
 @section('actions')
-    @if ($isSdo)
+    @if ($isSdo || $isOvcaa || $isOc)
         <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
-            <i class="bi bi-file-earmark-check-fill"></i> SDO Document Review
-        </a>
-    @elseif ($isOvcaa)
-        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
-            <i class="bi bi-patch-check-fill"></i> OVCAA Review Queue
-        </a>
-    @elseif ($isOc)
-        <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
-            <i class="bi bi-shield-check"></i> OC Final Approval Queue
+            <i class="bi bi-file-earmark-check-fill"></i> Proposals
         </a>
     @elseif ($isOso)
         <a href="{{ route('office.activities') }}" class="org-btn org-btn-primary">
@@ -3434,11 +3426,11 @@
                     </section>
                 </div>
 
-                {{-- 4. Full-Width Recent Updates & Activity Feed --}}
+                {{-- Full-width posted announcements, matching the Updates page. --}}
                 <section class="org-dash-card" style="margin-top: 1.25rem;">
                     <div class="org-dash-card-header">
                         <h3 class="org-dash-card-title">
-                            <i class="bi bi-bell-fill" style="color: #8b1828;"></i> Recent Updates &amp; Activity Movement
+                            <i class="bi bi-bell-fill" style="color: #8b1828;"></i> Recent Updates
                         </h3>
                         <a href="{{ route('office.updates') }}" class="org-dash-link">
                             View All Updates →

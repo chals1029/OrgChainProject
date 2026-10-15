@@ -39,6 +39,7 @@ class RenewalRequirementManagementTest extends TestCase
             DB::connection($connection)->beginTransaction();
         }
         Storage::fake('public');
+        Storage::fake('local');
 
         $this->oso = $this->officeUser('oso');
         $this->so = $this->officeUser('so');
@@ -51,6 +52,7 @@ class RenewalRequirementManagementTest extends TestCase
             'is_active' => true,
             'is_qualified_for_renewal' => true,
         ]);
+        $this->so->update(['student_organization_id' => $this->organization->id]);
 
         $this->docA = $this->definition('a', withPdf: true);
         $this->docB = $this->definition('b', withPdf: false);
@@ -238,7 +240,7 @@ class RenewalRequirementManagementTest extends TestCase
         $keyA = $this->docA['key'];
         $submission = $this->submission();
         $signed = $this->document($submission, $keyA, OrgRenewalDocument::REVIEW_VERIFIED);
-        $signedBytes = Storage::disk('public')->get($signed->file_path);
+        $signedBytes = Storage::disk('local')->get($signed->file_path);
 
         $this->assertSame(
             Storage::disk('public')->get($this->docA['pdf_path']),
@@ -278,7 +280,7 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertSame(OrgRenewalDocument::REVIEW_VERIFIED, $signedAfter->review_status);
         $this->assertSame($this->oso->id, (int) $signedAfter->reviewed_by);
         $this->assertNotNull($signedAfter->reviewed_at);
-        $this->assertSame($signedBytes, Storage::disk('public')->get($signedAfter->file_path));
+        $this->assertSame($signedBytes, Storage::disk('local')->get($signedAfter->file_path));
         $this->assertSame('submitted', $submission->fresh()->status);
     }
 
@@ -362,7 +364,7 @@ class RenewalRequirementManagementTest extends TestCase
         $keyB = $this->docB['key'];
         $submission = $this->submission();
         $signed = $this->document($submission, $keyA, OrgRenewalDocument::REVIEW_VERIFIED);
-        $signedBytes = Storage::disk('public')->get($signed->file_path);
+        $signedBytes = Storage::disk('local')->get($signed->file_path);
 
         $this->actingAs($this->oso, 'office')
             ->from(route('office.renewal'))
@@ -375,7 +377,7 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertNotNull($signedAfter);
         $this->assertSame($signed->file_path, $signedAfter->file_path);
         $this->assertSame(OrgRenewalDocument::REVIEW_VERIFIED, $signedAfter->review_status);
-        $this->assertSame($signedBytes, Storage::disk('public')->get($signed->file_path));
+        $this->assertSame($signedBytes, Storage::disk('local')->get($signedAfter->file_path));
         Storage::disk('public')->assertExists([$this->docA['template_path'], $this->docA['pdf_path']]);
 
         $this->actingAs($this->oso, 'office')
@@ -555,6 +557,33 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertSame('approved', $approved->fresh()->status);
     }
 
+    public function test_information_only_draft_readiness_counts_only_physically_present_current_requirements(): void
+    {
+        $definitions = $this->definitions();
+        $this->actingAs($this->so, 'office')->postJson(route('office.renewal.information.save'), [
+            'window_id' => $this->window->id,
+            'organization_name' => $this->organization->name,
+            'adviser_name' => 'Saved Adviser',
+            'dean_name' => 'Saved Dean',
+        ])->assertOk();
+        $draft = OrgRenewalSubmission::where('renewal_window_id', $this->window->id)
+            ->where('organization_name', $this->organization->name)->firstOrFail();
+        $this->assertSame(0, $draft->completionPercent($definitions));
+        $present = $this->document($draft, $this->docA['key']);
+        $missing = $this->document($draft, $this->docB['key']);
+        Storage::disk('local')->delete($missing->file_path);
+        $draft->refresh();
+        $this->assertSame([$this->docA['key']], $draft->uploadedKeys());
+        $this->assertSame(50, $draft->completionPercent($definitions));
+        $this->get(route('office.renewal'))->assertOk()
+            ->assertViewHas('myRenewalSubmission', fn ($submission) => $submission?->id === $draft->id
+                && $submission->uploadedKeys() === [$this->docA['key']]);
+        $this->assertFalse($draft->submissionLocked());
+        $this->assertNull($draft->submitted_at);
+        $this->assertSame($definitions, $this->definitions());
+        Storage::disk('local')->assertExists($present->file_path);
+    }
+
     /** @return array{0: array, 1: array} */
     private function rosterStanding(): array
     {
@@ -714,7 +743,7 @@ class RenewalRequirementManagementTest extends TestCase
     private function document(OrgRenewalSubmission $submission, string $key, string $reviewStatus = OrgRenewalDocument::REVIEW_PENDING): OrgRenewalDocument
     {
         $path = 'renewal-documents/'.Str::uuid().'.pdf';
-        Storage::disk('public')->put($path, '%PDF-1.4 signed upload '.Str::random(16));
+        Storage::disk('local')->put($path, '%PDF-1.4 signed upload '.Str::random(16));
 
         return OrgRenewalDocument::query()->create([
             'submission_id' => $submission->id,

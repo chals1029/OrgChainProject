@@ -148,7 +148,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_so_submits_ar_independently_and_oso_archives_it_while_fr_remains_unaffected(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -240,7 +240,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_so_submits_fr_independently_after_exact_latest_viewed_while_ar_remains_unaffected(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -371,7 +371,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_peer_locked_state_does_not_block_edit_and_submission(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -420,7 +420,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_same_type_locked_duplicates_block_submission(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -454,7 +454,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_rejected_decision_is_terminal_and_requires_reason(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -509,7 +509,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_oso_publication_privacy_draft_and_returned_documents_hidden_from_oso(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $organization = $this->organization->name;
         $period = [
             'organization_name' => $organization,
@@ -579,7 +579,7 @@ class SemesterReportWorkflowTest extends TestCase
 
     public function test_directory_only_opens_available_submitted_reports_and_selects_the_available_type(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $period = ['academic_year' => '2037-2038', 'semester' => '1st Semester'];
         $cases = [
             'none' => [],
@@ -606,7 +606,7 @@ class SemesterReportWorkflowTest extends TestCase
                 $path = 'semester-reports/directory-'.Str::uuid().'.pdf';
                 if ($hasFile) {
                     $upload = $this->reportPdf('directory.pdf');
-                    Storage::disk('public')->put($path, file_get_contents($upload->getRealPath()));
+                    Storage::disk('local')->put($path, file_get_contents($upload->getRealPath()));
                 }
                 OrgReportDocument::create($period + [
                     'org_report_status_id' => $status->id, 'report_type' => $type,

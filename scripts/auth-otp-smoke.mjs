@@ -1,13 +1,14 @@
 /**
  * Auth + OTP UI journey (Playwright).
- * Student OTP uses EXPOSE_TEST_OTP debug_code from JSON send endpoint.
+ * Codes come only from the institutional mailbox, never an HTTP debug field.
  *
  * Usage:
- *   EXPOSE_TEST_OTP=true (in .env of the running app) then:
+ *   Set E2E_OFFICE_PASSWORD privately, then:
  *   node scripts/auth-otp-smoke.mjs
  */
 import { chromium } from 'playwright';
 import fs from 'fs';
+import { createInterface } from 'node:readline/promises';
 
 const BASE = process.env.APP_URL || 'http://127.0.0.1:8000';
 const OFFICE_PATH = '/orgchain-office-access-a9e2f71c4b83';
@@ -86,21 +87,30 @@ async function main() {
       form: { sr_code: STUDENT_SR },
     });
     const sendJson = await send.json().catch(() => ({}));
-    const code = sendJson.debug_code;
+    let code;
+    if (send.ok() && sendJson.ok && process.stdin.isTTY) {
+      const input = createInterface({ input: process.stdin, output: process.stdout });
+      try {
+        code = (await input.question('Enter the six-digit code from the institutional mailbox: ')).trim();
+        if (!/^\d{6}$/.test(code)) throw new Error('The mailbox code must have six digits.');
+      } finally {
+        input.close();
+      }
+    }
     report.steps.push({
       name: 'student_otp_send',
       ok: send.ok() && !!sendJson.ok,
-      detail: sendJson.email || send.status(),
+      http: send.status(),
     });
     if (!send.ok() || !sendJson.ok) {
       note('assert', `OTP send failed: ${send.status()} ${JSON.stringify(sendJson)}`);
     }
+    const codeHidden = !Object.hasOwn(sendJson, 'debug_code');
+    report.steps.push({ name: 'student_otp_not_exposed', ok: codeHidden });
+    if (!codeHidden) note('assert', 'OTP response exposed a debug code.');
     if (!code) {
-      note(
-        'assert',
-        'No debug_code in OTP response. Set EXPOSE_TEST_OTP=true in .env and restart php artisan serve for full OTP UI verify.'
-      );
-      report.steps.push({ name: 'student_otp_verify', ok: false, skipped: true });
+      console.log('Mailbox verification not exercised in this non-interactive run; PHPUnit covers the isolated send/verify flow.');
+      report.steps.push({ name: 'student_otp_verify', skipped: true, reason: 'Requires a code from the institutional mailbox.' });
     } else {
       console.log('[Student] verify OTP');
       // Refresh CSRF then verify in the same browser cookie jar

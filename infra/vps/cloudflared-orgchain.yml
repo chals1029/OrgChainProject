@@ -1,0 +1,8 @@
+tunnel: 0a42aa21-d161-478e-a311-e52340180030
+credentials-file: /etc/cloudflared/orgchain-tunnel.json
+metrics: 127.0.0.1:20241
+
+ingress:
+  - hostname: orgchain.tech
+    service: http://127.0.0.1:8000
+  - service: http_status:404

@@ -160,7 +160,7 @@ class SoFinancialReportTest extends TestCase
 
         $this->assertSame(0, OrgReportDocument::where('organization_name', $this->organization->name)->count());
         $this->assertSame(0, OrgReportStatus::where('organization_name', $this->organization->name)->count());
-        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     public function test_history_uses_submission_date_and_uploaded_workbook_money_never_reaches_cash(): void
@@ -355,7 +355,7 @@ class SoFinancialReportTest extends TestCase
         $this->document($arStatus, null, 'Accomplishment Report', null, false);
 
         $this->getJson(route('office.financial.reports.preview', $fr))->assertOk();
-        $disk = Storage::disk('public');
+        $disk = Storage::disk('local');
         $frFilePath = $fr->file_path;
         $frContent = $disk->get($frFilePath);
 
@@ -418,7 +418,7 @@ class SoFinancialReportTest extends TestCase
 
         $this->getJson(route('office.financial.reports.preview', $fr))->assertOk();
         $replacement = $this->workbook($this->receipts(3), $this->disbursements(1), 0);
-        Storage::disk('public')->put($fr->file_path, (string) file_get_contents($replacement->getRealPath()));
+        Storage::disk('local')->put($fr->file_path, (string) file_get_contents($replacement->getRealPath()));
         $this->post(route('office.financial.reports.submit', $fr))->assertSessionHasErrors('report');
         $assertDraft();
 
@@ -654,7 +654,7 @@ class SoFinancialReportTest extends TestCase
         $templateHash = hash_file('sha256', $this->templatePath());
         $this->actingAs($this->so, 'office');
         $noAccount = $this->get(route('office.financial.export', self::PERIOD))->assertOk();
-        $this->assertStringContainsString('blank template', (string) $noAccount->headers->get('Content-Disposition'));
+        $this->assertSame($templateHash, hash_file('sha256', $noAccount->baseResponse->getFile()->getPathname()));
 
         $this->ledgerFixture();
         $this->post(route('office.financial.reports.store'), self::PERIOD + [
@@ -748,7 +748,7 @@ class SoFinancialReportTest extends TestCase
         $this->assertCount(1, $roundTrip['disbursements']);
 
         $blank = $this->get(route('office.financial.export', ['academic_year' => '2030-2031', 'semester' => 'Midyear']))->assertOk();
-        $this->assertStringContainsString('blank template', (string) $blank->headers->get('Content-Disposition'));
+        $this->assertSame($templateHash, hash_file('sha256', $blank->baseResponse->getFile()->getPathname()));
 
         $this->assertSame($templateHash, hash_file('sha256', $this->templatePath()));
     }
@@ -879,7 +879,7 @@ class SoFinancialReportTest extends TestCase
     ): OrgReportDocument {
         $path = 'semester-reports/'.$status->report_type.'/fixture/'.Str::uuid().($summary !== null ? '.xlsx' : '.pdf');
         if ($withFile) {
-            Storage::disk('public')->put($path, $content);
+            Storage::disk('local')->put($path, $content);
         }
         $document = OrgReportDocument::create([
             'org_report_status_id' => $status->id,

@@ -1,23 +1,22 @@
-.ar-desk { --ar-red:#8b1828; --ar-line:#eadfe2; --ar-muted:#73666c; display:grid; gap:24px; color:#2c2327; }
+.ar-desk { --ar-red:#8b1828; --ar-line:#eadfe2; --ar-muted:#73666c; display:grid; gap:20px; color:#2c2327; }
 .ar-desk *, .ar-dialog *, .ar-packet * { box-sizing:border-box; }
 .ar-desk h2, .ar-dialog h2 { margin:0; font-size:1.22rem; line-height:1.4; color:#292025; }
 .ar-desk h3 { margin:12px 0; font-size:1.12rem; line-height:1.45; }
-.ar-card { background:#fff; border:1px solid var(--ar-line); border-radius:20px; padding:28px; box-shadow:0 5px 22px #59152a06; min-width:0; }
+.ar-card { background:#fff; border:1px solid var(--ar-line); border-radius:16px; padding:22px; box-shadow:0 5px 22px #59152a06; min-width:0; }
 .ar-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
 .ar-eyebrow { display:block; font-size:.68rem; font-weight:800; color:#8b1828; letter-spacing:.09em; text-transform:uppercase; margin-bottom:7px; }
 .ar-muted { color:#73666c; font-size:.85rem; line-height:1.65; margin:8px 0 0; }
 .ar-status, .ar-tag { display:inline-flex; align-items:center; padding:6px 10px; border-radius:9px; background:#fbf3f5; border:1px solid #ecdce0; color:#8b1828; font-size:.72rem; line-height:1.5; font-weight:700; overflow-wrap:anywhere; }
 .ar-status.is-locked { background:#fff5e9; color:#984b0c; border-color:#f2d4ad; }
-.ar-period-form { display:flex; flex-wrap:wrap; align-items:end; gap:16px; margin-top:24px; }
+.ar-period-form { display:flex; flex-wrap:wrap; align-items:end; gap:14px; margin-top:18px; }
 .ar-period-form .ar-field { flex:1 1 190px; margin:0; }
-.ar-period-note { margin-top:14px; }
 .ar-field { display:grid; gap:8px; margin:0 0 18px; min-width:0; font-size:.82rem; font-weight:700; color:#43363d; }
 .ar-field small { font-size:.74rem; color:#80717a; font-weight:400; line-height:1.5; }
 .ar-field input, .ar-field select, .ar-field textarea, .ar-photo-input { border:1px solid #dfd3d8; border-radius:10px; background:#fff; padding:11px 13px; color:#32272e; font:inherit; font-weight:400; width:100%; min-width:0; }
 .ar-field textarea { resize:vertical; line-height:1.65; min-height:82px; }
 .ar-field input:focus, .ar-field select:focus, .ar-field textarea:focus, .ar-photo-input:focus { outline:3px solid #8b18281c; border-color:#a34456; }
-.ar-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-top:26px; }
-.ar-stats article { display:flex; gap:12px; padding:19px 16px; border:1px solid #f0e6e9; background:#fffafb; border-radius:14px; min-width:0; }
+.ar-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:20px; }
+.ar-stats article { display:flex; gap:10px; padding:15px 13px; border:1px solid #f0e6e9; background:#fffafb; border-radius:12px; min-width:0; }
 .ar-stat-icon { color:#8b1828; background:#f8e9ed; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; flex-shrink:0; font-size:1.1rem; }
 .ar-stats small, .ar-stats strong, .ar-stats article div>span { display:block; }
 .ar-stats small { font-size:.73rem; color:#74656e; }
@@ -35,7 +34,7 @@
 .ar-count { font-size:.8rem; background:#f6e8ec; color:#8b1828; padding:3px 9px; border-radius:8px; margin-left:7px; }
 .ar-report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
 .ar-report-card { display:flex; flex-direction:column; }
-.ar-report-summary { font-size:.85rem; line-height:1.7; white-space:pre-line; overflow-wrap:anywhere; margin:17px 0; }
+.ar-report-summary { font-size:.85rem; line-height:1.7; white-space:pre-line; overflow-wrap:anywhere; margin:15px 0; padding:12px; border-radius:10px; background:#fcf7f9; }
 .ar-tags { display:flex; gap:7px; flex-wrap:wrap; }
 .ar-report-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding-top:20px; margin:20px 0 0; border-top:1px solid #eee4e7; }
 .ar-report-metrics dt { font-size:.7rem; color:#80717a; }
@@ -47,6 +46,7 @@
 .ar-empty p { max-width:620px; margin:10px auto; font-size:.87rem; color:#7c6b75; line-height:1.7; }
 body.ar-dialog-open { overflow:hidden; }
 .ar-dialog { position:fixed; inset:0; margin:auto; padding:0; border:1px solid #e4d3d9; border-radius:20px; background:#fff; color:#30232a; width:min(940px,calc(100vw - 40px)); max-width:none; max-height:calc(100dvh - 40px); overflow:hidden; box-shadow:0 28px 100px #2b091c4d; }
+.org-content>.ar-dialog { animation:none; opacity:1; transform:none; }
 .ar-dialog::backdrop { background:#25151db3; backdrop-filter:blur(4px); }
 .ar-dialog[open] { display:flex; flex-direction:column; }
 .ar-dialog form, .ar-preview-box { display:flex; flex-direction:column; min-height:0; width:100%; max-height:calc(100dvh - 40px); }
@@ -79,6 +79,15 @@ body.ar-dialog-open { overflow:hidden; }
 .ar-photo-input { font-size:.76rem; padding:8px; }
 .ar-financial-context { padding:16px; font-size:.83rem; line-height:1.7; border:1px solid #eadce1; border-radius:12px; background:#fff8fa; }
 .ar-dialog-foot { border-top:1px solid #ecdee3; display:flex; justify-content:flex-end; gap:12px; padding:18px 28px; background:#fff; flex-shrink:0; }
+.ar-upload-dialog { width:min(620px,calc(100vw - 40px)); }
+.ar-upload-dialog .ar-dialog-body { padding-top:18px; }
+.ar-upload-note { margin:0 0 20px; }
+.ar-upload-zone { position:relative; display:grid; justify-items:center; gap:10px; padding:28px 18px; border:1.5px dashed #d9aab7; border-radius:14px; background:#fdf7f9; text-align:center; cursor:pointer; font-size:.84rem; }
+.ar-upload-zone:focus-within { outline:3px solid #8b182833; outline-offset:2px; }
+.ar-upload-icon { display:grid; place-items:center; width:48px; height:48px; border-radius:50%; color:#fff; background:#a51b3a; font-size:1.4rem; }
+.ar-upload-zone small { color:#82727a; }
+.ar-upload-zone input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.ar-upload-filename { max-width:100%; color:#8b1828; font-size:.78rem; font-weight:700; overflow-wrap:anywhere; }
 .ar-preview-dialog { width:min(1320px,calc(100vw - 40px)); height:min(960px,calc(100dvh - 40px)); }
 .ar-preview-box { height:100%; }
 .ar-preview-status { margin:0; padding:10px 20px; background:#fff8fa; font-size:.8rem; color:#875663; }

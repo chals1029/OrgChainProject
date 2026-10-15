@@ -1,5 +1,6 @@
 <?php
     $ok = is_array($result ?? null) ? (bool) ($result['ok'] ?? false) : null;
+    $historical = is_array($result ?? null) && ($result['status'] ?? null) === 'historical';
     $nodes = is_array($result['nodes'] ?? null) ? $result['nodes'] : [];
 ?>
 
@@ -7,7 +8,7 @@
     <div class="main-header-left">
         <p class="eyebrow"><i class="bi bi-link-45deg"></i> VOTE CHAIN</p>
         <h1>Chain Integrity Verify</h1>
-        <p class="ssc-dashboard-tagline">Check a ballot reference against the database receipt and all 3 local node ledgers.</p>
+        <p class="ssc-dashboard-tagline">Check a ballot reference against its stored receipt and blockchain proof.</p>
     </div>
 </div>
 
@@ -39,6 +40,8 @@
         <div class="d-flex align-items-center gap-2 mb-3">
             <?php if ($ok): ?>
                 <span class="badge text-bg-success"><i class="bi bi-check-circle"></i> Verified</span>
+            <?php elseif ($historical): ?>
+                <span class="badge text-bg-secondary"><i class="bi bi-archive"></i> Historical</span>
             <?php else: ?>
                 <span class="badge text-bg-danger"><i class="bi bi-x-circle"></i> Failed</span>
             <?php endif; ?>
@@ -56,9 +59,9 @@
                 <dt class="col-sm-3">Ballot root</dt>
                 <dd class="col-sm-9"><code class="user-select-all"><?= e((string) ($result['receipt']['ballot_root'] ?? '—')) ?></code></dd>
                 <dt class="col-sm-3">Hash link</dt>
-                <dd class="col-sm-9"><?= !empty($result['hash_link_ok']) ? 'Intact' : 'Broken / unverified' ?></dd>
+                <dd class="col-sm-9"><?= $historical ? 'Not checked on the current chain' : (!empty($result['hash_link_ok']) ? 'Intact' : 'Broken / unverified') ?></dd>
                 <dt class="col-sm-3">Nodes matched</dt>
-                <dd class="col-sm-9"><?= (int) ($result['nodes_matched'] ?? 0) ?> / 3</dd>
+                <dd class="col-sm-9"><?php if ($historical): ?>Not checked on the current chain<?php else: ?><?= (int) ($result['nodes_matched'] ?? 0) ?><?= $nodes !== [] ? ' / '.count($nodes) : '' ?><?php endif; ?></dd>
             </dl>
         <?php endif; ?>
 
@@ -98,7 +101,7 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
             <h2 class="h5 m-0"><i class="bi bi-code-square"></i> Blockchain REST API Explorer</h2>
-            <p class="text-muted small m-0">Expose live 3-node blockchain integrity verification to external auditors, apps, and student clients.</p>
+            <p class="text-muted small m-0">Inspect receipt proofs and the active blockchain deployment.</p>
         </div>
         <span class="badge bg-primary">v1.0 REST API</span>
     </div>
@@ -107,14 +110,14 @@
         <div class="col-md-4">
             <div class="p-3 border rounded bg-light">
                 <strong class="d-block text-primary"><i class="bi bi-shield-check"></i> Verify Reference API</strong>
-                <small class="text-muted d-block mb-2">Verify SHA-256 seal and 3-node consensus for a receipt reference.</small>
+                <small class="text-muted d-block mb-2">Verify a receipt seal against its blockchain deployment.</small>
                 <code>GET <?= e(voting_url('/api/blockchain/verify?reference=REF')) ?></code>
             </div>
         </div>
         <div class="col-md-4">
             <div class="p-3 border rounded bg-light">
                 <strong class="d-block text-success"><i class="bi bi-cpu"></i> Ledger Status API</strong>
-                <small class="text-muted d-block mb-2">Check block count, latest hash, genesis anchor, and 3-node health.</small>
+                <small class="text-muted d-block mb-2">Check the configured blockchain's block count, latest hash and validator status.</small>
                 <code>GET <?= e(voting_url('/api/blockchain/status')) ?></code>
             </div>
         </div>

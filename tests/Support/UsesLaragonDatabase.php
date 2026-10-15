@@ -3,6 +3,7 @@
 namespace Tests\Support;
 
 use App\Models\OfficeUser;
+use App\Models\StudentOrganization;
 use App\Models\SystemAdminUser;
 use App\Models\UserAccount;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ trait UsesLaragonDatabase
             'driver' => 'mysql',
             'host' => $env['DB_HOST'] ?? '127.0.0.1',
             'port' => $env['DB_PORT'] ?? '3306',
-            'database' => $env['DB_DATABASE'] ?? 'votingsystem',
+            'database' => getenv('ORGCHAIN_TEST_DATABASE') ?: ($env['DB_DATABASE'] ?? 'votingsystem'),
             'username' => $env['DB_USERNAME'] ?? 'root',
             'password' => $env['DB_PASSWORD'] ?? '',
             'charset' => 'utf8mb4',
@@ -35,7 +36,7 @@ trait UsesLaragonDatabase
         ];
 
         $orgchain = $mysql;
-        $orgchain['database'] = $env['DB_ORGCHAIN_DATABASE'] ?? 'orgchain';
+        $orgchain['database'] = getenv('ORGCHAIN_TEST_ORGCHAIN_DATABASE') ?: ($env['DB_ORGCHAIN_DATABASE'] ?? 'orgchain');
 
         config([
             'database.default' => 'mysql',
@@ -74,6 +75,11 @@ trait UsesLaragonDatabase
     protected function ensureOfficeUser(string $role): OfficeUser
     {
         $email = "{$role}.office@g.batstate-u.edu.ph";
+        $organization = $role === 'so'
+            ? StudentOrganization::updateOrCreate(['name' => 'Synthetic Shared Test Organization'], [
+                'short_name' => 'TEST', 'college' => 'Fixture College', 'academic_year' => '2026-2027', 'is_active' => true,
+            ])
+            : null;
 
         $user = OfficeUser::query()->updateOrCreate(
             ['email' => $email],
@@ -83,8 +89,9 @@ trait UsesLaragonDatabase
                 'password' => Hash::make('FixtureOfficeOnly@2026!'),
                 'office_role' => $role,
                 'office_title' => strtoupper($role).' Desk',
-                'student_organization_id' => null,
+                'student_organization_id' => $organization?->id,
                 'is_active' => true,
+                'must_change_password' => false,
             ]
         );
 
@@ -112,19 +119,25 @@ trait UsesLaragonDatabase
 
     protected function ensureActiveStudent(string $srCode = '21-00001'): UserAccount
     {
-        return UserAccount::query()->updateOrCreate(
-            ['sr_code' => $srCode],
-            [
-                'full_name' => 'Test Student',
-                'email' => $srCode.'@g.batstate-u.edu.ph',
-                'college' => 'CICS',
-                'program' => 'BSIT',
-                'year_level' => '4th Year',
-                'role' => 'student',
-                'account_status' => 'active',
-                'password_hash' => Hash::make('FixtureStudentOnly@2026!'),
-                'created_at' => now(),
-            ]
-        );
+        $user = UserAccount::query()->firstOrNew(['sr_code' => $srCode]);
+        if (! $user->exists) {
+            $user->user_id = (int) UserAccount::query()->max('user_id') + 1;
+            // Imported schemas may require explicit IDs rather than AUTO_INCREMENT.
+            $user->incrementing = false;
+        }
+
+        $user->fill([
+            'full_name' => 'Test Student',
+            'email' => $srCode.'@g.batstate-u.edu.ph',
+            'college' => 'CICS',
+            'program' => 'BSIT',
+            'year_level' => '4th Year',
+            'role' => 'student',
+            'account_status' => 'active',
+            'password_hash' => Hash::make('FixtureStudentOnly@2026!'),
+            'created_at' => now(),
+        ])->save();
+
+        return $user;
     }
 }

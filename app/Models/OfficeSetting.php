@@ -32,11 +32,6 @@ class OfficeSetting extends Model
                 'contact_location' => '3rd Floor, Student Services Center, Gov. Pablo Borbon Main Campus I, Batangas City',
                 'logo_path' => null,
             ],
-            'security' => [
-                'session_timeout' => 15,
-                'tosa_gate' => true,
-                'tosa_pin_hash' => null,
-            ],
         ];
     }
 
@@ -75,12 +70,4 @@ class OfficeSetting extends Model
         return $defaults;
     }
 
-    public static function publicValuesFor(string $scope): array
-    {
-        $values = static::valuesFor($scope);
-        $values['security']['tosa_pin_configured'] = filled($values['security']['tosa_pin_hash'] ?? null);
-        unset($values['security']['tosa_pin_hash']);
-
-        return $values;
-    }
 }

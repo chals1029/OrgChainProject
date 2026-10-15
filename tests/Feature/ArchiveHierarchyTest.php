@@ -160,11 +160,11 @@ class ArchiveHierarchyTest extends TestCase
                 'archive_folder_id' => $id, 'document' => UploadedFile::fake()->createWithContent('forged.docx', $this->docxBytes()),
             ])->assertNotFound();
         }
-        $this->assertEmpty(Storage::disk('local')->allFiles());
+        $this->assertSame([$document->file_path], Storage::disk('local')->allFiles());
         $this->assertDatabaseMissing('archive_folders', ['name' => 'Forged child']);
         $this->get(route('office.archive.documents.view', $document))->assertNotFound();
         $this->get(route('office.archive.documents.download', $document))->assertNotFound();
-        $this->assertSame('secret bytes', Storage::disk('public')->get($document->file_path));
+        $this->assertSame('secret bytes', Storage::disk('local')->get($document->file_path));
     }
 
     public function test_foreign_so_private_upload_cannot_be_read_by_another_organization(): void
@@ -190,6 +190,9 @@ class ArchiveHierarchyTest extends TestCase
         $folder = $this->folder('Protected root');
         $document = $this->document($folder, 'Protected document', 'protected');
         [, $activityDocument] = $this->activityDocument($this->organization);
+        $filesBeforeRequests = Storage::disk('local')->allFiles();
+        $folderCount = ArchiveFolder::query()->count();
+        $documentCount = ArchiveDocument::query()->count();
         foreach (['so', 'sdo', 'ovcaa', 'oc'] as $role) {
             $this->actingAs($this->officeUser($role), 'office');
             $this->get(route('office.archive'))->assertForbidden();
@@ -203,7 +206,10 @@ class ArchiveHierarchyTest extends TestCase
                 $this->get(route('office.archive.activity-documents.'.$action, $activityDocument))->assertForbidden();
             }
         }
-        $this->assertEmpty(Storage::disk('local')->allFiles());
+        $this->assertSame($filesBeforeRequests, Storage::disk('local')->allFiles());
+        $this->assertSame('protected', Storage::disk('local')->get($document->file_path));
+        $this->assertSame($folderCount, ArchiveFolder::query()->count());
+        $this->assertSame($documentCount, ArchiveDocument::query()->count());
     }
 
     public function test_archive_upload_retains_twenty_megabyte_limit(): void
@@ -253,10 +259,10 @@ class ArchiveHierarchyTest extends TestCase
         $this->assertEmpty(Storage::disk('local')->allFiles());
     }
 
-    public function test_oso_retains_broad_hierarchy_upload_and_legacy_public_document_bytes(): void
+    public function test_oso_retains_broad_hierarchy_upload_and_private_document_bytes(): void
     {
         $root = $this->folder('Legacy verified report', $this->foreignOrganization);
-        $legacy = $this->document($root, 'Legacy archive report', 'original public bytes');
+        $legacy = $this->document($root, 'Migrated archive report', 'original private bytes');
         $this->actingAs($this->oso, 'office')->get(route('office.archive'))->assertOk()
             ->assertViewHas('assignedArchiveOrganization', null)
             ->assertViewHas('allSavedFolders', fn ($folders) => $folders->contains('id', $root->id));
@@ -271,17 +277,17 @@ class ArchiveHierarchyTest extends TestCase
         $this->assertSame('local', $child->documents()->sole()->file_disk);
         foreach (['view', 'download'] as $action) {
             $response = $this->get(route('office.archive.documents.'.$action, $legacy))->assertOk();
-            $this->assertSame('original public bytes', $this->body($response));
+            $this->assertSame('original private bytes', $this->body($response));
         }
-        $this->assertSame('public', $legacy->fresh()->file_disk);
-        $this->assertSame('original public bytes', Storage::disk('public')->get($legacy->file_path));
+        $this->assertSame('local', $legacy->fresh()->file_disk);
+        $this->assertSame('original private bytes', Storage::disk('local')->get($legacy->file_path));
         $legacyMixedFolder = $this->folder('Legacy mixed organization child', $this->organization, $root);
         $legacyMixedDocument = $this->document($legacyMixedFolder, 'Legacy mixed report', 'legacy mixed bytes');
         $this->get(route('office.archive', ['folder_id' => $legacyMixedFolder->id]))->assertOk();
         $this->assertSame('legacy mixed bytes', $this->body(
             $this->get(route('office.archive.documents.view', $legacyMixedDocument))->assertOk()
         ));
-        Storage::disk('public')->delete($legacy->file_path);
+        Storage::disk('local')->delete($legacy->file_path);
         foreach (['view', 'download'] as $action) {
             $this->get(route('office.archive.documents.'.$action, $legacy))->assertNotFound();
         }
@@ -316,16 +322,66 @@ class ArchiveHierarchyTest extends TestCase
     {
         $folder = $this->folder('File boundary root');
         $document = $this->document($folder, 'Directory document', 'bytes');
-        Storage::disk('public')->makeDirectory('archive-directory');
+        $storedPath = $document->file_path;
+        Storage::disk('local')->makeDirectory('archive-directory');
         $document->update(['file_path' => 'archive-directory']);
         $this->actingAs($this->so, 'office');
         foreach (['view', 'download'] as $action) {
             $this->get(route('office.archive.documents.'.$action, $document))->assertNotFound();
         }
-        $document->update(['file_disk' => 'unknown']);
-        $this->get(route('office.archive.documents.view', $document))->assertNotFound();
+        foreach (['unknown', 'public'] as $disk) {
+            $document->update(['file_disk' => $disk, 'file_path' => $storedPath]);
+            foreach (['view', 'download'] as $action) {
+                $this->get(route('office.archive.documents.'.$action, $document))->assertNotFound();
+            }
+        }
         $document->update(['file_disk' => 'local', 'file_path' => '../../.env']);
         $this->get(route('office.archive.documents.download', $document))->assertNotFound();
+    }
+
+    public function test_organization_archive_preserves_nested_files_beyond_recent_limit_and_private_ownership(): void
+    {
+        $root = $this->folder('Financial reports 2025-2026');
+        $nested = $this->folder('Original documents', parent: $root);
+        $expected = [];
+        for ($index = 0; $index < 30; $index++) {
+            $document = $this->document($nested, 'Report '.sprintf('%02d', $index), 'Private report '.$index);
+            $expected[] = $document->id;
+        }
+        $foreign = $this->document($this->folder('Foreign reports 2025-2026', $this->foreignOrganization), 'Foreign report', 'Foreign bytes');
+        $response = $this->actingAs($this->oso, 'office')->get(route('office.archive', [
+            'archive_org' => $this->organization->name, 'year' => '2025-2026',
+        ]))->assertOk();
+        $archive = $response->viewData('selectedArchiveOrganization');
+        $reports = collect($archive['groups'])->firstWhere('key', 'reports')['documents'];
+        $this->assertEqualsCanonicalizing($expected, array_column($reports, 'id'));
+        $this->assertNotContains($foreign->id, array_column($reports, 'id'));
+        $this->assertSame(30, $archive['document_count']);
+        $first = $reports[array_search($expected[0], array_column($reports, 'id'))];
+        $this->assertSame('Private report 0', $this->body($this->get($first['download_url'])->assertOk()));
+        $this->actingAs($this->so, 'office')->get(route('office.archive', ['archive_org' => $this->foreignOrganization->name]))->assertNotFound();
+        $this->get(route('office.archive', ['archive_org' => $this->organization->name, 'year' => '2024-2025']))
+            ->assertOk()->assertViewHas('selectedArchiveOrganization', fn ($row) => $row['document_count'] === 0);
+    }
+
+    public function test_organization_archive_search_and_scope_preserve_second_page_results(): void
+    {
+        $prefix = 'Archive pagination '.Str::uuid();
+        $organizations = [];
+        for ($index = 1; $index <= 10; $index++) {
+            $organizations[] = StudentOrganization::query()->create([
+                'name' => $prefix.' '.sprintf('%02d', $index), 'college' => 'Engineering', 'is_active' => true,
+            ]);
+        }
+        StudentOrganization::query()->create(['name' => $prefix.' Foreign scope', 'college' => 'Sciences', 'is_active' => true]);
+        $response = $this->actingAs($this->oso, 'office')->get(route('office.archive', [
+            'search' => $prefix, 'scope' => 'Engineering', 'page' => 2,
+        ]))->assertOk();
+        $page = $response->viewData('archiveOrganizations');
+        $this->assertSame(10, $page->total());
+        $this->assertSame([$organizations[9]->name], $page->pluck('key')->all());
+        $this->assertStringContainsString('scope=Engineering', $page->previousPageUrl());
+        $this->assertStringContainsString(rawurlencode($prefix), $page->previousPageUrl());
     }
 
     private function officeUser(string $role, ?StudentOrganization $organization = null): OfficeUser
@@ -350,11 +406,10 @@ class ArchiveHierarchyTest extends TestCase
     private function document(ArchiveFolder $folder, string $name, string $bytes): ArchiveDocument
     {
         $path = 'archive-fixtures/'.Str::uuid().'.pdf';
-        Storage::disk('public')->put($path, $bytes);
-        // Deliberately omit file_disk: verified legacy archives must use the migration's public default.
+        Storage::disk('local')->put($path, $bytes);
         return ArchiveDocument::query()->create([
             'archive_folder_id' => $folder->id, 'name' => $name, 'original_name' => $name.'.pdf',
-            'file_path' => $path, 'mime_type' => 'application/pdf', 'file_size' => strlen($bytes), 'uploaded_by' => 'Fixture author',
+            'file_path' => $path, 'file_disk' => 'local', 'mime_type' => 'application/pdf', 'file_size' => strlen($bytes), 'uploaded_by' => 'Fixture author',
         ])->fresh();
     }
 
@@ -365,7 +420,7 @@ class ArchiveHierarchyTest extends TestCase
             'college' => $organization->college, 'status' => 'upcoming', 'workflow_status' => 'oc_approved',
         ]);
         $path = 'archive-activity-fixtures/'.Str::uuid().'.pdf';
-        Storage::disk('public')->put($path, '%PDF-1.4 actual bytes');
+        Storage::disk('local')->put($path, '%PDF-1.4 actual bytes');
         $submission = InCampusActivitySubmission::query()->create([
             'org_activity_id' => $activity->id, 'organization_name' => $organization->name,
             'college' => $organization->college, 'activity_type' => 'in_campus', 'status' => 'submitted',

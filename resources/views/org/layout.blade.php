@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
     <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=16">
+    <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 @php
@@ -58,20 +59,11 @@
                     </a>
                 @endif
 
-                {{-- Activities / Proposals / SDO Document Review / OVCAA Review --}}
+                {{-- Activity management for SO; proposal review for office desks. --}}
                 <a href="{{ route('office.activities') }}" class="org-nav-link {{ ($activeNav ?? '') === 'activities' ? 'is-active' : '' }}">
-                    @if (($office->office_role ?? '') === 'oso')
+                    @if (in_array($office->office_role ?? '', ['oso', 'sdo', 'ovcaa', 'oc'], true))
                         <i class="bi bi-file-earmark-check-fill is-ico-blue"></i>
                         <span>Proposals</span>
-                    @elseif (($office->office_role ?? '') === 'sdo')
-                        <i class="bi bi-leaf-fill is-ico-green"></i>
-                        <span>SDO Document Review</span>
-                    @elseif (($office->office_role ?? '') === 'ovcaa')
-                        <i class="bi bi-patch-check-fill is-ico-green"></i>
-                        <span>OVCAA Review</span>
-                    @elseif (($office->office_role ?? '') === 'oc')
-                        <i class="bi bi-shield-check is-ico-slate"></i>
-                        <span>OC Final Approval</span>
                     @else
                         <i class="bi bi-lightning-charge-fill is-ico-gold"></i>
                         <span>Activities</span>

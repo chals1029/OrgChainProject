@@ -32,13 +32,19 @@ class EnsureOfficeAuthenticated
 
         if (! $user || ! $user->is_active || ! $validVersion) {
             $guard->logoutCurrentDevice();
-            $request->session()->forget(['office_auth_state', 'tosa_unlock']);
+            $request->session()->forget('office_auth_state');
             $message = 'Your office session expired or this account is inactive. Sign in again.';
             if ($request->expectsJson() || $request->is('office-desk/budget-utilization/receipts/validate-document')) {
                 return response()->json(['ok' => false, 'message' => $message], 401);
             }
 
             return redirect()->route('office.login')->withErrors(['email' => $message]);
+        }
+
+        if ($user->office_role === 'so') {
+            $organization = $user->studentOrganization;
+            abort_unless($organization && $organization->is_active && trim((string) $organization->name) !== '', 403,
+                'This SO account requires an active organization assignment.');
         }
 
         $guard->setUser($user);

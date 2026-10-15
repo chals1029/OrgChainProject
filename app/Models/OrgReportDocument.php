@@ -50,7 +50,7 @@ class OrgReportDocument extends Model
             return false;
         }
 
-        $absolute = Storage::disk('public')->path($path);
+        $absolute = Storage::disk('local')->path($path);
         clearstatcache(true, $absolute);
 
         return is_file($absolute) && is_readable($absolute) && (int) filesize($absolute) > 0;

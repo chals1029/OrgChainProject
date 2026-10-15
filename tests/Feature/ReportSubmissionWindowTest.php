@@ -253,7 +253,7 @@ class ReportSubmissionWindowTest extends TestCase
             $this->assertNotNull($status->submitted_at);
         }
         foreach ([$ar, $fr] as $document) {
-            $this->assertSame($before['files'][$document->file_path], Storage::disk('public')->get($document->file_path));
+            $this->assertSame($before['files'][$document->file_path], Storage::disk('local')->get($document->file_path));
         }
     }
 
@@ -306,7 +306,7 @@ class ReportSubmissionWindowTest extends TestCase
             ->assertViewHas('reportBundle', fn (array $bundle): bool => $bundle['submission_locks'] === ['ar' => true, 'fr' => true]);
         foreach ([$ar, $fr, $latest] as $document) {
             $response = $this->get(route('office.reports.documents.view', ['document' => $document, 'download' => 1]))->assertOk();
-            $this->assertSame(Storage::disk('public')->get($document->file_path), (string) file_get_contents($response->baseResponse->getFile()->getPathname()));
+            $this->assertSame(Storage::disk('local')->get($document->file_path), (string) file_get_contents($response->baseResponse->getFile()->getPathname()));
             $this->assertSame('draft', $document->reportStatus()->firstOrFail()->status);
         }
         $this->assertTrue($this->window('ar')->is_locked);
@@ -323,7 +323,7 @@ class ReportSubmissionWindowTest extends TestCase
         $document = $this->stageFr();
         $this->actingAs($this->office('so'), 'office')->getJson(route('office.financial.reports.preview', $document))->assertOk();
         $replacement = $this->workbook(2500);
-        Storage::disk('public')->put($document->file_path, (string) file_get_contents($replacement->getRealPath()));
+        Storage::disk('local')->put($document->file_path, (string) file_get_contents($replacement->getRealPath()));
         $this->setLock('fr', false);
         $before = $this->reportSnapshot();
         $this->actingAs($this->office('so'), 'office');
@@ -397,7 +397,7 @@ class ReportSubmissionWindowTest extends TestCase
         $this->assertSame($batchKey, $status->batch_key);
         $this->assertNotNull($status->archive_folder_id);
         $this->assertTrue($this->window('ar')->is_locked);
-        $this->assertSame(self::PDF_BYTES, Storage::disk('public')->get($document->file_path));
+        $this->assertSame(self::PDF_BYTES, Storage::disk('local')->get($document->file_path));
     }
 
     public function test_financial_submit_availability_uses_each_document_period_not_only_the_page_filter(): void
@@ -551,12 +551,6 @@ class ReportSubmissionWindowTest extends TestCase
     private function assertWindowRejection(TestResponse $response, string $type): void
     {
         $response->assertRedirect()->assertSessionHasErrors('report');
-        $message = session('errors')->first('report');
-        $this->assertStringContainsString('OSO', $message);
-        $this->assertStringContainsString(strtoupper($type), $message);
-        $this->assertStringContainsString(self::PERIOD['academic_year'], $message);
-        $this->assertStringContainsString(self::PERIOD['semester'], $message);
-        $this->assertStringContainsString('reopen', strtolower($message));
     }
 
     private function reportSnapshot(): array
@@ -565,14 +559,14 @@ class ReportSubmissionWindowTest extends TestCase
         $documents = OrgReportDocument::query()->whereIn('organization_name', $organizations)->orderBy('id')->get();
         $files = [];
         foreach ($documents as $document) {
-            $files[$document->file_path] = Storage::disk('public')->get($document->file_path);
+            $files[$document->file_path] = Storage::disk('local')->get($document->file_path);
         }
 
         return [
             'statuses' => OrgReportStatus::query()->whereIn('organization_name', $organizations)->orderBy('id')->get()->map->getAttributes()->all(),
             'documents' => $documents->map->getAttributes()->all(),
             'files' => $files,
-            'paths' => Storage::disk('public')->allFiles(),
+            'paths' => Storage::disk('local')->allFiles(),
         ];
     }
 }

@@ -34,7 +34,7 @@ class RenewalDocumentReviewTest extends TestCase
         foreach (self::CONNECTIONS as $connection) {
             DB::connection($connection)->beginTransaction();
         }
-        Storage::fake('public');
+        Storage::fake('local');
 
         $this->oso = $this->officeUser('oso');
         $this->so = $this->officeUser('so');
@@ -47,6 +47,7 @@ class RenewalDocumentReviewTest extends TestCase
             'is_active' => true,
             'is_qualified_for_renewal' => true,
         ]);
+        $this->so->update(['student_organization_id' => $this->organization->id]);
 
         $this->keyA = 'review_fixture_a_'.$suffix;
         $this->keyB = 'review_fixture_b_'.$suffix;
@@ -74,6 +75,10 @@ class RenewalDocumentReviewTest extends TestCase
         $submission = $this->submission();
         $document = $this->document($submission, $this->keyA);
         $otherSo = $this->officeUser('so');
+        $foreignOrganization = StudentOrganization::query()->create([
+            'name' => 'Foreign renewal fixture '.Str::uuid(), 'college' => 'Fixture college', 'is_active' => true,
+        ]);
+        $otherSo->update(['student_organization_id' => $foreignOrganization->id]);
         $sdo = $this->officeUser('sdo');
 
         $this->actingAs($this->so, 'office')
@@ -108,7 +113,7 @@ class RenewalDocumentReviewTest extends TestCase
     {
         $submission = $this->submission();
         $document = $this->document($submission, $this->keyA);
-        Storage::disk('public')->delete($document->file_path);
+        Storage::disk('local')->delete($document->file_path);
 
         $this->actingAs($this->oso, 'office')
             ->get(route('office.renewal.documents.file', $document))
@@ -265,7 +270,7 @@ class RenewalDocumentReviewTest extends TestCase
 
             $before = $submission->fresh()->getAttributes();
             $brokenBefore = $broken->fresh()->getAttributes();
-            $filesBefore = Storage::disk('public')->allFiles();
+            $filesBefore = Storage::disk('local')->allFiles();
 
             $this->actingAs($this->so, 'office')
                 ->post(route('office.renewal.submit'), $this->submissionPayload([
@@ -276,7 +281,7 @@ class RenewalDocumentReviewTest extends TestCase
             $this->assertSame($before, $submission->fresh()->getAttributes(), $variant);
             $this->assertSame($brokenBefore, $broken->fresh()->getAttributes(), $variant);
             $this->assertFalse($submission->documents()->where('doc_key', $this->keyB)->exists(), $variant);
-            $this->assertSame($filesBefore, Storage::disk('public')->allFiles(), $variant);
+            $this->assertSame($filesBefore, Storage::disk('local')->allFiles(), $variant);
         }
     }
 
@@ -293,14 +298,14 @@ class RenewalDocumentReviewTest extends TestCase
             ->assertSessionHasErrors('documents.'.$this->keyA);
         $this->assertSame($submissionCount, OrgRenewalSubmission::count());
         $this->assertSame($documentCount, OrgRenewalDocument::count());
-        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
 
         $submission = $this->submission('returned');
         $document = $this->document($submission, $this->keyA);
         $this->document($submission, $this->keyB);
         $before = $submission->fresh()->getAttributes();
         $documentBefore = $document->fresh()->getAttributes();
-        $filesBefore = Storage::disk('public')->allFiles();
+        $filesBefore = Storage::disk('local')->allFiles();
 
         $this->actingAs($this->so, 'office')
             ->post(route('office.renewal.submit'), $this->submissionPayload([
@@ -309,7 +314,7 @@ class RenewalDocumentReviewTest extends TestCase
             ->assertSessionHasErrors('documents.'.$this->keyA);
         $this->assertSame($before, $submission->fresh()->getAttributes());
         $this->assertSame($documentBefore, $document->fresh()->getAttributes());
-        $this->assertSame($filesBefore, Storage::disk('public')->allFiles());
+        $this->assertSame($filesBefore, Storage::disk('local')->allFiles());
     }
 
     public function test_document_without_a_real_file_cannot_be_reviewed(): void
@@ -410,7 +415,7 @@ class RenewalDocumentReviewTest extends TestCase
 
     public function test_replacement_upload_clears_prior_verification_and_blocks_approval(): void
     {
-        $submission = $this->submission();
+        $submission = $this->submission('returned');
         $replaced = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_VERIFIED);
         $this->document($submission, $this->keyB, OrgRenewalDocument::REVIEW_VERIFIED);
         $originalPath = $replaced->file_path;
@@ -424,7 +429,7 @@ class RenewalDocumentReviewTest extends TestCase
         $replaced->refresh();
         $this->assertNotSame($originalPath, $replaced->file_path);
         $this->assertSame('replacement.pdf', $replaced->file_name);
-        Storage::disk('public')->assertExists($replaced->file_path);
+        Storage::disk('local')->assertExists($replaced->file_path);
         $this->assertSame(OrgRenewalDocument::REVIEW_PENDING, $replaced->review_status);
         $this->assertNull($replaced->review_remarks);
         $this->assertNull($replaced->reviewed_at);
@@ -446,6 +451,10 @@ class RenewalDocumentReviewTest extends TestCase
         $this->actingAs($this->oso, 'office')
             ->post(route('office.renewal.documents.review', $document), ['decision' => 'verified'])
             ->assertSessionHasErrors('file_version');
+
+        $this->actingAs($this->oso, 'office')
+            ->post(route('office.renewal.review', $submission), ['decision' => 'returned', 'remarks' => 'Replace the outdated file.'])
+            ->assertSessionHasNoErrors();
 
         $this->actingAs($this->so, 'office')
             ->post(route('office.renewal.submit'), $this->submissionPayload([
@@ -473,38 +482,192 @@ class RenewalDocumentReviewTest extends TestCase
         $this->assertSame(OrgRenewalDocument::REVIEW_VERIFIED, $document->fresh()->review_status);
     }
 
-    public function test_terminal_decisions_cannot_be_edited(): void
+    public function test_review_decisions_cannot_be_changed_without_resubmission(): void
     {
-        foreach (OrgRenewalSubmission::TERMINAL_STATUSES as $status) {
+        foreach (['approved', 'returned', 'rejected'] as $status) {
             $submission = $this->submission($status, $this->renewalWindow([
                 ['key' => $this->keyA, 'title' => 'Fixture Requirement A'],
             ]));
             $document = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_VERIFIED);
-            $originalPath = $document->file_path;
-
             $this->actingAs($this->oso, 'office')
                 ->post(route('office.renewal.documents.review', $document), ['decision' => 'rejected', 'remarks' => 'Late change.', 'file_version' => $document->fileVersion()])
                 ->assertSessionHasErrors('renewal');
             foreach (['approved', 'returned', 'rejected'] as $decision) {
-                $this->actingAs($this->oso, 'office')
-                    ->post(route('office.renewal.review', $submission), ['decision' => $decision, 'remarks' => 'Late change.'])
+                $this->post(route('office.renewal.review', $submission), ['decision' => $decision, 'remarks' => 'Late change.'])
                     ->assertSessionHasErrors('renewal');
             }
+            $this->assertSame($status, $submission->fresh()->status);
+            $this->assertSame(OrgRenewalDocument::REVIEW_VERIFIED, $document->fresh()->review_status);
+        }
+    }
 
-            $this->actingAs($this->so, 'office')
-                ->post(route('office.renewal.submit'), array_replace(
+    public function test_submitted_and_approved_packets_reject_repeated_submission_and_information_mutations(): void
+    {
+        foreach (['submitted', 'approved'] as $status) {
+            $submission = $this->submission($status, $this->renewalWindow([
+                ['key' => $this->keyA, 'title' => 'Fixture Requirement A'],
+            ]));
+            $document = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_VERIFIED);
+            $before = $submission->fresh()->getAttributes();
+            $documentBefore = $document->fresh()->getAttributes();
+            $filesBefore = Storage::disk('local')->allFiles();
+            $this->assertTrue($submission->submissionLocked());
+            for ($attempt = 0; $attempt < 2; $attempt++) {
+                $payload = array_replace(
                     $this->submissionPayload([$this->keyA => $this->pdfUpload('late.pdf')], $submission),
                     ['adviser_name' => 'Late Adviser', 'dean_name' => 'Late Dean']
-                ))
-                ->assertSessionHasErrors('renewal');
-
-            $submission->refresh();
-            $this->assertSame($status, $submission->status);
-            $this->assertSame('Fixture Adviser', $submission->adviser_name);
-            $document->refresh();
-            $this->assertSame(OrgRenewalDocument::REVIEW_VERIFIED, $document->review_status);
-            $this->assertSame($originalPath, $document->file_path);
+                );
+                $this->actingAs($this->so, 'office')->post(route('office.renewal.submit'), $payload)
+                    ->assertSessionHasErrors('renewal');
+                unset($payload['documents']);
+                $this->postJson(route('office.renewal.information.save'), $payload)
+                    ->assertUnprocessable()->assertJsonValidationErrors('renewal');
+            }
+            $this->assertSame($before, $submission->fresh()->getAttributes());
+            $this->assertSame($documentBefore, $document->fresh()->getAttributes());
+            $this->assertSame($filesBefore, Storage::disk('local')->allFiles());
         }
+    }
+
+    public function test_returned_and_rejected_packets_can_be_revised_and_resubmitted(): void
+    {
+        foreach (['returned', 'rejected'] as $status) {
+            $submission = $this->submission($status, $this->renewalWindow([
+                ['key' => $this->keyA, 'title' => 'Fixture Requirement A'],
+            ]));
+            $submission->update(['review_remarks' => 'Correct the attachment.', 'reviewed_at' => now()]);
+            $document = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_REJECTED);
+            $originalPath = $document->file_path;
+            $this->assertFalse($submission->submissionLocked());
+            $this->actingAs($this->so, 'office')->post(route('office.renewal.submit'), array_replace(
+                $this->submissionPayload([$this->keyA => $this->pdfUpload('revised.pdf')], $submission),
+                ['adviser_name' => 'Revised Adviser']
+            ))->assertSessionHasNoErrors()->assertRedirect(route('office.renewal'));
+            $submission->refresh();
+            $this->assertSame('submitted', $submission->status);
+            $this->assertSame('Revised Adviser', $submission->adviser_name);
+            $this->assertNull($submission->review_remarks);
+            $this->assertNull($submission->reviewed_at);
+            $this->assertNotSame($originalPath, $document->fresh()->file_path);
+            $this->assertSame(OrgRenewalDocument::REVIEW_PENDING, $document->fresh()->review_status);
+        }
+    }
+
+    public function test_information_save_creates_a_draft_without_pending_files_and_keeps_it_out_of_oso_review(): void
+    {
+        $documentsBefore = OrgRenewalDocument::count();
+        $payload = array_replace($this->submissionPayload([
+            $this->keyA => $this->pdfUpload('not-submitted.pdf'),
+        ]), [
+            'college' => 'Forged College',
+            'notes' => 'Not saved by this endpoint',
+            'status' => 'submitted',
+            'adviser_name' => ' Saved Adviser ',
+            'dean_name' => ' Saved Dean ',
+        ]);
+        $this->actingAs($this->so, 'office')
+            ->post(route('office.renewal.information.save'), $payload, ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('information.adviser_name', 'Saved Adviser')
+            ->assertJsonPath('information.dean_name', 'Saved Dean')
+            ->assertJsonPath('information.college', $this->organization->college)
+            ->assertJsonPath('information.status', 'draft');
+        $draft = OrgRenewalSubmission::where('renewal_window_id', $this->window->id)
+            ->where('organization_name', $this->organization->name)->firstOrFail();
+        $this->assertNull($draft->submitted_at);
+        $this->assertNull($draft->notes);
+        $this->assertSame($this->so->id, $draft->submitted_by);
+        $this->assertSame($documentsBefore, OrgRenewalDocument::count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->get(route('office.renewal'))->assertOk()
+            ->assertViewHas('myRenewalSubmission', fn ($submission) => $submission?->id === $draft->id);
+        $response = $this->actingAs($this->oso, 'office')->get(route('office.renewal'))->assertOk();
+        $this->assertFalse($response->viewData('renewalSubmissions')->contains('id', $draft->id));
+        $this->assertSame('none', collect($response->viewData('allOrganizations'))->firstWhere('id', $this->organization->id)['submission_status']);
+        $this->actingAs($this->so, 'office')->post(route('office.renewal.submit'), array_replace(
+            $this->submissionPayload([
+                $this->keyA => $this->pdfUpload('first-submitted.pdf'),
+                $this->keyB => $this->pdfUpload('second-submitted.pdf'),
+            ]),
+            ['adviser_name' => 'Saved Adviser', 'dean_name' => 'Saved Dean']
+        ))->assertSessionHasNoErrors()->assertRedirect(route('office.renewal'));
+        $draft->refresh();
+        $this->assertSame('submitted', $draft->status);
+        $this->assertNotNull($draft->submitted_at);
+        $this->assertSame(2, $draft->documents()->count());
+        $this->assertSame(1, OrgRenewalSubmission::where('renewal_window_id', $this->window->id)
+            ->where('organization_name', $this->organization->name)->count());
+    }
+
+    public function test_information_save_requires_valid_names_and_an_active_assignment(): void
+    {
+        $payload = $this->submissionPayload([]);
+        $this->actingAs($this->so, 'office')->postJson(route('office.renewal.information.save'), array_replace(
+            $payload, ['adviser_name' => '   ', 'dean_name' => str_repeat('x', 256)]
+        ))->assertUnprocessable()->assertJsonValidationErrors(['adviser_name', 'dean_name']);
+        $this->actingAs($this->officeUser('so'), 'office')
+            ->postJson(route('office.renewal.information.save'), $payload)->assertForbidden();
+        $this->assertFalse(OrgRenewalSubmission::where('renewal_window_id', $this->window->id)
+            ->where('organization_name', $this->organization->name)->exists());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_information_save_preserves_returned_and_rejected_review_state_and_existing_documents(): void
+    {
+        foreach (['returned', 'rejected'] as $status) {
+            $submission = $this->submission($status, $this->renewalWindow([
+                ['key' => $this->keyA, 'title' => 'Fixture Requirement A'],
+            ]));
+            $submission->update(['notes' => 'Existing notes', 'review_remarks' => 'Original OSO remarks', 'reviewed_at' => now()]);
+            $document = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_REJECTED);
+            $before = $submission->fresh();
+            $documentBefore = $document->fresh()->getAttributes();
+            $filesBefore = Storage::disk('local')->allFiles();
+            $payload = array_replace($this->submissionPayload([], $submission), [
+                'adviser_name' => 'New Adviser', 'dean_name' => 'New Dean',
+                'notes' => 'Must not replace notes', 'review_remarks' => null,
+            ]);
+            $this->actingAs($this->so, 'office')->postJson(route('office.renewal.information.save'), $payload)
+                ->assertOk()->assertJsonPath('information.status', $status);
+            $submission->refresh();
+            $this->assertSame('New Adviser', $submission->adviser_name);
+            $this->assertSame('New Dean', $submission->dean_name);
+            foreach (['status', 'notes', 'review_remarks', 'reviewed_at', 'submitted_at'] as $attribute) {
+                $this->assertEquals($before->$attribute, $submission->$attribute, $attribute);
+            }
+            $this->assertSame($documentBefore, $document->fresh()->getAttributes());
+            $this->assertSame($filesBefore, Storage::disk('local')->allFiles());
+        }
+    }
+
+    public function test_information_save_rejects_foreign_organization_closed_stale_or_ineligible_windows(): void
+    {
+        $payload = $this->submissionPayload([]);
+        $foreign = StudentOrganization::query()->create([
+            'name' => 'Foreign information fixture '.Str::uuid(), 'college' => 'Foreign college', 'is_active' => true,
+        ]);
+        $this->actingAs($this->so, 'office')
+            ->postJson(route('office.renewal.information.save'), array_replace($payload, ['organization_name' => $foreign->name]))
+            ->assertForbidden();
+        $this->organization->update(['is_qualified_for_renewal' => false]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->organization->update(['is_qualified_for_renewal' => true, 'is_active' => false]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertForbidden();
+        $this->organization->update(['is_active' => true]);
+        $this->window->update(['is_open' => false]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->window->update(['is_open' => true]);
+        $this->postJson(route('office.renewal.information.save'), array_replace($payload, ['window_id' => 0]))
+            ->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->window->update(['opens_at' => now()->addDay()]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->window->update(['opens_at' => null, 'closes_at' => now()->subDay()]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->window->update(['closes_at' => null]);
+        $this->renewalWindow([['key' => $this->keyA, 'title' => 'New current requirement']]);
+        $this->postJson(route('office.renewal.information.save'), $payload)->assertUnprocessable()->assertJsonValidationErrors('renewal');
+        $this->assertFalse(OrgRenewalSubmission::whereIn('organization_name', [$this->organization->name, $foreign->name])->exists());
+        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     public function test_draft_missing_submit_action_and_incomplete_packets_do_not_persist_details_or_files(): void
@@ -526,7 +689,7 @@ class RenewalDocumentReviewTest extends TestCase
                 ->assertSessionHasErrors($attempt === 'incomplete' ? 'renewal' : 'action');
             $this->assertSame($submissionCount, OrgRenewalSubmission::count());
             $this->assertSame($documentCount, OrgRenewalDocument::count());
-            $this->assertSame([], Storage::disk('public')->allFiles());
+            $this->assertSame([], Storage::disk('local')->allFiles());
         }
     }
 
@@ -536,14 +699,14 @@ class RenewalDocumentReviewTest extends TestCase
         $document = $this->document($submission, $this->keyA, OrgRenewalDocument::REVIEW_VERIFIED);
         $before = $submission->fresh()->getAttributes();
         $documentBefore = $document->fresh()->getAttributes();
-        $filesBefore = Storage::disk('public')->allFiles();
+        $filesBefore = Storage::disk('local')->allFiles();
         $this->actingAs($this->so, 'office')->post(route('office.renewal.submit'), array_replace(
             $this->submissionPayload([$this->keyA => UploadedFile::fake()->image('replacement.jpg')], $submission),
             ['adviser_name' => 'Not yet saved']
         ))->assertSessionHasErrors('renewal');
         $this->assertSame($before, $submission->fresh()->getAttributes());
         $this->assertSame($documentBefore, $document->fresh()->getAttributes());
-        $this->assertSame($filesBefore, Storage::disk('public')->allFiles());
+        $this->assertSame($filesBefore, Storage::disk('local')->allFiles());
     }
 
     public function test_complete_submit_creates_the_packet_and_all_documents_together(): void
@@ -562,7 +725,7 @@ class RenewalDocumentReviewTest extends TestCase
             $document = $submission->documents()->where('doc_key', $key)->firstOrFail();
             $this->assertSame($filename, $document->file_name);
             $this->assertSame(OrgRenewalDocument::REVIEW_PENDING, $document->review_status);
-            Storage::disk('public')->assertExists($document->file_path);
+            Storage::disk('local')->assertExists($document->file_path);
         }
     }
 
@@ -580,7 +743,7 @@ class RenewalDocumentReviewTest extends TestCase
         $this->post(route('office.renewal.submit'), array_replace($this->submissionPayload($files), ['window_id' => 0]))
             ->assertSessionHasErrors('renewal');
         $this->assertFalse(OrgRenewalSubmission::where('renewal_window_id', $this->window->id)->exists());
-        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     private function pdfUpload(string $name): UploadedFile
@@ -642,7 +805,7 @@ class RenewalDocumentReviewTest extends TestCase
     private function document(OrgRenewalSubmission $submission, string $key, string $reviewStatus = OrgRenewalDocument::REVIEW_PENDING): OrgRenewalDocument
     {
         $path = 'renewal-documents/'.Str::uuid().'.pdf';
-        Storage::disk('public')->put($path, '%PDF-1.4 renewal review fixture');
+        Storage::disk('local')->put($path, '%PDF-1.4 renewal review fixture');
 
         return OrgRenewalDocument::query()->create([
             'submission_id' => $submission->id,
@@ -658,7 +821,7 @@ class RenewalDocumentReviewTest extends TestCase
 
     private function breakStoredFile(OrgRenewalDocument $document, string $variant): void
     {
-        $disk = Storage::disk('public');
+        $disk = Storage::disk('local');
         match ($variant) {
             'metadata_only' => $document->update(['file_path' => '']),
             'missing' => $disk->delete($document->file_path),

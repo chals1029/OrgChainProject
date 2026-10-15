@@ -107,20 +107,7 @@ class ApiController extends Controller
             return;
         }
 
-        $secret = (string) (voting_config('nodes.secret_token', '') ?? '');
-        $token = $_SERVER['HTTP_X_NODE_TOKEN'] ?? '';
-        if ($token === '' && ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
-            if (preg_match('/Bearer\s+(.*)$/i', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-                $token = $matches[1];
-            }
-        }
-
-        if ($secret === '' || ! hash_equals($secret, (string) $token)) {
-            http_response_code(403);
-            echo json_encode([
-                'ok' => false,
-                'error' => 'Unauthorized node. Invalid or missing node security token.',
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if (! $this->authenticateNode()) {
             return;
         }
 
@@ -189,6 +176,11 @@ class ApiController extends Controller
     {
         header('Content-Type: application/json');
         header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Content-Type, X-Node-Token, Authorization');
+
+        if (! $this->authenticateNode()) {
+            return;
+        }
 
         $electionId = (int) ($_GET['election_id'] ?? 1);
         $node = (int) ($_GET['node'] ?? voting_config('nodes.current_node', 1));
@@ -208,6 +200,11 @@ class ApiController extends Controller
     {
         header('Content-Type: application/json');
         header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Content-Type, X-Node-Token, Authorization');
+
+        if (! $this->authenticateNode()) {
+            return;
+        }
 
         $electionId = (int) ($_GET['election_id'] ?? 1);
         $node = (int) ($_GET['node'] ?? voting_config('nodes.current_node', 1));
@@ -232,6 +229,29 @@ class ApiController extends Controller
             'timestamp' => date('c'),
             'result' => $findResult,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function authenticateNode(): bool
+    {
+        $secret = (string) (voting_config('nodes.secret_token', '') ?? '');
+        $token = (string) ($_SERVER['HTTP_X_NODE_TOKEN'] ?? '');
+        if ($token === '' && ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
+            if (preg_match('/Bearer\s+(.*)$/i', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
+                $token = $matches[1];
+            }
+        }
+
+        if ($secret !== '' && $token !== '' && hash_equals($secret, $token)) {
+            return true;
+        }
+
+        http_response_code(403);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'Unauthorized node. Invalid or missing node security token.',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        return false;
     }
 }
 

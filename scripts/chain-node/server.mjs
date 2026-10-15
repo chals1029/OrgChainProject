@@ -196,7 +196,7 @@ const server = http.createServer(async (req, res) => {
 
   if (needsAuth) {
     const token = getToken(req);
-    if (SECRET && !tokensMatch(SECRET, token)) {
+    if (!SECRET || !token || !tokensMatch(SECRET, token)) {
       sendJson(res, 403, { ok: false, error: 'Unauthorized node. Invalid or missing node security token.' });
       return;
     }

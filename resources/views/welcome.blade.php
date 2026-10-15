@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="OrgChain — Blockchain-powered student organization management for Batangas State University.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="OrgChain">
+    <meta property="og:title" content="OrgChain | Batangas State University">
+    <meta property="og:description" content="Student organization submissions, reports and office reviews for Batangas State University.">
+    <meta property="og:url" content="{{ url('/') }}">
+    <meta property="og:image" content="{{ asset('Orgchain logo.png') }}">
+    <meta property="og:image:alt" content="OrgChain logo">
+    <link rel="canonical" href="{{ url('/') }}">
 
     <title>OrgChain | Batangas State University</title>
     <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
@@ -434,7 +442,7 @@
     </footer>
 
     {{-- Student Login Modal --}}
-    <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginTitle" hidden>
+    <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginTitle" data-auto-open="{{ ($errors->any() || request()->boolean('login') || session('status') || session('login') || session('code_sent')) ? 'true' : 'false' }}" hidden>
         <div class="modal login-modal liquid-glass">
             <button type="button" class="modal-close" id="closeLoginBtn" aria-label="Close login">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -556,11 +564,6 @@
     @endif
 
     <script>
-        @if ($errors->any() || request()->boolean('login') || session('status') || session('login') || session('code_sent'))
-            document.addEventListener('DOMContentLoaded', function () {
-                document.getElementById('openLoginBtn')?.click();
-            });
-        @endif
 
         // Login modal — step switching helpers
         document.addEventListener('DOMContentLoaded', function () {

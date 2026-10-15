@@ -3,6 +3,12 @@
 @php
     $canCreateSubfolder = $currentFolder && !($currentFolder->is_activity ?? false);
     $hasUploadFolders = $allSavedFolders->isNotEmpty();
+    $showOrganizationArchives = !$currentFolder && $assignedArchiveOrganization === null;
+    $archiveQuery = [
+        'year' => $archiveFilters['year'],
+        'scope' => $archiveFilters['scope'],
+        'search' => $archiveFilters['search'],
+    ];
 @endphp
 
 @section('title', $currentFolder ? $currentFolder->name . ' — Archive Vault' : 'Archive Vault')
@@ -11,9 +17,9 @@
     <h1><strong>{{ $assignedArchiveOrganization ? 'Organization Archive' : 'Archive Vault' }}</strong></h1>
     <p class="org-welcome">
         @if ($assignedArchiveOrganization)
-            Store and reopen documents for {{ $assignedArchiveOrganization }}. Archiving a file does not submit it for report review.
+            Browse preserved documents for {{ $assignedArchiveOrganization }}. Archive uploads do not submit reports for review.
         @else
-            Browse archived organization documents and verified semester records, or organize uploaded files in archive folders.
+            Browse organization archives and preserved documents.
         @endif
     </p>
 @endsection
@@ -30,6 +36,7 @@
 @endsection
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/archive.css') }}?v={{ filemtime(public_path('css/archive.css')) }}">
     <style>
         /* ==========================================================================
            Google Drive-Style Archive Vault System
@@ -733,29 +740,9 @@
             animation: arcModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        #archiveDocPreviewModal { max-width: 1160px; }
-        #archiveDocPreviewModal .arc-modal-box { padding: 1.25rem; }
-        #prevDocTitle, #prevDocOriginalName { overflow-wrap: anywhere; }
-        .arc-preview-body {
-            height: min(58dvh, 720px);
-            min-height: 200px;
-            overflow: auto;
-            background: #e9edf2;
-            border: 1px solid var(--g-border);
-            border-radius: 12px;
-        }
-        .arc-preview-body:focus-visible { outline: 2px solid var(--g-maroon); outline-offset: 2px; }
-        .arc-preview-message { margin: 0; padding: 2rem; text-align: center; color: var(--g-ink-body); }
-        .arc-preview-body iframe { display: block; width: 100%; height: 100%; min-height: 200px; border: 0; background: white; }
-        .arc-preview-body img { display: block; max-width: 100%; height: auto; margin: auto; }
-        .arc-preview-word { width: max-content; min-width: 100%; }
-        .arc-preview-word .docx-wrapper { width: max-content; min-width: 100%; box-sizing: border-box; padding: 20px; }
-        .arc-preview-word .docx-wrapper > section.docx { flex-shrink: 0; margin: 0 auto 20px; }
         @media (max-width: 600px) {
             .arc-modal { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }
             .arc-modal-box { padding: 1rem; max-height: calc(100dvh - 1rem); }
-            #archiveDocPreviewModal .arc-modal-box { padding: 0.85rem; }
-            .arc-preview-word .docx-wrapper { padding: 12px; }
         }
 
         @keyframes arcModalPop {
@@ -892,8 +879,8 @@
                 <i class="bi bi-folder-fill"></i>
             </div>
             <div class="gdrive-stat-meta">
-                <strong>{{ $totalFolders }}</strong>
-                <span>Archived Folders</span>
+                <strong>{{ $showOrganizationArchives ? $archiveOrganizationCount : $totalFolders }}</strong>
+                <span>{{ $showOrganizationArchives ? 'Organization Archives' : 'Archived Folders' }}</span>
             </div>
         </div>
 
@@ -917,6 +904,14 @@
             </div>
         </div>
     </div>
+
+    @include('org.partials.archive-organizations')
+
+    @if (!$selectedArchiveOrganization)
+        @if ($showOrganizationArchives)
+            <details class="archive-legacy">
+                <summary><i class="bi bi-folder"></i> Folders &amp; preserved files</summary>
+        @endif
 
     {{-- 2. Google Drive Breadcrumbs & Controls Toolbar --}}
     <div class="gdrive-nav-panel">
@@ -1096,8 +1091,8 @@
                                         <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? '—' }}</span>
                                     </div>
                                     <div class="gdrive-file-actions">
-                                        <button type="button" class="gdrive-btn-preview" data-archive-preview data-preview-title="{{ $doc['name'] }}" data-preview-original-name="{{ $originalName }}" data-preview-folder="{{ $folderName }}" data-preview-type="{{ $type }}" data-preview-size="{{ $doc['size'] ?? '—' }}" data-preview-date="{{ $doc['date'] ?? '—' }}" data-preview-author="{{ $doc['author'] ?? '—' }}" data-preview-url="{{ $doc['url'] }}" data-preview-download="{{ $doc['download_url'] }}">
-                                            <i class="bi bi-eye"></i> Preview
+                                        <button type="button" class="gdrive-btn-preview" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
+                                            <i class="bi bi-eye"></i> View
                                         </button>
                                         <a href="{{ $doc['download_url'] }}" class="gdrive-btn-download" download="{{ $originalName }}">
                                             <i class="bi bi-download"></i> Download
@@ -1161,8 +1156,8 @@
                                         <td style="font-size: 0.84rem; font-weight: 600;">{{ $doc['author'] ?? '—' }}</td>
                                         <td style="text-align: right; white-space: nowrap;">
                                             <div class="gdrive-tbl-actions">
-                                                <button type="button" class="gdrive-tbl-btn is-preview" data-archive-preview data-preview-title="{{ $doc['name'] }}" data-preview-original-name="{{ $originalName }}" data-preview-folder="{{ $folderName }}" data-preview-type="{{ $type }}" data-preview-size="{{ $doc['size'] ?? '—' }}" data-preview-date="{{ $doc['date'] ?? '—' }}" data-preview-author="{{ $doc['author'] ?? '—' }}" data-preview-url="{{ $doc['url'] }}" data-preview-download="{{ $doc['download_url'] }}">
-                                                    <i class="bi bi-eye"></i> Preview
+                                                <button type="button" class="gdrive-tbl-btn is-preview" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
+                                                    <i class="bi bi-eye"></i> View
                                                 </button>
                                                 <a href="{{ $doc['download_url'] }}" class="gdrive-tbl-btn is-download" download="{{ $originalName }}">
                                                     <i class="bi bi-download"></i> Download
@@ -1185,6 +1180,10 @@
             </div>
         @endif
     </main>
+        @if ($showOrganizationArchives)
+            </details>
+        @endif
+    @endif
 
     {{-- Modal 1: Create New Folder / Subfolder --}}
     <dialog class="arc-modal" id="newFolderModal">
@@ -1320,54 +1319,7 @@
         </div>
     </dialog>
 
-    {{-- Modal 3: Document Preview & Details --}}
-    <dialog class="arc-modal" id="archiveDocPreviewModal" aria-labelledby="prevDocTitle">
-        <div class="arc-modal-box">
-            <div class="arc-modal-header">
-                <h3><i class="bi bi-file-earmark-text-fill" style="color: var(--g-maroon);"></i> Document Preview</h3>
-                <button type="button" class="arc-modal-close" onclick="closeArchivePreviewModal()" aria-label="Close document preview">&times;</button>
-            </div>
-
-            <div style="margin-bottom: 1.25rem;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--g-maroon); background: var(--g-maroon-light); padding: 0.15rem 0.6rem; border-radius: 9999px; border: 1px solid var(--g-maroon-border);" id="prevDocFolder"></span>
-                    <span class="gdrive-file-format-badge" id="prevDocFormat"></span>
-                </div>
-                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--g-ink-dark); line-height: 1.35; margin: 0 0 0.35rem;" id="prevDocTitle"></h2>
-                <p style="font-size: 0.8rem; color: var(--g-ink-muted); margin: 0 0 0.85rem;" id="prevDocOriginalName"></p>
-
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.15rem; margin-bottom: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.84rem;">
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">File Size</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocSize"></strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded On</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocDate"></strong>
-                        </div>
-                        <div>
-                            <span style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--g-ink-muted); font-weight: 700;">Uploaded By</span>
-                            <strong style="color: var(--g-ink-dark);" id="prevDocAuthor"></strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="archiveDocPreviewBody" class="arc-preview-body" tabindex="0" aria-label="Document contents; scroll to read"></div>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.65rem; border-top: 1px solid var(--g-border-subtle); padding-top: 1rem;">
-                <button type="button" class="org-btn org-btn-ghost" onclick="closeArchivePreviewModal()">Close</button>
-                <a class="org-btn org-btn-primary" id="prevDocDownloadLink" download>
-                    <i class="bi bi-download"></i> Download Document
-                </a>
-            </div>
-        </div>
-    </dialog>
-
-
-    <script src="{{ asset('js/vendor/jszip.min.js') }}"></script>
-    <script src="{{ asset('js/vendor/docx-preview.min.js') }}"></script>
+    @include('org.partials.document-preview')
     <script>
         let currentGdriveView = localStorage.getItem('gdrive_archive_view') || 'grid';
 
@@ -1469,115 +1421,6 @@
             if (dialog) dialog.close();
         }
 
-        const archivePreviewDialog = document.getElementById('archiveDocPreviewModal');
-        const archivePreviewBody = document.getElementById('archiveDocPreviewBody');
-        let archivePreviewRevision = 0;
-        let archivePreviewRequest = null;
-        let archivePreviewMediaUrl = null;
-
-        function clearArchivePreview() {
-            archivePreviewRevision++;
-            if (archivePreviewRequest) archivePreviewRequest.abort();
-            archivePreviewRequest = null;
-            if (archivePreviewMediaUrl) URL.revokeObjectURL(archivePreviewMediaUrl);
-            archivePreviewMediaUrl = null;
-            archivePreviewBody.replaceChildren();
-            const download = document.getElementById('prevDocDownloadLink');
-            download.removeAttribute('href');
-            download.removeAttribute('download');
-        }
-
-        function archivePreviewMessage(text, isError = false) {
-            const message = document.createElement('p');
-            message.className = 'arc-preview-message';
-            message.setAttribute('role', isError ? 'alert' : 'status');
-            message.textContent = text;
-            archivePreviewBody.replaceChildren(message);
-        }
-
-        async function openArchivePreviewModal(trigger) {
-            clearArchivePreview();
-            const token = archivePreviewRevision;
-            const data = trigger.dataset;
-            document.getElementById('prevDocTitle').textContent = data.previewTitle;
-            document.getElementById('prevDocOriginalName').textContent = data.previewOriginalName;
-            document.getElementById('prevDocFolder').textContent = data.previewFolder;
-            document.getElementById('prevDocFormat').textContent = data.previewType;
-            document.getElementById('prevDocSize').textContent = data.previewSize;
-            document.getElementById('prevDocDate').textContent = data.previewDate;
-            document.getElementById('prevDocAuthor').textContent = data.previewAuthor;
-            const download = document.getElementById('prevDocDownloadLink');
-            download.href = data.previewDownload;
-            download.download = data.previewOriginalName;
-            archivePreviewMessage('Loading document…');
-            if (!archivePreviewDialog.open) archivePreviewDialog.showModal();
-            archivePreviewDialog.querySelector('.arc-modal-box').scrollTop = 0;
-            const controller = new AbortController();
-            archivePreviewRequest = controller;
-            try {
-                const response = await fetch(data.previewUrl, { credentials: 'same-origin', signal: controller.signal });
-                if (!response.ok) throw new Error(`The document could not be loaded (HTTP ${response.status}).`);
-                const blob = await response.blob();
-                if (token !== archivePreviewRevision) return;
-                const mime = blob.type.toLowerCase().split(';')[0];
-                const type = data.previewType.toLowerCase();
-                if (mime === 'text/html') throw new Error('The server did not return the document. Your session may have expired.');
-                if (mime === 'application/pdf' || type === 'pdf') {
-                    archivePreviewMediaUrl = URL.createObjectURL(blob);
-                    const frame = document.createElement('iframe');
-                    frame.title = data.previewOriginalName;
-                    frame.src = archivePreviewMediaUrl + '#view=FitH';
-                    archivePreviewBody.replaceChildren(frame);
-                } else if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg'].includes(type)) {
-                    archivePreviewMediaUrl = URL.createObjectURL(blob);
-                    const image = document.createElement('img');
-                    image.alt = data.previewOriginalName;
-                    image.src = archivePreviewMediaUrl;
-                    image.addEventListener('error', () => {
-                        if (token === archivePreviewRevision) archivePreviewMessage('The image could not be displayed. Use Download to open the original file.', true);
-                    });
-                    archivePreviewBody.replaceChildren(image);
-                } else if (mime.includes('wordprocessingml') || type === 'docx') {
-                    if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-                        throw new Error('The Word preview library could not be loaded.');
-                    }
-                    const container = document.createElement('div');
-                    container.className = 'arc-preview-word';
-                    await window.docx.renderAsync(blob, container, null, {
-                        breakPages: true,
-                        ignoreWidth: false,
-                        ignoreHeight: false,
-                        renderHeaders: true,
-                        renderFooters: true,
-                        renderFootnotes: true,
-                        useBase64URL: true,
-                    });
-                    if (token !== archivePreviewRevision) return;
-                    archivePreviewBody.replaceChildren(container);
-                } else {
-                    archivePreviewMessage('This file type cannot be previewed in the browser. Use Download to open the original file.');
-                }
-                archivePreviewBody.scrollTop = 0;
-                archivePreviewBody.scrollLeft = 0;
-            } catch (error) {
-                if (token !== archivePreviewRevision || error.name === 'AbortError') return;
-                archivePreviewMessage(`${error.message} Use Download to open the original file.`, true);
-            } finally {
-                if (archivePreviewRequest === controller) archivePreviewRequest = null;
-            }
-        }
-
-        function closeArchivePreviewModal() {
-            archivePreviewDialog.close();
-        }
-
-
-        document.addEventListener('click', (event) => {
-            const trigger = event.target.closest('[data-archive-preview]');
-            if (trigger) openArchivePreviewModal(trigger);
-        });
-        archivePreviewDialog.addEventListener('close', clearArchivePreview);
-        archivePreviewDialog.addEventListener('cancel', clearArchivePreview);
         document.addEventListener('DOMContentLoaded', () => {
             setGdriveView(currentGdriveView);
         });

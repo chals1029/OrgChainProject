@@ -2,15 +2,9 @@
 
 declare(strict_types=1);
 
-$autoload = require dirname(__DIR__, 2).'/vendor/autoload.php';
-if ($autoload instanceof Composer\Autoload\ClassLoader) {
-    $autoload->addPsr4('Elliptic\\', dirname(__DIR__, 2).'/vendor/simplito/elliptic-php/lib');
-    $autoload->addPsr4('BN\\', dirname(__DIR__, 2).'/vendor/simplito/bn-php/lib');
-    $autoload->addPsr4('BI\\', dirname(__DIR__, 2).'/vendor/simplito/bigint-wrapper-php/lib');
-    $autoload->addPsr4('kornrunner\\', dirname(__DIR__, 2).'/vendor/kornrunner/keccak/src');
-}
+require dirname(__DIR__, 2).'/vendor/autoload.php';
 
-use Elliptic\EC;
+use Mdanter\Ecc\EccFactory;
 use kornrunner\Keccak;
 
 if (! extension_loaded('gmp')) {
@@ -20,15 +14,26 @@ if (! extension_loaded('gmp')) {
 
 $root = dirname(__DIR__, 2);
 $output = $root.DIRECTORY_SEPARATOR.'infra'.DIRECTORY_SEPARATOR.'besu'.DIRECTORY_SEPARATOR.'networkFiles';
-$chainId = 20260920;
-
-$privateKeys = [
-    'node-1' => str_pad(dechex(1), 64, '0', STR_PAD_LEFT),
-    'node-2' => str_pad(dechex(2), 64, '0', STR_PAD_LEFT),
-    'node-3' => str_pad(dechex(3), 64, '0', STR_PAD_LEFT),
-    'node-4' => str_pad(dechex(4), 64, '0', STR_PAD_LEFT),
-    'app' => str_pad(dechex(0x101), 64, '0', STR_PAD_LEFT),
-];
+$options = getopt('', ['chain-id:']);
+$chainId = filter_var($options['chain-id'] ?? 20260920, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if ($chainId === false) {
+    throw new InvalidArgumentException('--chain-id must be a positive integer.');
+}
+if (file_exists($root.'/infra/besu/.env') || is_link($output)
+    || (is_dir($output) && array_diff(scandir($output), ['.', '..', '.gitkeep']) !== [])
+    || (file_exists($output) && ! is_dir($output))) {
+    throw new RuntimeException('An existing network or Compose environment was found. Archive it before generating another network.');
+}
+umask(0077);
+$order = gmp_init('fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141', 16);
+$privateKeys = [];
+foreach (['node-1', 'node-2', 'node-3', 'node-4', 'app'] as $name) {
+    do {
+        $privateKey = bin2hex(random_bytes(32));
+        $number = gmp_init($privateKey, 16);
+    } while (gmp_cmp($number, 0) === 0 || gmp_cmp($number, $order) >= 0 || in_array($privateKey, $privateKeys, true));
+    $privateKeys[$name] = $privateKey;
+}
 
 $accounts = [];
 foreach ($privateKeys as $name => $privateKey) {
@@ -125,18 +130,19 @@ writeFile(
     implode(PHP_EOL, $composeEnv).PHP_EOL
 );
 
-fwrite(STDOUT, "Generated a four-validator QBFT network.\n");
+fwrite(STDOUT, "Generated a four-validator QBFT network with random private keys.\n");
 fwrite(STDOUT, 'App signer address: '.$accounts['app']['address']."\n");
 fwrite(STDOUT, 'Genesis: infra/besu/networkFiles/genesis.json'."\n");
-fwrite(STDOUT, 'Start:   powershell -ExecutionPolicy Bypass -File scripts/besu/start-network.ps1'."\n");
+fwrite(STDOUT, "Start the configured Docker Compose network, then deploy the anchor contract.\n");
 
 function publicKeyFromPrivateKey(string $privateKey): string
 {
-    $ec = new EC('secp256k1');
-    $key = $ec->keyFromPrivate($privateKey, 'hex');
-    $publicKey = strtolower((string) $key->getPublic(false, 'hex'));
+    static $generator;
+    $generator ??= EccFactory::getSecgCurves()->generator256k1();
+    $point = $generator->getPrivateKeyFrom(gmp_init($privateKey, 16))->getPublicKey()->getPoint();
 
-    return str_starts_with($publicKey, '04') ? substr($publicKey, 2) : $publicKey;
+    return str_pad(gmp_strval($point->getX(), 16), 64, '0', STR_PAD_LEFT)
+        .str_pad(gmp_strval($point->getY(), 16), 64, '0', STR_PAD_LEFT);
 }
 
 function addressFromPublicKey(string $publicKey): string
@@ -192,7 +198,7 @@ function stripHexPrefix(string $value): string
 
 function ensureDirectory(string $directory): void
 {
-    if (! is_dir($directory) && ! mkdir($directory, 0775, true) && ! is_dir($directory)) {
+    if (is_link($directory) || (! is_dir($directory) && ! mkdir($directory, 0700, true) && ! is_dir($directory))) {
         throw new RuntimeException('Unable to create '.$directory);
     }
 }
@@ -200,7 +206,15 @@ function ensureDirectory(string $directory): void
 function writeFile(string $path, string $contents): void
 {
     ensureDirectory(dirname($path));
-    if (file_put_contents($path, $contents) === false) {
-        throw new RuntimeException('Unable to write '.$path);
+    $handle = fopen($path, 'xb');
+    if ($handle === false) {
+        throw new RuntimeException('Unable to create a new file at '.$path);
+    }
+    try {
+        if (fwrite($handle, $contents) !== strlen($contents)) {
+            throw new RuntimeException('Unable to write '.$path);
+        }
+    } finally {
+        fclose($handle);
     }
 }

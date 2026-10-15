@@ -207,8 +207,15 @@
         /* 1 & 2. Organization & Activity Information Cards Grid */
         .org-info-panels-grid {
             display: grid;
-            grid-template-columns: 1fr 1.35fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 1.25rem;
+        }
+
+        .org-info-panels-grid > .org-info-card {
+            min-width: 0;
+            padding: 1rem 1.1rem;
+            justify-content: flex-start;
+            background: linear-gradient(135deg, #fff8fa 0%, #fff 55%);
         }
 
         .org-info-card {
@@ -226,9 +233,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 1.1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #f6eff0;
+            flex-wrap: wrap;
+            gap: .65rem .5rem;
+            margin-bottom: 1.25rem;
         }
 
         .org-info-card-title {
@@ -241,6 +248,31 @@
             gap: 0.5rem;
         }
 
+        .org-info-panels-grid .org-info-card-title {
+            min-width: 0;
+            font-size: .9rem;
+            color: #202d43;
+            gap: .7rem;
+        }
+        .org-info-heading-icon {
+            display: grid;
+            place-items: center;
+            flex: 0 0 40px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: #a61942;
+            background: #fce5ed;
+            font-size: 1.2rem;
+        }
+        .org-info-panels-grid > .is-activity {
+            background: linear-gradient(135deg, #fbf7ff 0%, #fff 55%);
+        }
+        .is-activity .org-info-heading-icon {
+            color: #6431a6;
+            background: #eee4ff;
+        }
+
         .org-info-pill-badge {
             font-size: 0.72rem;
             font-weight: 700;
@@ -251,16 +283,54 @@
             border: 1px solid #f8d7dc;
         }
 
+        .org-info-panels-grid .org-info-pill-badge {
+            max-width: 52%;
+            padding: .35rem .7rem;
+            font-size: .6rem;
+            line-height: 1.4;
+            text-align: center;
+            overflow-wrap: anywhere;
+            border-color: #fae8ee;
+        }
+        .org-info-panels-grid .is-activity .org-info-pill-badge {
+            color: #6431a6;
+            background: #f0e8ff;
+            border-color: #eae0fc;
+        }
+
         .org-info-meta-list {
+            position: relative;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.85rem 1.25rem;
+            flex: 1;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem 2rem;
+        }
+        .org-info-meta-list::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            border-left: 1px solid #eeeef2;
+        }
+        .org-info-meta-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .65rem;
+            min-width: 0;
+        }
+        .org-info-meta-item > div { min-width: 0; }
+        .org-info-meta-item > i {
+            flex: 0 0 20px;
+            margin-top: .2rem;
+            color: #293b54;
+            font-size: 1rem;
         }
 
         .org-info-meta-item span.lbl {
-            font-size: 0.74rem;
+            font-size: .63rem;
             font-weight: 600;
-            color: #786f73;
+            color: #7c8492;
             text-transform: uppercase;
             letter-spacing: 0.03em;
             display: block;
@@ -268,9 +338,11 @@
         }
 
         .org-info-meta-item strong.val {
-            font-size: 0.88rem;
+            font-size: .8rem;
             font-weight: 700;
-            color: #1a1618;
+            color: #243148;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
             display: block;
         }
 
@@ -766,6 +838,8 @@
             .org-info-meta-list {
                 grid-template-columns: 1fr;
             }
+            .org-info-meta-list::after { display: none; }
+            .org-info-panels-grid .org-info-pill-badge { max-width: 100%; }
             .org-info-card,
             .org-stepper-card {
                 padding: 1rem;
@@ -929,218 +1003,17 @@
         @if ($isOso && !$osoHasActivityRequest && $osoFinancialOverview !== null)
             @include('org.budget-financial-overview')
         @endif
-        @if ($isSo)
-            <p class="org-welcome" style="margin:0;">
-                <a href="{{ route('office.financial', ['academic_year' => $selectedYear]) }}">Manage organization cash in Financial Report</a>.
-                Approved budgets reserve cash; recorded receipt expenses appear there once as cash outflow.
-            </p>
-        @endif
 
-        @if ($canRecordExpense)
-        {{-- SO only: Record Expense with a receipt photo and manually entered details --}}
-        <section class="so-expense-card" aria-label="Record Expense">
-            <div class="so-expense-head">
-                <div>
-                    <h3><i class="bi bi-journal-plus"></i> Record Expense</h3>
-                    <span>Upload shared receipts/supporting documents, enter the item details, and submit.</span>
-                </div>
-                <span class="org-info-pill-badge">SO Encoding</span>
-            </div>
-
-            @if ($errors->any())
-                <div class="so-alert is-error"><i class="bi bi-exclamation-triangle-fill"></i> {{ $errors->first() }}</div>
-            @endif
-
-            @if ($approvedBudgetActivities->isEmpty())
-                <div class="so-alert"><i class="bi bi-hourglass-split"></i> No final-approved activities are available yet. Budget utilization can be recorded after the activity completes the approval workflow.</div>
-            @endif
-
-            <form method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data" id="soExpenseForm" class="so-expense-form" data-org-upload-form>
-                @csrf
-                <input type="hidden" name="batch_request_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                <input type="hidden" name="receipt_reviewed" value="1">
-
-                {{-- Shared receipt set: one upload supports every item row below. --}}
-                <div class="so-receipt-capture" id="soReceiptCapture">
-                    <div class="so-receipt-capture-copy">
-                        <strong><i class="bi bi-paperclip"></i> Receipts / Supporting Documents</strong>
-                        <p>Upload receipts (up to 3). These shared documents support every item you encode below. If one receipt lists many items, add one input row per item—do not upload the receipt again.</p>
-                    </div>
-                    <div class="so-receipt-upload-board">
-                        <div class="so-receipt-dropzone" id="soReceiptDropzone" role="button" tabindex="0" aria-controls="soReceiptInput" aria-label="Upload receipts and supporting documents">
-                            <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
-                            <button type="button" class="org-btn org-btn-outline" id="soUploadGalleryBtn" aria-controls="soReceiptInput">
-                                <i class="bi bi-folder2-open"></i> Upload receipts (up to 3)
-                            </button>
-                            <span>Drag and drop files here, or click to browse</span>
-                            <small>Supports JPG, PNG, WebP, or PDF · max 5 MB each</small>
-                            <button type="button" class="org-btn org-btn-primary" id="soOpenCameraBtn" aria-controls="soCameraModal">
-                                <i class="bi bi-camera"></i> Open Camera
-                            </button>
-                        </div>
-                        <div class="so-receipt-previews" id="soReceiptPreview" data-previews hidden></div>
-                    </div>
-                    <input type="file" name="receipts[]" id="soReceiptInput" class="so-receipt-file-input" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple required data-receipt-input aria-label="Receipts and supporting documents">
-                    <input type="file" id="soCameraInput" class="so-camera-file-input" accept="image/*" capture="environment" aria-label="Take a receipt photo">
-                    <span id="soReceiptUploadStatus" class="org-upload-status so-receipt-upload-status" aria-live="polite">No receipt selected.</span>
-                </div>
-
-                {{-- Live camera modal: real permission prompt + viewfinder + shutter --}}
-                <div id="soCameraModal" hidden style="position:fixed;inset:0;z-index:9999;background:rgba(10,5,7,.82);align-items:center;justify-content:center;padding:1rem;">
-                    <div class="so-camera-dialog" style="background:#fff;border-radius:18px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);">
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem;border-bottom:1px solid #f0e6e8;">
-                            <strong style="font-size:0.92rem;"><i class="bi bi-camera-fill" style="color:#8b1828;"></i> Capture Receipt</strong>
-                            <button type="button" id="soCameraCloseBtn" class="org-btn org-btn-ghost org-btn-sm">Close</button>
-                        </div>
-                        <div class="so-camera-video-stage" style="background:#000;position:relative;">
-                            <video id="soCameraVideo" playsinline muted autoplay style="display:block;width:100%;max-height:60vh;object-fit:cover;"></video>
-                            <div id="soCameraStarting" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.85rem;font-weight:700;gap:0.5rem;">
-                                <i class="bi bi-camera-fill"></i> Starting camera…
-                            </div>
-                        </div>
-                        <p id="soCameraError" hidden style="margin:0;padding:0.6rem 1rem;font-size:0.8rem;font-weight:700;color:#b91c1c;background:#fef2f2;"></p>
-                        <div class="so-camera-controls" style="display:flex;gap:0.6rem;padding:0.9rem 1rem;">
-                            <button type="button" id="soCameraSnapBtn" class="org-btn org-btn-primary" style="flex:1;justify-content:center;" disabled>
-                                <i class="bi bi-camera"></i> <span id="soCameraSnapLabel">Starting camera…</span>
-                            </button>
-                            <button type="button" id="soCameraPickerBtn" class="org-btn org-btn-ghost org-btn-sm" title="Pick a photo from files instead">
-                                <i class="bi bi-image"></i> Files
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="so-batch-activity">
-                    <label>
-                        <span>Activity / Project *</span>
-                        <select name="org_activity_id" id="receiptActivityId" required onchange="selectBudgetActivity('activity-'+this.value)" @disabled($approvedBudgetActivities->isEmpty())>
-                            <option value="">Select an approved activity</option>
-                            @foreach ($approvedActivityChoices as $choice)
-                                <option value="{{ $choice['activityId'] }}" @selected((int) old('org_activity_id', request('activity_id')) === $choice['activityId'])>{{ $choice['actName'] }} — {{ $choice['orgName'] }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label>
-                        <span>Organization Name</span>
-                        <input type="text" id="receiptOrganization" readonly value="{{ $selectedOrganization }}" placeholder="Filled from the selected activity">
-                    </label>
-                </div>
-
-                <div class="so-expense-items-head">
-                    <div>
-                        <strong>
-                            <i class="bi bi-list-check"></i> Expense items and receipts
-                            <span class="so-items-count-badge" id="soItemsCountBadge">1 item</span>
-                        </strong>
-                        <p>Add one input row for every purchased item listed on the shared receipts. Each row becomes one budget-history entry; the uploaded receipt set is used for the whole submission.</p>
-                    </div>
-                    <button type="button" class="org-btn org-btn-outline" id="soAddExpenseRow"><i class="bi bi-plus-lg"></i> Add item</button>
-                </div>
-
-                <div id="soExpenseItems" class="so-expense-items">
-                    <article class="so-expense-item" id="soExpenseRow0" data-expense-row data-row-index="0">
-                        <div class="so-expense-row-head">
-                            <div><span class="so-item-number">Item 1</span><strong>Item details</strong><small>Enter the information shown on the shared receipts.</small></div>
-                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-remove-row hidden>Remove</button>
-                        </div>
-                        <input type="hidden" name="expenses[0][request_key]" value="{{ old('expenses.0.request_key', (string) \Illuminate\Support\Str::uuid()) }}" data-field="request_key">
-                        <div class="so-form-grid">
-                    <label>
-                        <span>Expense description *</span>
-                        <input type="text" name="expenses[0][item_name]" id="soItemName" value="{{ old('expenses.0.item_name') }}" required maxlength="255" placeholder="e.g. Refreshments for volunteers" data-field="item_name">
-                    </label>
-                    <label>
-                        <span>Category</span>
-                        <select name="expenses[0][category]" data-field="category">
-                            <option value="">Select category</option>
-                            @foreach (['Equipment Rental', 'Supplies', 'Food & Refreshments', 'Transportation', 'Printing', 'Honoraria', 'Other'] as $cat)
-                                <option value="{{ $cat }}" @selected(old('expenses.0.category') === $cat)>{{ $cat }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label>
-                        <span>Quantity *</span>
-                        <input type="number" name="expenses[0][quantity]" id="soQuantity" value="{{ old('expenses.0.quantity', 1) }}" min="1" max="100000" required data-field="quantity">
-                    </label>
-                    <label>
-                        <span>Unit Cost (₱) *</span>
-                        <input type="number" name="expenses[0][unit_cost]" id="soUnitCost" value="{{ old('expenses.0.unit_cost') }}" min="0.01" step="0.01" required placeholder="Receipt total" data-field="unit_cost">
-                        <small style="font-weight:500;color:#7a7074;">Quantity 1 means the whole receipt total. For identical items, enter their quantity and per-item price.</small>
-                    </label>
-                    <label>
-                        <span>Expense Date *</span>
-                        <input type="date" name="expenses[0][expense_date]" id="soExpenseDate" value="{{ old('expenses.0.expense_date') }}" max="{{ now()->toDateString() }}" required data-field="expense_date">
-                    </label>
-                    <label>
-                        <span>Merchant / recipient</span>
-                        <input type="text" name="expenses[0][supplier]" id="soSupplier" value="{{ old('expenses.0.supplier') }}" maxlength="255" placeholder="Store or vendor" data-field="supplier">
-                    </label>
-                    <label>
-                        <span>OR / Receipt Reference No. *</span>
-                        <input type="text" name="expenses[0][receipt_reference]" id="soReceiptReference" value="{{ old('expenses.0.receipt_reference') }}" required maxlength="120" placeholder="OR / invoice / reference" data-field="receipt_reference">
-                    </label>
-                    <label>
-                        <span>Receipt type</span>
-                        <select name="expenses[0][receipt_type]" id="soReceiptType" required data-field="receipt_type">
-                            <option value="unknown">Not identified / other</option>
-                            <option value="paper_receipt">Store receipt / invoice</option>
-                            <option value="ewallet_receipt">E-wallet payment receipt</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Payment method</span>
-                        <select name="expenses[0][payment_method]" id="soPaymentMethod" required data-field="payment_method">
-                            <option value="unknown">Not shown / unknown</option>
-                            <option value="gcash">GCash</option>
-                            <option value="maya">Maya</option>
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="bank_transfer">Bank transfer</option>
-                        </select>
-                    </label>
-                </div>
-                    </article>
-                </div>
-
-                <template id="soExpenseRowTemplate">
-                    <article class="so-expense-item" data-expense-row data-row-index="__INDEX__">
-                        <div class="so-expense-row-head">
-                            <div><span class="so-item-number">Item __NUMBER__</span><strong>Item details</strong><small>Enter the information shown on the shared receipts.</small></div>
-                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-remove-row>Remove</button>
-                        </div>
-                        <div class="so-form-grid">
-                            <input type="hidden" name="expenses[__INDEX__][request_key]" value="__REQUEST_KEY__" data-field="request_key">
-                            <label><span>Expense description *</span><input type="text" name="expenses[__INDEX__][item_name]" required maxlength="255" placeholder="e.g. Printed materials" data-field="item_name"></label>
-                            <label><span>Category</span><select name="expenses[__INDEX__][category]" data-field="category"><option value="">Select category</option>@foreach (['Equipment Rental', 'Supplies', 'Food & Refreshments', 'Transportation', 'Printing', 'Honoraria', 'Other'] as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach</select></label>
-                            <label><span>Quantity *</span><input type="number" name="expenses[__INDEX__][quantity]" value="1" min="1" max="100000" required data-field="quantity"></label>
-                            <label><span>Unit Cost (₱) *</span><input type="number" name="expenses[__INDEX__][unit_cost]" min="0.01" step="0.01" required placeholder="Receipt total" data-field="unit_cost"></label>
-                            <label><span>Expense Date *</span><input type="date" name="expenses[__INDEX__][expense_date]" max="{{ now()->toDateString() }}" required data-field="expense_date"></label>
-                            <label><span>Merchant / recipient</span><input type="text" name="expenses[__INDEX__][supplier]" maxlength="255" placeholder="Store or recipient" data-field="supplier"></label>
-                            <label><span>OR / Receipt Reference No. *</span><input type="text" name="expenses[__INDEX__][receipt_reference]" required maxlength="120" placeholder="OR / invoice / reference" data-field="receipt_reference"></label>
-                            <label><span>Receipt type</span><select name="expenses[__INDEX__][receipt_type]" required data-field="receipt_type"><option value="unknown">Not identified / other</option><option value="paper_receipt">Store receipt / invoice</option><option value="ewallet_receipt">E-wallet payment receipt</option></select></label>
-                            <label><span>Payment method</span><select name="expenses[__INDEX__][payment_method]" required data-field="payment_method"><option value="unknown">Not shown / unknown</option><option value="gcash">GCash</option><option value="maya">Maya</option><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option></select></label>
-                        </div>
-                    </article>
-                </template>
-
-                <div class="so-form-actions">
-                    <button type="reset" class="org-btn org-btn-ghost">Clear</button>
-                    <button type="submit" class="org-btn org-btn-primary" @disabled($approvedBudgetActivities->isEmpty())><i class="bi bi-send-fill"></i> Record expense</button>
-                </div>
-            </form>
-
-        </section>
-        @endif
 
 
         <style>
             .so-receipt-capture { border: 1.5px solid #f0dfe3; border-radius: 16px; padding: 1rem 1.1rem; background: #fffafb; display: grid; gap: 0.85rem; min-width: 0; }
             .so-receipt-capture-copy strong { display: flex; align-items: center; gap: 0.4rem; color: #7a1222; font-size: 0.92rem; }
             .so-receipt-capture-copy p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #786f73; }
-            .so-receipt-upload-board { display: grid; grid-template-columns: minmax(240px, .9fr) minmax(0, 1.7fr); gap: .75rem; align-items: stretch; }
-            .so-receipt-dropzone { display: grid; place-items: center; align-content: center; gap: .38rem; min-height: 168px; padding: 1rem; border: 1.5px dashed #e8b4bc; border-radius: 12px; background: #fff; color: #786f73; text-align: center; cursor: pointer; }
-            .so-receipt-dropzone:hover, .so-receipt-dropzone:focus-visible, .so-receipt-dropzone.is-dragging { border-color: #8b1828; background: #fff5f6; }
-            .so-receipt-dropzone > i { color: #8b1828; font-size: 2rem; }
+            .so-receipt-upload-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: .85rem; align-items: stretch; }
+            .so-receipt-dropzone { display: grid; place-items: center; align-content: center; gap: .6rem; min-height: 220px; padding: 1.5rem; border: 1.5px dashed #bb6a7c; border-radius: 14px; background: #fcf1f4; color: #7a3948; text-align: center; cursor: pointer; }
+            .so-receipt-dropzone:hover, .so-receipt-dropzone:focus-visible, .so-receipt-dropzone.is-dragging { border-color: #8b1828; background: #f8e5ea; }
+            .so-receipt-dropzone > i { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: #8b1828; color: #fff; font-size: 1.5rem; }
             .so-receipt-dropzone .org-btn { min-height: 42px; }
             .so-receipt-dropzone span { font-size: .76rem; font-weight: 700; }
             .so-receipt-dropzone small { font-size: .68rem; font-weight: 500; }
@@ -1167,43 +1040,18 @@
             .so-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
             .so-batch-activity { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: .8rem; }
             .so-batch-activity label, .so-expense-item label { display: grid; align-content: start; gap: .35rem; font-size: .78rem; font-weight: 800; color: #2b2427; }
+            .so-batch-activity input, .so-batch-activity select { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: .65rem .8rem; border: 1.5px solid #f0e0e3; border-radius: 12px; background: #fdfafb; color: #2b2427; font: inherit; font-weight: 500; }
+            .so-budget-context { box-shadow: none; border-radius: 12px; }
+            .so-budget-context .org-info-panels-grid { padding: 0 .85rem .85rem; }
+            .so-budget-context .org-info-card { box-shadow: none; border-radius: 12px; }
+            .so-budget-cash-link { margin: 0; padding: 0 1.1rem .85rem; color: #786f73; font-size: .74rem; line-height: 1.5; }
+            .so-budget-cash-link a { color: #8b1828; font-weight: 700; }
             .so-expense-items-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: .85rem 0 .1rem; }
             .so-expense-items-head strong { display: flex; align-items: center; gap: .45rem; color: #7a1222; font-size: .92rem; flex-wrap: wrap; }
             .so-expense-items-head p { margin: .25rem 0 0; font-size: .78rem; color: #786f73; }
             .so-items-count-badge { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 700; color: #8b1828; background: #fdf0f2; border: 1px solid #f8d7dc; border-radius: 999px; padding: 0.12rem 0.55rem; margin-left: 0.35rem; }
             .so-expense-items { display: grid; gap: .85rem; min-width: 0; }
-            .so-expense-items:has(> .so-expense-item:nth-child(3)),
-            .so-expense-items.is-scrollable {
-                max-height: min(580px, 68vh);
-                overflow-y: auto;
-                overflow-x: hidden;
-                padding-right: 0.35rem;
-                padding-bottom: 0.25rem;
-                scrollbar-width: thin;
-                scrollbar-color: #d7b7bd #fbf6f7;
-                border-radius: 12px;
-                scroll-behavior: smooth;
-                overscroll-behavior: contain;
-            }
-            .so-expense-items:has(> .so-expense-item:nth-child(3))::-webkit-scrollbar,
-            .so-expense-items.is-scrollable::-webkit-scrollbar {
-                width: 6px;
-            }
-            .so-expense-items:has(> .so-expense-item:nth-child(3))::-webkit-scrollbar-track,
-            .so-expense-items.is-scrollable::-webkit-scrollbar-track {
-                background: #fbf6f7;
-                border-radius: 9999px;
-            }
-            .so-expense-items:has(> .so-expense-item:nth-child(3))::-webkit-scrollbar-thumb,
-            .so-expense-items.is-scrollable::-webkit-scrollbar-thumb {
-                background: #d7b7bd;
-                border-radius: 9999px;
-            }
-            .so-expense-items:has(> .so-expense-item:nth-child(3))::-webkit-scrollbar-thumb:hover,
-            .so-expense-items.is-scrollable::-webkit-scrollbar-thumb:hover {
-                background: #8b1828;
-            }
-            .so-expense-item { display: grid; gap: .75rem; padding: .9rem; border: 1px solid #f0dfe3; border-radius: 15px; background: #fffafb; min-width: 0; }
+            .so-expense-item { display: grid; gap: 1rem; padding: 1.15rem; border: 1px solid #f0dfe3; border-radius: 15px; background: #fffafb; min-width: 0; }
             .so-expense-row-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
             .so-expense-row-head > div { display: grid; gap: .18rem; }
             .so-item-number { color: #8b1828; font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
@@ -1243,7 +1091,7 @@
                 .so-expense-row-head { align-items: stretch; }
                 .so-expense-row-head .org-btn { min-height: 44px; }
                 .so-receipt-upload-board { grid-template-columns: 1fr; }
-                .so-receipt-dropzone { min-height: 150px; }
+                .so-receipt-dropzone { min-height: 200px; padding: 1.25rem; }
                 .so-receipt-dropzone .org-btn { width: 100%; min-height: 46px; }
                 .so-receipt-previews { grid-template-columns: repeat(2, minmax(0, 1fr)); }
                 .so-receipt-preview img { height: 120px; }
@@ -1263,67 +1111,102 @@
                 .so-queue-right a { overflow-wrap: anywhere; }
             }
         </style>
-        <script src="{{ asset('js/receipt-upload.js') }}?v={{ filemtime(public_path('js/receipt-upload.js')) }}"></script>
         @if (!$isOso || $osoSelectedActivity !== null)
 
+        @section('budget-context-details')
+        @if ($isSo)
+            <details class="so-secondary-details so-budget-context">
+                <summary>Organization &amp; activity information</summary>
+                <p class="so-budget-cash-link"><a href="{{ route('office.financial', ['academic_year' => $selectedYear]) }}">Manage cash in Financial Report</a> · Approved budgets reserve cash; receipt expenses are recorded once.</p>
+        @endif
         {{-- 1 & 2. Organization Information & Activity / Project Information Panels --}}
         <div class="org-info-panels-grid">
             {{-- Organization Information Panel --}}
             <section class="org-info-card" aria-label="Organization Information">
                 <div class="org-info-card-head">
                     <h3 class="org-info-card-title">
-                        <i class="bi bi-building" style="color: #8b1828;"></i> Organization Information
+                        <span class="org-info-heading-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span> Organization Information
                     </h3>
                     <span class="org-info-pill-badge" id="orgCategoryBadge">—</span>
                 </div>
                 <div class="org-info-meta-list">
                     <div class="org-info-meta-item">
-                        <span class="lbl">Organization Name</span>
-                        <strong class="val" id="orgNameVal">—</strong>
+                        <div>
+                            <span class="lbl">Organization Name</span>
+                            <strong class="val" id="orgNameVal">—</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">Academic Year</span>
-                        <strong class="val" id="orgAyVal">A.Y. 2025–2026</strong>
+                        <i class="bi bi-mortarboard-fill" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Academic Year</span>
+                            <strong class="val" id="orgAyVal">A.Y. 2025–2026</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">Budget Period</span>
-                        <strong class="val" id="orgPeriodVal">1st Semester (Aug–Dec)</strong>
+                        <i class="bi bi-calendar-week" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Budget Period</span>
+                            <strong class="val" id="orgPeriodVal">1st Semester (Aug–Dec)</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">College / Unit</span>
-                        <strong class="val" id="orgUnitVal">—</strong>
+                        <i class="bi bi-building-fill" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">College / Unit</span>
+                            <strong class="val" id="orgUnitVal">—</strong>
+                        </div>
                     </div>
                 </div>
             </section>
 
             {{-- Activity / Project Information Panel --}}
-            <section class="org-info-card" aria-label="Activity and Project Information">
+            <section class="org-info-card is-activity" aria-label="Activity and Project Information">
                 <div class="org-info-card-head">
                     <h3 class="org-info-card-title">
-                        <i class="bi bi-clipboard2-check-fill" style="color: #8b1828;"></i> Activity / Project Information
+                        <span class="org-info-heading-icon"><i class="bi bi-clipboard2-check-fill" aria-hidden="true"></i></span> Activity / Project Information
                     </h3>
                     <span class="org-info-pill-badge" id="actScopePill">—</span>
                 </div>
                 <div class="org-info-meta-list">
                     <div class="org-info-meta-item">
-                        <span class="lbl">Activity / Project Name</span>
-                        <strong class="val" id="actNameVal">—</strong>
+                        <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Activity / Project Name</span>
+                            <strong class="val" id="actNameVal">—</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">Type &amp; Category</span>
-                        <strong class="val" id="actTypeVal">—</strong>
+                        <i class="bi bi-tag-fill" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Type &amp; Category</span>
+                            <strong class="val" id="actTypeVal">—</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">Execution Date</span>
-                        <strong class="val" id="actDateVal">—</strong>
+                        <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Execution Date</span>
+                            <strong class="val" id="actDateVal">—</strong>
+                        </div>
                     </div>
                     <div class="org-info-meta-item">
-                        <span class="lbl">Designated Venue</span>
-                        <strong class="val" id="actVenueVal">—</strong>
+                        <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                        <div>
+                            <span class="lbl">Designated Venue</span>
+                            <strong class="val" id="actVenueVal">—</strong>
+                        </div>
                     </div>
                 </div>
             </section>
         </div>
+        @if ($isSo)
+            </details>
+        @endif
+        @endsection
+        @unless ($isSo)
+            @yield('budget-context-details')
+        @endunless
 
         {{-- 3, 4, 5, 6. Approved Budget, Actual Expenses, Remaining Balance & Utilization Rate --}}
         <div class="org-kpi-row">
@@ -1382,7 +1265,7 @@
 
         {{-- 7 & 8. Expense Breakdown (Donut Chart) & Budget vs. Actual Expenses (Bar Chart) --}}
         @section('budget-chart-details')
-        @if ($isSo || $isOso)
+        @if ($isOso)
             <details class="so-secondary-details" @if ($isOso) id="osoBudgetCharts" @endif>
                 <summary>Show budget charts and trend details</summary>
         @endif
@@ -1404,7 +1287,7 @@
                         </div>
                         <div class="org-legend-list" id="donutCustomLegend"></div>
                     </div>
-                    <p style="margin:0.75rem 0 0;font-size:0.74rem;color:#786f73;">{{ $isOso ? 'Organization portfolio-wide scope split for the selected year and semester, not just this activity. The Budget vs. Actual chart and encoded expense table show the selected activity.' : 'Portfolio-wide scope split — per-activity itemization lives in the Budget vs. Actual chart and the Expense Details table.' }}</p>
+                    <p style="margin:0.75rem 0 0;font-size:0.74rem;color:#786f73;">{{ $isOso ? 'Organization portfolio by scope for the selected period.' : 'Portfolio spending by scope. Activity itemization is shown below.' }}</p>
                 </div>
             </section>
 
@@ -1419,14 +1302,211 @@
                 </div>
             </section>
         </div>
-        @if ($isSo || $isOso)
+        @if ($isOso)
             </details>
         @endif
         @endsection
         @unless ($isOso)
             @yield('budget-chart-details')
         @endunless
+        @if ($canRecordExpense)
+        {{-- SO only: Record Expense with a receipt photo and manually entered details --}}
+        <section class="so-expense-card" aria-label="Record Expense">
+            <div class="so-expense-head">
+                <div>
+                    <h3><i class="bi bi-journal-plus"></i> Record Expense</h3>
+                    <span>Upload shared receipts and enter each expense item.</span>
+                </div>
+                <span class="org-info-pill-badge">SO Encoding</span>
+            </div>
 
+            @if ($errors->any())
+                <div class="so-alert is-error"><i class="bi bi-exclamation-triangle-fill"></i> {{ $errors->first() }}</div>
+            @endif
+
+            @if ($approvedBudgetActivities->isEmpty())
+                <div class="so-alert"><i class="bi bi-hourglass-split"></i> No final-approved activities are available yet. Budget utilization can be recorded after the activity completes the approval workflow.</div>
+            @endif
+
+            <form method="post" action="{{ route('office.budget.receipts.store') }}" enctype="multipart/form-data" id="soExpenseForm" class="so-expense-form" data-org-upload-form>
+                @csrf
+                <input type="hidden" name="batch_request_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                <input type="hidden" name="receipt_reviewed" value="1">
+                <div class="so-batch-activity">
+                    <label>
+                        <span>Activity / Project *</span>
+                        <select name="org_activity_id" id="receiptActivityId" required onchange="selectBudgetActivity('activity-'+this.value)" @disabled($approvedBudgetActivities->isEmpty())>
+                            <option value="">Select an approved activity</option>
+                            @foreach ($approvedActivityChoices as $choice)
+                                <option value="{{ $choice['activityId'] }}" @selected((int) old('org_activity_id', request('activity_id')) === $choice['activityId'])>{{ $choice['actName'] }} — {{ $choice['orgName'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label>
+                        <span>Organization Name</span>
+                        <input type="text" id="receiptOrganization" readonly value="{{ $selectedOrganization }}" placeholder="Filled from the selected activity">
+                    </label>
+                </div>
+                @yield('budget-context-details')
+
+                {{-- Shared receipt set: one upload supports every item row below. --}}
+                <div class="so-receipt-capture" id="soReceiptCapture">
+                    <div class="so-receipt-capture-copy">
+                        <strong><i class="bi bi-paperclip"></i> Receipts / Supporting Documents</strong>
+                        <p>Up to 3 shared documents for all items in this submission.</p>
+                    </div>
+                    <div class="so-receipt-upload-board">
+                        <div class="so-receipt-dropzone" id="soReceiptDropzone" role="button" tabindex="0" aria-controls="soReceiptInput" aria-label="Upload receipts and supporting documents">
+                            <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
+                            <button type="button" class="org-btn org-btn-outline" id="soUploadGalleryBtn" aria-controls="soReceiptInput">
+                                <i class="bi bi-folder2-open"></i> Upload receipts (up to 3)
+                            </button>
+                            <span>Drag and drop files here, or click to browse</span>
+                            <small>Supports JPG, PNG, WebP, or PDF · max 5 MB each</small>
+                            <button type="button" class="org-btn org-btn-primary" id="soOpenCameraBtn" aria-controls="soCameraModal">
+                                <i class="bi bi-camera"></i> Open Camera
+                            </button>
+                        </div>
+                        <div class="so-receipt-previews" id="soReceiptPreview" data-previews hidden></div>
+                    </div>
+                    <input type="file" name="receipts[]" id="soReceiptInput" class="so-receipt-file-input" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple required data-receipt-input aria-label="Receipts and supporting documents">
+                    <input type="file" id="soCameraInput" class="so-camera-file-input" accept="image/*" capture="environment" aria-label="Take a receipt photo">
+                    <span id="soReceiptUploadStatus" class="org-upload-status so-receipt-upload-status" aria-live="polite">No receipt selected.</span>
+                </div>
+
+                {{-- Live camera modal: real permission prompt + viewfinder + shutter --}}
+                <div id="soCameraModal" hidden style="position:fixed;inset:0;z-index:9999;background:rgba(10,5,7,.82);align-items:center;justify-content:center;padding:1rem;">
+                    <div class="so-camera-dialog" style="background:#fff;border-radius:18px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem;border-bottom:1px solid #f0e6e8;">
+                            <strong style="font-size:0.92rem;"><i class="bi bi-camera-fill" style="color:#8b1828;"></i> Capture Receipt</strong>
+                            <button type="button" id="soCameraCloseBtn" class="org-btn org-btn-ghost org-btn-sm">Close</button>
+                        </div>
+                        <div class="so-camera-video-stage" style="background:#000;position:relative;">
+                            <video id="soCameraVideo" playsinline muted autoplay style="display:block;width:100%;max-height:60vh;object-fit:cover;"></video>
+                            <div id="soCameraStarting" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.85rem;font-weight:700;gap:0.5rem;">
+                                <i class="bi bi-camera-fill"></i> Starting camera…
+                            </div>
+                        </div>
+                        <p id="soCameraError" hidden style="margin:0;padding:0.6rem 1rem;font-size:0.8rem;font-weight:700;color:#b91c1c;background:#fef2f2;"></p>
+                        <div class="so-camera-controls" style="display:flex;gap:0.6rem;padding:0.9rem 1rem;">
+                            <button type="button" id="soCameraSnapBtn" class="org-btn org-btn-primary" style="flex:1;justify-content:center;" disabled>
+                                <i class="bi bi-camera"></i> <span id="soCameraSnapLabel">Starting camera…</span>
+                            </button>
+                            <button type="button" id="soCameraPickerBtn" class="org-btn org-btn-ghost org-btn-sm" title="Pick a photo from files instead">
+                                <i class="bi bi-image"></i> Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="so-expense-items-head">
+                    <div>
+                        <strong>
+                            <i class="bi bi-list-check"></i> Expense items
+                            <span class="so-items-count-badge" id="soItemsCountBadge">1 item</span>
+                        </strong>
+                        <p>One item card per purchase; receipts are shared across all items.</p>
+                    </div>
+                    <button type="button" class="org-btn org-btn-outline" id="soAddExpenseRow"><i class="bi bi-plus-lg"></i> Add item</button>
+                </div>
+
+                <div id="soExpenseItems" class="so-expense-items">
+                    <article class="so-expense-item" id="soExpenseRow0" data-expense-row data-row-index="0">
+                        <div class="so-expense-row-head">
+                            <div><span class="so-item-number">Item 1</span><strong>Item details</strong><small>Enter the information shown on the shared receipts.</small></div>
+                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-remove-row hidden>Remove</button>
+                        </div>
+                        <input type="hidden" name="expenses[0][request_key]" value="{{ old('expenses.0.request_key', (string) \Illuminate\Support\Str::uuid()) }}" data-field="request_key">
+                        <div class="so-form-grid">
+                    <label>
+                        <span>Expense description *</span>
+                        <input type="text" name="expenses[0][item_name]" id="soItemName" value="{{ old('expenses.0.item_name') }}" required maxlength="255" placeholder="e.g. Refreshments for volunteers" data-field="item_name">
+                    </label>
+                    <label>
+                        <span>Category</span>
+                        <select name="expenses[0][category]" data-field="category">
+                            <option value="">Select category</option>
+                            @foreach (['Equipment Rental', 'Supplies', 'Food & Refreshments', 'Transportation', 'Printing', 'Honoraria', 'Other'] as $cat)
+                                <option value="{{ $cat }}" @selected(old('expenses.0.category') === $cat)>{{ $cat }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label>
+                        <span>Quantity *</span>
+                        <input type="number" name="expenses[0][quantity]" id="soQuantity" value="{{ old('expenses.0.quantity', 1) }}" min="1" max="100000" required data-field="quantity">
+                    </label>
+                    <label>
+                        <span>Unit Cost (₱) *</span>
+                        <input type="number" name="expenses[0][unit_cost]" id="soUnitCost" value="{{ old('expenses.0.unit_cost') }}" min="0.01" step="0.01" required placeholder="Price per item" data-field="unit_cost">
+                    </label>
+                    <label>
+                        <span>Expense Date *</span>
+                        <input type="date" name="expenses[0][expense_date]" id="soExpenseDate" value="{{ old('expenses.0.expense_date') }}" max="{{ now()->toDateString() }}" required data-field="expense_date">
+                    </label>
+                    <label>
+                        <span>Merchant / recipient</span>
+                        <input type="text" name="expenses[0][supplier]" id="soSupplier" value="{{ old('expenses.0.supplier') }}" maxlength="255" placeholder="Store or vendor" data-field="supplier">
+                    </label>
+                    <label>
+                        <span>OR / Receipt Reference No. *</span>
+                        <input type="text" name="expenses[0][receipt_reference]" id="soReceiptReference" value="{{ old('expenses.0.receipt_reference') }}" required maxlength="120" placeholder="OR / invoice / reference" data-field="receipt_reference">
+                    </label>
+                    <label>
+                        <span>Receipt type</span>
+                        <select name="expenses[0][receipt_type]" id="soReceiptType" required data-field="receipt_type">
+                            <option value="unknown">Not identified / other</option>
+                            <option value="paper_receipt">Store receipt / invoice</option>
+                            <option value="ewallet_receipt">E-wallet payment receipt</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Payment method</span>
+                        <select name="expenses[0][payment_method]" id="soPaymentMethod" required data-field="payment_method">
+                            <option value="unknown">Not shown / unknown</option>
+                            <option value="gcash">GCash</option>
+                            <option value="maya">Maya</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="bank_transfer">Bank transfer</option>
+                        </select>
+                    </label>
+                </div>
+                    </article>
+                </div>
+
+                <template id="soExpenseRowTemplate">
+                    <article class="so-expense-item" data-expense-row data-row-index="__INDEX__">
+                        <div class="so-expense-row-head">
+                            <div><span class="so-item-number">Item __NUMBER__</span><strong>Item details</strong><small>Enter the information shown on the shared receipts.</small></div>
+                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-remove-row>Remove</button>
+                        </div>
+                        <div class="so-form-grid">
+                            <input type="hidden" name="expenses[__INDEX__][request_key]" value="__REQUEST_KEY__" data-field="request_key">
+                            <label><span>Expense description *</span><input type="text" name="expenses[__INDEX__][item_name]" required maxlength="255" placeholder="e.g. Printed materials" data-field="item_name"></label>
+                            <label><span>Category</span><select name="expenses[__INDEX__][category]" data-field="category"><option value="">Select category</option>@foreach (['Equipment Rental', 'Supplies', 'Food & Refreshments', 'Transportation', 'Printing', 'Honoraria', 'Other'] as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach</select></label>
+                            <label><span>Quantity *</span><input type="number" name="expenses[__INDEX__][quantity]" value="1" min="1" max="100000" required data-field="quantity"></label>
+                            <label><span>Unit Cost (₱) *</span><input type="number" name="expenses[__INDEX__][unit_cost]" min="0.01" step="0.01" required placeholder="Price per item" data-field="unit_cost"></label>
+                            <label><span>Expense Date *</span><input type="date" name="expenses[__INDEX__][expense_date]" max="{{ now()->toDateString() }}" required data-field="expense_date"></label>
+                            <label><span>Merchant / recipient</span><input type="text" name="expenses[__INDEX__][supplier]" maxlength="255" placeholder="Store or recipient" data-field="supplier"></label>
+                            <label><span>OR / Receipt Reference No. *</span><input type="text" name="expenses[__INDEX__][receipt_reference]" required maxlength="120" placeholder="OR / invoice / reference" data-field="receipt_reference"></label>
+                            <label><span>Receipt type</span><select name="expenses[__INDEX__][receipt_type]" required data-field="receipt_type"><option value="unknown">Not identified / other</option><option value="paper_receipt">Store receipt / invoice</option><option value="ewallet_receipt">E-wallet payment receipt</option></select></label>
+                            <label><span>Payment method</span><select name="expenses[__INDEX__][payment_method]" required data-field="payment_method"><option value="unknown">Not shown / unknown</option><option value="gcash">GCash</option><option value="maya">Maya</option><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option></select></label>
+                        </div>
+                    </article>
+                </template>
+                <script id="soExpenseOldItems" type="application/json">@json(old('expenses', []))</script>
+
+                <div class="so-form-actions">
+                    <button type="reset" class="org-btn org-btn-ghost">Clear</button>
+                    <button type="submit" class="org-btn org-btn-primary" @disabled($approvedBudgetActivities->isEmpty())><i class="bi bi-send-fill"></i> Record expense</button>
+                </div>
+            </form>
+
+        </section>
+        @endif
+
+        <script src="{{ asset('js/receipt-upload.js') }}?v={{ filemtime(public_path('js/receipt-upload.js')) }}"></script>
         {{-- 9. Expense Details (Data Table) --}}
         <section class="org-expense-table-card" aria-label="Detailed Expense Entries Table">
             <div class="org-table-header-flex">
@@ -1472,9 +1552,10 @@
 
     </div>
 
-    @if (!$isOso || $osoSelectedActivity !== null)
+    @if (!$isOso || $osoSelectedActivity !== null || (!$osoHasActivityRequest && ($selectedOrganization ?? '') === '' && $osoFinancialOverview !== null))
         @include('org.partials.budget-receipt-preview')
-
+    @endif
+    @if (!$isOso || $osoSelectedActivity !== null)
         {{-- Load Chart.js only for pages with activity details. --}}
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif

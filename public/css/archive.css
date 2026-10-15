@@ -1,0 +1,43 @@
+.archive-filters { display:flex; align-items:end; gap:.8rem; flex-wrap:wrap; padding:1rem; margin-bottom:1.3rem; border:1px solid #eadfe2; border-radius:14px; background:#fff; }
+.archive-filter { display:grid; gap:.3rem; min-width:150px; flex:1 1 150px; color:#786f73; font-size:.76rem; font-weight:700; }
+.archive-filter.is-search { flex:2 1 240px; }
+.archive-filter input,.archive-filter select { box-sizing:border-box; width:100%; min-height:40px; padding:.55rem .7rem; border:1px solid #e2d7da; border-radius:9px; background:#fffcfd; color:#30272a; font:inherit; font-size:.85rem; }
+.archive-panel { padding:1.4rem; margin-bottom:1.4rem; border:1px solid #eadfe2; border-radius:18px; background:#fff; }
+.archive-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+.archive-panel-heading h2 { margin:0; font-size:1.04rem; color:#30272a; }
+.archive-panel-heading p,.archive-muted { margin:.3rem 0 0; color:#786f73; font-size:.8rem; }
+.archive-org-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.archive-org-card { display:flex; flex-direction:column; gap:.8rem; padding:1.15rem; min-width:0; border:1px solid #eadfe2; border-radius:14px; background:#fff; }
+.archive-org-card:hover { border-color:#d9aab3; box-shadow:0 5px 18px rgba(100,20,35,.06); }
+.archive-org-identity { display:flex; align-items:center; gap:.6rem; color:#8b1828; font-size:.83rem; font-weight:800; }
+.archive-org-icon { display:grid; place-items:center; width:34px; height:34px; flex-shrink:0; border-radius:9px; background:#fdf0f2; }
+.archive-org-card h3 { margin:0; font-size:.94rem; line-height:1.45; color:#30272a; overflow-wrap:anywhere; }
+.archive-org-meta { display:flex; flex-wrap:wrap; gap:.45rem .8rem; color:#786f73; font-size:.76rem; }
+.archive-org-card .org-btn { align-self:flex-end; margin-top:auto; }
+.archive-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; border-top:1px solid #f0e6e8; margin-top:1.2rem; padding-top:1rem; color:#786f73; font-size:.78rem; }
+.archive-pagination nav { display:flex; gap:.35rem; flex-wrap:wrap; }
+.archive-page { display:inline-flex; align-items:center; justify-content:center; min-width:32px; padding:.35rem .6rem; border:1px solid #eadfe2; border-radius:8px; color:#8b1828; text-decoration:none; }
+.archive-page[aria-current] { background:#8b1828; color:#fff; border-color:#8b1828; }
+.archive-empty { padding:2rem 1rem; text-align:center; color:#786f73; font-size:.88rem; }
+.archive-detail-header { padding-bottom:1.2rem; border-bottom:1px solid #f0e6e8; margin-bottom:1.2rem; }
+.archive-detail-header h2 { margin:.35rem 0; font-size:1.25rem; overflow-wrap:anywhere; color:#30272a; }
+.archive-detail-groups { display:grid; gap:1rem; }
+.archive-group { border:1px solid #eadfe2; border-radius:12px; overflow:hidden; }
+.archive-group > summary { display:flex; align-items:center; gap:.7rem; padding:.85rem 1rem; cursor:pointer; background:#fcf7f8; color:#30272a; list-style:none; }
+.archive-group > summary::-webkit-details-marker { display:none; }
+.archive-group > summary::after { content:'+'; margin-left:auto; color:#8b1828; font-weight:800; }
+.archive-group[open] > summary::after { content:'−'; }
+.archive-group-title { min-width:0; flex:1; }
+.archive-group-title strong { display:block; font-size:.87rem; }
+.archive-group-title small { display:block; color:#786f73; margin-top:.2rem; font-size:.75rem; }
+.archive-group-count { border-radius:999px; background:#f3e4e8; color:#8b1828; padding:.15rem .5rem; font-size:.73rem; font-weight:700; }
+.archive-file-row { display:flex; align-items:center; gap:.7rem; padding:.8rem 1rem; border-top:1px solid #f0e6e8; }
+.archive-file-row > i { color:#8b1828; font-size:1.25rem; flex-shrink:0; }
+.archive-file-name { min-width:0; flex:1; }
+.archive-file-name strong { display:block; color:#30272a; font-size:.82rem; overflow-wrap:anywhere; }
+.archive-file-name small { display:block; color:#786f73; font-size:.72rem; margin-top:.25rem; overflow-wrap:anywhere; }
+.archive-file-row .org-btn { flex-shrink:0; }
+.archive-legacy > summary { padding:1rem; margin-bottom:1rem; border:1px solid #eadfe2; border-radius:12px; background:#fff; color:#8b1828; font-weight:700; cursor:pointer; }
+.archive-filters :focus-visible,.archive-group > summary:focus-visible,.archive-legacy > summary:focus-visible,.archive-page:focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
+@media(max-width:1100px) { .archive-org-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .archive-org-grid { grid-template-columns:minmax(0,1fr); } .archive-panel { padding:1rem; } .archive-filter { min-width:0; flex-basis:100%; } .archive-file-row { gap:.5rem; padding:.75rem; } .archive-file-row .org-btn { padding:.35rem .6rem; } .gdrive-search-box { min-width:0; width:100%; } .gdrive-toolbar-actions { width:100%; } }

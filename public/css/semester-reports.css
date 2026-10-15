@@ -3,6 +3,7 @@
 .sr-browser [hidden] { display:none !important; }
 .sr-card { margin:0 0 1.2rem; padding:1.25rem; border:1.5px solid #f0e6e8; border-radius:18px; background:#fff; min-width:0; box-shadow:0 4px 16px rgba(90,15,30,.03); }
 .sr-browser .sr-card { margin:0; }
+.sr-card.sr-card-embedded { margin:18px 0 0; padding:16px 0 0; border:0; border-top:1px solid #f0e6e8; border-radius:0; box-shadow:none; }
 .sr-head { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:.75rem; margin-bottom:.9rem; }
 .sr-head h2, .sr-head h3 { margin:0; color:#1a1618; font-size:1.05rem; }
 .sr-muted { margin:.35rem 0 0; color:#7a7074; font-size:.8rem; line-height:1.5; }
@@ -56,6 +57,21 @@
 .sr-empty h3 { color:#30282b; }
 .sr-card button:disabled { cursor:not-allowed; opacity:.55; }
 .sr-danger { color:#b91c1c; }
+.sr-lock-dialog { box-sizing:border-box; width:400px; max-width:calc(100vw - 2rem); max-height:calc(100vh - 2rem); max-height:calc(100dvh - 2rem); margin:auto; padding:0; overflow:auto; border:1px solid #eadcdf; border-radius:18px; background:#fff; color:#30282b; font:inherit; box-shadow:0 20px 60px rgba(45,15,24,.2); }
+/* Native modal content must not inherit the page's staggered entrance animation. */
+.org-content > .sr-lock-dialog { animation:none; opacity:1; transform:none; }
+.sr-lock-dialog::backdrop { background:rgba(45,25,32,.38); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+.sr-lock-box { padding:1.5rem; text-align:center; }
+.sr-lock-icon { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; margin-bottom:.8rem; border:1px solid #f0dce1; border-radius:50%; background:#fff3f5; color:#8b1828; font-size:1.2rem; }
+.sr-lock-box h2 { margin:0; color:#1a1618; font-size:1.05rem; }
+.sr-lock-period { margin:.4rem 0 .9rem; color:#7a7074; font-size:.78rem; font-weight:700; overflow-wrap:anywhere; }
+.sr-lock-box #srLockDescription { color:#7a7074; font-size:.8rem; line-height:1.6; }
+.sr-lock-box #srLockDescription p { margin:.65rem 0; }
+.sr-lock-box #srLockDescription strong { color:#554d50; }
+.sr-lock-actions { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.6rem; margin-top:1.2rem; }
+.sr-lock-actions .org-btn { min-height:40px; }
+.sr-lock-actions .org-btn:focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
+.sr-lock-actions button:disabled { cursor:wait; opacity:.55; }
 @media (max-width:760px) {
     .sr-card { padding:1rem; }
     .sr-dates, .sr-review-grid { grid-template-columns:1fr; }

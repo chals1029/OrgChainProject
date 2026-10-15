@@ -279,7 +279,7 @@ class PreOralDemoSeeder extends Seeder
                     'college' => array_key_first($colleges),
                     'organization_name' => 'OrgChain Demo Org',
                     'status' => 'submitted',
-                    'requirements' => ['cv' => true, 'good_moral' => true, 'scholastic' => $i % 2 === 0],
+                    'requirements' => [],
                 ])
             );
         }

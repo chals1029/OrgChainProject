@@ -530,8 +530,8 @@ class VoteBlockchain
                 'User-Agent: OrgChain-VoteBlockchain/1.0',
                 'ngrok-skip-browser-warning: 69420',
             ],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
         $response = curl_exec($ch);
@@ -644,8 +644,8 @@ class VoteBlockchain
                 'X-Node-Token: '.$secret,
                 'ngrok-skip-browser-warning: 69420',
             ],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
         $response = curl_exec($ch);

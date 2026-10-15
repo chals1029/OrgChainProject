@@ -76,16 +76,6 @@ function probeUrl(url, timeoutMs = 4000) {
   });
 }
 
-function readEnvFlag(key) {
-  const envPath = path.join(ROOT, '.env');
-  if (!fs.existsSync(envPath)) return null;
-  const line = fs
-    .readFileSync(envPath, 'utf8')
-    .split(/\r?\n/)
-    .find((l) => l.startsWith(`${key}=`));
-  if (!line) return null;
-  return line.slice(key.length + 1).trim().replace(/^["']|["']$/g, '');
-}
 
 async function preflight() {
   banner('OrgChain · Run All Tests — preflight');
@@ -110,15 +100,7 @@ async function preflight() {
       process.exit(2);
     }
 
-    const expose = readEnvFlag('EXPOSE_TEST_OTP');
-    if (expose !== 'true' && expose !== '1') {
-      console.warn(
-        '  [WARN] EXPOSE_TEST_OTP is not true — student OTP UI verify may fail.\n' +
-          '         Set EXPOSE_TEST_OTP=true in .env and restart php artisan serve.'
-      );
-    } else {
-      console.log('  [OK] EXPOSE_TEST_OTP enabled (OTP UI verify can read debug_code)');
-    }
+    console.log('  [INFO] Browser OTP verification requires interactive mailbox access; no HTTP debug-code mode exists.');
   }
 
   return true;

@@ -17,7 +17,7 @@
         $activity = $submission->activity;
         $currentType = old('activity_type', $submission->activity_type ?: 'in_campus');
 
-        $editTitle = old('title', $editActivity['title'] ?? $activity?->title ?? '');
+        $editTitle = $editActivity['title'] ?? $activity?->title ?? '';
         $editOrg = $activityOrganization?->name ?? old('organization_name', $editActivity['organization'] ?? $submission->organization_name ?? '');
         $editLocation = old('location', $editActivity['location'] ?? $activity?->location ?? '');
         $editRationale = old('rationale', $editActivity['rationale'] ?? $submission->rationale ?? '');
@@ -56,6 +56,17 @@
             'local_off_campus' => $offCampusRequirements ?? [],
         ];
         $storedAttachments = is_array($submission->attachments ?? null) ? $submission->attachments : [];
+        $approvedPlanActivities = $approvedPlanActivities ?? [];
+        $selectedPlanKey = old('plan_activity_key', $storedAttachments['plan_activity_key'] ?? '');
+        if (!session()->hasOldInput('plan_activity_key') && !in_array($selectedPlanKey, array_column($approvedPlanActivities, 'key'), true)) {
+            $selectedPlanKey = '';
+            foreach ($approvedPlanActivities as $planActivity) {
+                if ($planActivity['title'] === $editTitle && $planActivity['reference'] === ($storedAttachments['plan_reference'] ?? '')) {
+                    $selectedPlanKey = $planActivity['key'];
+                    break;
+                }
+            }
+        }
         $checklistKeys = array_column($requirementSets[$currentType] ?? [], 'key');
         $previousUploads = array_filter($activityDocs, fn ($doc) => ($doc['kind'] ?? '') === 'upload' && !in_array($doc['key'], $checklistKeys, true));
         $typeLabel = $currentType === 'local_off_campus' ? 'Local Off-Campus' : 'In-Campus';
@@ -85,7 +96,7 @@
             16 => ['Peace, Justice and Strong Institutions', null, '#00689d'],
             17 => ['Partnerships for the Goals', 'link-45deg', '#19486a'],
         ];
-        $documentDisk = \Illuminate\Support\Facades\Storage::disk('public');
+        $documentDisk = \Illuminate\Support\Facades\Storage::disk('local');
         $hasStoredFile = static fn ($file): bool => is_array($file)
             && !empty($file['path'])
             && $documentDisk->fileExists($file['path'])
@@ -93,6 +104,7 @@
     @endphp
 
     <link rel="stylesheet" href="{{ asset('css/activity-create.css') }}?v={{ filemtime(public_path('css/activity-create.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
 
     @if ($errors->any())
         <div class="ap-rule" role="alert">
@@ -107,7 +119,8 @@
 
     <form id="activityProposalForm" class="ap-form" method="post"
           action="{{ $submission->exists ? route('office.activities.update', $submission) : route('office.activities.store') }}"
-          enctype="multipart/form-data" data-template-url="{{ route('office.activities.templates.download') }}">
+          enctype="multipart/form-data" data-template-url="{{ route('office.activities.templates.download') }}"
+          data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
         @csrf
         @if ($submission->exists) @method('PUT') @endif
         <input type="hidden" name="submission_action" value="submit">
@@ -159,19 +172,21 @@
                             @endforeach
                         </datalist>
                     @endif
-                    <label class="ap-field ap-span-3">
-                        <span>Activity title <b>*</b></span>
-                        <input name="title" id="inputTitle" value="{{ $editTitle }}" maxlength="255" required placeholder="Enter the activity title">
-                        @error('title') <em>{{ $message }}</em> @enderror
-                    </label>
-
-                    <div class="ap-field ap-plan-reference ap-span-6">
-                        <label for="inputPlanReference">Reference in approved Plan of Activities <b>*</b></label>
-                        <input name="plan_reference" id="inputPlanReference"
-                               value="{{ old('plan_reference', $storedAttachments['plan_reference'] ?? '') }}"
-                               maxlength="500" required placeholder="Project number / title — semester and planned date">
-                        <small>Enter the project listed in your approved Attachment I. OSO will verify the reference against your submitted plan.</small>
-                        @error('plan_reference') <em>{{ $message }}</em> @enderror
+                    <div class="ap-field ap-plan-reference ap-span-3">
+                        <label for="inputPlanActivity">Activity from approved Attachment I <b>*</b></label>
+                        <select name="plan_activity_key" id="inputPlanActivity" required @if ($approvedPlanError) aria-describedby="approvedPlanHelp" @endif>
+                            <option value="">Choose an approved activity</option>
+                            @foreach ($approvedPlanActivities as $planActivity)
+                                <option value="{{ $planActivity['key'] }}" title="{{ $planActivity['reference'] }}" @selected($selectedPlanKey === $planActivity['key'])>{{ $loop->iteration }}. {{ $planActivity['title'] }}</option>
+                            @endforeach
+                        </select>
+                        @if ($approvedPlanError)
+                            <small id="approvedPlanHelp">{{ $approvedPlanError }}</small>
+                        @endif
+                        @if ($submission->exists && $selectedPlanKey === '' && $editTitle !== '')
+                            <small>Your previous activity ({{ $editTitle }}) does not match an entry in the current approved plan. Choose an actual approved entry before resubmitting.</small>
+                        @endif
+                        @error('plan_activity_key') <em>{{ $message }}</em> @enderror
                     </div>
 
                     <label class="ap-field ap-span-2">
@@ -187,7 +202,7 @@
                     <label class="ap-field ap-span-2">
                         <span>Allocated budget (₱) <b>*</b></span>
                         <input type="number" name="approved_budget" id="inputApprovedBudget"
-                               min="0.01" step="0.01" inputmode="decimal" required value="{{ $editBudget }}" placeholder="0.00">
+                               min="0" step="0.01" inputmode="decimal" required value="{{ $editBudget }}" placeholder="0.00">
                         @error('approved_budget') <em>{{ $message }}</em> @enderror
                     </label>
                     <label class="ap-field ap-span-3">
@@ -293,19 +308,24 @@
                                     </div>
                                     <p>{{ $requirement['description'] }}</p>
                                     <div class="ap-document-links">
-                                        <button type="button" data-doc-preview
-                                                data-doc-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"
-                                                data-doc-preview-title="{{ $requirement['title'] }} — Official template"
-                                                data-doc-preview-download-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-eye"></i> View</button>
+                                        <button type="button" data-document-preview
+                                                data-document-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile, 'preview' => 1]) }}"
+                                                data-document-preview-title="{{ $requirement['title'] }} — Official template"
+                                                data-document-original-name="{{ $sourceFile }}" data-document-preview-type="{{ strtolower(pathinfo($sourceFile, PATHINFO_EXTENSION)) }}"
+                                                data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
+                                                data-document-preview-download="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-eye"></i> View</button>
                                         <a href="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-download"></i> Download</a>
                                     </div>
                                     @error('attachments.'.$requirement['key']) <em>{{ $message }}</em> @enderror
                                     @if ($hasFile && $submission->exists)
                                         <div class="ap-document-links">
-                                            <button type="button" data-doc-preview
-                                                    data-doc-preview-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
-                                                    data-doc-preview-title="{{ $storedFile['name'] ?? $requirement['title'] }}"
-                                                    data-doc-preview-download-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}">View current file</button>
+                                            <button type="button" data-document-preview
+                                                    data-document-preview-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
+                                                    data-document-preview-title="{{ $storedFile['name'] ?? $requirement['title'] }}"
+                                                    data-document-original-name="{{ $storedFile['name'] ?? basename($storedFile['path']) }}"
+                                                    data-document-preview-type="{{ strtolower(pathinfo($storedFile['name'] ?? $storedFile['path'], PATHINFO_EXTENSION)) }}"
+                                                    data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
+                                                    data-document-preview-download="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}">View current file</button>
                                             <button type="button" data-attachment-delete
                                                     data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $requirement['key']]) }}"
                                                     data-attachment-name="{{ $storedFile['name'] ?? $requirement['title'] }}">Remove current file</button>
@@ -313,7 +333,16 @@
                                     @endif
                                 </div>
                                 <div class="ap-requirement-upload">
-                                    <span class="ap-file-status" data-file-status data-current-name="{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : '' }}">{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : 'No file selected.' }}</span>
+                                    <span class="ap-file-status" data-file-status data-current-name="{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : '' }}">
+                                        @if ($hasFile && $submission->exists)
+                                            <a data-document-file data-current-file href="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
+                                               data-document-preview-download="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}"
+                                               data-document-preview-type="{{ strtolower(pathinfo($storedFile['name'] ?? $storedFile['path'], PATHINFO_EXTENSION)) }}"
+                                               data-document-conversion-url="{{ route('office.documents.preview.convert') }}">{{ $storedFile['name'] ?? basename($storedFile['path']) }}</a>
+                                        @else
+                                            No file selected.
+                                        @endif
+                                    </span>
                                     <label class="ap-upload-button" for="{{ $fileId }}">
                                         <i class="bi bi-upload" aria-hidden="true"></i>
                                         <span data-upload-label>{{ $hasFile ? 'Replace file' : 'Upload' }}</span>
@@ -342,7 +371,7 @@
                                     <p>{{ $doc['status'] }}{{ filled($doc['date'] ?? '') && $doc['date'] !== '—' ? ' · '.$doc['date'] : '' }}</p>
                                 </div>
                                 <div class="ap-document-links">
-                                    <button type="button" data-doc-preview data-doc-preview-url="{{ $doc['url'] }}" data-doc-preview-title="{{ $doc['name'] }}" data-doc-preview-download-url="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
+                                    <button type="button" data-document-preview data-document-preview-url="{{ $doc['url'] }}" data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['name'] }}" data-document-preview-type="{{ strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
                                     <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
                                     <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
                                 </div>
@@ -354,22 +383,23 @@
         </div>
 
         {{-- Real DOCX/PDF/image preview modal. Preview never navigates directly to a download response. --}}
-        <dialog class="org-doc-preview-dialog" id="activityDocPreviewModal" aria-labelledby="activityDocPreviewTitle">
+        <dialog class="org-doc-preview-dialog" id="activityDocPreviewModal" data-document-preview-dialog aria-labelledby="activityDocPreviewTitle">
             <div class="org-doc-preview-box">
                 <div class="org-doc-preview-head">
                     <div>
-                        <strong id="activityDocPreviewTitle"><i class="bi bi-file-earmark-richtext"></i> Document preview</strong>
-                        <small id="activityDocPreviewStatus">Loading the original project document…</small>
+                        <strong id="activityDocPreviewTitle" data-document-preview-title>Document preview</strong>
+                        <small>Preview of the original selected or stored document.</small>
                     </div>
-                    <button type="button" class="org-doc-preview-close" data-doc-preview-close aria-label="Close document preview">&times;</button>
+                    <button type="button" class="org-doc-preview-close" data-document-preview-close aria-label="Close document preview">&times;</button>
                 </div>
-                <div class="org-doc-preview-body" id="activityDocPreviewBody">
+                <div class="org-doc-preview-body document-preview-body" id="activityDocPreviewBody" data-document-preview-body>
                     <div class="org-doc-preview-loading"><div><i class="bi bi-hourglass-split"></i>Loading document…</div></div>
                 </div>
                 <div class="org-doc-preview-foot">
-                    <button type="button" class="org-btn-cancel-link" data-doc-preview-close>Close</button>
-                    <a class="org-doc-preview-download" id="activityDocPreviewDownload" href="#">
-                        <i class="bi bi-download"></i> Download document
+                    <a data-document-preview-external target="_blank" rel="noopener" hidden>Open preview in new tab</a>
+                    <button type="button" class="org-btn-cancel-link" data-document-preview-close>Close</button>
+                    <a class="org-doc-preview-download" id="activityDocPreviewDownload" data-document-preview-download href="#">
+                        <i class="bi bi-download"></i> Download original
                     </a>
                 </div>
             </div>
@@ -389,107 +419,9 @@
 
     <script src="{{ asset('js/vendor/jszip.min.js') }}"></script>
     <script src="{{ asset('js/vendor/docx-preview.min.js') }}"></script>
+    <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}"></script>
     <script>
         (function () {
-            const previewModal = document.getElementById('activityDocPreviewModal');
-            const previewBody = document.getElementById('activityDocPreviewBody');
-            const previewTitle = document.getElementById('activityDocPreviewTitle');
-            const previewStatus = document.getElementById('activityDocPreviewStatus');
-            const previewDownload = document.getElementById('activityDocPreviewDownload');
-            const objectUrls = new WeakMap();
-
-            const setPreviewObjectUrl = (container, url) => {
-                const previous = objectUrls.get(container);
-                if (previous) URL.revokeObjectURL(previous);
-                if (url) objectUrls.set(container, url);
-                else objectUrls.delete(container);
-            };
-
-            const previewRequestUrl = (url) => {
-                try {
-                    const parsed = new URL(url, window.location.href);
-                    if (parsed.pathname.includes('/office-desk/activities/templates/download')) {
-                        parsed.searchParams.set('preview', '1');
-                    }
-                    return parsed.toString();
-                } catch (error) {
-                    return url;
-                }
-            };
-
-            const extensionFrom = (url) => {
-                try {
-                    return new URL(url, window.location.href).pathname.split('.').pop().toLowerCase();
-                } catch (error) {
-                    return '';
-                }
-            };
-
-            const renderDocument = async (url, container) => {
-                if (!url || !container) throw new Error('Document URL is missing.');
-                setPreviewObjectUrl(container, null);
-                container.innerHTML = '';
-
-                const response = await fetch(previewRequestUrl(url), {
-                    credentials: 'same-origin',
-                    headers: { Accept: 'application/octet-stream, application/pdf, image/*, application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-                });
-                if (!response.ok) throw new Error(`Preview request failed (${response.status}).`);
-
-                const blob = await response.blob();
-                const contentType = (response.headers.get('content-type') || '').split(';')[0].toLowerCase();
-                const extension = extensionFrom(url);
-                const isPdf = contentType === 'application/pdf' || extension === 'pdf';
-                const isImage = contentType.startsWith('image/');
-                const isDocx = contentType.includes('wordprocessingml') || extension === 'docx';
-                const isLegacyDoc = extension === 'doc' || contentType.includes('msword');
-
-                if (isPdf) {
-                    const objectUrl = URL.createObjectURL(blob);
-                    setPreviewObjectUrl(container, objectUrl);
-                    const frame = document.createElement('iframe');
-                    frame.src = objectUrl;
-                    frame.title = 'PDF document preview';
-                    frame.loading = 'lazy';
-                    container.appendChild(frame);
-                    return { kind: 'pdf' };
-                }
-
-                if (isImage) {
-                    const objectUrl = URL.createObjectURL(blob);
-                    setPreviewObjectUrl(container, objectUrl);
-                    const image = document.createElement('img');
-                    image.src = objectUrl;
-                    image.alt = 'Document preview';
-                    image.style.display = 'block';
-                    image.style.maxWidth = '100%';
-                    image.style.margin = '0 auto';
-                    container.appendChild(image);
-                    return { kind: 'image' };
-                }
-
-                if (isLegacyDoc) {
-                    throw new Error('Legacy .doc files are download-only in the browser preview.');
-                }
-
-                if (!isDocx || !window.docx || typeof window.docx.renderAsync !== 'function') {
-                    throw new Error('The DOCX preview engine is unavailable for this file.');
-                }
-
-                await window.docx.renderAsync(blob, container, null, {
-                    breakPages: true,
-                    ignoreWidth: false,
-                    ignoreHeight: false,
-                    renderHeaders: true,
-                    renderFooters: true,
-                    renderFootnotes: true,
-                    useBase64URL: true,
-                });
-                return { kind: 'docx' };
-            };
-
-            window.orgChainRenderDocument = renderDocument;
-
             const deleteAttachment = (button) => {
                 const name = button.dataset.attachmentName || 'this document';
                 if (!window.confirm(`Remove ${name}?`)) return;
@@ -519,35 +451,6 @@
                 form.submit();
             };
 
-            const showPreviewMessage = (message, error = false) => {
-                if (!previewBody) return;
-                previewBody.innerHTML = `<div class="org-doc-preview-${error ? 'error' : 'loading'}"><div><i class="bi bi-${error ? 'exclamation-triangle' : 'hourglass-split'}"></i>${message}</div></div>`;
-            };
-
-            const openPreview = async (trigger) => {
-                if (!previewModal || !previewBody) return;
-                const url = trigger.dataset.docPreviewUrl;
-                const title = trigger.dataset.docPreviewTitle || 'Document preview';
-                const downloadUrl = trigger.dataset.docPreviewDownloadUrl || url;
-                previewTitle.replaceChildren();
-                const titleIcon = document.createElement('i');
-                titleIcon.className = 'bi bi-file-earmark-richtext';
-                previewTitle.append(titleIcon, document.createTextNode(` ${title}`));
-                previewStatus.textContent = 'Loading the original project document…';
-                previewDownload.href = downloadUrl || '#';
-                showPreviewMessage('Loading document…');
-                if (!previewModal.open) previewModal.showModal();
-
-                try {
-                    const result = await renderDocument(url, previewBody);
-                    previewStatus.textContent = result.kind === 'docx'
-                        ? 'Rendered from the original DOCX file.'
-                        : 'Rendered from the original project file.';
-                } catch (error) {
-                    previewStatus.textContent = 'Preview is not available for this file type.';
-                    showPreviewMessage(`${error.message} Use Download document below to open it in Word.`, true);
-                }
-            };
 
             document.addEventListener('click', (event) => {
                 const deleteButton = event.target.closest('[data-attachment-delete]');
@@ -557,22 +460,6 @@
                     deleteAttachment(deleteButton);
                     return;
                 }
-
-                const trigger = event.target.closest('[data-doc-preview]');
-                if (trigger) {
-                    event.preventDefault();
-                    openPreview(trigger);
-                    return;
-                }
-
-                if (event.target.closest('[data-doc-preview-close]')) {
-                    setPreviewObjectUrl(previewBody, null);
-                    previewModal?.close();
-                }
-            });
-
-            previewModal?.addEventListener('close', () => {
-                setPreviewObjectUrl(previewBody, null);
             });
         })();
     </script>

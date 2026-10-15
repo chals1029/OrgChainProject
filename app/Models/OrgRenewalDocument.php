@@ -70,7 +70,7 @@ class OrgRenewalDocument extends Model
             return false;
         }
 
-        $disk = Storage::disk('public');
+        $disk = Storage::disk('local');
 
         return $disk->fileExists($path) && $disk->size($path) > 0;
     }

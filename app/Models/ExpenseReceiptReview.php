@@ -59,7 +59,7 @@ class ExpenseReceiptReview extends Model
             ->filter(fn ($file) => is_array($file) && filled($file['path'] ?? null))
             ->map(fn (array $file) => [
                 'path' => (string) $file['path'],
-                'disk' => (string) ($file['disk'] ?? $this->receipt_disk ?: 'public'),
+                'disk' => 'local',
                 'name' => (string) ($file['name'] ?? $this->receipt_name),
                 'hash' => $file['hash'] ?? null,
                 'size' => isset($file['size']) ? (int) $file['size'] : null,
@@ -72,7 +72,7 @@ class ExpenseReceiptReview extends Model
 
         return [[
             'path' => (string) $this->receipt_path,
-            'disk' => (string) ($this->receipt_disk ?: 'public'),
+            'disk' => 'local',
             'name' => (string) $this->receipt_name,
             'hash' => $this->file_hash,
             'size' => null,
