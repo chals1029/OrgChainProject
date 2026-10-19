@@ -1,19 +1,15 @@
 ---
 title: Welcome to OrgChain Vault
-tags:
-  - welcome
-  - index
+tags: [welcome, index]
 created: 2026-08-20
+updated: 2026-10-16
+status: active
 ---
 
-# 🏛️ Welcome to OrgChain Knowledge Base
+# Welcome to OrgChain
 
-This is the comprehensive documentation, architecture, and tracking vault for the **OrgChain** project.
+Start with [[Dashboard]]. Use [[Current System Guide]] for the current implementation and [[System Map MOC]] to find a detailed note.
 
-👉 **Start here**: [[Dashboard]] or explore the complete [[System Map MOC]].
+For the capstone ERD, open [[Database Schema and ERD]]. It distinguishes the local database's enforced foreign keys from relationships implemented in application code.
 
-## Latest (2026-09-18)
-- [[Organization Renewal Filing Window]] — OSO-gated renewal desk for SO
-- [[Playwright Console Smoke Testing]] — full-system browser smoke
-- [[Session Log 2026-09-18 Renewal Budget Chain and Playwright Smoke]]
-- Credentials & paths: [[Quick Reference and Cheatsheet]]
+Dated session logs are historical records, not the current operating procedure. No credentials, student records or private document uploads belong in this vault.

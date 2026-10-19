@@ -2,18 +2,15 @@
 .org-calendar *, .org-calendar *::before, .org-calendar *::after { box-sizing: border-box; }
 .org-calendar [hidden] { display: none !important; }
 .org-calendar .cal-card { min-width: 0; padding: 20px; background: #fff; border: 1px solid var(--cal-border); border-radius: 18px; }
-.org-calendar .cal-filters { display: grid; grid-template-columns: minmax(180px, 1.7fr) repeat(3, minmax(120px, 1fr)) auto; gap: 12px; align-items: end; margin-bottom: 20px; }
+.org-calendar .cal-filters { display: grid; grid-template-columns: minmax(180px, 1.7fr) repeat(3, minmax(120px, 1fr)); gap: 10px; align-items: end; margin-bottom: 14px; }
 .org-calendar .cal-field { display: grid; gap: 7px; min-width: 0; font-size: .78rem; font-weight: 700; color: #51424a; }
 .org-calendar .cal-field input, .org-calendar .cal-field select { width: 100%; min-width: 0; height: 40px; border: 1px solid var(--cal-border); background: #fcfafb; border-radius: 10px; padding: 0 11px; font: inherit; font-weight: 500; color: #33232b; }
 .org-calendar :where(a, button, input, select):focus-visible { outline: 3px solid #cb8b9a; outline-offset: 3px; }
-.org-calendar .cal-filter-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.org-calendar .cal-filter-actions .org-btn { min-height: 40px; }
-.org-calendar .cal-clear { color: var(--cal-accent); font-size: .78rem; font-weight: 700; text-decoration: underline; }
 .org-calendar .cal-feedback { margin: 0; font-size: .82rem; color: var(--cal-muted); }
 .org-calendar .cal-feedback:not(:empty) { margin: 0 0 12px; }
 .org-calendar[aria-busy="true"] .cal-layout { opacity: .65; }
 .org-calendar[aria-busy="true"] [data-cal-nav] { pointer-events: none; }
-.org-calendar .cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.org-calendar .cal-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .org-calendar .cal-toolbar, .org-calendar .cal-month-navigation, .org-calendar .cal-view-controls { display: flex; align-items: center; gap: 10px; }
 .org-calendar .cal-toolbar { justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; }
 .org-calendar .cal-month-navigation { min-width: 0; }
@@ -43,15 +40,6 @@
 .org-calendar .cal-day-event > i { flex-shrink: 0; }
 .org-calendar .cal-day-event.cal-scope-off { border-left-color: #42779d; background: #edf5fb; color: #315f7d; }
 .org-calendar .cal-more { font-size: .67rem; font-weight: 700; color: var(--cal-muted); }
-.org-calendar .cal-agenda-view { display: none; }
-.org-calendar[data-view="agenda"] .cal-month-view { display: none; }
-.org-calendar[data-view="agenda"] .cal-agenda-view { display: block; }
-.org-calendar .cal-agenda-day { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; padding: 16px 0; border-top: 1px solid #f0e7ea; }
-.org-calendar .cal-agenda-date { display: flex; flex-direction: column; align-items: center; gap: 2px; align-self: start; padding: 8px 3px; border-radius: 10px; background: #fbf4f6; color: var(--cal-accent); }
-.org-calendar .cal-agenda-date > span { font-size: .7rem; font-weight: 700; }
-.org-calendar .cal-agenda-date > strong { font-size: 1.4rem; line-height: 1.15; }
-.org-calendar .cal-agenda-date.is-today { background: var(--cal-accent); color: #fff; }
-.org-calendar .cal-agenda-events { display: grid; gap: 10px; min-width: 0; }
 .org-calendar .cal-event { display: flex; flex-direction: column; gap: 7px; width: 100%; min-width: 0; padding: 13px; border: 1px solid var(--cal-border); border-left: 3px solid var(--cal-accent); border-radius: 11px; background: #fff; text-align: left; color: #392731; cursor: pointer; font: inherit; font-size: .85rem; }
 .org-calendar .cal-event:hover { background: #fff9fb; border-color: #d19ba9; }
 .org-calendar .cal-event.cal-scope-off { border-left-color: #42779d; }
@@ -69,12 +57,7 @@
 .org-calendar .cal-timing-upcoming { color: #745284; background: #f3edf8; }
 .org-calendar .cal-footnote { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #f0e7ea; font-size: .73rem; color: var(--cal-muted); line-height: 1.6; }
 .org-calendar .cal-month-empty { margin: 16px 0 0; color: var(--cal-muted); text-align: center; font-size: .82rem; }
-.org-calendar[data-view="agenda"] .cal-month-empty { display: none; }
-.org-calendar .cal-empty { display: flex; align-items: center; flex-direction: column; gap: 10px; padding: 42px 16px; text-align: center; color: var(--cal-muted); }
-.org-calendar .cal-empty > i { font-size: 1.6rem; color: #b78594; }
-.org-calendar .cal-empty > strong { font-size: .9rem; color: #58434d; }
-.org-calendar .cal-empty > p { margin: 0; font-size: .8rem; line-height: 1.6; }
-.org-calendar .cal-sidebar { display: grid; gap: 20px; min-width: 0; }
+.org-calendar .cal-sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; align-items: start; }
 .org-calendar .cal-side-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 15px; }
 .org-calendar .cal-side-heading h2 { margin: 0; font-size: .95rem; font-weight: 800; }
 .org-calendar .cal-count { min-width: 25px; padding: 3px 7px; border-radius: 8px; background: #faf0f3; color: var(--cal-accent); font-size: .73rem; font-weight: 700; text-align: center; }
@@ -98,13 +81,7 @@
 .org-calendar .cal-dialog-footer #calDialogBack { margin-right: auto; }
 @media (max-width: 1250px) {
     .org-calendar .cal-filters { grid-template-columns: minmax(160px, 1.6fr) repeat(3, minmax(110px, 1fr)); }
-    .org-calendar .cal-filter-actions { grid-column: 1 / -1; }
-    .org-calendar .cal-layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
     .org-calendar .cal-card { padding: 16px; }
-}
-@media (max-width: 1100px) {
-    .org-calendar .cal-layout { grid-template-columns: minmax(0, 1fr); }
-    .org-calendar .cal-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
 @media (max-width: 760px) {
     .org-calendar .cal-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -119,16 +96,12 @@
     .org-calendar .cal-day-event > i { display: none; }
 }
 @media (max-width: 540px) {
-    .org-calendar[data-view="auto"] .cal-month-view { display: none; }
-    .org-calendar[data-view="auto"] .cal-agenda-view { display: block; }
-    .org-calendar[data-view="auto"] .cal-month-empty { display: none; }
     .org-calendar .cal-card { padding: 14px; border-radius: 14px; }
     .org-calendar .cal-layout { gap: 20px; }
     .org-calendar .cal-grid { gap: 3px; }
     .org-calendar .cal-day { min-height: 86px; border-radius: 7px; padding: 3px; }
     .org-calendar .cal-day-number { width: 23px; height: 23px; font-size: .75rem; }
     .org-calendar .cal-day-event { font-size: .56rem; border-left-width: 1px; padding: 2px; }
-    .org-calendar .cal-agenda-day { grid-template-columns: 42px minmax(0, 1fr); gap: 10px; }
     .org-calendar .cal-event { padding: 10px; }
     .org-calendar .cal-dialog-header, .org-calendar .cal-dialog-body, .org-calendar .cal-dialog-footer { padding: 16px; }
 }

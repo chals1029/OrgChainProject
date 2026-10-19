@@ -12,34 +12,27 @@ status: active
 # 📅 Interactive Activity Calendar
 
 > [!info] Campus Calendar
-> The interactive calendar at `/office-desk/calendar` aggregates all approved and upcoming activities across university organizations, preventing venue conflicts and schedule overlaps.
+> The read-only calendar at `/office-desk/calendar` shows persisted activities permitted for the signed-in desk. SO accounts stay within their assigned organization; institutional desks see packages only once their workflow stage permits access. It displays schedules, not a venue-conflict validation or approval action.
 
 ---
 
-## 🎨 Calendar Status Color Codes
+## Calendar status and scheduled timing
 
-```mermaid
-graph TD
-    UP["🟢 Upcoming Activities<br/>Status: 'upcoming' / 'ovcaa_approved'"]
-    ON["🟡 Ongoing Activities<br/>Status: 'ongoing'"]
-    COMP["⚪ Completed Activities<br/>Status: 'completed'"]
-    PEND["🟠 In Review / Verification<br/>Status: 'verification' / 'pending'"]
-```
+Approval status comes from the persisted workflow: pending review, returned, OC approved or completed. Upcoming/ongoing/past timing is derived separately from start/end timestamps; a future schedule does not prove approval. Multi-day events occupy each relevant day, with a midnight-exclusive end.
 
 ---
 
 ## 🗓️ Dynamic Month Filtering
 
-The calendar controller dynamically parses query parameters `?month=YYYY-MM`:
-- Calculates monthly event densities.
-- Maps multi-day activities (`starts_at` to `ends_at`).
-- Links each calendar event directly to its detailed proposal and budget sheets.
+The controller parses `month=YYYY-MM`, literal activity/venue search `q`, and scope/status/timing filters. Invalid months retain the current month. Today and Month are the only view controls on desktop and mobile; Agenda, its query state and mobile automatic switching are removed. Ongoing and Upcoming panels sit below the full-width month grid.
+
+Enter submits search without a Search button. Clearing the text manually or with the native search-clear control restores unsearched results while preserving month and other filters. Scope/status/timing selects still apply immediately. Continuation arrows are omitted; full start/end ranges remain in the event details.
 
 ---
 
 ## ⚡ No-reload month navigation (2026-09-19)
 
-The ‹ › arrows fetch the target month in the background and swap only the grid, month title, upcoming list, and events JSON (`loadMonth()` in `calendar.blade.php`), then `pushState` the URL. Grid dims while loading; any fetch failure falls back to a full page load. Back/forward triggers a reload to keep state consistent.
+`public/js/org-calendar.js` fetches the target month/filter result and replaces the calendar root, including its month grid, below-calendar lists and event JSON. It updates the URL with `pushState`, retains focus, and falls back to ordinary GET navigation on failure. Browser back/forward reloads the matching URL. Search does not request on ordinary typing until Enter or clearing an applied query.
 
 ## 🪟 Schedule detail modal (2026-09-19)
 

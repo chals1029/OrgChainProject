@@ -66,19 +66,7 @@
                     0 organizations
                 @endif
             </span>
-            @if ($archiveOrganizations->hasPages())
-                <nav aria-label="Organization archive pages">
-                    @if (!$archiveOrganizations->onFirstPage())
-                        <a class="archive-page" href="{{ $archiveOrganizations->previousPageUrl() }}" rel="prev">Previous</a>
-                    @endif
-                    @foreach ($archiveOrganizations->getUrlRange(max(1, $archiveOrganizations->currentPage() - 2), min($archiveOrganizations->lastPage(), $archiveOrganizations->currentPage() + 2)) as $page => $pageUrl)
-                        <a class="archive-page" href="{{ $pageUrl }}" @if ($page === $archiveOrganizations->currentPage()) aria-current="page" @endif>{{ $page }}</a>
-                    @endforeach
-                    @if ($archiveOrganizations->hasMorePages())
-                        <a class="archive-page" href="{{ $archiveOrganizations->nextPageUrl() }}" rel="next">Next</a>
-                    @endif
-                </nav>
-            @endif
+            {{ $archiveOrganizations->links('components.pagination') }}
         </div>
     </section>
 @endif
@@ -122,7 +110,7 @@
                                 <strong>{{ $doc['original_name'] }}</strong>
                                 <small>{{ $doc['name'] }}@if (!empty($doc['folder_name'])) · {{ $doc['folder_name'] }}@endif · {{ strtoupper($fileType) }}@if (!empty($doc['date'])) · {{ $doc['date'] }}@endif @if (!empty($doc['size'])) · {{ $doc['size'] }}@endif</small>
                             </div>
-                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['original_name'] }}" data-document-preview-type="{{ $fileType }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-label="View {{ $doc['original_name'] }}">View</button>
+                            <button type="button" class="app-view-action" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['original_name'] }}" data-document-preview-type="{{ $fileType }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-label="View {{ $doc['original_name'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                         </div>
                     @empty
                         <p class="archive-empty">No archived documents in this category.</p>

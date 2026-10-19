@@ -127,7 +127,6 @@ class CalendarFeaturesTest extends TestCase
         $this->assertContains($span->id, $this->idsForDate($november, '2026-11-01'));
         $this->assertContains($span->id, $this->idsForDate($november, '2026-11-02'));
         $this->assertNotContains($span->id, $this->idsForDate($november, '2026-11-03'));
-        $this->assertSame(['2026-11-01', '2026-11-02'], $november->viewData('agendaDays')->pluck('date')->map->toDateString()->all());
     }
 
     public function test_year_crossing_long_spans_are_clipped_to_the_requested_grid(): void
@@ -181,7 +180,6 @@ class CalendarFeaturesTest extends TestCase
         $this->activity(['starts_at' => '2027-03-20 09:00:00', 'ends_at' => '2027-03-20 17:00:00']);
         $current = $this->calendar();
         $this->assertSame('2026-10', $current->viewData('monthKey'));
-        $this->assertSame([], $current->viewData('agendaDays')->all());
         $this->assertSame('2026-10', $this->calendar(['month' => '2026-13'])->viewData('monthKey'));
     }
 
@@ -213,7 +211,7 @@ class CalendarFeaturesTest extends TestCase
         $this->activity(['title' => 'Travel safety briefing', 'location' => 'City Hall 100%_West']);
         $this->activity(['location' => 'City Hall 100%_West', 'workflow_status' => 'oso_review']);
         $this->activity(['location' => 'City Hall 100%_West', 'workflow_status' => 'oso_review', 'activity_scope' => 'local_off_campus', 'starts_at' => '2026-10-01 09:00:00', 'ends_at' => '2026-10-01 17:00:00']);
-        $query = ['q' => 'city hall 100%_', 'scope' => 'off', 'status' => 'pending', 'timing' => 'upcoming', 'view' => 'agenda'];
+        $query = ['q' => 'city hall 100%_', 'scope' => 'off', 'status' => 'pending', 'timing' => 'upcoming'];
         $response = $this->calendar($query);
         $this->assertSame([$match->id], $response->viewData('events')->pluck('id')->all());
         $this->assertSame([$match->id], $response->viewData('upcomingEvents')->pluck('id')->all());
@@ -231,15 +229,15 @@ class CalendarFeaturesTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-15 12:00:00', 'Asia/Manila'));
         $activity = $this->activity(['starts_at' => '2026-10-15 11:00:00', 'ends_at' => '2026-10-16 17:00:00']);
         $before = $activity->fresh()->getRawOriginal();
-        $response = $this->calendar(['month' => '2026-10', 'view' => 'agenda']);
+        $response = $this->calendar(['month' => '2026-10']);
         $event = $response->viewData('events')->firstWhere('id', $activity->id);
         $this->assertSame('2026-10-15T11:00:00+08:00', $event['starts_at']);
         $this->assertSame('2026-10-16T17:00:00+08:00', $event['ends_at']);
         $this->assertSame('ongoing', $event['timing_key']);
         $this->assertSame('2026-10-15', $response->viewData('todayKey'));
         $this->assertContains($activity->id, $this->idsForDate($response, '2026-10-16'));
-        $this->calendar(['month' => '2026-11', 'status' => 'approved', 'view' => 'month']);
-        $this->calendar(['month' => '2026-09', 'scope' => 'in', 'view' => 'agenda']);
+        $this->calendar(['month' => '2026-11', 'status' => 'approved']);
+        $this->calendar(['month' => '2026-09', 'scope' => 'in']);
         $this->assertSame($before, $activity->refresh()->getRawOriginal());
         $this->assertSame(1, OrgActivity::where('organization_name', $this->organization->name)->count());
     }

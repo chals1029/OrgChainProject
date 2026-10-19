@@ -66,47 +66,39 @@
            --------------------------------------------------------- */
         .oso-filter-bar-card {
             background: #ffffff;
-            border-radius: 20px;
+            border-radius: 16px;
             border: 1.5px solid #f0e6e8;
-            padding: 0.85rem 1.15rem;
+            padding: 0.8rem 1rem;
             box-shadow: 0 4px 16px rgba(90, 15, 30, 0.03);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem 1rem;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)) auto;
+            align-items: end;
+            gap: 0.6rem 0.8rem;
             width: 100%;
             min-width: 0;
         }
 
-        .oso-filter-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem 0.85rem;
-            flex-wrap: wrap;
-            flex: 1 1 auto;
-            min-width: 0;
-        }
+        .oso-filter-bar-left { display: contents; }
 
-        .oso-filter-bar-title {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: #8b1828;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-right: 0.15rem;
+        .oso-filter-group-organization { min-width: 0; }
+
+        .analytics-organization-name {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip-path: inset(50%);
             white-space: nowrap;
-            flex-shrink: 0;
         }
 
         .oso-filter-group {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.25rem;
+            min-width: 0;
         }
 
         .oso-filter-label {
@@ -124,6 +116,8 @@
             display: inline-flex;
             align-items: center;
             max-width: 100%;
+            width: 100%;
+            min-width: 0;
         }
 
         .oso-filter-select {
@@ -131,8 +125,8 @@
             -webkit-appearance: none;
             background: #fdfafb;
             border: 1.5px solid #f0e0e3;
-            border-radius: 9999px;
-            padding: 0.36rem 1.85rem 0.36rem 0.82rem;
+            border-radius: 9px;
+            padding: 0.4rem 1.9rem 0.4rem 0.65rem;
             font-size: 0.78rem;
             font-weight: 700;
             color: #2b2427;
@@ -142,7 +136,10 @@
             transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
             white-space: nowrap;
-            max-width: 220px;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            height: 38px;
             text-overflow: ellipsis;
             overflow: hidden;
         }
@@ -186,17 +183,17 @@
         .oso-filter-bar-right {
             display: flex;
             align-items: center;
-            gap: 0.55rem;
-            flex-shrink: 0;
-            margin-left: auto;
+            gap: 0.4rem;
+            min-height: 38px;
+            min-width: 0;
         }
 
         .oso-filter-reset-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             padding: 0;
             border-radius: 50%;
             background: #faf4f5;
@@ -232,7 +229,9 @@
             border: 1px solid #bbf7d0;
             font-size: 0.72rem;
             font-weight: 700;
-            white-space: nowrap;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.3;
             transition: all 0.2s ease;
         }
 
@@ -811,6 +810,12 @@
         /* ---------------------------------------------------------
            Responsive Media Queries
            --------------------------------------------------------- */
+        @media (max-width: 1400px) {
+            .oso-filter-bar-card { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .oso-filter-group-organization { grid-column: span 2; }
+            .oso-filter-bar-right { grid-column: span 2; justify-self: end; }
+        }
+
         @media (max-width: 1200px) {
             .org-health-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -829,16 +834,9 @@
         @media (max-width: 768px) {
             .oso-filter-bar-card {
                 padding: 0.75rem 0.9rem;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-            .oso-filter-bar-right {
-                width: 100%;
-                justify-content: space-between;
-                padding-top: 0.5rem;
-                border-top: 1px solid #f6eff0;
-            }
-            .oso-filter-select {
-                max-width: 160px;
-            }
+            .oso-filter-group-organization { grid-column: 1 / -1; }
             .org-analytics-card {
                 padding: 1.25rem 1.25rem;
             }
@@ -853,36 +851,37 @@
                 gap: 0.5rem;
             }
         }
+        @media (max-width: 380px) {
+            .oso-filter-bar-card { grid-template-columns: minmax(0, 1fr); padding: 0.7rem; }
+            .oso-filter-bar-right { grid-column: auto; }
+        }
     </style>
 
     <div class="org-analytics-container">
     {{-- Interactive Period & Date Filter Toolbar (Matching OSO Dashboard Filter Style) --}}
     <section class="oso-filter-bar-card" aria-label="Analytics Intelligence Filters">
         <div class="oso-filter-bar-left">
-            <div class="oso-filter-bar-title">
-                <i class="bi bi-funnel-fill"></i>
-                <span>Filters:</span>
-            </div>
 
             {{-- Cross-organization filter for OSO, SDO, OVCAA, and OC; locked select for Student Org --}}
-            <div class="oso-filter-group">
+            <div class="oso-filter-group oso-filter-group-organization">
                 <label for="organizationFilter" class="oso-filter-label"><i class="bi bi-building"></i> Organization</label>
                 <div class="oso-select-wrapper">
                     @if ($isSo)
-                        <select id="organizationFilter" class="oso-filter-select" disabled title="Locked to your assigned Student Org" style="cursor: not-allowed; opacity: 0.95; background: #fdf0f2; color: #8b1828; font-weight: 700;">
-                            <option value="{{ $selectedOrganization }}" selected>{{ $selectedOrganization ?: 'Assigned Student Org' }}</option>
+                        <select id="organizationFilter" class="oso-filter-select" disabled title="{{ $selectedOrganization ?: 'Assigned Student Org' }} — locked to your assigned organization" aria-describedby="analyticsOrganizationName" style="cursor: not-allowed; opacity: 0.95; background: #fdf0f2; color: #8b1828; font-weight: 700;">
+                            <option value="{{ $selectedOrganization }}" selected title="{{ $selectedOrganization }}">{{ $selectedOrganization ?: 'Assigned Student Org' }}</option>
                         </select>
                         <i class="bi bi-lock-fill oso-select-arrow" style="color: #8b1828;"></i>
                     @else
-                        <select id="organizationFilter" class="oso-filter-select" onchange="updateAnalyticsOrganizationFilter(this.value)">
+                        <select id="organizationFilter" class="oso-filter-select" title="{{ $selectedOrganization ?: 'All Organizations' }}" aria-describedby="analyticsOrganizationName" onchange="updateAnalyticsOrganizationFilter(this.value)">
                             <option value="">All Organizations</option>
                             @foreach (($organizations ?? collect()) as $organizationName)
-                                <option value="{{ $organizationName }}" @selected(($selectedOrganization ?? '') === $organizationName)>{{ $organizationName }}</option>
+                                <option value="{{ $organizationName }}" title="{{ $organizationName }}" @selected(($selectedOrganization ?? '') === $organizationName)>{{ $organizationName }}</option>
                             @endforeach
                         </select>
                         <i class="bi bi-chevron-down oso-select-arrow"></i>
                     @endif
                 </div>
+                <span id="analyticsOrganizationName" class="analytics-organization-name">{{ $selectedOrganization ?: 'All organizations' }}{{ $isSo ? ' · Assigned organization (locked)' : '' }}</span>
             </div>
 
             {{-- Calendar year filter for January–December charts --}}

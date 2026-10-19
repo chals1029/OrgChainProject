@@ -53,6 +53,16 @@ class CommunityPost extends Model
         return $this->likes()->where('student_id', $student->id)->exists();
     }
 
+    public function isNewInFeed(): bool
+    {
+        $createdAt = $this->created_at;
+        $now = now();
+
+        return $createdAt !== null
+            && $createdAt->greaterThan($now->copy()->subRealHours(24))
+            && $createdAt->lessThanOrEqualTo($now);
+    }
+
     public function scopeSearchFeed(Builder $query, string $term): Builder
     {
         $term = trim($term);

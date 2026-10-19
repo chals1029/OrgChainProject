@@ -394,6 +394,8 @@ class ActivityBudgetLifecycleTest extends TestCase
         $this->assertSame('0.00', (string) $a->refresh()->implemented_budget);
         $this->assertSame(0, ExpenseReceiptReview::where('org_activity_id', $a->id)->count());
         $other = OrgActivity::create(['title' => 'Excess', 'organization_name' => $a->organization_name, 'workflow_status' => 'ovcaa_review', 'starts_at' => '2026-10-22', 'approved_budget' => 6000]);
+        $source = InCampusActivitySubmission::where('org_activity_id', $a->id)->latest('id')->firstOrFail();
+        $source->replicate()->fill(['org_activity_id' => $other->id, 'workflow_status' => 'ovcaa_review'])->save();
         $this->actingAs($this->offices['ovcaa'], 'office')->post('/office-desk/activities/'.$other->id.'/advance')->assertSessionHasNoErrors();
         $this->assertSame('oc_review', $other->refresh()->workflow_status);
         $this->actingAs($this->offices['oc'], 'office')->post('/office-desk/activities/'.$other->id.'/advance')->assertSessionHasErrors('workflow');

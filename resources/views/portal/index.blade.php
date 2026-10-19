@@ -71,26 +71,11 @@
             </article>
         </section>
 
-        {{-- SDG highlights + department filter + student voice --}}
-        <section class="sp-section" style="margin-top:1.25rem;">
-            <div class="sp-section-head">
-                <div>
-                    <h2><i class="bi bi-globe2"></i> SDG Highlights</h2>
-                    <p>Which Sustainable Development Goals campus activities incorporate.</p>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-bottom:1rem;">
-                @forelse (($sdgHighlights ?? collect()) as $sdg)
-                    <article class="liquid-glass" style="padding:0.9rem 1rem;border-radius:16px;">
-                        <strong style="color:#7a1222;">{{ $sdg['sdg'] }}</strong>
-                        <div style="font-size:0.82rem;color:#786f73;">{{ $sdg['count'] }} activities</div>
-                        <small>{{ collect($sdg['samples'])->implode(' · ') }}</small>
-                    </article>
-                @empty
-                    <p style="color:#786f73;">SDG-tagged activities will appear here after seeding.</p>
-                @endforelse
-            </div>
+        {{-- SDG highlights --}}
+        @include('portal.sdg-highlights')
 
+        {{-- Department filter and student voice --}}
+        <section class="sp-section">
             <form method="get" action="{{ route('portal.home') }}" style="display:flex;flex-wrap:wrap;gap:0.65rem;align-items:end;margin-bottom:1rem;">
                 <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:700;">
                     Filter by department
@@ -215,27 +200,34 @@
                 <div class="sp-budget-chart-card liquid-glass">
                     <div class="sp-chart-card-head">
                         <h3><i class="bi bi-bar-chart-line-fill"></i> Category Breakdown</h3>
-                        <span class="sp-chart-count">In-Campus / Off-Campus</span>
+                        <span class="sp-chart-count">{{ count($budgetCategoryBreakdown ?? []) }} Categories</span>
                     </div>
                     <div class="sp-hbar-list">
                         @forelse (($budgetCategoryBreakdown ?? []) as $item)
                             @php
                                 $pct = $item['allocated'] > 0 ? round(($item['utilized'] / $item['allocated']) * 100, 1) : 0;
-                                $catIcon = $loop->first ? 'bi-buildings' : 'bi-geo-alt';
+                                $catIcon = $item['category'] === 'In-Campus' ? 'bi-buildings' : 'bi-house-door-fill';
                             @endphp
                             <div class="sp-hbar-item">
-                                <div class="sp-hbar-meta">
-                                    <span class="sp-hbar-label">
-                                        <i class="bi {{ $catIcon }}"></i>
-                                        <strong>{{ $item['category'] }}</strong>
-                                    </span>
-                                    <div class="sp-hbar-nums">
-                                        <span class="sp-hbar-amount">Actual ₱{{ number_format($item['utilized'], 2) }} / Budget ₱{{ number_format($item['allocated'], 2) }}</span>
-                                        <strong class="sp-hbar-pct">{{ $pct }}%</strong>
+                                <span class="sp-hbar-label">
+                                    <i class="bi {{ $catIcon }}" aria-hidden="true"></i>
+                                    <strong>{{ $item['category'] }}</strong>
+                                </span>
+                                <div class="sp-hbar-progress">
+                                    <div class="sp-hbar-track" aria-hidden="true">
+                                        <div class="sp-hbar-fill" style="width: {{ min(100, max(0, $pct)) }}%"></div>
                                     </div>
+                                    <strong class="sp-hbar-pct">{{ $pct }}%</strong>
                                 </div>
-                                <div class="sp-hbar-track">
-                                    <div class="sp-hbar-fill" style="width: {{ min(100, $pct) }}%"></div>
+                                <div class="sp-hbar-values">
+                                    <div class="sp-hbar-value">
+                                        <strong>₱{{ number_format($item['utilized'], 2) }}</strong>
+                                        <span>Actual</span>
+                                    </div>
+                                    <div class="sp-hbar-value">
+                                        <strong>₱{{ number_format($item['allocated'], 2) }}</strong>
+                                        <span>Total / Budget</span>
+                                    </div>
                                 </div>
                             </div>
                         @empty
@@ -690,11 +682,6 @@
                             'registered' => $regCount,
                             'capacity' => $capCount,
                             'target' => 'BatStateU Students & Org Officers',
-                            'is_rsvp' => false,
-                            'breakdown' => [
-                                ['label' => '1st & 2nd Year', 'count' => round($regCount * 0.55), 'pct' => 55],
-                                ['label' => '3rd & 4th Year', 'count' => round($regCount * 0.45), 'pct' => 45]
-                            ]
                         ],
                         'photos' => [
                             ['url' => asset('voting-assets/img/Bg_SSC.jpg'), 'caption' => 'Plenary session & participant assembly', 'tag' => 'Assembly'],
@@ -771,7 +758,7 @@
                     </div>
 
                     <div class="sp-act-card-footer">
-                        <button type="button" class="sp-act-btn-details"
+                        <button type="button" class="sp-act-btn-details app-view-action" aria-label="View {{ $act->title }}"
                             data-act-modal-trigger
                             data-act-details="{{ $actJson }}"
                             data-title="{{ $act->title }}"
@@ -780,8 +767,7 @@
                             data-time="{{ $timeRange }}"
                             data-location="{{ $loc }}"
                             data-desc="{{ $desc }}">
-                            <span>View details</span>
-                            <i class="bi bi-arrow-right"></i>
+                            <i class="bi bi-eye" aria-hidden="true"></i> <span>View</span>
                         </button>
 
                         <button type="button" class="sp-act-btn-discuss" data-act-id="{{ $act->id }}" data-act-title="{{ $act->title }}" title="Discuss in Community">
@@ -847,11 +833,6 @@
                                         'registered' => $regCount,
                                         'capacity' => $capCount,
                                         'target' => 'BatStateU Students & Org Officers',
-                                        'is_rsvp' => false,
-                                        'breakdown' => [
-                                            ['label' => '1st & 2nd Year', 'count' => round($regCount * 0.55), 'pct' => 55],
-                                            ['label' => '3rd & 4th Year', 'count' => round($regCount * 0.45), 'pct' => 45]
-                                        ]
                                     ],
                                     'photos' => [
                                         ['url' => asset('voting-assets/img/Bg_SSC.jpg'), 'caption' => 'Plenary session & participant assembly', 'tag' => 'Assembly'],
@@ -928,7 +909,7 @@
                 </table>
             </div>
 
-            {{-- List View Pagination (< 1 2 3 >) --}}
+            {{-- Activity list pagination --}}
             <div class="sp-table-pagination" id="spActListPagination" style="display: none;"></div>
         </div>
 
@@ -1099,11 +1080,11 @@
                 </div>
                 <div class="sp-ann-page-controls">
                     <button type="button" class="sp-ann-page-btn" id="spAnnouncePrevBtn" aria-label="Previous page">
-                        <i class="bi bi-chevron-left"></i>
+                        Previous
                     </button>
                     <div id="spAnnouncePageNumbers" style="display: inline-flex; gap: 0.35rem;"></div>
                     <button type="button" class="sp-ann-page-btn" id="spAnnounceNextBtn" aria-label="Next page">
-                        <i class="bi bi-chevron-right"></i>
+                        Next
                     </button>
                 </div>
             </div>
@@ -1120,10 +1101,10 @@
             .portal-body[data-portal-tab="tosa"] .sp-flash span { min-width: 0; overflow-wrap: anywhere; }
             [data-panel="tosa"] { min-width: 0; width: 100%; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
             [data-panel="tosa"] [hidden] { display: none !important; }
-            [data-panel="tosa"] .sp-tosa-submissions-view { min-width: 0; width: 100%; max-width: 1040px; margin-inline: auto; padding-bottom: .5rem; }
-            [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .65rem; margin-bottom: .5rem; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-submissions-view { display: grid; gap: .4rem; min-width: 0; width: 100%; max-width: none; padding-bottom: .35rem; }
+            [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .6rem; margin: 0; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
             [data-panel="tosa"] .sp-tosa-accordion { padding: 0; }
-            [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
+            [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .55rem; padding: .55rem .65rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
             [data-panel="tosa"] .sp-tosa-section-summary::-webkit-details-marker { display: none; }
             [data-panel="tosa"] .sp-tosa-section-summary:hover { background: #fdf0f2; }
             [data-panel="tosa"] .sp-tosa-section-copy { flex: 1; min-width: 0; }
@@ -1133,13 +1114,13 @@
             [data-panel="tosa"] .sp-tosa-section-chevron { flex: 0 0 auto; color: #8b1828; font-size: .8rem; }
             [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary { border-radius: 12px 12px 0 0; }
             [data-panel="tosa"] .sp-tosa-accordion[open] > .sp-tosa-section-summary > .sp-tosa-section-chevron { transform: rotate(90deg); }
-            [data-panel="tosa"] .sp-tosa-section-body { padding: .65rem; border-top: 1px solid #ead8de; }
+            [data-panel="tosa"] .sp-tosa-section-body { padding: .55rem; border-top: 1px solid #ead8de; }
             [data-panel="tosa"] .sp-tosa-master-form { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
             [data-panel="tosa"] .sp-tosa-master-copy { display: flex; align-items: flex-start; gap: .7rem; min-width: 0; flex: 1 1 22rem; }
             [data-panel="tosa"] .sp-tosa-master-copy > div { min-width: 0; }
             [data-panel="tosa"] .sp-tosa-master-label { display: block; color: #8b1828; font-size: .65rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
             [data-panel="tosa"] .sp-tosa-master-copy strong { display: block; margin-top: .15rem; font-size: .9rem; }
-            [data-panel="tosa"] .sp-tosa-card p { margin: .3rem 0; font-size: .8rem; color: #786f73; line-height: 1.5; }
+            [data-panel="tosa"] .sp-tosa-card p { margin: .25rem 0; font-size: .8rem; color: #786f73; line-height: 1.4; }
             [data-panel="tosa"] .sp-tosa-card small { display: block; color: #786f73; font-size: .72rem; margin-top: .2rem; }
             [data-panel="tosa"] .sp-tosa-card h3 { margin: 0; font-size: .9rem; }
             [data-panel="tosa"] .sp-tosa-requirements { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; }
@@ -1162,26 +1143,33 @@
             [data-panel="tosa"] .sp-tosa-file-picker { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; position: relative; }
             [data-panel="tosa"] .sp-tosa-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); border: 0; }
             [data-panel="tosa"] .sp-tosa-file-input:focus-visible + label { outline: 2px solid #8b1828; outline-offset: 3px; }
-            [data-panel="tosa"] .sp-tosa-selection { flex-basis: 100%; min-width: 0; padding: .5rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; font-size: .75rem; }
-            [data-panel="tosa"] .sp-tosa-file-feedback { flex-basis: 100%; margin: 0; color: #a12638; font-size: .75rem; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-selection { display: flex; align-items: center; gap: .5rem; order: -1; flex-basis: 100%; min-width: 0; padding: .5rem; border-radius: 8px; background: #fdf0f2; color: #8b1828; font-size: .75rem; }
+            [data-panel="tosa"] .sp-tosa-selection > i { flex: 0 0 auto; font-size: 1.3rem; }
+            [data-panel="tosa"] .sp-tosa-selection-copy { min-width: 0; }
+            [data-panel="tosa"] .sp-tosa-selection .sp-tosa-filename { margin: 0; text-decoration: none; }
+            [data-panel="tosa"] .sp-tosa-file-feedback { order: 1; flex-basis: 100%; margin: 0; color: #a12638; font-size: .75rem; overflow-wrap: anywhere; }
             [data-panel="tosa"] .sp-tosa-reference-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; list-style: none; margin: 0; padding: 0; }
-            [data-panel="tosa"] .sp-tosa-reference-list li { min-width: 0; padding: .75rem; border: 1px solid #ead8de; border-radius: 10px; font-size: .8rem; }
+            [data-panel="tosa"] .sp-tosa-reference-list li { min-width: 0; padding: .55rem .65rem; border: 1px solid #ead8de; border-radius: 10px; font-size: .8rem; }
             [data-panel="tosa"] .sp-tosa-reference-heading { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
             [data-panel="tosa"] .sp-tosa-reference-heading > strong { min-width: 0; }
             [data-panel="tosa"] .sp-tosa-reference-list .sp-tosa-document-links { margin-top: .5rem; }
             [data-panel="tosa"] .sp-tosa-submit-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; }
             [data-panel="tosa"] .sp-tosa-submit-banner > div { min-width: 0; flex: 1 1 22rem; }
             [data-panel="tosa"] #tosaSubmitForm { min-width: 0; margin: 0; }
+            [data-panel="tosa"] [data-tosa-submit-wrapper] { position: relative; }
+            [data-panel="tosa"] .sp-tosa-submit-tooltip { position: absolute; right: 0; bottom: calc(100% + .5rem); z-index: 80; width: max-content; max-width: min(20rem, calc(100vw - 3rem)); padding: .6rem .75rem; border-radius: 8px; background: #40151f; color: #fff; font-size: .75rem; line-height: 1.4; box-shadow: 0 4px 14px #40151f26; visibility: hidden; opacity: 0; pointer-events: none; }
+            [data-panel="tosa"] [data-tosa-submit-wrapper]:hover .sp-tosa-submit-tooltip,
+            [data-panel="tosa"] [data-tosa-submit-wrapper]:focus .sp-tosa-submit-tooltip { visibility: visible; opacity: 1; }
             [data-panel="tosa"] a:focus-visible, [data-panel="tosa"] button:focus-visible, [data-panel="tosa"] summary:focus-visible { outline: 2px solid #8b1828; outline-offset: 3px; }
             @media (max-width: 760px) {
                 [data-panel="tosa"] .sp-tosa-row { grid-template-columns: minmax(0, 1fr); }
-                [data-panel="tosa"] .sp-tosa-card:not(.sp-tosa-accordion) { padding: .8rem; }
+                [data-panel="tosa"] .sp-tosa-card:not(.sp-tosa-accordion) { padding: .65rem; }
                 [data-panel="tosa"] .sp-tosa-row-actions { gap: .6rem; }
             }
             @media (max-width: 520px) {
                 [data-panel="tosa"] .sp-tosa-reference-list { grid-template-columns: minmax(0, 1fr); }
-                [data-panel="tosa"] .sp-tosa-section-summary { gap: .5rem; padding: .7rem; }
-                [data-panel="tosa"] .sp-tosa-section-body { padding: .7rem; }
+                [data-panel="tosa"] .sp-tosa-section-summary { gap: .5rem; padding: .55rem .6rem; }
+                [data-panel="tosa"] .sp-tosa-section-body { padding: .6rem; }
                 [data-panel="tosa"] .sp-tosa-section-heading { font-size: .85rem; }
             }
         </style>
@@ -1226,7 +1214,7 @@
                     <div class="sp-tosa-document-links">
                         @if ($tosaMasterForm['available'])
                             @if ($tosaMasterForm['can_preview'])
-                                <a href="{{ $tosaMasterForm['preview_url'] }}" class="sp-tosa-control" data-document-preview
+                                <a href="{{ $tosaMasterForm['preview_url'] }}" class="sp-tosa-control app-view-action" data-document-preview
                                    data-document-preview-url="{{ $tosaMasterForm['preview_url'] }}" data-document-preview-title="{{ $tosaMasterForm['name'] }}"
                                    data-document-preview-type="{{ strtolower($tosaMasterForm['preview_format']) }}" data-document-preview-download="{{ $tosaMasterForm['download_url'] }}">
                                     <i class="bi bi-eye" aria-hidden="true"></i> View
@@ -1284,9 +1272,9 @@
                             <div class="sp-tosa-document-links">
                                 @if ($reference['available'])
                                     @if ($reference['key'] === 'computation')
-                                        <a href="{{ route('portal.tosa.workbook.reference') }}" class="sp-tosa-control" target="_blank" rel="noopener"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
+                                        <a href="{{ route('portal.tosa.workbook.reference') }}" class="sp-tosa-control app-view-action" target="_blank" rel="noopener" aria-label="View computation reference workbook"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                                     @elseif ($reference['can_preview'])
-                                        <a href="{{ $reference['preview_url'] }}" class="sp-tosa-control" data-document-preview
+                                        <a href="{{ $reference['preview_url'] }}" class="sp-tosa-control app-view-action" aria-label="View {{ $reference['name'] }}" data-document-preview
                                            data-document-preview-url="{{ $reference['preview_url'] }}" data-document-preview-title="{{ $reference['name'] }}"
                                            data-document-preview-type="{{ strtolower($reference['preview_format']) }}" data-document-preview-download="{{ $reference['download_url'] }}">
                                             <i class="bi bi-eye" aria-hidden="true"></i> View
@@ -1335,8 +1323,6 @@
                                                aria-label="View saved {{ data_get($doc['file'], 'name') }}">{{ data_get($doc['file'], 'name') }}</a>
                                         @elseif ($doc['file'])
                                             <small>{{ data_get($doc['file'], 'name') }}</small>
-                                        @else
-                                            <small>No file saved for this section.</small>
                                         @endif
                                     </div>
                                 </div>
@@ -1356,8 +1342,11 @@
                                             <i class="bi bi-folder2-open" aria-hidden="true"></i> <span data-tosa-picker-text>{{ $doc['uploaded'] ? 'Replace file' : 'Choose file' }}</span>
                                         </label>
                                         <div class="sp-tosa-selection" data-tosa-selection hidden aria-live="polite">
-                                            <small data-tosa-selected-meta></small>
-                                            <a class="sp-tosa-filename" data-document-file data-tosa-selected-file hidden></a>
+                                            <i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i>
+                                            <div class="sp-tosa-selection-copy">
+                                                <a class="sp-tosa-filename" data-document-file data-tosa-selected-file hidden></a>
+                                                <small data-tosa-selected-meta></small>
+                                            </div>
                                         </div>
                                         <p id="tosaFeedback_{{ $doc['key'] }}" class="sp-tosa-file-feedback" data-tosa-file-feedback role="status" hidden></p>
                                         <button type="button" class="sp-tosa-control" data-tosa-cancel hidden>Cancel selection</button>
@@ -1392,10 +1381,11 @@
                 </div>
                     <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-confirm="manual" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}" data-confirm-message="Submit your complete A–G packet for OSO review? All files will be saved together and locked. Changes are allowed only if OSO requests Revision.">
                         @csrf
-                        <span data-tosa-submit-wrapper tabindex="0" aria-describedby="tosaSubmitHelp" title="Complete all required A–G sections before submitting.">
+                        <span data-tosa-submit-wrapper tabindex="{{ $tosaComplete ? '-1' : '0' }}" aria-label="Submission requirements" aria-describedby="tosaSubmitTooltip">
                         <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete)>
                             <i class="bi bi-send-check" aria-hidden="true"></i> {{ $tosaRevision ? 'Resubmit for Review' : 'Submit for Review' }}
                         </button>
+                        <span id="tosaSubmitTooltip" class="sp-tosa-submit-tooltip" role="tooltip" @if ($tosaComplete) hidden @endif>Complete the required A–G files before submitting.</span>
                         </span>
                     </form>
             </div>
@@ -1469,11 +1459,6 @@
                         <span id="spChipFeelingName">Feeling</span>
                         <button type="button" class="sp-chip-remove" id="spRemoveFeelingBtn" aria-label="Remove feeling">&times;</button>
                     </div>
-                    <div class="sp-composer-chip sp-chip-tags" id="spChipTags" hidden>
-                        <i class="bi bi-person-fill-add sp-icon-blue"></i>
-                        <span id="spChipTagsName">Tagged</span>
-                        <button type="button" class="sp-chip-remove" id="spRemoveTagsBtn" aria-label="Remove tags">&times;</button>
-                    </div>
                 </div>
 
                 {{-- Hidden Form Fields --}}
@@ -1485,7 +1470,6 @@
                 </select>
                 <input type="hidden" name="feeling" id="spComposerFeelingInput" value="">
                 <input type="hidden" name="audience" id="spComposerAudienceInput" value="{{ old('audience', 'public') }}">
-                <input type="hidden" name="tagged_users" id="spComposerTaggedInput" value="">
 
                 {{-- Modern Composer Bottom Toolbar (Picture 1) --}}
                 <div class="sp-composer-bar">
@@ -1496,29 +1480,6 @@
                             <i class="bi bi-image-fill sp-icon-green"></i>
                             <span>Photo / Video</span>
                         </label>
-
-                        {{-- 2. Tag people --}}
-                        <div class="sp-action-dropdown-wrap">
-                            <button type="button" class="sp-bar-action-btn sp-action-tag" id="spComposerTagBtn" title="Tag people">
-                                <i class="bi bi-person-fill-add sp-icon-blue"></i>
-                                <span>Tag people</span>
-                            </button>
-                            <div class="sp-action-popover liquid-glass" id="spTagPopover" hidden>
-                                <div class="sp-popover-head">
-                                    <strong>Tag Classmates & Officers</strong>
-                                    <button type="button" class="sp-popover-close" id="spTagPopoverClose">&times;</button>
-                                </div>
-                                <div class="sp-popover-body">
-                                    <input type="text" class="sp-popover-search" id="spTagSearchInput" placeholder="Type student name or council...">
-                                    <div class="sp-tag-quick-list" id="spTagQuickList">
-                                        <button type="button" class="sp-tag-option" data-tag="SSC Executive Council">🏛️ SSC Executive Council</button>
-                                        <button type="button" class="sp-tag-option" data-tag="CICS Student Council">💻 CICS Student Council</button>
-                                        <button type="button" class="sp-tag-option" data-tag="Red Cross Youth">🩺 Red Cross Youth</button>
-                                        <button type="button" class="sp-tag-option" data-tag="CEAFA Student Council">⚙️ CEAFA Council</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {{-- 3. Activity --}}
                         <div class="sp-action-dropdown-wrap">
@@ -1622,6 +1583,14 @@
 
         {{-- Community feed --}}
         <section class="sp-section">
+            @php
+                $feedHasFilters = ($communityAudience ?? 'all') !== 'all' || ($communityPeriod ?? 'all') !== 'all';
+                $feedQuery = array_merge(request()->only(['college', 'status']), [
+                    'community_q' => $communitySearch ?? '',
+                    'community_audience' => $communityAudience ?? 'all',
+                    'community_period' => $communityPeriod ?? 'all',
+                ]);
+            @endphp
             <div class="sp-section-head sp-feed-header-row">
                 <div class="sp-feed-title-wrap">
                     <h2><i class="bi bi-chat-quote-fill"></i> Community feed</h2>
@@ -1629,19 +1598,46 @@
                 </div>
                 <div class="sp-feed-controls">
                     <div class="sp-feed-sort-dropdown-wrap">
-                        <button type="button" class="sp-feed-sort-btn" id="spFeedSortBtn" title="Sort feed">
+                        <button type="button" class="sp-feed-sort-btn" id="spFeedSortBtn" title="Sort feed" aria-expanded="false" aria-controls="spFeedSortPopover">
                             <span id="spFeedSortLabel">{{ ['recent' => 'Most recent', 'top' => 'Top comments', 'popular' => 'Most liked'][$feedSort ?? 'recent'] }}</span>
                             <i class="bi bi-chevron-down"></i>
                         </button>
                         <div class="sp-action-popover sp-sort-popover liquid-glass" id="spFeedSortPopover" hidden>
-                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'recent' ? 'is-active' : '' }}" data-sort="recent">Most recent</button>
-                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'top' ? 'is-active' : '' }}" data-sort="top">Top comments</button>
-                            <button type="button" class="sp-sort-opt {{ ($feedSort ?? 'recent') === 'popular' ? 'is-active' : '' }}" data-sort="popular">Most liked</button>
+                            @foreach (['recent' => 'Most recent', 'top' => 'Top comments', 'popular' => 'Most liked'] as $sortValue => $sortLabel)
+                                <a class="sp-sort-opt {{ ($feedSort ?? 'recent') === $sortValue ? 'is-active' : '' }}" href="{{ route('portal.community', array_merge($feedQuery, ['sort' => $sortValue])) }}" @if (($feedSort ?? 'recent') === $sortValue) aria-current="true" @endif>{{ $sortLabel }}</a>
+                            @endforeach
                         </div>
                     </div>
-                    <button type="button" class="sp-feed-filter-toggle-btn" id="spFeedFilterToggle" title="Feed filters">
-                        <i class="bi bi-sliders"></i>
-                    </button>
+                    <details class="sp-feed-filter-dropdown" @if ($feedHasFilters) open @endif>
+                        <summary class="sp-feed-filter-toggle-btn {{ $feedHasFilters ? 'is-active' : '' }}" id="spFeedFilterToggle" title="Feed filters" aria-label="Feed filters">
+                            <i class="bi bi-sliders" aria-hidden="true"></i>
+                        </summary>
+                        <form method="get" action="{{ route('portal.community') }}" class="sp-feed-filter-panel liquid-glass" aria-label="Filter community posts">
+                            <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
+                            <input type="hidden" name="community_q" value="{{ $communitySearch ?? '' }}">
+                            @foreach (request()->only(['college', 'status']) as $filterName => $filterValue)
+                                <input type="hidden" name="{{ $filterName }}" value="{{ $filterValue }}">
+                            @endforeach
+                            <label>Audience
+                                <select name="community_audience">
+                                    @foreach (['all' => 'All visible posts', 'public' => 'Public posts', 'department' => 'Department posts', 'org' => 'Organization posts'] as $value => $label)
+                                        <option value="{{ $value }}" @selected(($communityAudience ?? 'all') === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label>Posted
+                                <select name="community_period">
+                                    @foreach (['all' => 'Any time', 'day' => 'Last 24 hours', 'week' => 'Last 7 days', 'month' => 'Last 30 days'] as $value => $label)
+                                        <option value="{{ $value }}" @selected(($communityPeriod ?? 'all') === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <div class="sp-feed-filter-actions">
+                                <a href="{{ route('portal.community', array_merge(request()->only(['college', 'status']), ['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent'])) }}">Clear filters</a>
+                                <button type="submit">Apply filters</button>
+                            </div>
+                        </form>
+                    </details>
                 </div>
             </div>
 
@@ -1668,7 +1664,9 @@
                                 <span class="sp-post-time-meta">{{ $post->created_at->diffForHumans() }} · <i class="bi {{ $audienceIcon }}" aria-hidden="true"></i> {{ $audienceLabel }}</span>
                             </div>
                             <div class="sp-post-top-actions">
-                                <span class="sp-post-badge-new">New</span>
+                                @if ($post->isNewInFeed())
+                                    <span class="sp-post-badge-new" data-post-new-until="{{ $post->created_at->copy()->addRealHours(24)->getTimestampMs() }}" title="Posted within the last 24 hours">New</span>
+                                @endif
                                 <div class="sp-post-menu-wrap">
                                     <button type="button" class="sp-post-menu-trigger" aria-label="Post options">
                                         <i class="bi bi-three-dots"></i>
@@ -1799,29 +1797,23 @@
                             </div>
                             <div class="sp-comment-input-capsule">
                                 <input id="comment-{{ $post->id }}" type="text" name="body" maxlength="800" placeholder="Write a comment…" required autocomplete="off">
-                                <div class="sp-comment-inline-tools">
-                                    <button type="button" class="sp-comment-tool-btn" title="Emoji" onclick="const inp=document.getElementById('comment-{{ $post->id }}'); if(inp){inp.value+=' ❤️ '; inp.focus();}"><i class="bi bi-emoji-smile"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="Attach Photo"><i class="bi bi-camera"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="GIF"><i class="bi bi-filetype-gif"></i></button>
-                                    <button type="button" class="sp-comment-tool-btn" title="Sticker"><i class="bi bi-sticky"></i></button>
-                                </div>
                             </div>
                             <button type="submit" class="sp-comment-submit-hidden" style="display: none;">Submit</button>
                         </form>
                     </article>
                 @empty
                     <div class="sp-post liquid-glass" role="status">
-                        <h3>{{ ($communitySearch ?? '') !== '' ? 'No matching posts' : 'No posts yet' }}</h3>
-                        <p>{{ ($communitySearch ?? '') !== '' ? 'Try another search term or clear the search.' : 'Posts shared with you will appear here.' }}</p>
+                        <h3>{{ ($communitySearch ?? '') !== '' || $feedHasFilters ? 'No matching posts' : 'No posts yet' }}</h3>
+                        <p>{{ ($communitySearch ?? '') !== '' || $feedHasFilters ? 'Try another search or adjust the feed filters.' : 'Posts shared with you will appear here.' }}</p>
                         @if (($communitySearch ?? '') !== '')
-                            <a href="{{ route('portal.community') }}">Clear search</a>
+                            <a href="{{ route('portal.community', array_merge($feedQuery, ['community_q' => '', 'sort' => $feedSort ?? 'recent'])) }}">Clear search</a>
                         @endif
                     </div>
                 @endforelse
             </div>
 
             <div class="sp-pagination">
-                {{ $posts->appends(['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent'])->links() }}
+                {{ $posts->appends(array_merge($feedQuery, ['sort' => $feedSort ?? 'recent']))->links('components.pagination') }}
             </div>
         </section>
     </div>
@@ -1897,7 +1889,7 @@
                             <div class="sp-act-part-stat">
                                 <span class="sp-part-stat-label">Registered Count</span>
                                 <strong class="sp-part-stat-val" id="spActPartRegistered">0</strong>
-                                <small id="spActPartSub">Active RSVP list</small>
+                                <small>Registered participants</small>
                             </div>
                             <div class="sp-act-part-stat">
                                 <span class="sp-part-stat-label">Total Capacity</span>
@@ -1923,31 +1915,6 @@
                             <div class="sp-act-part-bar-track">
                                 <div class="sp-act-part-bar-fill" id="spActPartBarFill" style="width: 0%;"></div>
                             </div>
-                        </div>
-                        <div class="sp-act-demographics-grid">
-                            <div class="sp-act-demo-card">
-                                <h4><i class="bi bi-pie-chart-fill"></i> Attendee Demographics (By Year)</h4>
-                                <div class="sp-act-demo-bars" id="spActDemoBars"></div>
-                            </div>
-                            <div class="sp-act-trust-card">
-                                <div class="sp-trust-badge-icon"><i class="bi bi-patch-check-fill"></i></div>
-                                <h4>OrgChain Verified Participation</h4>
-                                <p>Attendance is digitally recorded through student QR badge check-in, providing immutable proof of leadership & extracurricular involvement.</p>
-                                <div class="sp-trust-status">
-                                    <i class="bi bi-shield-lock-fill"></i>
-                                    <span>Cryptographically Logged to Ledger</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sp-act-rsvp-box">
-                            <div>
-                                <strong>Want to participate in this event?</strong>
-                                <p>Register your attendance to receive official event updates and a verified certificate of participation.</p>
-                            </div>
-                            <button type="button" class="btn btn-primary sp-rsvp-action-btn" id="spActRsvpBtn">
-                                <i class="bi bi-bookmark-check-fill"></i>
-                                <span id="spActRsvpBtnText">RSVP for Event</span>
-                            </button>
                         </div>
                     </div>
                 </div>

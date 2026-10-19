@@ -21,9 +21,9 @@ status: active
 | :--- | :--- | :--- |
 | **OSO** | Renewal (sliders badge) | Open/close window, AY/semester, set requirements, monitor 32 org qualifications & active status with reasons, inspect incoming packets via drawer, approve or return |
 | **SO** | Renewal (lock badge) | When open & qualified: draft org details, download official .docx templates, upload 10 signed documents, submit packet |
-| **SDO / OVCAA** | Hidden | Direct `/office-desk/renewal` → **403** |
+| **SDO / OVCAA / OC** | Hidden | Direct `/office-desk/renewal` → **403** |
 
-**URL:** `/office-desk/renewal` · Route names: `office.renewal`, `office.renewal.window`, `office.renewal.submit`, `office.renewal.documents`, `office.renewal.review`, `office.renewal.organization.status`
+**URL:** `/office-desk/renewal` · Route names: `office.renewal`, `office.renewal.window`, `office.renewal.information.save`, `office.renewal.submit`, `office.renewal.review`, `office.renewal.organization.status`. There is no current per-file `office.renewal.documents` mutation route.
 
 ## Organization Eligibility & Qualification Monitor (OSO)
 
@@ -38,13 +38,13 @@ OSO maintains institutional control over all 32 student organizations across Bat
   - *Pending disciplinary clearance or administrative review.*
 - **Student Desk Enforcement**: Disqualified or inactive organizations see an immediate red warning banner detailing the OSO deficiency reason, and the "Submit Packet to OSO" button is locked.
 
-## Physical Wet-Ink Signing & Scan Upload Workflow (Data Privacy Compliant)
+## Institutional signing and completed-file workflow
 
-In compliance with **Republic Act 10173 (Data Privacy Act of 2012)** and university accreditation standards:
+The workflow supports the institution's document/signature process. Private storage and authorized access are controls, not a claim of independently certified legal compliance.
 1. **Download Official Template (.docx)**: Student leaders download the clean university template for each requirement.
-2. **Edit Locally in Microsoft Word**: Officers type in council member rosters, activity plans, and constitution details in Word without formatting corruption.
+2. **Edit locally**: Complete the official file in a compatible editor and review its layout before signing.
 3. **Print & Collect Physical Signatures**: Hardcopies are signed with authentic wet-ink signatures by the Student President, Faculty Adviser, and College Dean.
-4. **Scan & Upload**: Scanned copies (PDF, PNG, JPG) or documents are uploaded back into OrgChain.
+4. **Choose and preview files locally**: Select completed scans/documents; valid local selections and actual saved originals update readiness. Selection alone uploads nothing.
 5. **In-Browser Review (OSO)**: OSO coordinators expand the **"Inspect Submitted Documents"** drawer to view scanned signatures directly in the browser modal viewer or download files, and proceed with **Approve Renewal** or **Return for Revisions**.
 
 ## Official Recognition Documents (10 Requirements + Master Form)
@@ -77,8 +77,8 @@ sequenceDiagram
   OSO->>DB: Open renewal window + Set org qualification / active status
   SO->>SO: Renewal tab unlocks (if qualified & active)
   SO->>SO: Download .docx templates & collect physical wet-ink signatures
-  SO->>DB: Save draft + upload signed document scans
-  SO->>DB: Submit packet to OSO
+  SO->>SO: Select and preview complete packet locally
+  SO->>DB: Confirm Submit for Review (upload once and lock)
   OSO->>DB: Inspect submitted files in drawer (Preview / Download)
   alt All complete
     OSO->>DB: Approve Renewal (Official Recognition)
@@ -86,6 +86,12 @@ sequenceDiagram
     OSO->>DB: Return for Revisions (with review remarks)
   end
 ```
+
+## Save and confirmation boundaries
+
+Populated adviser/dean names start read-only. **Edit information → Save changes** posts names only to `/office-desk/renewal/information`, without reloading or discarding selected files. A names-only draft is not an OSO-submitted packet. **Submit for Review** uploads the complete packet once and immediately locks editing. OSO Return or Reject reopens that packet while filing is open; this renewal rule is distinct from TOSA's Revision-only unlock and AR/FR's returned-report-only revision.
+
+Submission, review, filing-window, qualification and template/settings changes require confirmation. Read-only previews/downloads and local file selection/cancellation do not. Requirement-template selection stays local until explicit upload/save. Source: current README, `public/js/so-renewal.js`, renewal controller guards and `routes/web.php`.
 
 ## Related
 

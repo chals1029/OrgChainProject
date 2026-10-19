@@ -184,10 +184,6 @@
             button.className = 'or-button is-small';
             button.textContent = label;
             if (options.ariaLabel) button.setAttribute('aria-label', options.ariaLabel);
-            if (options.current) {
-                button.classList.add('is-primary');
-                button.setAttribute('aria-current', 'page');
-            }
             if (options.disabled) {
                 button.disabled = true;
             } else {
@@ -196,23 +192,6 @@
             return button;
         }
 
-        function pageNumbers(pageCount) {
-            if (pageCount <= 7) {
-                var all = [];
-                for (var i = 1; i <= pageCount; i += 1) all.push(i);
-                return all;
-            }
-            var list = [1];
-            var from = Math.max(2, page - 1);
-            var to = Math.min(pageCount - 1, page + 1);
-            if (page <= 3) to = 4;
-            if (page >= pageCount - 2) from = pageCount - 3;
-            if (from > 2) list.push(null);
-            for (var p = from; p <= to; p += 1) list.push(p);
-            if (to < pageCount - 1) list.push(null);
-            list.push(pageCount);
-            return list;
-        }
 
         function renderPagination(pageCount) {
             if (!pagination) return;
@@ -221,22 +200,12 @@
             if (pagination.hidden) return;
             if (!pagination.getAttribute('aria-label')) pagination.setAttribute('aria-label', 'Organization pages');
 
-            pagination.appendChild(pageButton('\u2039', page - 1, { ariaLabel: 'Previous page', disabled: page === 1 }));
-            pageNumbers(pageCount).forEach(function (number) {
-                if (number === null) {
-                    var gap = document.createElement('span');
-                    gap.className = 'or-pagination-gap';
-                    gap.setAttribute('aria-hidden', 'true');
-                    gap.textContent = '\u2026';
-                    pagination.appendChild(gap);
-                    return;
-                }
-                pagination.appendChild(pageButton(String(number), number, {
-                    ariaLabel: 'Page ' + number,
-                    current: number === page,
-                }));
-            });
-            pagination.appendChild(pageButton('\u203A', page + 1, { ariaLabel: 'Next page', disabled: page === pageCount }));
+            pagination.appendChild(pageButton('Previous', page - 1, { disabled: page === 1 }));
+            var position = document.createElement('span');
+            position.textContent = 'Page ' + page + ' of ' + pageCount;
+            position.setAttribute('aria-live', 'polite');
+            pagination.appendChild(position);
+            pagination.appendChild(pageButton('Next', page + 1, { disabled: page === pageCount }));
         }
 
         if (pagination) {
@@ -245,7 +214,7 @@
                 if (!button || !pagination.contains(button)) return;
                 page = parseInt(button.dataset.orPage, 10) || 1;
                 renderPage();
-                var focusTarget = pagination.querySelector('[aria-current="page"]');
+                var focusTarget = pagination.querySelector('[data-or-page="' + (page + (button.textContent === 'Next' ? 1 : -1)) + '"]') || pagination.querySelector('button:not(:disabled)');
                 if (focusTarget) focusTarget.focus();
             });
         }

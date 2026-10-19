@@ -16,8 +16,9 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet">
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
-    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v=16">
+    <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v={{ filemtime(public_path('css/org-portal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
 </head>
@@ -183,10 +184,27 @@
                 <div class="org-top-actions">
                     @yield('actions')
                     
-                    <button type="button" class="org-bell" aria-label="Notifications">
-                        <i class="bi bi-bell-fill"></i>
-                        <span class="org-bell-dot"></span>
+                    <button type="button" class="org-bell" id="orgNotificationsButton" popovertarget="orgNotifications" aria-label="Notifications" aria-controls="orgNotifications" aria-expanded="false">
+                        <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                        @if (($officeNotifications ?? collect())->isNotEmpty())<span class="org-bell-dot" aria-hidden="true"></span>@endif
                     </button>
+                    <section id="orgNotifications" class="org-notifications" popover="auto" aria-labelledby="orgNotificationsHeading">
+                        <div class="org-notifications-heading">
+                            <div><h2 id="orgNotificationsHeading">Notifications</h2><p>Recent activity updates and announcements</p></div>
+                            <button type="button" popovertarget="orgNotifications" popovertargetaction="hide" aria-label="Close notifications">×</button>
+                        </div>
+                        <div class="org-notifications-list">
+                            @forelse (($officeNotifications ?? collect()) as $notification)
+                                <a href="{{ $notification['url'] }}">
+                                    <strong>{{ $notification['title'] }}</strong>
+                                    <span>{{ $notification['detail'] }}</span>
+                                    <time datetime="{{ $notification['at']->toIso8601String() }}">{{ $notification['at']->diffForHumans() }}</time>
+                                </a>
+                            @empty
+                                <p class="org-notifications-empty">No recent notifications.</p>
+                            @endforelse
+                        </div>
+                    </section>
 
                     {{-- User Profile Pill Menu (Right side of Bell) --}}
                     <div class="org-user-menu-wrap">
@@ -278,6 +296,9 @@
     </div>
 
     <script>
+        document.getElementById('orgNotifications')?.addEventListener('toggle', function (event) {
+            document.getElementById('orgNotificationsButton').setAttribute('aria-expanded', String(event.newState === 'open'));
+        });
         function toggleOrgUserDropdown(e) {
             e.stopPropagation();
             const btn = document.getElementById('orgUserMenuBtn');

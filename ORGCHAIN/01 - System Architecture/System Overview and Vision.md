@@ -1,66 +1,42 @@
 ---
-title: System Overview & Institutional Vision
-tags:
-  - architecture
-  - vision
-  - batstateu
-  - governance
+title: System Overview and Institutional Vision
+tags: [architecture, vision, batstateu, governance]
 created: 2026-08-20
+updated: 2026-10-16
 status: active
 ---
 
-# 🏛️ System Overview & Institutional Vision
+# System Overview and Institutional Vision
 
-> [!abstract] Institutional Context
-> **Batangas State University - The National Engineering University (BatStateU)** hosts dozens of recognized student organizations, professional academic societies, and the Supreme Student Council (SSC). Managing physical paper document approvals, tracking fund utilization, and conducting trustworthy student council elections have historically suffered from operational bottlenecks, delayed reviews, and trust deficits.
+OrgChain supports student-organization governance at Batangas State University: activity proposals, budget/expense accountability, organization renewal, semester reports, TOSA applications and elections.
 
----
+## Purpose and limits
 
-## 🎯 The OrgChain Mission
+- Route submissions through the responsible offices and show the recorded review state.
+- Keep organization funds, activity budgets and expense evidence attributable to the correct organization.
+- Let authorized users inspect original documents without publishing confidential uploads.
+- Anchor supported voting/expense proofs for later integrity verification; blockchain is not document storage or a substitute for the relational database.
+- Provide student-facing activities, official announcements, feedback and an audience-scoped community feed.
 
-**OrgChain** was created to establish a single, unified digital governance, transparency, and election framework with four fundamental pillars:
+These are implemented capabilities and design goals, not measured claims of faster approvals, complete transparency or impossible tampering. No outcome percentage or turnaround improvement is asserted without evaluation evidence.
+
+## Activity approval responsibility
 
 ```mermaid
 flowchart LR
-    A[🏛️ Multi-Tier Approvals<br/>SO ➔ OSO ➔ SDO ➔ OVCAA] --> OrgChain[OrgChain Platform]
-    B[💰 Budget Transparency<br/>Public Allocations & Expense Liquidations] --> OrgChain
-    C[🗳️ Cryptographic Voting<br/>3-Node Append-Only VoteChain] --> OrgChain
-    D[🎓 Student Community<br/>Engaged Campus Dialogue] --> OrgChain
+    SO["SO: prepare and submit"] --> OSO["OSO: review"]
+    OSO --> SDO["SDO: review"]
+    SDO --> OVCAA["OVCAA: endorse"]
+    OVCAA --> OC["OC: final approval"]
+    OC --> Visible["Approved activity becomes student-visible"]
 ```
 
-1. **Streamlined Institutional Governance**: Replace paper routing with a 4-tier digital document workflow ([[Multi-Tier Office Roles SO OSO SDO OVCAA]]) that validates compliance checklists in accordance with University and CHED policies.
-2. **Transparent Financial Liquidation**: Provide real-time visibility into organization budget allocations and expenditures, backed by cryptographic expense liquidations ([[Budget Utilization and Receipt Records]]).
-3. **Provable Election Integrity**: Eliminate electoral disputes by securing voter ballots with a 3-node localized blockchain ledger ([[VoteChain Cryptographic Engine]]), ensuring that ballots cannot be modified or deleted without invalidating cryptographic hash seals.
-4. **Active Student Engagement**: Connect students to university events through an interactive campus feed ([[Community Feed Posts and Likes]]) and calendar ([[Interactive Activity Calendar]]).
+An adviser/dean signature or organization-information field does not create an additional login role. Returned/rejected transitions and document permissions remain workflow-specific; see [[Activity Proposal Approval Pipeline]].
 
----
+## Current technical direction
 
-## ⚠️ Traditional Pain Points vs. OrgChain Solutions
+The application is a Laravel modular monolith with an integrated native PHP voting kernel, two configured MySQL schemas and private document storage. The last recorded VPS deployment uses a four-validator Besu QBFT network. The historical three-node file driver is a different configured mode, not the current Besu topology or automatic failover.
 
-| Traditional Challenge | OrgChain Solution | Impact |
-| :--- | :--- | :--- |
-| **Lost or stalled paper endorsements** across multiple administration buildings | Centralized digital submission queue with real-time status badges (`created`, `verification`, `ovcaa_approved`) | Approval turnaround reduced from weeks to days |
-| **Opaque student org fund utilization** leading to mistrust | Public portal showing categorized budget items, spent totals, and receipt liquidations | 100% financial transparency for student fee allocations |
-| **Allegations of election tampering** or database manipulation | 3-node JSONL append-only cryptographic ledger with Merkle ballot roots and SHA-256 chain links | Cryptographically verifiable election results with zero ballot tampering |
-| **Disjointed campus event awareness** | Unified portal calendar and community feed linking directly to approved proposals | Higher student participation in campus life |
+See [[High-Level Technical Architecture]], [[Database Schema and ERD]], [[TOSA Application and Review Workflow]] and [[VPS Pilot Deployment and Status]].
 
----
-
-## 📐 Governance Model & Stakeholder Hierarchy
-
-```mermaid
-graph TD
-    subgraph Governance["University Approval Flow"]
-        SO["Student Org (SO)<br/>Drafts & Submits Activity"]
-        OSO["Office of Student Orgs (OSO)<br/>Checks Checklist & Faculty Approval"]
-        SDO["Sustainable Dev Office (SDO)<br/>Checks SDG & Environmental Compliance"]
-        OVCAA["OVCAA<br/>Final Executive University Sanction"]
-    end
-
-    SO -->|1. Submit Proposal| OSO
-    OSO -->|2. Endorse| SDO
-    SDO -->|3. Review SDGs| OVCAA
-    OVCAA -->|4. Approved & Scheduled| Cal[📅 Campus Calendar & Portal]
-```
-
-See the detailed approval pipeline in [[Activity Proposal Approval Pipeline]].
+Source: project `README.md`, `routes/web.php`, `app/Models/OrgActivity.php`, `config/besu.php` and `infra/vps/`.

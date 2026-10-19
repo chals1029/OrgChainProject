@@ -1326,8 +1326,8 @@
                     </div>
 
                     <div class="aso-card-footer">
-                        <button type="button" class="aso-btn-view-notice" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
-                            <span>View Notice</span> <i class="bi bi-arrow-right"></i>
+                        <button type="button" class="aso-btn-view-notice app-view-action" aria-label="View {{ $item['title'] }}" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
+                            <i class="bi bi-eye" aria-hidden="true"></i> <span>View</span>
                         </button>
                         <div style="display: flex; gap: 0.35rem;">
                             @if (!empty($item['attachment_url']))
@@ -1410,8 +1410,8 @@
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <div class="aso-tbl-actions">
-                                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
-                                            <i class="bi bi-eye"></i> View Notice
+                                        <button type="button" class="aso-tbl-btn-action is-preview app-view-action" aria-label="View {{ $item['title'] }}" onclick="openAnnouncementDetailModal({{ $item['id'] }})">
+                                            <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </button>
                                         <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink({{ $item['id'] }})">
                                             <i class="bi bi-link-45deg"></i>
@@ -1497,8 +1497,8 @@
                             <span><i class="bi bi-arrow-down-circle"></i> <strong class="tpl-download-count">{{ $tpl['downloads'] }}</strong> downloads</span>
                         </div>
                         <div class="aso-tpl-actions">
-                            <button type="button" class="aso-btn-preview" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
-                                <i class="bi bi-eye"></i> Preview
+                            <button type="button" class="aso-btn-preview app-view-action" aria-label="View {{ $tpl['name'] }}" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </button>
                             @if (!empty($tpl['download_url']))
                                 <a class="aso-btn-download" href="{{ $tpl['download_url'] }}" style="text-decoration:none;">
@@ -1565,8 +1565,8 @@
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <div class="aso-tbl-actions">
-                                        <button type="button" class="aso-tbl-btn-action is-preview" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
-                                            <i class="bi bi-eye"></i> Preview
+                                        <button type="button" class="aso-tbl-btn-action is-preview app-view-action" aria-label="View {{ $tpl['name'] }}" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
+                                            <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </button>
                                         @if (!empty($tpl['download_url']))
                                             <a class="aso-tbl-btn-action is-download" href="{{ $tpl['download_url'] }}" style="text-decoration:none;">
@@ -1633,16 +1633,8 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--aso-border-subtle); padding-top: 1rem;">
-                <button type="button" class="aso-action-btn" id="modalCopyLinkBtn">
-                    <i class="bi bi-link-45deg"></i> Copy Link
-                </button>
-                <div style="display: flex; gap: 0.65rem;">
-                    <button type="button" class="org-btn org-btn-ghost" onclick="closeAnnouncementDetailModal()">Close</button>
-                    <button type="button" class="aso-btn-publish" id="acknowledgeNoticeButton" onclick="acknowledgeCurrentNotice()">
-                        <i class="bi bi-check2-circle"></i> Acknowledge Notice
-                    </button>
-                </div>
+            <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--aso-border-subtle); padding-top: 1rem;">
+                <button type="button" class="org-btn org-btn-ghost" onclick="closeAnnouncementDetailModal()">Close</button>
             </div>
         </div>
     </dialog>
@@ -1734,7 +1726,7 @@
     </dialog>
 
     {{-- Toast Notification Box --}}
-    <div class="aso-toast-container" id="toastContainer"></div>
+    <div class="aso-toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
 
     {{-- Document Preview Modal (renders supported files in-page, with an explicit download action) --}}
     <dialog class="aso-modal" id="docxPreviewModal" style="max-width:860px;width:calc(100% - 2rem);">
@@ -1770,7 +1762,6 @@
         let currentAnnouncementView = 'grid'; // 'grid' | 'list'
         let currentTemplateView = 'grid'; // 'grid' | 'list'
         const persistedAnnouncements = new Map(@json($announcements).map(item => [Number(item.id), item]));
-        let currentAnnouncementId = null;
 
         function focusAnnouncementComposer() {
             const section = document.getElementById('composerSection');
@@ -1956,7 +1947,6 @@
         function openAnnouncementDetailModal(id) {
             const item = persistedAnnouncements.get(Number(id));
             if (!item) return;
-            currentAnnouncementId = Number(id);
             const {title, type, priority, author, time, body, attachment} = item;
             const attachSize = item.attachment_size;
             const attachUrl = item.attachment_url;
@@ -1992,47 +1982,8 @@
                 attachSection.style.display = 'none';
             }
 
-            document.getElementById('modalCopyLinkBtn').onclick = function() {
-                copyAnnouncementLink(id);
-            };
-            const acknowledgeButton = document.getElementById('acknowledgeNoticeButton');
-            acknowledgeButton.disabled = Boolean(item.acknowledged_at);
-            acknowledgeButton.textContent = item.acknowledged_at ? 'Acknowledged by you' : 'Acknowledge Notice';
-
             const dialog = document.getElementById('announcementDetailModal');
             if (dialog) dialog.showModal();
-        }
-
-        async function acknowledgeCurrentNotice() {
-            const item = persistedAnnouncements.get(currentAnnouncementId);
-            if (!item || item.acknowledged_at) return;
-            if (!window.OrgActionConfirmations.confirm('Acknowledge this notice?')) return;
-
-            const button = document.getElementById('acknowledgeNoticeButton');
-            button.disabled = true;
-            try {
-                const response = await fetch(item.acknowledge_url, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-                const result = await response.json();
-                if (!response.ok || !result.ok || !result.acknowledged_at) {
-                    throw new Error(result.message || 'The notice could not be acknowledged.');
-                }
-                item.acknowledged_at = result.acknowledged_at;
-                document.querySelectorAll('[data-acknowledgment-for="' + item.id + '"]').forEach(state => { state.hidden = false; });
-                if (currentAnnouncementId === Number(item.id)) {
-                    button.textContent = 'Acknowledged by you';
-                }
-                showToast('Notice acknowledged.', 'success');
-            } catch (error) {
-                if (currentAnnouncementId === Number(item.id)) button.disabled = false;
-                showToast(error.message || 'The notice could not be acknowledged. Please try again.', 'error');
-            }
         }
 
         function closeAnnouncementDetailModal() {
@@ -2236,6 +2187,10 @@
             const container = document.getElementById('toastContainer');
             if (!container) return;
 
+            // A modal's top layer covers page-level toasts, regardless of z-index.
+            const host = document.querySelector('dialog[open]') || document.body;
+            if (container.parentElement !== host) host.appendChild(container);
+
             const toast = document.createElement('div');
             toast.className = `aso-toast is-${type}`;
             const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill';
@@ -2265,6 +2220,13 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        document.querySelectorAll('dialog').forEach(dialog => {
+            dialog.addEventListener('close', () => {
+                const container = document.getElementById('toastContainer');
+                if (container?.parentElement === dialog) document.body.appendChild(container);
+            });
+        });
 
         const sharedAnnouncement = new URL(window.location.href).searchParams.get('announcement');
         if (sharedAnnouncement) openAnnouncementDetailModal(sharedAnnouncement);

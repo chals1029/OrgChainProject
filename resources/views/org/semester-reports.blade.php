@@ -45,7 +45,7 @@
             <div class="sr-notice is-error" role="alert"><strong>The report action could not be completed.</strong><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
         @if (session('success'))<div class="sr-notice" role="status">{{ session('success') }}</div>@endif
-        <section class="sr-card" aria-labelledby="srPeriodTitle">
+        <section class="sr-card sr-period-card" aria-labelledby="srPeriodTitle">
             <div class="sr-head"><div><h2 id="srPeriodTitle">Reporting period</h2><p class="sr-muted">Organization reports for the selected period.</p></div></div>
             <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters" data-report-period-form>
                 <input type="hidden" name="tab" value="{{ $selectedTab }}">
@@ -55,7 +55,7 @@
             </form>
         </section>
 
-        <section class="sr-card" id="reportSubmissionControls" aria-labelledby="reportSubmissionControlsTitle">
+        <section class="sr-card sr-submission-card" id="reportSubmissionControls" aria-labelledby="reportSubmissionControlsTitle">
             <div class="sr-head">
                 <div>
                     <h2 id="reportSubmissionControlsTitle"><i class="bi bi-lock"></i> Submission controls</h2>
@@ -63,13 +63,13 @@
                 </div>
             </div>
             <p class="sr-muted">Lock AR and FR separately. Existing submissions remain available for review.</p>
-            <div class="sr-documents">
+            <div class="sr-submission-controls">
                 @foreach (['ar' => 'Accomplishment Report (AR)', 'fr' => 'Financial Report (FR)'] as $type => $title)
                     @php($submissionLocked = (bool) ($submissionLocks[$type] ?? false))
-                    <div class="sr-document" data-submission-control="{{ $type }}" data-submission-locked="{{ $submissionLocked ? 'true' : 'false' }}">
+                    <div class="sr-submission-row" data-submission-control="{{ $type }}" data-submission-locked="{{ $submissionLocked ? 'true' : 'false' }}">
                         <div>
-                            <strong>{{ $title }}</strong>
-                            <small>{{ $submissionLocked ? 'Locked — SO cannot submit' : 'Open — SO can submit completed reports' }}</small>
+                            <div class="sr-submission-title"><strong id="srSubmissionLabel{{ $type }}">{{ $title }}</strong><span class="sr-submission-state {{ $submissionLocked ? 'is-closed' : 'is-open' }}">{{ $submissionLocked ? 'Closed' : 'Open' }}</span></div>
+                            <small>{{ $submissionLocked ? 'Closed — Organizations cannot submit new reports' : 'Open — Organizations can submit completed reports' }}</small>
                         </div>
                         <form method="post" action="{{ route('office.reports.submission-lock', ['reportType' => $type]) }}" class="sr-actions" data-sr-submission-form="{{ $type }}" data-confirm="manual">
                             @csrf
@@ -78,8 +78,8 @@
                             <input type="hidden" name="organization" value="{{ $selectedOrganization }}">
                             <input type="hidden" name="tab" value="{{ $selectedTab }}">
                             <input type="hidden" name="is_locked" value="{{ $submissionLocked ? '0' : '1' }}">
-                            <button type="submit" class="org-btn {{ $submissionLocked ? 'org-btn-outline' : 'org-btn-primary' }} org-btn-sm" data-sr-submission-button @if (!$submissionLocked) aria-haspopup="dialog" aria-controls="srLockDialog" @endif>
-                                <i class="bi {{ $submissionLocked ? 'bi-unlock' : 'bi-lock' }}"></i> {{ $submissionLocked ? 'Reopen' : 'Lock' }} {{ strtoupper($type) }} submissions
+                            <button type="submit" class="sr-submission-switch" role="switch" aria-checked="{{ $submissionLocked ? 'false' : 'true' }}" aria-labelledby="srSubmissionLabel{{ $type }}" data-sr-submission-button @if (!$submissionLocked) aria-haspopup="dialog" aria-controls="srLockDialog" @endif>
+                                <span class="sr-switch-thumb" aria-hidden="true"></span>
                             </button>
                         </form>
                     </div>
@@ -106,9 +106,9 @@
                                 @endforeach
                                 <td data-label="Reports">
                                     @if ($entry['can_view_submitted'])
-                                        <a class="org-btn org-btn-ghost org-btn-sm" href="{{ $entry['view_url'] }}#srSelectedReport" data-sr-view-submitted>View Submitted Reports</a>
+                                        <a class="app-view-action" href="{{ $entry['view_url'] }}#srSelectedReport" data-sr-view-submitted aria-label="View submitted reports for {{ $entry['organization'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                                     @else
-                                        <button type="button" class="org-btn org-btn-ghost org-btn-sm" disabled title="No submitted AR or FR file is available for review.">View Submitted Reports</button>
+                                        <button type="button" class="app-view-action" disabled title="No submitted AR or FR file is available for review." aria-label="View submitted reports for {{ $entry['organization'] }} — unavailable"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                     @endif
                                 </td>
                             </tr>
@@ -129,10 +129,8 @@
             </div>
         </section>
 
+        @if ($selectedOrganization !== '')
         <section class="sr-card" id="srSelectedReport" aria-labelledby="srSelectedTitle">
-            @if ($selectedOrganization === '')
-                <div class="sr-empty"><h3 id="srSelectedTitle">Choose an organization</h3><p>Use View Submitted Reports to open its reports for the selected semester.</p></div>
-            @else
                 <div class="sr-head"><div><h2 id="srSelectedTitle">{{ $selectedOrganization }}</h2><p class="sr-muted">{{ $bundle['college'] ?? '' }} · AY {{ $selectedYear }} · {{ $selectedSemester }}</p></div></div>
                 <nav class="sr-tabs" aria-label="Report type">
                     @foreach (['ar' => 'Accomplishment Report (AR)', 'fr' => 'Financial Report (FR)'] as $type => $title)
@@ -154,7 +152,7 @@
                                 <div><strong>{{ $document->name ?: $document->original_name }}</strong><small>{{ $document->original_name }} · Saved {{ $reportDate($document->created_at) }}</small></div>
                                 <div class="sr-actions">
                                     @if ($previewReports[(string) $document->id]['has_file'])
-                                        <button type="button" class="org-btn org-btn-primary org-btn-sm" data-fin-view="{{ $document->id }}"><i class="bi bi-eye"></i> Preview {{ strtoupper($selectedTab) }}</button>
+                                        <button type="button" class="app-view-action" data-fin-view="{{ $document->id }}" aria-label="View {{ $document->original_name }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                         <a class="org-btn org-btn-ghost org-btn-sm" href="{{ $previewReports[(string) $document->id]['download_url'] }}"><i class="bi bi-download"></i> Download original</a>
                                     @else
                                         <span class="sr-danger">The submitted file is missing or unreadable.</span>
@@ -198,8 +196,8 @@
                 @elseif (($record['state'] ?? '') === 'oso_review')
                     <p class="sr-notice is-error">This report is not currently eligible for a review decision.</p>
                 @endif
-            @endif
         </section>
+        @endif
     </div>
 
     <dialog id="srLockDialog" class="sr-lock-dialog" aria-labelledby="srLockTitle" aria-describedby="srLockPeriod srLockDescription">

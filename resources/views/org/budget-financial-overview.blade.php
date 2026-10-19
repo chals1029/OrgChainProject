@@ -36,10 +36,12 @@
     .oso-cash-approved { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .6rem 1rem; padding: .8rem 1rem; border: 1px solid #eadde0; border-radius: 12px; background: #fdfafb; }
     .oso-cash-approved strong { color: #8b1828; font-variant-numeric: tabular-nums; }
     .oso-cash-note { margin: 0; font-size: .76rem; color: #786f73; line-height: 1.5; }
+    .oso-cash-explanation { display:flex; align-items:flex-start; gap:.55rem; margin:0; padding:.8rem 1rem; border:1px solid #eee5e8; border-radius:8px; background:#faf5f6; color:#786f73; font-size:.76rem; line-height:1.5; }
+    .oso-cash-explanation i { color:#75232e; flex-shrink:0; margin-top:.05rem; }
     .oso-cash-table-wrap { max-height: 520px; overflow: auto; border: 1px solid #eadde0; border-radius: 12px; }
     .oso-cash-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: .78rem; }
     .oso-cash-table th, .oso-cash-table td { padding: .85rem .9rem; text-align: left; border-bottom: 1px solid #f0e6e8; vertical-align: top; }
-    .oso-cash-table th { position: sticky; top: 0; background: #fbf5f7; color: #786f73; font-size: .7rem; z-index: 1; }
+    .oso-cash-table thead th { position: sticky; top: 0; background: #f7f8fa; color: #786f73; font-size: .7rem; text-transform: uppercase; z-index: 1; }
     .oso-cash-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .oso-cash-table small { display: block; color: #786f73; margin-top: .25rem; }
     .oso-cash-table .org-btn { white-space: nowrap; }
@@ -47,17 +49,19 @@
     .oso-directory-table .oso-directory-name { position: static; background: transparent; color: #1a1618; overflow-wrap: anywhere; }
     .oso-cash-overview [hidden] { display: none !important; }
     .oso-budget-directory { display: grid; gap: .85rem; min-width: 0; }
-    .oso-budget-directory h3 { margin: 0; font-size: 1rem; }
+    .oso-budget-directory h3 { margin: 0; font-size: 1.3rem; font-weight:800; color:#20252d; }
     .oso-directory-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; }
     .oso-directory-head .oso-cash-note { margin-top: .25rem; }
     .oso-directory-table th:first-child { width: 28%; }
     .oso-directory-table th:last-child { width: 13%; }
-    .oso-directory-table .org-btn { padding: .4rem .65rem; font-size: .72rem; border-radius: 999px; }
+    .oso-directory-table .app-view-action { padding:.3rem .6rem; font-size:.75rem; border-radius:8px; }
     .oso-directory-pages { padding-top: .2rem; }
     .oso-directory-pages .org-report-page-btn { width: auto; min-width: 32px; padding: .35rem .6rem; }
     .oso-directory-search { display: flex; align-items: end; flex-wrap: wrap; gap: .6rem; }
     .oso-directory-search label { display: grid; gap: .4rem; flex: 1 1 240px; min-width: 0; font-size: .8rem; font-weight: 700; }
-    .oso-directory-search input { width: 100%; min-width: 0; box-sizing: border-box; padding: .7rem .8rem; border: 1px solid #d8c8cd; border-radius: 10px; color: #1a1618; background: #fff; font: inherit; font-weight: 400; }
+    .oso-directory-search-field { position:relative; display:block; }
+    .oso-directory-search-field > i { position:absolute; left:.8rem; top:50%; transform:translateY(-50%); color:#8b929d; pointer-events:none; }
+    .oso-directory-search input { width:100%; min-width:0; box-sizing:border-box; padding:.65rem .8rem .65rem 2.1rem; border:1px solid #dfe2e7; border-radius:8px; color:#1a1618; background:#f6f7f9; font:inherit; font-weight:400; }
     .oso-directory-count { margin: 0; color: #786f73; font-size: .8rem; }
     .oso-directory-empty { margin: 0; padding: 1rem; border: 1px dashed #d8c8cd; border-radius: 12px; color: #786f73; font-size: .85rem; line-height: 1.5; }
     .oso-activity-list { display: grid; gap: .85rem; margin: 0; padding: 0; list-style: none; }
@@ -179,7 +183,7 @@
         <span>Approved activity budgets <small>— separate from cash spending</small></span>
         <strong data-cash-metric="approved_budget">₱{{ number_format($osoFinancialOverview['totals']['approved_budget'], 2) }}</strong>
     </div>
-    <p class="oso-cash-note">Beginning + inflow − outflow = ending cash. Shared with SO Financial Report; approved budgets are not cash spending. Searches do not change these totals.</p>
+    <p class="oso-cash-explanation"><i class="bi bi-info-circle-fill" aria-hidden="true"></i><span>Cash balance = beginning balance + inflows − outflows. Approved budgets are tracked separately and do not count as cash spending. Search and filters do not change totals. <strong>—</strong> means no saved cash account for the selected year; ₱0.00 is a recorded zero.</span></p>
 
     @if ($selectedOrganization === '')
         <section class="oso-budget-directory" id="osoOrganizationDirectory" data-budget-directory="organizations" aria-labelledby="osoOrganizationDirectoryHeading">
@@ -192,7 +196,7 @@
             </div>
             <form class="oso-directory-search" data-directory-form role="search">
                 <label for="osoOrganizationSearch">Search organizations or colleges
-                    <input id="osoOrganizationSearch" type="search" data-directory-query placeholder="Organization or college name" aria-controls="osoOrganizationRows" autocomplete="off">
+                    <span class="oso-directory-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="osoOrganizationSearch" type="search" data-directory-query placeholder="Organization or college name" aria-controls="osoOrganizationRows" autocomplete="off"></span>
                 </label>
             </form>
             <div class="oso-cash-table-wrap">
@@ -217,9 +221,9 @@
                                     @unless ($row['has_account'])<small>No saved cash account for this year</small>@endunless
                                 </th>
                                 @foreach (['beginning_balance' => 'Beginning cash', 'cash_inflow' => 'Inflow', 'cash_outflow' => 'Outflow', 'ending_balance' => 'Ending cash', 'approved_budget' => 'Approved budgets'] as $key => $label)
-                                    <td class="num" data-label="{{ $label }}">₱{{ number_format($row[$key], 2) }}</td>
+                                    <td class="num" data-label="{{ $label }}">@if ($key !== 'approved_budget' && !$row['has_account'])<span aria-label="No saved cash account for AY {{ $selectedYear }}" title="No saved cash account for AY {{ $selectedYear }}">—</span>@else ₱{{ number_format($row[$key], 2) }}@endif</td>
                                 @endforeach
-                                <td><a class="org-btn org-btn-outline org-btn-sm" href="{{ route('office.budget', [...$osoDirectoryFilters, 'organization' => $row['organization']]) }}" data-budget-organization-details="osoBudgetOrganization{{ $loop->index }}" data-organization-name="{{ $row['organization'] }}" data-organization-college="{{ $row['college'] ?: 'College not recorded' }}" aria-haspopup="dialog" aria-controls="osoBudgetDetailsDialog" aria-label="View Details for {{ $row['organization'] }}">View Details</a></td>
+                                <td><a class="app-view-action" href="{{ route('office.budget', [...$osoDirectoryFilters, 'organization' => $row['organization']]) }}" data-budget-organization-details="osoBudgetOrganization{{ $loop->index }}" data-organization-name="{{ $row['organization'] }}" data-organization-college="{{ $row['college'] ?: 'College not recorded' }}" aria-haspopup="dialog" aria-controls="osoBudgetDetailsDialog" aria-label="View budget details for {{ $row['organization'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a></td>
                             </tr>
                         @empty
                             <tr><td colspan="7">No organizations match the selected reporting-period and department filters.</td></tr>
@@ -241,7 +245,7 @@
             </div>
             <form class="oso-directory-search" data-directory-form role="search">
                 <label for="osoActivitySearch">Search approved activities
-                    <input id="osoActivitySearch" type="search" data-directory-query placeholder="Activity name, venue or scope" aria-controls="osoActivityRows" autocomplete="off">
+                    <span class="oso-directory-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="osoActivitySearch" type="search" data-directory-query placeholder="Activity name, venue or scope" aria-controls="osoActivityRows" autocomplete="off"></span>
                 </label>
             </form>
             <p class="oso-directory-count" data-directory-count role="status" aria-live="polite" aria-atomic="true">{{ $osoDirectoryActivities->count() }} of {{ $osoDirectoryActivities->count() }} approved activities</p>
@@ -260,7 +264,7 @@
                         </div>
                         <div class="oso-activity-action">
                             <small>{{ count($entry['expenses'] ?? []) }} encoded {{ count($entry['expenses'] ?? []) === 1 ? 'expense' : 'expenses' }}</small>
-                            <a class="org-btn org-btn-outline org-btn-sm" href="{{ route('office.budget', [...$osoDirectoryFilters, 'organization' => $selectedOrganization, 'activity_id' => $entry['activityId']]) }}" aria-label="View Expenses for {{ $entry['actName'] }}">View Expenses</a>
+                            <a class="app-view-action" href="{{ route('office.budget', [...$osoDirectoryFilters, 'organization' => $selectedOrganization, 'activity_id' => $entry['activityId']]) }}" aria-label="View expenses for {{ $entry['actName'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                         </div>
                     </li>
                 @endforeach
@@ -296,13 +300,10 @@
             @if ($financialTransactions->total() > 0)
                 <div class="oso-cash-pages">
                     <span>Showing {{ $financialTransactions->firstItem() }}–{{ $financialTransactions->lastItem() }} of {{ $financialTransactions->total() }} transactions</span>
-                    <nav aria-label="Cash transaction pages">
-                        @if ($financialTransactions->previousPageUrl())<a class="org-btn org-btn-ghost org-btn-sm" href="{{ $financialTransactions->previousPageUrl() }}#osoCashTransactions">Previous</a>@endif
-                        @if ($financialTransactions->nextPageUrl())<a class="org-btn org-btn-ghost org-btn-sm" href="{{ $financialTransactions->nextPageUrl() }}#osoCashTransactions">Next</a>@endif
-                    </nav>
+                    {{ $financialTransactions->fragment('osoCashTransactions')->links('components.pagination') }}
                 </div>
             @endif
-                <p class="oso-cash-note">Cash history is separate from activity expense itemization. Use View Expenses above to open an activity's receipts. OSO cannot edit organization cash here.</p>
+                <p class="oso-cash-note">Cash history is separate from activity expense itemization. Use an activity's View action above to open its receipts. OSO cannot edit organization cash here.</p>
             </div>
         </details>
     @endif

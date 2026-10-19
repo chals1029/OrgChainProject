@@ -771,8 +771,7 @@
             cursor: pointer;
         }
 
-        .org-report-page-btn:hover:not(:disabled),
-        .org-report-page-btn.is-active {
+        .org-report-page-btn:hover:not(:disabled) {
             background: #7a1222;
             border-color: #7a1222;
             color: #ffffff;
@@ -1920,15 +1919,9 @@
             const end = Math.min(safePage * pageSize, total);
             info.innerHTML = `Showing <strong>${start}</strong> to <strong>${end}</strong> of <strong>${total}</strong> ${label}`;
 
-            let html = `<button type="button" class="org-report-page-btn" ${safePage === 1 ? 'disabled' : ''} onclick="${handler}(${safePage - 1})" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>`;
-            for (let p = 1; p <= totalPages; p += 1) {
-                if (totalPages <= 7 || p === 1 || p === totalPages || (p >= safePage - 1 && p <= safePage + 1)) {
-                    html += `<button type="button" class="org-report-page-btn ${p === safePage ? 'is-active' : ''}" onclick="${handler}(${p})" aria-label="Page ${p}" ${p === safePage ? 'aria-current="page"' : ''}>${p}</button>`;
-                } else if (p === safePage - 2 || p === safePage + 2) {
-                    html += '<span aria-hidden="true">&hellip;</span>';
-                }
-            }
-            html += `<button type="button" class="org-report-page-btn" ${safePage === totalPages ? 'disabled' : ''} onclick="${handler}(${safePage + 1})" aria-label="Next page"><i class="bi bi-chevron-right"></i></button>`;
+            const html = `<button type="button" class="org-report-page-btn" ${safePage === 1 ? 'disabled' : ''} onclick="${handler}(${safePage - 1})">Previous</button>
+                <span aria-live="polite">Page ${safePage} of ${totalPages}</span>
+                <button type="button" class="org-report-page-btn" ${safePage === totalPages ? 'disabled' : ''} onclick="${handler}(${safePage + 1})">Next</button>`;
 
             bar.style.display = 'flex';
             nav.innerHTML = html;
@@ -1968,7 +1961,7 @@
                         </td>
                         <td style="text-align: right;">
                             ${exp.receiptUrl
-                                ? `<a href="${escBudget(exp.receiptUrl)}" data-budget-receipt-preview="${escBudget(exp.id)}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog" class="org-file-action-btn" style="text-decoration:none;"><i class="bi bi-eye"></i> View${(exp.receiptAttachments?.length || 1) > 1 ? ' (' + exp.receiptAttachments.length + ')' : ''}</a>`
+                                ? `<a href="${escBudget(exp.receiptUrl)}" data-budget-receipt-preview="${escBudget(exp.id)}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog" class="org-file-action-btn app-view-action" aria-label="View receipt${(exp.receiptAttachments?.length || 1) > 1 ? ' attachments (' + exp.receiptAttachments.length + ')' : ''}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>`
                                 : '<span>Original unavailable</span>'}
                         </td>
                     </tr>

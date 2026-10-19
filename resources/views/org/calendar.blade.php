@@ -21,7 +21,7 @@
         $calendarUrl = route('office.calendar');
         $calendarLink = static function (array $overrides = []) use ($calendarFilters, $monthKey): string {
             $query = array_merge($calendarFilters, ['month' => $monthKey], $overrides);
-            return route('office.calendar', array_filter($query, fn ($value) => $value !== '' && $value !== 'all' && $value !== 'auto'));
+            return route('office.calendar', array_filter($query, fn ($value) => $value !== '' && $value !== 'all'));
         };
         $hasFilters = $calendarFilters['q'] !== '' || $calendarFilters['scope'] !== 'all'
             || $calendarFilters['status'] !== 'all' || $calendarFilters['timing'] !== 'all';
@@ -34,10 +34,9 @@
             'days' => collect($eventsByDate)->map(fn ($items) => array_column($items, 'id'))->all(),
         ];
     @endphp
-    <div id="orgCalendarRoot" class="org-calendar" data-view="{{ $calendarFilters['view'] }}" data-month="{{ $monthKey }}" data-calendar-url="{{ $calendarUrl }}">
+    <div id="orgCalendarRoot" class="org-calendar">
         <form class="cal-filters cal-card" method="get" action="{{ $calendarUrl }}" id="orgCalendarFilters">
             <input type="hidden" name="month" value="{{ $monthKey }}">
-            <input type="hidden" name="view" value="{{ $calendarFilters['view'] }}">
             <label class="cal-field cal-search">
                 <span>Activity or venue</span>
                 <input type="search" name="q" value="{{ $calendarFilters['q'] }}" placeholder="Search activity or venue…" maxlength="200">
@@ -66,12 +65,6 @@
                     @endforeach
                 </select>
             </label>
-            <div class="cal-filter-actions">
-                <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-search" aria-hidden="true"></i> Search</button>
-                @if ($hasFilters)
-                    <a href="{{ $calendarLink(['q' => '', 'scope' => 'all', 'status' => 'all', 'timing' => 'all']) }}" class="cal-clear" data-cal-nav>Clear filters</a>
-                @endif
-            </div>
         </form>
 
         <p id="orgCalendarFeedback" class="cal-feedback" role="status" aria-live="polite"></p>
@@ -86,8 +79,7 @@
                     <div class="cal-view-controls">
                         <a href="{{ $calendarLink(['month' => $todayMonth]) }}" class="cal-today" data-cal-nav data-cal-today>Today</a>
                         <nav class="cal-view-toggle" aria-label="Calendar view">
-                            <a href="{{ $calendarLink(['view' => 'month']) }}" data-cal-nav data-cal-view="month" @if($calendarFilters['view'] !== 'agenda') aria-current="page" @endif><i class="bi bi-calendar3" aria-hidden="true"></i> Month</a>
-                            <a href="{{ $calendarLink(['view' => 'agenda']) }}" data-cal-nav data-cal-view="agenda" @if($calendarFilters['view'] === 'agenda') aria-current="page" @endif><i class="bi bi-list-ul" aria-hidden="true"></i> Agenda</a>
+                            <a href="{{ $calendarLink() }}" data-cal-nav aria-current="page"><i class="bi bi-calendar3" aria-hidden="true"></i> Month</a>
                         </nav>
                     </div>
                 </div>
@@ -105,7 +97,7 @@
                                 @foreach (array_slice($day['events'], 0, 2) as $event)
                                     <span class="cal-day-event cal-scope-{{ $event['scope_key'] }}" title="{{ $event['title'] }} · {{ $event['status'] }} · {{ $event['date_label'] }} · {{ $event['time_label'] }}">
                                         <i class="bi {{ $statusIcon($event['status_key']) }}" aria-hidden="true"></i>
-                                        <span>{{ $event['date_key'] < $dateKey ? '↳ ' : '' }}{{ $event['title'] }}</span>
+                                        <span>{{ $event['title'] }}</span>
                                     </span>
                                 @endforeach
                                 @if (count($day['events']) > 2)<span class="cal-more">+{{ count($day['events']) - 2 }} more</span>@endif
@@ -114,26 +106,7 @@
                     </div>
                 </div>
 
-                <div class="cal-agenda-view" id="orgCalAgendaView">
-                    @forelse ($agendaDays as $day)
-                        <section class="cal-agenda-day" aria-label="{{ $day['date']->format('l, F j, Y') }}" data-agenda-date="{{ $day['date']->toDateString() }}">
-                            <div @class(['cal-agenda-date', 'is-today' => $day['date']->toDateString() === $todayKey])><span>{{ $day['date']->format('D') }}</span><strong>{{ $day['date']->day }}</strong><span>{{ $day['date']->format('M') }}</span></div>
-                            <div class="cal-agenda-events">
-                                @foreach ($day['events'] as $event)
-                                    <button type="button" class="cal-event cal-scope-{{ $event['scope_key'] }}" data-cal-event="{{ $event['id'] }}">
-                                        <span class="cal-event-heading"><strong>{{ $event['title'] }}</strong><span class="cal-status cal-status-{{ $event['status_key'] }}">{{ $event['status'] }}</span></span>
-                                        <span class="cal-event-meta">{{ $event['date_key'] < $day['date']->toDateString() ? 'Continues · ' : '' }}{{ $event['date_label'] }} · {{ $event['time_label'] }}</span>
-                                        <span class="cal-event-meta"><i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $event['location'] }}</span>
-                                        <span class="cal-event-tags"><span class="cal-timing cal-timing-{{ $event['timing_key'] }}">{{ $event['timing_label'] }}</span><span>{{ $event['scope_key'] === 'off' ? 'Off-campus' : 'In-campus' }}</span></span>
-                                    </button>
-                                @endforeach
-                            </div>
-                        </section>
-                    @empty
-                        <div class="cal-empty"><i class="bi bi-calendar2" aria-hidden="true"></i><strong>No matching activities this month</strong><p>{{ $hasFilters ? 'Try another month or clear your filters.' : 'Activity schedules will appear here when your desk has permitted activities.' }}</p></div>
-                    @endforelse
-                </div>
-                @if ($agendaDays->isEmpty())<p class="cal-month-empty">No {{ $hasFilters ? 'matching ' : '' }}activities in {{ $monthLabel }}.</p>@endif
+                @if (!$monthHasEvents)<p class="cal-month-empty">No {{ $hasFilters ? 'matching ' : '' }}activities in {{ $monthLabel }}.</p>@endif
                 <p class="cal-footnote">Approval and scheduled time are separate. Changes to an activity must follow the approval workflow.</p>
             </section>
 
@@ -169,7 +142,7 @@
                     <p id="calDetailNote" class="cal-detail-note"></p>
                 </div>
             </div>
-            <div class="cal-dialog-footer"><button type="button" class="org-btn org-btn-ghost org-btn-sm" id="calDialogBack" hidden>← All that day</button><a href="{{ route('office.activities') }}" class="org-btn org-btn-primary org-btn-sm" id="calDetailLink" hidden>View activity <i class="bi bi-arrow-right" aria-hidden="true"></i></a><button type="button" class="org-btn org-btn-ghost org-btn-sm" data-cal-close>Close</button></div>
+            <div class="cal-dialog-footer"><button type="button" class="org-btn org-btn-ghost org-btn-sm" id="calDialogBack" hidden>← All that day</button><a href="{{ route('office.activities') }}" class="app-view-action" aria-label="View activity details" id="calDetailLink" hidden><i class="bi bi-eye" aria-hidden="true"></i> View</a><button type="button" class="org-btn org-btn-ghost org-btn-sm" data-cal-close>Close</button></div>
         </dialog>
         <script type="application/json" id="orgCalendarData">{!! json_encode($calendarPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
     </div>

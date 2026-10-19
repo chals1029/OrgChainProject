@@ -519,6 +519,17 @@ class StudentPortalController extends Controller
             $feedSort = 'recent';
         }
 
+        $communityAudience = $request->query('community_audience', 'all');
+        if (! in_array($communityAudience, ['all', 'public', 'department', 'org'], true)) {
+            $communityAudience = 'all';
+        }
+        $communityPeriod = $request->query('community_period', 'all');
+        if (! in_array($communityPeriod, ['all', 'day', 'week', 'month'], true)) {
+            $communityPeriod = 'all';
+        }
+        $periodDays = ['day' => 1, 'week' => 7, 'month' => 30][$communityPeriod] ?? null;
+        $feedNow = now();
+
         $studentCollegeValues = collect([
             trim((string) ($student?->college ?? '')),
             $studentCollege,
@@ -550,6 +561,18 @@ class StudentPortalController extends Controller
                     // Authors can always see their own posts while profile data is incomplete.
                     ->orWhere('student_id', $student->id);
             })
+            ->when($communityAudience !== 'all', function ($query) use ($communityAudience): void {
+                if ($communityAudience === 'public') {
+                    $query->where(function ($public): void {
+                        $public->where('audience', 'public')->orWhereNull('audience');
+                    });
+                } else {
+                    $query->where('audience', $communityAudience);
+                }
+            })
+            ->when($periodDays !== null, fn ($query) => $query
+                ->where('created_at', '>=', $feedNow->copy()->subDays($periodDays))
+                ->where('created_at', '<=', $feedNow))
             ->searchFeed($communitySearch)
             ->withCount(['likes as actual_likes_count', 'comments as actual_comments_count'])
             ->with([
@@ -577,7 +600,7 @@ class StudentPortalController extends Controller
             default => $postsQuery->latest(),
         };
 
-        $posts = $postsQuery->paginate(10)->withQueryString();
+        $posts = $postsQuery->orderByDesc('id')->paginate(10)->withQueryString();
 
         // Count one view per post per browser session, not on every refresh.
         if ($tab === 'community' && $posts->isNotEmpty()) {
@@ -622,7 +645,7 @@ class StudentPortalController extends Controller
             ->map(fn ($rows, $sdg) => [
                 'sdg' => $sdg,
                 'count' => $rows->count(),
-                'samples' => $rows->take(3)->pluck('title')->values(),
+                'activities' => $rows->pluck('title')->values(),
             ])
             ->values();
 
@@ -806,6 +829,8 @@ class StudentPortalController extends Controller
             'colleges' => $colleges,
             'feedSort' => $feedSort,
             'communitySearch' => $communitySearch,
+            'communityAudience' => $communityAudience,
+            'communityPeriod' => $communityPeriod,
             'selectedCollege' => $collegeFilter,
             'collegeFilterExplicit' => $request->has('college'),
             'selectedStatus' => $statusFilter,

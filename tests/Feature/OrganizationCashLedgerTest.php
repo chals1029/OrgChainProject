@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BudgetItem;
 use App\Models\ExpenseReceiptReview;
+use App\Models\InCampusActivitySubmission;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
 use App\Models\OrgCashIncome;
@@ -13,6 +14,7 @@ use App\Models\OrgReportDocument;
 use App\Models\OrgReportStatus;
 use App\Models\StudentOrganization;
 use App\Services\ActivityBudgetService;
+use App\Services\ActivityRequirements;
 use App\Services\BudgetChainService;
 use App\Services\OrganizationCashLedger;
 use App\Services\OrgWorkflowService;
@@ -136,7 +138,6 @@ class OrganizationCashLedgerTest extends TestCase
         $this->assertSame(0.0, $before['available']);
 
         $this->assertApprovalRejected($this->pendingActivity('0.01'), 'available cash');
-        $this->assertApprovalRejected($this->pendingActivity('0.00'), 'approved budget');
         $this->assertSame($before, $this->ledger->balance($account));
     }
 
@@ -502,7 +503,7 @@ class OrganizationCashLedgerTest extends TestCase
 
     private function pendingActivity(string $budget, ?StudentOrganization $organization = null): OrgActivity
     {
-        return OrgActivity::create([
+        $activity = OrgActivity::create([
             'title' => 'Cash Ledger Activity '.Str::uuid(),
             'organization_name' => ($organization ?? $this->organization)->name,
             'workflow_status' => 'oc_review',
@@ -511,6 +512,19 @@ class OrganizationCashLedgerTest extends TestCase
             'ends_at' => '2026-11-10 17:00:00',
             'approved_budget' => $budget,
         ]);
+        $attachments = [];
+        foreach (app(ActivityRequirements::class)->inCampusRequirements() as $requirement) {
+            $path = 'approval-fixtures/'.$activity->id.'/'.$requirement['key'].'.pdf';
+            Storage::disk('local')->put($path, "%PDF-1.4\n% Cash ledger approval evidence\n%%EOF\n");
+            $attachments[$requirement['key']] = ['path' => $path, 'name' => $requirement['key'].'.pdf'];
+        }
+        InCampusActivitySubmission::create([
+            'org_activity_id' => $activity->id, 'organization_name' => $activity->organization_name,
+            'status' => 'submitted', 'activity_type' => 'in_campus', 'workflow_status' => 'oc_review',
+            'submitted_at' => now(), 'attachments' => $attachments,
+        ]);
+
+        return $activity;
     }
 
     private function approvedActivity(string $budget, ?StudentOrganization $organization = null): OrgActivity

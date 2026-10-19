@@ -14,10 +14,12 @@
     @else
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
-        <link rel="stylesheet" href="{{ asset('css/landing.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
+    <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
+    <script src="{{ asset('js/sdg-highlights.js') }}?v={{ filemtime(public_path('js/sdg-highlights.js')) }}" defer></script>
 </head>
 <body class="landing-body portal-body" data-portal-tab="{{ $tab ?? 'home' }}">
     <div class="page-ambient" aria-hidden="true">
@@ -100,6 +102,11 @@
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <input type="search" name="community_q" value="{{ $communitySearch ?? '' }}" placeholder="Search community posts…" aria-label="Search community posts">
                         <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
+                        <input type="hidden" name="community_audience" value="{{ $communityAudience ?? 'all' }}">
+                        <input type="hidden" name="community_period" value="{{ $communityPeriod ?? 'all' }}">
+                        @foreach (request()->only(['college', 'status']) as $filterName => $filterValue)
+                            <input type="hidden" name="{{ $filterName }}" value="{{ $filterValue }}">
+                        @endforeach
                         <button type="submit" class="sp-link-btn">Search</button>
                     </form>
                     <div class="sp-top-menu-wrap">
@@ -209,26 +216,24 @@
                 <div class="sp-modal-head-title"><i class="bi bi-person-gear"></i> <span id="spProfileModalTitle">Profile settings</span></div>
                 <button type="button" class="sp-modal-close-btn" data-close-profile aria-label="Close"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="{{ route('portal.profile.update') }}" class="sp-profile-form" data-confirm-message="Save your profile changes?">
-                @csrf
-                @method('PUT')
+            <div class="sp-profile-form">
+                <p class="sp-profile-readonly-note">Official student record. Contact the registrar for corrections.</p>
                 <label>
                     <span>Full name</span>
-                    <input type="text" name="name" value="{{ $student->name }}" required maxlength="255">
+                    <input type="text" value="{{ $student->name }}" readonly aria-readonly="true">
                 </label>
                 <label>
                     <span>College / Department</span>
-                    <input type="text" name="college" value="{{ $student->college }}" maxlength="255" placeholder="e.g. College of Informatics and Computing Sciences">
+                    <input type="text" value="{{ $student->college }}" readonly aria-readonly="true">
                 </label>
                 <label>
                     <span>Year level</span>
-                    <input type="text" name="year_level" value="{{ $student->year_level }}" maxlength="50" placeholder="e.g. 3rd Year">
+                    <input type="text" value="{{ $student->year_level }}" readonly aria-readonly="true">
                 </label>
                 <div class="sp-profile-form-actions">
-                    <button type="button" class="sp-btn-ghost" data-close-profile>Cancel</button>
-                    <button type="submit" class="sp-btn-primary"><i class="bi bi-check-lg"></i> Save changes</button>
+                    <button type="button" class="sp-btn-ghost" data-close-profile>Close</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -348,7 +353,7 @@
             }
 
             // -------------------------------------------------------------
-            // Announcements Multi-Filter & < 1, 2, 3 > Pagination Engine
+            // Announcements filtering and pagination
             // -------------------------------------------------------------
             (function initAnnouncementsEngine() {
                 const PAGE_SIZE = 5;
@@ -422,21 +427,9 @@
                         countBadgeEl.textContent = `Showing ${startDisplay}–${endIndex} of ${totalItems} bulletins`;
                     }
 
-                    // 7. Page Buttons < 1, 2, 3 >
                     if (pageNumbersContainer) {
-                        pageNumbersContainer.innerHTML = '';
-                        for (let p = 1; p <= totalPages; p++) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = `sp-ann-page-btn ${p === currentPage ? 'is-active' : ''}`;
-                            btn.textContent = p;
-                            btn.setAttribute('aria-label', `Page ${p}`);
-                            btn.addEventListener('click', () => {
-                                currentPage = p;
-                                renderTable();
-                            });
-                            pageNumbersContainer.appendChild(btn);
-                        }
+                        pageNumbersContainer.textContent = `Page ${currentPage} of ${totalPages}`;
+                        pageNumbersContainer.setAttribute('aria-live', 'polite');
                     }
 
                     // 8. Prev / Next button state
@@ -530,62 +523,6 @@
             const closeAllComposerPopovers = () => {
                 document.querySelectorAll('.sp-action-popover').forEach((p) => (p.hidden = true));
             };
-
-            // 2. Tag People
-            const tagBtn = document.getElementById('spComposerTagBtn');
-            const tagPopover = document.getElementById('spTagPopover');
-            const tagClose = document.getElementById('spTagPopoverClose');
-            const chipTags = document.getElementById('spChipTags');
-            const chipTagsName = document.getElementById('spChipTagsName');
-            const removeTagsBtn = document.getElementById('spRemoveTagsBtn');
-            const taggedInput = document.getElementById('spComposerTaggedInput');
-            const tagSearchInput = document.getElementById('spTagSearchInput');
-
-            tagBtn?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const willOpen = tagPopover?.hidden;
-                closeAllComposerPopovers();
-                if (tagPopover) tagPopover.hidden = !willOpen;
-                if (willOpen && tagSearchInput) setTimeout(() => tagSearchInput.focus(), 50);
-            });
-
-            tagClose?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (tagPopover) tagPopover.hidden = true;
-            });
-
-            document.querySelectorAll('.sp-tag-option').forEach((opt) => {
-                opt.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const tagVal = opt.dataset.tag || opt.textContent.trim();
-                    if (taggedInput) taggedInput.value = tagVal;
-                    if (chipTagsName) chipTagsName.textContent = 'With: ' + tagVal;
-                    if (chipTags) chipTags.hidden = false;
-                    if (tagPopover) tagPopover.hidden = true;
-                    updateChipsVisibility();
-                });
-            });
-
-            tagSearchInput?.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const val = tagSearchInput.value.trim();
-                    if (val) {
-                        if (taggedInput) taggedInput.value = val;
-                        if (chipTagsName) chipTagsName.textContent = 'With: ' + val;
-                        if (chipTags) chipTags.hidden = false;
-                        if (tagPopover) tagPopover.hidden = true;
-                        updateChipsVisibility();
-                    }
-                }
-            });
-
-            removeTagsBtn?.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (taggedInput) taggedInput.value = '';
-                if (chipTags) chipTags.hidden = true;
-                updateChipsVisibility();
-            });
 
             // 3. Activity / Event Link
             const actBtn = document.getElementById('spComposerActivityBtn');
@@ -725,30 +662,54 @@
                 if (!e.target.closest('.sp-feed-sort-dropdown-wrap')) {
                     const sortPop = document.getElementById('spFeedSortPopover');
                     if (sortPop) sortPop.hidden = true;
+                    document.getElementById('spFeedSortBtn')?.setAttribute('aria-expanded', 'false');
                 }
                 if (!e.target.closest('.sp-post-menu-wrap')) {
                     document.querySelectorAll('.sp-post-options-menu').forEach((m) => (m.hidden = true));
+                }
+                if (!e.target.closest('.sp-feed-filter-dropdown')) {
+                    document.querySelector('.sp-feed-filter-dropdown')?.removeAttribute('open');
                 }
             });
 
             // Feed Sort Dropdown Toggle
             const feedSortBtn = document.getElementById('spFeedSortBtn');
             const feedSortPopover = document.getElementById('spFeedSortPopover');
-            const feedSortLabel = document.getElementById('spFeedSortLabel');
 
             feedSortBtn?.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (feedSortPopover) feedSortPopover.hidden = !feedSortPopover.hidden;
+                if (feedSortPopover) {
+                    feedSortPopover.hidden = !feedSortPopover.hidden;
+                    if (!feedSortPopover.hidden) {
+                        document.querySelector('.sp-feed-filter-dropdown')?.removeAttribute('open');
+                    }
+                    feedSortBtn.setAttribute('aria-expanded', String(!feedSortPopover.hidden));
+                }
             });
 
-            document.querySelectorAll('.sp-sort-opt').forEach((btn) => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const url = new URL(@json(route('portal.community')), window.location.origin);
-                    url.searchParams.set('sort', btn.dataset.sort || 'recent');
-                    const query = document.querySelector('#spTopSearchBox [name="community_q"]')?.value || '';
-                    if (query) url.searchParams.set('community_q', query);
-                    window.location.assign(url);
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape') return;
+                if (feedSortPopover && !feedSortPopover.hidden) {
+                    feedSortPopover.hidden = true;
+                    feedSortBtn?.setAttribute('aria-expanded', 'false');
+                    feedSortBtn?.focus();
+                }
+                const filters = document.querySelector('.sp-feed-filter-dropdown[open]');
+                if (filters) {
+                    filters.removeAttribute('open');
+                    filters.querySelector('summary')?.focus();
+                }
+            });
+
+            document.querySelectorAll('[data-post-new-until]').forEach((badge) => {
+                const remaining = Number(badge.dataset.postNewUntil) - Date.now();
+                if (remaining <= 0) badge.remove();
+                else window.setTimeout(() => badge.remove(), remaining);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) return;
+                document.querySelectorAll('[data-post-new-until]').forEach((badge) => {
+                    if (Number(badge.dataset.postNewUntil) <= Date.now()) badge.remove();
                 });
             });
 
@@ -1120,7 +1081,7 @@
                 });
             });
 
-            // Table pagination (< 1 2 3 >) for activities (5 per page)
+            // Existing five-row dashboard tables retain their own page state.
             const initTablePagination = () => {
                 document.querySelectorAll('[data-sp-paginated-card]').forEach((card) => {
                     const table = card.querySelector('[data-sp-table]');
@@ -1137,9 +1098,9 @@
                             paginationContainer.style.display = 'none';
                         } else {
                             paginationContainer.innerHTML = `
-                                <button type="button" class="sp-page-btn sp-page-nav is-disabled" disabled aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>
-                                <button type="button" class="sp-page-btn sp-page-num is-active">1</button>
-                                <button type="button" class="sp-page-btn sp-page-nav is-disabled" disabled aria-label="Next page"><i class="bi bi-chevron-right"></i></button>
+                                <button type="button" class="sp-page-btn sp-page-nav is-disabled" disabled>Previous</button>
+                                <span aria-live="polite">Page 1 of 1</span>
+                                <button type="button" class="sp-page-btn sp-page-nav is-disabled" disabled>Next</button>
                             `;
                         }
                         return;
@@ -1164,11 +1125,11 @@
                     const renderControls = () => {
                         paginationContainer.innerHTML = '';
 
-                        // Prev button <
+                        // Previous page
                         const prevBtn = document.createElement('button');
                         prevBtn.type = 'button';
                         prevBtn.className = 'sp-page-btn sp-page-nav' + (currentPage === 1 ? ' is-disabled' : '');
-                        prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                        prevBtn.textContent = 'Previous';
                         prevBtn.title = 'Previous page';
                         prevBtn.disabled = currentPage === 1;
                         prevBtn.addEventListener('click', () => {
@@ -1176,23 +1137,16 @@
                         });
                         paginationContainer.appendChild(prevBtn);
 
-                        // Page numbers: 1 2 3 ...
-                        for (let i = 1; i <= totalPages; i++) {
-                            const pageBtn = document.createElement('button');
-                            pageBtn.type = 'button';
-                            pageBtn.className = 'sp-page-btn sp-page-num' + (i === currentPage ? ' is-active' : '');
-                            pageBtn.textContent = i;
-                            pageBtn.addEventListener('click', () => {
-                                renderPage(i);
-                            });
-                            paginationContainer.appendChild(pageBtn);
-                        }
+                        const position = document.createElement('span');
+                        position.textContent = `Page ${currentPage} of ${totalPages}`;
+                        position.setAttribute('aria-live', 'polite');
+                        paginationContainer.appendChild(position);
 
-                        // Next button >
+                        // Next page
                         const nextBtn = document.createElement('button');
                         nextBtn.type = 'button';
                         nextBtn.className = 'sp-page-btn sp-page-nav' + (currentPage === totalPages ? ' is-disabled' : '');
-                        nextBtn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                        nextBtn.textContent = 'Next';
                         nextBtn.title = 'Next page';
                         nextBtn.disabled = currentPage === totalPages;
                         nextBtn.addEventListener('click', () => {
@@ -1341,11 +1295,11 @@
                 const renderListControls = (totalPages) => {
                     listPaginationEl.innerHTML = '';
 
-                    // Prev button <
+                    // Previous page
                     const prevBtn = document.createElement('button');
                     prevBtn.type = 'button';
                     prevBtn.className = 'sp-page-btn sp-page-nav' + (currentListPage === 1 ? ' is-disabled' : '');
-                    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                    prevBtn.textContent = 'Previous';
                     prevBtn.title = 'Previous page';
                     prevBtn.disabled = currentListPage === 1;
                     prevBtn.addEventListener('click', () => {
@@ -1353,23 +1307,16 @@
                     });
                     listPaginationEl.appendChild(prevBtn);
 
-                    // Page number buttons: 1 2 3 ...
-                    for (let i = 1; i <= totalPages; i++) {
-                        const pageBtn = document.createElement('button');
-                        pageBtn.type = 'button';
-                        pageBtn.className = 'sp-page-btn sp-page-num' + (i === currentListPage ? ' is-active' : '');
-                        pageBtn.textContent = i;
-                        pageBtn.addEventListener('click', () => {
-                            renderListPage(i);
-                        });
-                        listPaginationEl.appendChild(pageBtn);
-                    }
+                    const position = document.createElement('span');
+                    position.textContent = `Page ${currentListPage} of ${totalPages}`;
+                    position.setAttribute('aria-live', 'polite');
+                    listPaginationEl.appendChild(position);
 
-                    // Next button >
+                    // Next page
                     const nextBtn = document.createElement('button');
                     nextBtn.type = 'button';
                     nextBtn.className = 'sp-page-btn sp-page-nav' + (currentListPage === totalPages ? ' is-disabled' : '');
-                    nextBtn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                    nextBtn.textContent = 'Next';
                     nextBtn.title = 'Next page';
                     nextBtn.disabled = currentListPage === totalPages;
                     nextBtn.addEventListener('click', () => {
@@ -1557,11 +1504,6 @@
                             registered: 185,
                             capacity: 250,
                             target: 'BatStateU Students & Officers',
-                            is_rsvp: false,
-                            breakdown: [
-                                { label: '1st & 2nd Year', count: 105, pct: 57 },
-                                { label: '3rd & 4th Year', count: 80, pct: 43 }
-                            ]
                         },
                         photos: [
                             { url: '{{ asset("voting-assets/img/Bg_SSC.jpg") }}', caption: 'Plenary hall assembly in session', tag: 'Session' },
@@ -1630,7 +1572,7 @@
                 }
 
                 // Tab 2: Participants
-                const part = data.participants || { registered: 185, capacity: 250, target: 'All Students', is_rsvp: false, breakdown: [] };
+                const part = data.participants || { registered: 185, capacity: 250, target: 'All Students' };
                 const regCount = Number(part.registered || 0);
                 const capCount = Number(part.capacity || 250);
                 const capPct = Math.min(100, Math.round((regCount / Math.max(capCount, 1)) * 100));
@@ -1657,41 +1599,6 @@
                 if (barFillEl) {
                     barFillEl.style.width = `${capPct}%`;
                     barFillEl.className = `sp-act-part-bar-fill ${capPct >= 90 ? 'is-full' : (capPct >= 70 ? 'is-high' : '')}`;
-                }
-
-                const demoBarsEl = document.getElementById('spActDemoBars');
-                if (demoBarsEl) {
-                    const breakdown = part.breakdown || [
-                        { label: '1st & 2nd Year', count: Math.round(regCount * 0.55), pct: 55 },
-                        { label: '3rd & 4th Year', count: Math.round(regCount * 0.45), pct: 45 }
-                    ];
-
-                    demoBarsEl.innerHTML = breakdown
-                        .map((b) => `
-                            <div class="sp-act-demo-row">
-                                <div class="sp-demo-label-row">
-                                    <span>${b.label}</span>
-                                    <strong>${b.count} (${b.pct}%)</strong>
-                                </div>
-                                <div class="sp-demo-track">
-                                    <div class="sp-demo-fill" style="width: ${b.pct}%;"></div>
-                                </div>
-                            </div>
-                        `)
-                        .join('');
-                }
-
-                // RSVP Button state
-                const rsvpBtn = document.getElementById('spActRsvpBtn');
-                const rsvpText = document.getElementById('spActRsvpBtnText');
-                if (rsvpBtn && rsvpText) {
-                    if (part.is_rsvp) {
-                        rsvpBtn.classList.add('is-registered');
-                        rsvpText.textContent = 'You are Registered';
-                    } else {
-                        rsvpBtn.classList.remove('is-registered');
-                        rsvpText.textContent = 'RSVP for Event';
-                    }
                 }
 
                 // Tab 3: Photos
@@ -1815,32 +1722,6 @@
             if (actLightbox) {
                 actLightbox.addEventListener('click', (e) => {
                     if (e.target === actLightbox) closeLightbox();
-                });
-            }
-
-            // Interactive RSVP button
-            const rsvpBtn = document.getElementById('spActRsvpBtn');
-            if (rsvpBtn) {
-                rsvpBtn.addEventListener('click', () => {
-                    const data = actModalEl._actData;
-                    if (!data) return;
-
-                    const isNowRegistered = !data.participants.is_rsvp;
-                    data.participants.is_rsvp = isNowRegistered;
-                    data.participants.registered += isNowRegistered ? 1 : -1;
-
-                    openActModal({ dataset: { actDetails: JSON.stringify(data) } });
-                    switchModalTab('participants');
-
-                    const toast = document.createElement('div');
-                    toast.className = 'sp-floating-toast';
-                    toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> <span>${isNowRegistered ? 'RSVP Confirmed! You are registered for this event.' : 'Registration cancelled.'}</span>`;
-                    document.body.appendChild(toast);
-                    setTimeout(() => toast.classList.add('is-show'), 20);
-                    setTimeout(() => {
-                        toast.classList.remove('is-show');
-                        setTimeout(() => toast.remove(), 300);
-                    }, 3000);
                 });
             }
 

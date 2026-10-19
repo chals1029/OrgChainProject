@@ -49,12 +49,12 @@
                     <div><strong>{{ $document->name ?: $document->original_name }}</strong><small>{{ $document->original_name }}</small></div>
                     <div class="sr-actions">
                         @if ($document->hasStoredFile())
-                        <a class="org-btn org-btn-ghost org-btn-sm" href="{{ route('office.reports.documents.view', $document) }}" target="_blank" rel="noopener"
+                        <a class="app-view-action" aria-label="View {{ strtoupper($reportType) }} report" href="{{ route('office.reports.documents.view', $document) }}" target="_blank" rel="noopener"
                             @if ($reportType === 'ar' && $document->accomplishment_summary !== null)
                                 data-acc-preview="{{ route('office.reports.documents.view', ['document' => $document, 'embedded' => 1]) }}" data-acc-preview-title="{{ $document->name ?: $document->original_name }}" data-acc-preview-download="{{ route('office.reports.documents.view', ['document' => $document, 'download' => 1]) }}"
                             @elseif ($reportType === 'ar')
                                 data-document-preview data-document-preview-url="{{ route('office.reports.documents.view', $document) }}" data-document-preview-title="{{ $document->name ?: $document->original_name }}" data-document-original-name="{{ $document->original_name }}" data-document-preview-type="{{ strtolower(pathinfo($document->original_name, PATHINFO_EXTENSION)) }}" data-document-preview-download="{{ route('office.reports.documents.view', ['document' => $document, 'download' => 1]) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
-                            @endif>View {{ strtoupper($reportType) }}</a>
+                            @endif><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                         <a class="org-btn org-btn-ghost org-btn-sm" href="{{ route('office.reports.documents.view', ['document' => $document, 'download' => 1]) }}">Download</a>
                         @else
                             <span class="sr-danger">The saved file is missing or unreadable.</span>

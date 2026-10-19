@@ -158,7 +158,7 @@
                                     <td data-label="Actions" class="is-actions">
                                         <div class="fin-row-actions">
                                             @if ($report['has_file'])
-                                                <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-fin-view="{{ $report['id'] }}"><i class="bi bi-eye"></i> View</button>
+                                                <button type="button" class="app-view-action" data-fin-view="{{ $report['id'] }}" aria-label="View Financial Report"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                                 <a href="{{ $report['download_url'] }}" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-download"></i> Download</a>
                                             @else
                                                 <span class="fin-missing"><i class="bi bi-exclamation-circle"></i> File missing</span>
@@ -277,7 +277,7 @@
                                     <td data-label="Actions" class="is-actions">
                                         <div class="fin-row-actions">
                                             @if ($report['has_file'])
-                                                <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-fin-view="{{ $report['id'] }}"><i class="bi bi-eye"></i> View</button>
+                                                <button type="button" class="app-view-action" data-fin-view="{{ $report['id'] }}" aria-label="View Financial Report"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                                 <a href="{{ $report['download_url'] }}" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-download"></i> Download</a>
                                             @else
                                                 <span class="fin-missing"><i class="bi bi-exclamation-circle"></i> File missing</span>

@@ -130,8 +130,11 @@ class DashboardReportingTest extends TestCase
             OrgReportStatus::query()->where('report_type', 'ar')->count(),
             TosaApplicant::query()->where('status', 'submitted')->count(),
         ], $overview['typeBreakdown']);
-        $this->assertSame(StudentOrganization::active()->count(), $overview['kpis']['totalOrgs']);
-        $this->assertArrayHasKey('typeRows', $overview);
+        $rosterYear = now()->year.'-'.(now()->year + 1);
+        $this->assertSame(
+            collect($overview['recognitionRows'])->where('academic_year', $rosterYear)->unique('organization_key')->count(),
+            $overview['kpis']['totalOrgs'],
+        );
         $this->assertCount($visibleProposalCount, collect($overview['typeRows'])->where('kind', 'proposal'));
     }
 

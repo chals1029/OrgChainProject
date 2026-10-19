@@ -1833,6 +1833,15 @@
             gap: 0.35rem;
         }
 
+        .oso-rank-item[href] { text-decoration: none; border-radius: 8px; }
+        .oso-rank-item[href]:hover .oso-rank-name { color: #8b1828; text-decoration: underline; }
+        .oso-rank-item[href]:focus-visible { outline: 2px solid #8b1828; outline-offset: 5px; }
+        .oso-rank-item[hidden] { display: none; }
+        .oso-cause-left { overflow-wrap: anywhere; white-space: pre-line; }
+        .oso-report-note { margin: 0.6rem 0 0; color: #706569; font-size: 0.78rem; line-height: 1.5; }
+        .oso-timing-list { margin: 0.75rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
+        .oso-timing-list li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 0.7rem; font-size: 0.8rem; padding: 0.45rem 0; border-bottom: 1px solid #f0e6e8; }
+
         .oso-rank-header {
             display: flex;
             align-items: center;
@@ -2245,7 +2254,7 @@
                         <label for="osoYearSelect" class="oso-filter-label"><i class="bi bi-calendar2-range"></i> Year</label>
                         <div class="oso-select-wrapper">
                             <select id="osoYearSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                @foreach (collect($osoOverview['rows'] ?? [])->pluck('year')->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
+                                @foreach (collect($osoOverview['rows'] ?? [])->pluck('year')->merge(collect($osoOverview['recognitionRows'] ?? [])->map(fn ($row) => (int) substr($row['academic_year'], 0, 4)))->merge(collect($osoOverview['processingRows'] ?? [])->pluck('year'))->merge(collect($osoOverview['returnRows'] ?? [])->pluck('year'))->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
                                     <option value="{{ $calendarYear }}" @selected((int) $calendarYear === now()->year)>{{ $calendarYear }} · Jan–Dec{{ (int) $calendarYear === now()->year ? ' (Current)' : '' }}</option>
                                 @endforeach
                                 <option value="all">All Calendar Years</option>
@@ -2326,7 +2335,7 @@
                         </div>
                         <div class="org-kpi-num" id="kpiTotalOrgsNum">{{ $osoKpis['totalOrgs'] ?? 0 }}</div>
                     </div>
-                    <h3 class="org-kpi-title">Total Organizations</h3>
+                    <h3 class="org-kpi-title">Recognized Organizations</h3>
                     <p class="org-kpi-sub" id="kpiTotalOrgsSub">{{ $osoOverview['orgSub'] ?? 'Recognized organizations' }}</p>
                 </article>
 
@@ -2363,7 +2372,7 @@
                         <div class="org-kpi-num" id="kpiRevisionRateNum">{{ $osoKpis['revisionRate'] ?? '0%' }}</div>
                     </div>
                     <h3 class="org-kpi-title">Revision Rate</h3>
-                    <p class="org-kpi-sub" id="kpiRevisionRateSub">Returned for incomplete compliance</p>
+                    <p class="org-kpi-sub" id="kpiRevisionRateSub">Activities with recorded return events / submitted activities</p>
                 </article>
 
             </div>
@@ -2498,9 +2507,9 @@
                     <div class="oso-card-head">
                         <div class="oso-card-title-group">
                             <h3><i class="bi bi-trophy-fill" style="color: #8b1828;"></i> College / Department Activity</h3>
-                            <p>Most to least active colleges by total submissions</p>
+                            <p>College-wide proposal totals across all organizations, not an individual student council's count. Select a college to drill down.</p>
                         </div>
-                        <a href="{{ route('office.activities') }}" class="org-dash-link">View Activity Pipeline &rarr;</a>
+                        <a href="{{ route('office.activities', ['submission_year' => now()->year, 'submission_semester' => 'all', 'submission_month' => 'all', 'activity_scope' => 'all']) }}" id="osoPipelineLink" class="app-view-action" aria-label="View activity pipeline"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                     </div>
 
                     <div class="oso-rank-list">
@@ -2511,7 +2520,7 @@
                         @endphp
                         @for ($i = 0; $i < 5; $i++)
                             @php $osoRankRow = $osoRank[$i] ?? null; @endphp
-                            <div class="oso-rank-item">
+                            <a class="oso-rank-item" id="rankDepartmentLink{{ $i + 1 }}" @if ($osoRankRow) href="{{ route('office.activities', ['college' => $osoRankRow['name'], 'submission_year' => now()->year, 'submission_semester' => 'all', 'submission_month' => 'all', 'activity_scope' => 'all']) }}" aria-label="View {{ $osoRankRow['name'] }} college-wide activity pipeline" @else hidden @endif>
                                 <div class="oso-rank-header">
                                     <span class="oso-rank-name">
                                         <i class="bi {{ $i === 0 ? 'bi-award-fill' : 'bi-award' }}" style="color: {{ $osoRankIconColors[$i] }};"></i> <span id="rankDepartmentName{{ $i + 1 }}">{{ $osoRankRow['name'] ?? 'No submissions yet' }}</span>
@@ -2521,8 +2530,9 @@
                                 <div class="oso-rank-bar-bg">
                                     <div class="oso-rank-bar-fill" id="rankDepartmentBar{{ $i + 1 }}" style="width: {{ $osoRankRow['pct'] ?? 0 }}%; background: {{ $osoRankBarColors[$i] }};"></div>
                                 </div>
-                            </div>
+                            </a>
                         @endfor
+                        <p id="osoRankEmpty" class="oso-report-note" @if (count($osoRank)) hidden @endif>No college submissions recorded in the selected period.</p>
                     </div>
                 </section>
 
@@ -2531,47 +2541,18 @@
             {{-- 4. MIDDLE ROW 3: Incomplete/Revision Rate (Donut/Bar) & Processing Time --}}
             <div class="oso-analytics-2col">
 
-                {{-- Card E: Incomplete/Revision Rate & Root Causes (Required Table Item 7 - Donut/Bar) --}}
+                {{-- Card E: Recorded workflow return events --}}
                 <section class="oso-analytics-card">
                     <div class="oso-card-head">
                         <div class="oso-card-title-group">
-                            <h3><i class="bi bi-shield-exclamation" style="color: #8b1828;"></i> Incomplete / Revision Analysis</h3>
-                            <p>{{ $osoKpis['revisionRate'] ?? '0%' }} return rate and top compliance deficiencies</p>
+                            <h3><i class="bi bi-shield-exclamation" style="color: #8b1828;"></i> Recorded Return / Revision Analysis</h3>
+                            <p id="osoReturnSummary" role="status" aria-live="polite">Loading recorded return events for the selected submission cohort.</p>
                         </div>
-                        <span class="oso-stat-badge is-neutral">Quality Audit</span>
+                        <span class="oso-stat-badge is-neutral">Workflow history</span>
                     </div>
 
-                    <div>
-                        {{-- Top Return Causes List --}}
-                        <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #706569; margin-bottom: 0.4rem;">
-                            Top Reasons for Returned Submissions
-                        </div>
-                        @php
-                            $osoCauseIcons = [
-                                'Missing Faculty Adviser / Dean Signature' => ['bi-pen-fill', '#dc2626'],
-                                'Budget Itemization vs Receipt Discrepancy' => ['bi-calculator-fill', '#d97706'],
-                                'Lacking SDO Waste Policy (WPCF) Form' => ['bi-recycle', '#16a34a'],
-                                'Incomplete Safety Protocol & Medical Clearance' => ['bi-file-earmark-medical-fill', '#2563eb'],
-                            ];
-                        @endphp
-                        <div class="oso-causes-list">
-                            @forelse (($osoOverview['returnCauses'] ?? []) as $cause)
-                                @php $osoCauseIcon = $osoCauseIcons[$cause['label']] ?? ['bi-flag-fill', '#786f73']; @endphp
-                                <div class="oso-cause-item">
-                                    <div class="oso-cause-left">
-                                        <i class="bi {{ $osoCauseIcon[0] }}" style="color: {{ $osoCauseIcon[1] }};"></i>
-                                        <span>{{ $cause['label'] }} ({{ $cause['count'] }})</span>
-                                    </div>
-                                    <span class="oso-cause-pct">{{ $cause['pct'] }}</span>
-                                </div>
-                            @empty
-                                <p style="margin: 0; font-size: 0.82rem; color: #786f73;">
-                                    <i class="bi bi-check2-circle" style="color: #16a34a;"></i>
-                                    No returned submissions yet &mdash; nothing to analyze.
-                                </p>
-                            @endforelse
-                        </div>
-                    </div>
+                    <div class="oso-causes-list" id="osoReturnReasons" aria-label="Recorded return reasons"></div>
+                    <p class="oso-report-note">Reasons are recorded workflow notes, not inferred causes. An activity may have multiple return events. Period follows the proposal's creation date; missing historical events do not prove an activity was never returned.</p>
                 </section>
 
                 {{-- Card F: Processing Time Turnaround --}}
@@ -2579,14 +2560,16 @@
                     <div class="oso-card-head">
                         <div class="oso-card-title-group">
                             <h3><i class="bi bi-clock-history" style="color: #8b1828;"></i> Average Processing Time (Days)</h3>
-                            <p>Turnaround speed per transaction type vs. SLA benchmark (3.0 Days)</p>
+                            <p>Elapsed calendar days from submission to a recorded review decision, not daily transaction volume.</p>
                         </div>
-                        <span class="oso-stat-badge is-positive">Target &le; 3.0d</span>
+                        <span class="oso-stat-badge is-neutral" id="osoTimingCount">Loading timing samples</span>
                     </div>
 
                     <div class="oso-canvas-wrap">
-                        <canvas id="osoProcessingTimeChart"></canvas>
+                        <canvas id="osoProcessingTimeChart" role="img" aria-label="Average elapsed review days by transaction type" aria-describedby="osoTimingSummary"></canvas>
                     </div>
+                    <ul class="oso-timing-list" id="osoTimingSummary" aria-label="Average review days and sample counts"></ul>
+                    <p class="oso-report-note">Filtered by actual submission date and activity scope. Only reliable completed review timestamps are included. Missing legacy timing and unavailable TOSA timing are not zero-day reviews.</p>
                 </section>
 
             </div>
@@ -2600,8 +2583,8 @@
                         </h3>
                         <span style="font-size: 0.78rem; color: #786f73;">Latest submitted student organization documents in the OSO review pipeline</span>
                     </div>
-                    <a href="{{ route('office.activities') }}" class="org-dash-link">
-                        View Full Pipeline &rarr;
+                    <a href="{{ route('office.activities', ['submission_year' => now()->year, 'submission_semester' => 'all', 'submission_month' => 'all', 'activity_scope' => 'all']) }}" data-oso-pipeline-link class="app-view-action" aria-label="View full activity pipeline">
+                        <i class="bi bi-eye" aria-hidden="true"></i> View
                     </a>
                 </div>
 
@@ -2645,8 +2628,8 @@
                                         </span>
                                     </td>
                                     <td style="text-align: right;">
-                                        <a href="{{ $trx['url'] }}" class="org-btn-view-pill">
-                                            View Details
+                                        <a href="{{ $trx['url'] }}" class="org-btn-view-pill app-view-action" aria-label="View transaction details">
+                                            <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </a>
                                     </td>
                                 </tr>
@@ -3019,7 +3002,7 @@
                                         <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $item['title'] }}</strong>
                                         <small style="color:#475569;">{{ $item['organization'] ?? 'Student Organization' }} · Complete review package received</small>
                                     </div>
-                                    <a href="{{ route('office.activities', ['activity' => $item['id'] ?? $item['title']]) }}" class="ovcaa-btn-decide">View details <i class="bi bi-arrow-right-short"></i></a>
+                                    <a href="{{ route('office.activities', ['activity' => $item['id'] ?? $item['title']]) }}" class="app-view-action" aria-label="View {{ $item['title'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                                 </div>
                             @empty
                                 <div style="padding:1.25rem;border:1px dashed #cbd5e1;border-radius:14px;color:#475569;background:#f8fafc;">
@@ -3162,8 +3145,8 @@
                             <h3 class="org-dash-card-title">
                                 <i class="bi bi-coin" style="color: #ca8a04;"></i> Budget Snapshot
                             </h3>
-                            <a href="{{ route('office.budget') }}" class="org-dash-link">
-                                View Details →
+                            <a href="{{ route('office.budget') }}" class="app-view-action" aria-label="View budget details">
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         </div>
 
@@ -3234,8 +3217,8 @@
                             <h3 class="org-dash-card-title">
                                 <i class="bi bi-bar-chart-fill" style="color: #8b1828;"></i> Budget Utilization vs Actual
                             </h3>
-                            <a href="{{ route('office.budget') }}" class="org-dash-link">
-                                View Details →
+                            <a href="{{ route('office.budget') }}" class="app-view-action" aria-label="View budget utilization details">
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         </div>
                         @php
@@ -3513,24 +3496,23 @@
                 time: null
             };
 
-            // Live OSO dataset served by the backend (buildOsoOverview).
-            // Every activity is a filterable row; all KPIs, charts, ranking and
-            // the transactions table below are aggregated from these rows.
+            // Live proposal rows and recorded reporting samples share the filter engine below.
             window.osoLiveRows = @json(($osoOverview['rows'] ?? []));
                 @php
-                    $hideSemesterReportMetrics = in_array(($office->office_role ?? ''), ['sdo', 'ovcaa', 'oc'], true);
                     $osoLiveMetaPayload = [
                         'kpis' => $osoOverview['kpis'] ?? [],
                         'typeBreakdown' => $osoOverview['typeBreakdown'] ?? [0, 0, 0, 0, 0],
                         'typeLabels' => $osoOverview['typeLabels'] ?? ['Activity Proposal', 'Renewal', 'Financial (FR)', 'Accomplishment (AR)', 'TOSA Award'],
                         'typeRows' => $osoOverview['typeRows'] ?? [],
                         'processingLabels' => $osoOverview['processingLabels'] ?? ['Proposals', 'Renewal', 'Financial (FR)', 'Accomp. (AR)', 'TOSA'],
-                        'processingTime' => $osoOverview['processingTime'] ?? [null, null, null, null, null],
-                        'orgSub' => $osoOverview['orgSub'] ?? 'Recognized organizations',
+                        'recognitionRows' => $osoOverview['recognitionRows'] ?? [],
+                        'processingRows' => $osoOverview['processingRows'] ?? [],
+                        'returnRows' => $osoOverview['returnRows'] ?? [],
                 ];
             @endphp
             const osoLiveMeta = @json($osoLiveMetaPayload);
             const currentCalendarYear = @json((string) now()->year);
+            const osoPipelineBaseUrl = @json(route('office.activities'));
 
             function buildTrendAxis(selectedYear, rows) {
                 return Array.from({ length: 12 }, (_, index) => {
@@ -3594,9 +3576,38 @@
                     (selectedMonth === 'all' || row.mon === selectedMonth) &&
                     (selectedScope === 'all' || (row.scope && row.scope === selectedScope));
                 const typeRows = allTypeRows.length ? allTypeRows.filter(matchesPeriod) : rows.map(() => ({ kind: 'proposal' }));
+                const academicYear = `${selectedYear}-${Number(selectedYear) + 1}`;
+                const recognitionKeys = new Set(osoLiveMeta.recognitionRows
+                    .filter(row => selectedYear === 'all' || row.academic_year === academicYear)
+                    .map(row => String(row.organization_key || '').trim().toLowerCase())
+                    .filter(Boolean));
+                const processingKinds = osoLiveMeta.processingLabels.length === 3
+                    ? ['proposal', 'renewal', 'tosa']
+                    : ['proposal', 'renewal', 'fr', 'ar', 'tosa'];
+                const processingSamples = osoLiveMeta.processingRows.filter(row =>
+                    matchesPeriod(row) && typeof row.days === 'number' && Number.isFinite(row.days) && row.days >= 0);
+                const processing = processingKinds.map((kind, index) => {
+                    const samples = processingSamples.filter(row => row.kind === kind);
+                    return {
+                        label: osoLiveMeta.processingLabels[index],
+                        count: samples.length,
+                        days: samples.length ? samples.reduce((sum, row) => sum + row.days, 0) / samples.length : null,
+                    };
+                });
+                const activityIds = new Set(rows.map(row => String(row.id)));
+                const returnEvents = osoLiveMeta.returnRows.filter(row =>
+                    matchesPeriod(row) && activityIds.has(String(row.activity_id)));
+                const returnedActivities = new Set(returnEvents.map(row => row.activity_id)).size;
+                const reasons = new Map();
+                returnEvents.forEach(row => {
+                    const reason = String(row.reason || '').trim() || 'No reason recorded';
+                    reasons.set(reason, (reasons.get(reason) || 0) + 1);
+                });
                 return {
-                    totalOrgs: (osoLiveMeta.kpis && osoLiveMeta.kpis.totalOrgs) || 0,
-                    orgSub: osoLiveMeta.orgSub,
+                    totalOrgs: recognitionKeys.size,
+                    orgSub: selectedYear === 'all'
+                        ? 'Distinct organizations across recorded academic-year rosters; independent of semester, month and scope.'
+                        : `Year ${selectedYear} maps to AY ${academicYear} roster; independent of semester, month and scope.`,
                     pendingTrx: (unfiltered && rows.length === ((window.osoLiveRows || []).length))
                         ? ((osoLiveMeta.kpis && osoLiveMeta.kpis.pendingTrx) || 0)
                         : (pending + revision),
@@ -3605,8 +3616,13 @@
                         : (pending + ' Proposals in selected period'),
                     totalSubmissions: total,
                     submissionsSub: unfiltered ? 'Across all student org portfolios' : 'Filtered selection',
-                    revisionRate: total ? ((revision / total) * 100).toFixed(1) + '%' : '0%',
-                    revisionSub: 'Returned for incomplete compliance',
+                    revisionRate: total ? ((returnedActivities / total) * 100).toFixed(1) + '%' : '0%',
+                    revisionSub: `${returnedActivities} of ${total} activities have recorded return events`,
+                    returnedActivities,
+                    returnEventCount: returnEvents.length,
+                    returnReasons: Array.from(reasons, ([reason, count]) => ({ reason, count }))
+                        .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)),
+                    processing,
                     approvalDonut: [approved, pending, revision],
                     scope: {
                         inCampus: rows.filter(r => r.scope === 'in-campus').length,
@@ -3705,9 +3721,9 @@
                 // 4. Update Scope Panel
                 const inCount = Math.round(data.scope.inCampus * multiplier * (selectedScope === 'off-campus' ? 0 : 1));
                 const offCount = Math.round(data.scope.offCampus * multiplier * (selectedScope === 'in-campus' ? 0 : 1));
-                const scopeTotal = inCount + offCount || 1;
-                const inPct = ((inCount / scopeTotal) * 100).toFixed(1);
-                const offPct = ((offCount / scopeTotal) * 100).toFixed(1);
+                const scopeTotal = inCount + offCount;
+                const inPct = scopeTotal ? ((inCount / scopeTotal) * 100).toFixed(1) : '0.0';
+                const offPct = scopeTotal ? ((offCount / scopeTotal) * 100).toFixed(1) : '0.0';
 
                 const scopeHeader = document.getElementById('scopeTotalHeader');
                 if (scopeHeader) scopeHeader.textContent = `${scopeTotal} Activities Total`;
@@ -3764,12 +3780,77 @@
                     window.osoCharts.type.update();
                 }
 
+                // Recorded review samples and workflow returns use the same period/scope selection.
+                if (window.osoCharts.time) {
+                    window.osoCharts.time.data.datasets[0].data = data.processing.map(row => row.days);
+                    window.osoCharts.time.update();
+                }
+                const timingSummary = document.getElementById('osoTimingSummary');
+                if (timingSummary) {
+                    timingSummary.replaceChildren(...data.processing.map(row => {
+                        const item = document.createElement('li');
+                        const label = document.createElement('strong');
+                        label.textContent = row.label;
+                        const value = document.createElement('span');
+                        value.textContent = row.days === null
+                            ? 'No timing data · 0 samples'
+                            : `${row.days.toFixed(2)} days · ${row.count} sample${row.count === 1 ? '' : 's'}`;
+                        item.append(label, value);
+                        return item;
+                    }));
+                }
+                const timingCount = data.processing.reduce((sum, row) => sum + row.count, 0);
+                const timingBadge = document.getElementById('osoTimingCount');
+                if (timingBadge) timingBadge.textContent = timingCount ? `${timingCount} reviewed samples` : 'No timing data';
+                const returnSummary = document.getElementById('osoReturnSummary');
+                if (returnSummary) returnSummary.textContent = data.returnEventCount
+                    ? `${data.returnedActivities} distinct returned activities / ${data.totalSubmissions} submissions (${data.revisionRate}); ${data.returnEventCount} recorded return events.`
+                    : 'No recorded return events in the selected submission cohort.';
+                const returnReasons = document.getElementById('osoReturnReasons');
+                if (returnReasons) {
+                    returnReasons.replaceChildren(...data.returnReasons.map(row => {
+                        const item = document.createElement('div');
+                        item.className = 'oso-cause-item';
+                        const reason = document.createElement('span');
+                        reason.className = 'oso-cause-left';
+                        reason.textContent = row.reason;
+                        const count = document.createElement('span');
+                        count.className = 'oso-cause-pct';
+                        count.textContent = `${row.count} event${row.count === 1 ? '' : 's'}`;
+                        item.append(reason, count);
+                        return item;
+                    }));
+                }
+
+                const pipelineUrl = (college = '') => {
+                    const url = new URL(osoPipelineBaseUrl, window.location.origin);
+                    url.searchParams.set('submission_year', selectedYear);
+                    url.searchParams.set('submission_semester', selectedSem);
+                    url.searchParams.set('submission_month', selectedMonth);
+                    url.searchParams.set('activity_scope', selectedScope);
+                    if (college) url.searchParams.set('college', college);
+                    return url.toString();
+                };
+                document.querySelectorAll('#osoPipelineLink, [data-oso-pipeline-link]').forEach(link => {
+                    link.href = pipelineUrl();
+                });
+
                 // 7. Update College / Department Ranking Bars
                 for (let idx = 0; idx < 5; idx++) {
                     const department = (data.departmentRanking || [])[idx] || null;
                     const rankName = document.getElementById(`rankDepartmentName${idx + 1}`);
                     const rankStat = document.getElementById(`rankDepartmentStat${idx + 1}`);
                     const rankBar = document.getElementById(`rankDepartmentBar${idx + 1}`);
+                    const rankLink = document.getElementById(`rankDepartmentLink${idx + 1}`);
+                    if (rankLink) {
+                        rankLink.hidden = !department;
+                        if (department) {
+                            rankLink.href = pipelineUrl(department.name);
+                            rankLink.setAttribute('aria-label', `View ${department.name} college-wide activity pipeline for the selected period`);
+                        } else {
+                            rankLink.removeAttribute('href');
+                        }
+                    }
                     if (rankName && department) rankName.textContent = department.name;
                     if (rankStat) {
                         rankStat.innerHTML = department
@@ -3780,6 +3861,8 @@
                         rankBar.style.width = department ? `${department.pct}%` : '0%';
                     }
                 }
+                const rankEmpty = document.getElementById('osoRankEmpty');
+                if (rankEmpty) rankEmpty.hidden = data.departmentRanking.length > 0;
 
                 // 8. Filter Table Rows
                 let visibleCount = 0;
@@ -3855,6 +3938,10 @@
             }
 
             document.addEventListener('DOMContentLoaded', function () {
+                if (typeof Chart === 'undefined') {
+                    applyOsoFilters();
+                    return;
+                }
                 Chart.defaults.font.family = "'Instrument Sans', system-ui, -apple-system, sans-serif";
                 Chart.defaults.color = '#786f73';
 
@@ -4035,7 +4122,7 @@
                     });
                 }
 
-                // 4. Processing Time Analysis Bar/Line Chart
+                // 4. Average elapsed review days; nulls deliberately leave unavailable kinds unplotted.
                 const timeCanvas = document.getElementById('osoProcessingTimeChart');
                 if (timeCanvas) {
                     window.osoCharts.time = new Chart(timeCanvas.getContext('2d'), {
@@ -4044,19 +4131,9 @@
                             labels: osoLiveMeta.processingLabels,
                             datasets: [
                                 {
-                                    type: 'line',
-                                    label: 'Target SLA Benchmark (3.0 Days)',
-                                    data: osoLiveMeta.processingLabels.map(() => 3.0),
-                                    borderColor: '#dc2626',
-                                    borderWidth: 1.5,
-                                    borderDash: [5, 5],
-                                    pointRadius: 0,
-                                    fill: false
-                                },
-                                {
                                     type: 'bar',
-                                    label: 'Avg Turnaround (Days)',
-                                    data: osoLiveMeta.processingTime,
+                                    label: 'Average elapsed review days',
+                                    data: initialOsoData.processing.map(row => row.days),
                                     spanGaps: false,
                                     backgroundColor: [
                                         '#10b981',
@@ -4093,7 +4170,7 @@
                                 },
                                 y: {
                                     beginAtZero: true,
-                                    max: 4.0,
+                                    grace: '10%',
                                     grid: { color: '#f5eaec' },
                                     ticks: {
                                         stepSize: 1,

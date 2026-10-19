@@ -1,82 +1,42 @@
 ---
 title: High-Level Technical Architecture
-tags:
-  - architecture
-  - technical
-  - laravel
-  - layers
+tags: [architecture, technical, laravel, layers]
 created: 2026-08-20
+updated: 2026-10-16
 status: active
 ---
 
-# 🏗️ High-Level Technical Architecture
+# High-Level Technical Architecture
 
-> [!info] Architectural Paradigm
-> OrgChain employs a **Modular Monolithic Architecture** on Laravel 13.x and PHP 8.3. It seamlessly bridges modern Eloquent ORM web controllers with a high-performance native PDO Voting Kernel and a localized 3-node cryptographic ledger engine.
-
----
-
-## 🏢 System Layer Diagram
+OrgChain is a modular monolith, not a collection of independently deployed business microservices. Blade/JavaScript interfaces call Laravel controllers; the voting module is mounted inside the application through `App\VotingSystem\Kernel`.
 
 ```mermaid
-graph TB
-    subgraph PresentationLayer["1. Presentation & Client Interfaces"]
-        SP_UI["🎓 Student Portal (Blade + Alpine.js)"]
-        OD_UI["🏢 Office Desk (Blade + Custom CSS)"]
-        VS_UI["🗳️ Voter Ballot & Receipt View"]
-        CAN_UI["📊 SSC Canvassing Live Dashboard"]
-    end
-
-    subgraph SecurityLayer["2. Security Guard & Rate Limiting"]
-        SG["🛡️ SecurityGuard Engine"]
-        RL["⏱️ RateLimiter (Global, Public, Staff)"]
-        WAF["🔍 SQL Injection & Scanner Pattern Detector"]
-    end
-
-    subgraph ControllerLayer["3. Application & Controller Layer"]
-        L_CTRL["Laravel Controllers<br/>(StudentPortal, OfficePortal, CommunityFeed)"]
-        V_KERN["Voting System Kernel<br/>(app/VotingSystem/Kernel.php)"]
-        V_CTRL["Voting Controllers<br/>(AdminController, VoterController, ApiController)"]
-    end
-
-    subgraph DomainLayer["4. Domain Logic & Business Rules"]
-        PROP_ENG["📋 Compliance & Proposal Engine"]
-        BUDGET_ENG["🧾 Receipt & Budget Processor"]
-        VCHAIN["🔗 VoteBlockchain Cryptographic Engine"]
-        NOTIF["📨 Mailer & OTP Service"]
-    end
-
-    subgraph DataLayer["5. Persistence & Blockchain Layer"]
-        MYSQL[("🗄️ MySQL Database<br/>(Users, Portals, Ballots, Audits)")]
-        BESU["⛓️ Hyperledger Besu QBFT<br/>(4 Validator Nodes + OrgChainAnchor)"]
-        FS["📁 Storage & Archive Attachments"]
-    end
-
-    PresentationLayer --> SecurityLayer
-    SecurityLayer --> ControllerLayer
-    ControllerLayer --> DomainLayer
-    DomainLayer --> DataLayer
+flowchart TD
+    Browser["Student, office and voting interfaces"] --> Edge["Recorded VPS: HTTPS edge and Cloudflare Tunnel"]
+    Edge --> Web["Nginx and PHP-FPM"]
+    Web --> Laravel["Laravel routing, guards and controllers"]
+    Laravel --> Voting["Integrated native voting kernel"]
+    Laravel --> Services["Workflow and document services"]
+    Laravel --> OfficeDB[("Primary MySQL schema")]
+    Laravel --> StudentDB[("Student and community MySQL schema")]
+    Voting --> OfficeDB
+    Services --> Private["Private original documents"]
+    Services --> Converter["Isolated document converter"]
+    Services --> Ledger["Configured blockchain driver"]
+    Voting --> Ledger
+    Ledger --> Besu["Recorded pilot: four Besu QBFT validators"]
 ```
 
----
+## Boundaries
 
-## 🧩 Architectural Subsystem Decomposition
+- **Laravel portals:** `routes/web.php`, `app/Http/Controllers/`, `resources/views/org/` and `resources/views/portal/`. `student` and `office` guards have separate identities and authorization.
+- **Voting:** `routes/voting.php`, `app/VotingSystem/Kernel.php` and its controllers/router. Native voting CSRF/session rules are not interchangeable with portal authentication.
+- **Relational data:** `mysql` and `orgchain` connections. Cross-schema application relationships may lack physical foreign keys; [[Database Schema and ERD]] labels that distinction.
+- **Evidence:** uploaded originals remain off-chain. Authorized routes stream private files; public asset prefixes are explicitly limited. See [[Security Architecture and Guardrails]].
+- **Conversion:** legacy Word preview uses an isolated converter; failure must not fabricate a document or overwrite the original.
+- **Ledger:** `config/besu.php` selects the driver. File/JSONL operation is an explicit alternate mode; a failed Besu call must not be relabeled as a successful file-ledger transaction.
+- **Readiness:** `routes/health.php` serves allowlisted cached states outside the web/session middleware. Private scheduled observations do the probing; public HTTP reads do not trigger probes.
 
-### 1. The Laravel Portal Kernel (`App\Http`)
-Handles student authentication, administrative office routing, dynamic form submission for in-campus and off-campus proposals, receipt attachment uploads, document archiving, and social feed interactions.
-- **Middlewares**: `EnsureStudentAuthenticated`, `EnsureOfficeAuthenticated`
-- **Routing**: `routes/web.php`
-- **Views**: `resources/views/org/`, `resources/views/portal/`, `resources/views/office/`
+The four validators share one VPS in the recorded pilot, so a VPS outage can affect all of them. This is not multi-host high availability. See [[VPS Pilot Deployment and Status]] for deployment scope, not the older multi-laptop demonstration runbook.
 
-### 2. The Integrated Voting System Kernel (`App\VotingSystem`)
-A dedicated, self-contained sub-application embedded under `/voting-system`. It operates with ultra-fast native PDO queries to handle peak election traffic with zero overhead, synchronous file locking, and multi-node ledger commits.
-- **Entry Point**: `App\VotingSystem\Kernel::handle()`
-- **Routing**: `App\VotingSystem\Core\Router`
-- **Controllers**: `AdminController`, `VoterController`, `ApiController`, `MediaController`
-- **State Bridge**: Bidirectional session synchronization with Laravel session store.
-
-### 3. The Blockchain & Audit Layer (`Hyperledger Besu QBFT` & `BesuChainService`)
-A permissioned, 4-node Hyperledger Besu private network governed by Quorum Byzantine Fault Tolerance (QBFT) consensus and the `OrgChainAnchor.sol` smart contract.
-- **Voting Anchors**: Anchors SHA-256 ballot roots and voter commitments (`hash(electionId|voterId|referenceCode)`) for secret, mathematically verifiable voting.
-- **Budget Anchors**: Anchors itemized and receipt-supported expense liquidations to ensure tamper-evident financial accountability.
-- **Offline / Fallback Driver**: Retains the historical 3-node JSONL append-only ledgers (`storage/app/voting/chain/node-{1,2,3}/`) when running in `BLOCKCHAIN_DRIVER=file` mode.
+Source: `bootstrap/app.php`, `config/database.php`, `config/besu.php`, `app/VotingSystem/Kernel.php`, `infra/vps/` and project README.

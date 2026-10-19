@@ -353,7 +353,7 @@
                         <div class="rs-row-actions">
                             @if ($doc)
                                 @if (in_array($ext, $previewable, true))
-                                    <button type="button" class="rs-act is-view"
+                                    <button type="button" class="rs-act is-view app-view-action"
                                         data-rs-preview="{{ route('office.renewal.documents.file', $doc) }}"
                                         data-rs-download="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}"
                                         data-rs-title="{{ $row['label'] }} · {{ $row['title'] }}"

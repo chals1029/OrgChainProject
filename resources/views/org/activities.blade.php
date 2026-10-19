@@ -7,6 +7,17 @@
     $isOvcaa = $role === 'ovcaa';
     $isOc = $role === 'oc';
     $isSo = !$isOso && !$isSdo && !$isOvcaa && !$isOc;
+    $pipelineContext = array_filter($pipelineFilters ?? [], static fn ($value) => $value !== '' && $value !== 'all' && $value !== null);
+    $pipelineQuery = array_filter(array_merge($pipelineContext, [
+        'organization' => $selectedOrganization ?? '',
+        'academic_year' => $selectedAcademicYear ?? '',
+    ]), static fn ($value) => $value !== '' && $value !== null);
+    $pipelinePeriod = array_filter([
+        !empty($pipelineContext['submission_year']) ? 'Submitted in '.$pipelineContext['submission_year'] : null,
+        ['sem1' => '1st semester', 'sem2' => '2nd semester', 'midyear' => 'Midyear'][$pipelineContext['submission_semester'] ?? ''] ?? null,
+        $pipelineContext['submission_month'] ?? null,
+        ['in-campus' => 'In-Campus', 'off-campus' => 'Off-Campus'][$pipelineContext['activity_scope'] ?? ''] ?? null,
+    ]);
 @endphp
 
 @section('title', $selectedActivity
@@ -15,7 +26,7 @@
 
 @section('header')
     @if ($selectedActivity)
-        <a href="{{ route('office.activities') }}" class="org-back-link">
+        <a href="{{ route('office.activities', $pipelineQuery) }}" class="org-back-link">
             <i class="bi bi-arrow-left"></i>
             @if (!$isSo) Back to Proposals
             @else Back to Activities
@@ -82,7 +93,7 @@
             @if ($canAdvanceActivity)
                 <form id="activityAdvanceForm" method="post" action="{{ route('office.activities.advance', $activityId) }}" style="display:inline;" data-advance-form onsubmit="this.querySelector('button[type=submit]').disabled=true;">
                     @csrf
-                    <button type="submit" class="org-btn org-btn-primary" @if($isSdo) style="background:#15803d;box-shadow:0 4px 14px rgba(21,128,61,0.25);" @elseif($isOvcaa) style="background:#1d4ed8;box-shadow:0 4px 14px rgba(29,78,216,0.25);" @elseif($isOc) style="background:#334155;box-shadow:0 4px 14px rgba(51,65,85,0.22);" @endif>
+                    <button type="submit" class="org-btn org-btn-primary" @disabled(!empty($selectedActivity['document_issue'])) @if(!empty($selectedActivity['document_issue'])) aria-describedby="activityDocumentIssue" @endif @if($isSdo) style="background:#15803d;box-shadow:0 4px 14px rgba(21,128,61,0.25);" @elseif($isOvcaa) style="background:#1d4ed8;box-shadow:0 4px 14px rgba(29,78,216,0.25);" @elseif($isOc) style="background:#334155;box-shadow:0 4px 14px rgba(51,65,85,0.22);" @endif>
                         @if ($isOso)
                             <i class="bi bi-check2-circle"></i> Endorse / Advance
                         @elseif ($isSdo)
@@ -132,16 +143,16 @@
         .org-controls-toolbar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            justify-content: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
             flex-wrap: wrap;
         }
 
         .org-filter-pills-row {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.35rem;
             overflow-x: auto;
             padding-bottom: 0.2rem;
             flex-wrap: wrap;
@@ -151,9 +162,9 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.45rem 1rem;
+            padding: 0.4rem 0.7rem;
             border-radius: 9999px;
-            font-size: 0.84rem;
+            font-size: 0.78rem;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
@@ -180,8 +191,8 @@
         .org-toolbar-actions {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin-left: auto;
+            gap: 0.4rem;
+            min-width: 0;
             flex-wrap: wrap;
         }
 
@@ -218,6 +229,24 @@
             cursor: pointer;
         }
 
+        .org-pipeline-context {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.4rem 0.75rem;
+            margin-bottom: 0.8rem;
+            padding: 0.65rem 0.85rem;
+            border: 1px solid #eadde1;
+            border-radius: 12px;
+            color: #654c55;
+            background: #fdf8fa;
+            font-size: 0.8rem;
+        }
+        .org-pipeline-context a { color: #8b1828; font-weight: 700; }
+        .org-organization-filter { max-width: 100%; min-width: 0; }
+        .org-organization-filter select { min-width: 0; }
+
         .org-proposals-search-box {
             position: relative;
             display: inline-flex;
@@ -249,7 +278,7 @@
             border-radius: 9999px;
             background: #ffffff;
             color: #1a1618;
-            width: 210px;
+            width: 180px;
             transition: all 0.2s ease;
             outline: none;
             box-sizing: border-box;
@@ -260,7 +289,6 @@
         .org-proposals-search-box input:focus {
             border-color: #8b1828;
             box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.1);
-            width: 250px;
             background: #ffffff;
         }
 
@@ -823,13 +851,8 @@
             transition: all 0.15s ease;
         }
 
-        .org-page-btn.is-active {
-            background: #8b1828;
-            color: #ffffff;
-            border-color: #8b1828;
-        }
 
-        .org-page-btn:hover:not(.is-active) {
+        .org-page-btn:hover:not(:disabled) {
             background: #fdf8f9;
             border-color: #d8c2c7;
         }
@@ -839,11 +862,6 @@
             cursor: default;
         }
 
-        .org-page-gap {
-            min-width: 1.25rem;
-            text-align: center;
-            color: #8c8286;
-        }
 
         /* =========================================================
            Activity Details Screen Styles (Image 2 Matching)
@@ -1815,8 +1833,7 @@
                                 </div>
                                 @if (!empty($selectedActivity['plan_document_url']))
                                 <button type="button"
-                                    class="org-btn org-btn-ghost org-btn-sm"
-                                    style="border-color: #fdba74; color: #c2410c; background: #fff7ed;"
+                                    class="app-view-action" aria-label="View approved Plan of Activities for {{ $selectedActivity['organization'] }}"
                                     data-document-preview
                                     data-document-preview-url="{{ $selectedActivity['plan_document_url'] }}"
                                     data-document-preview-title="{{ $selectedActivity['organization'] }} — Approved Plan of Activities (Attachment I)"
@@ -1824,7 +1841,7 @@
                                     data-document-original-name="{{ $selectedActivity['plan_document_name'] ?? '' }}"
                                     data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
                                     data-document-preview-download="{{ $selectedActivity['plan_document_url'] }}">
-                                    <i class="bi bi-eye"></i> View Approved Plan of Activities (Attachment I)
+                                    <i class="bi bi-eye" aria-hidden="true"></i> View
                                 </button>
                                 @else
                                     <span class="org-muted">No approved Attachment I document is available for this activity.</span>
@@ -1878,6 +1895,16 @@
                     </div>
                     <h2>Submitted Compliance Documents</h2>
                 </div>
+                @if (!empty($selectedActivity['document_issue']))
+                    <p id="activityDocumentIssue" role="status" style="padding:.75rem;border:1px solid #f5cf97;border-radius:10px;background:#fff8eb;color:#774e16;font-size:.84rem;">
+                        {{ $selectedActivity['document_issue'] }}
+                        @if (in_array($workflowStatus, ['oc_approved', 'completed'], true))
+                            This historical approval record is retained; required supporting files are currently unavailable.
+                        @else
+                            Endorsement and approval are blocked until the required supporting documents are available.
+                        @endif
+                    </p>
+                @endif
 
                 <div class="org-docs-table-wrap">
                     @if ($documentsLocked)
@@ -1921,7 +1948,7 @@
                                     <td style="text-align: right;">
                                         <button
                                             type="button"
-                                            class="doc-action-btn"
+                                            class="doc-action-btn app-view-action"
                                             data-document-preview
                                             data-document-preview-url="{{ $doc['url'] }}"
                                             data-document-preview-title="{{ $doc['name'] }}"
@@ -1929,9 +1956,9 @@
                                             data-document-original-name="{{ $doc['filename'] ?? $doc['name'] }}"
                                             data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
                                             data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"
-                                            aria-label="Preview {{ $doc['name'] }}"
+                                            aria-label="View {{ $doc['name'] }}"
                                         >
-                                            <i class="bi bi-eye-fill"></i> Preview
+                                            <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </button>
                                     </td>
                                 </tr>
@@ -2095,6 +2122,12 @@
 
     @else
         {{-- ============================ ACTIVITIES & PROPOSALS LIST VIEW ============================ --}}
+        @if ($pipelineContextActive ?? false)
+            <div class="org-pipeline-context" role="status">
+                <span>{{ $pipelineContext['college'] ?? 'All colleges' }} · {{ $pipelinePeriod ? implode(' · ', $pipelinePeriod) : 'All submission dates' }}</span>
+                <a href="{{ route('office.activities', array_filter(['organization' => $selectedOrganization ?? '', 'academic_year' => $selectedAcademicYear ?? ''])) }}">Clear dashboard filters</a>
+            </div>
+        @endif
         
         {{-- Controls Toolbar: Filter Pills, Search Bar & Grid/Table Switcher --}}
         <div class="org-controls-toolbar">
@@ -2119,6 +2152,9 @@
             <div class="org-toolbar-actions">
                 <form method="get" action="{{ route('office.activities') }}" class="org-organization-filter" aria-label="Proposal organization filter">
                     <input type="hidden" name="academic_year" value="{{ $selectedAcademicYear ?? '' }}">
+                    @foreach ($pipelineContext as $key => $value)
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endforeach
                     <label for="orgOrganizationFilter"><i class="bi bi-building"></i> Organization</label>
                     <select id="orgOrganizationFilter" name="organization" onchange="this.form.submit()">
                         <option value="">All Organizations</option>
@@ -2130,7 +2166,10 @@
 
                 <form method="get" action="{{ route('office.activities') }}" class="org-organization-filter" aria-label="Academic year filter">
                     <input type="hidden" name="organization" value="{{ $selectedOrganization ?? '' }}">
-                    <label for="orgAcademicYearFilter"><i class="bi bi-calendar2-range"></i> Year</label>
+                    @foreach ($pipelineContext as $key => $value)
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endforeach
+                    <label for="orgAcademicYearFilter"><i class="bi bi-calendar2-range"></i> Activity A.Y.</label>
                     <select id="orgAcademicYearFilter" name="academic_year" onchange="this.form.submit()">
                         <option value="">All Years</option>
                         @foreach (($activityAcademicYears ?? collect()) as $academicYear)
@@ -2138,6 +2177,21 @@
                         @endforeach
                     </select>
                 </form>
+
+                @unless ($isSo)
+                    <form method="get" action="{{ route('office.activities') }}" class="org-organization-filter" aria-label="Proposal college filter">
+                        @foreach (array_diff_key($pipelineQuery, ['college' => true]) as $key => $value)
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endforeach
+                        <label for="orgCollegeFilter"><i class="bi bi-buildings"></i> College</label>
+                        <select id="orgCollegeFilter" name="college" onchange="this.form.submit()">
+                            <option value="">All Colleges</option>
+                            @foreach (($pipelineColleges ?? []) as $college)
+                                <option value="{{ $college }}" @selected(($pipelineFilters['college'] ?? '') === $college)>{{ $college }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endunless
 
                 {{-- Live Search Input --}}
                 <div class="org-proposals-search-box">
@@ -2162,7 +2216,7 @@
         {{-- 1. GRID VIEW (Cards Grid) --}}
         <div class="org-activity-grid-container" id="orgActivityGrid">
             @foreach ($activities as $item)
-                <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" 
+                <a href="{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}"
                    class="org-grid-card org-item-element" 
                    data-category="{{ $item['filter_category'] }}"
                    data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
@@ -2197,8 +2251,8 @@
                             <i class="bi bi-file-earmark-text-fill" style="color: #8b1828;"></i>
                             {{ count($item['documents'] ?? []) }} Docs attached
                         </span>
-                        <span class="org-grid-action-link">
-                            View Details <i class="bi bi-arrow-right"></i>
+                        <span class="org-grid-action-link app-view-action">
+                            <i class="bi bi-eye" aria-hidden="true"></i> View
                         </span>
                     </div>
                 </a>
@@ -2222,7 +2276,7 @@
                     <tbody id="orgProposalsTableBody">
                         @foreach ($activities as $item)
                             <tr class="org-table-row org-item-element" 
-                                onclick="window.location.href='{{ route('office.activities', ['activity' => $item['slug']]) }}'"
+                                onclick="window.location.href='{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}'"
                                 data-category="{{ $item['filter_category'] }}"
                                 data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
                                 <td>
@@ -2239,7 +2293,7 @@
                                             @endif
                                         </div>
                                         <div class="org-table-title-wrap">
-                                            <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" class="org-table-main-title">
+                                            <a href="{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}" class="org-table-main-title">
                                                 {{ $item['title'] }}
                                             </a>
                                             <span class="org-table-sub-text">{{ $item['timestamp_note'] }}</span>
@@ -2272,8 +2326,8 @@
                                     </span>
                                 </td>
                                 <td style="text-align: right;">
-                                    <a href="{{ route('office.activities', ['activity' => $item['slug']]) }}" class="org-table-action-btn" onclick="event.stopPropagation();">
-                                        View Details <i class="bi bi-arrow-right"></i>
+                                    <a href="{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}" class="org-table-action-btn app-view-action" aria-label="View {{ $item['title'] }}" onclick="event.stopPropagation();">
+                                        <i class="bi bi-eye" aria-hidden="true"></i> View
                                     </a>
                                 </td>
                             </tr>
@@ -2358,39 +2412,26 @@
                     if (!paginationControls) return;
                     const totalPages = Math.max(1, Math.ceil(total / pageSize));
                     currentPage = Math.min(Math.max(currentPage, 1), totalPages);
-                    paginationControls.innerHTML = '';
-
+                    paginationControls.replaceChildren();
                     if (totalPages <= 1) return;
-
-                    const addButton = (label, page, disabled = false, active = false, aria = label) => {
+                    const addButton = (label, page, disabled) => {
                         const button = document.createElement('button');
                         button.type = 'button';
-                        button.className = `org-page-btn${active ? ' is-active' : ''}`;
-                        button.innerHTML = label;
+                        button.className = 'org-page-btn';
+                        button.textContent = label;
                         button.disabled = disabled;
-                        button.setAttribute('aria-label', aria);
-                        if (active) button.setAttribute('aria-current', 'page');
                         button.addEventListener('click', () => {
                             currentPage = page;
                             applyFilters(false);
                         });
                         paginationControls.appendChild(button);
                     };
-
-                    addButton('<i class="bi bi-chevron-left"></i>', currentPage - 1, currentPage === 1, false, 'Previous page');
-                    for (let page = 1; page <= totalPages; page += 1) {
-                        if (totalPages > 7 && page > 2 && page < totalPages - 1 && Math.abs(page - currentPage) > 1) {
-                            if (page === 3 || page === totalPages - 2) {
-                                const gap = document.createElement('span');
-                                gap.className = 'org-page-gap';
-                                gap.textContent = '…';
-                                paginationControls.appendChild(gap);
-                            }
-                            continue;
-                        }
-                        addButton(String(page), page, false, page === currentPage, `Page ${page}`);
-                    }
-                    addButton('<i class="bi bi-chevron-right"></i>', currentPage + 1, currentPage === totalPages, false, 'Next page');
+                    addButton('Previous', currentPage - 1, currentPage === 1);
+                    const position = document.createElement('span');
+                    position.setAttribute('aria-live', 'polite');
+                    position.textContent = `Page ${currentPage} of ${totalPages}`;
+                    paginationControls.appendChild(position);
+                    addButton('Next', currentPage + 1, currentPage === totalPages);
                 }
 
                 function applyFilters(resetPage = true) {

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CommunityPost;
 use App\Models\UserAccount;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\UsesLaragonDatabase;
@@ -27,6 +28,7 @@ class CommunityReportIssuesTest extends TestCase
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
         DB::connection('orgchain')->beginTransaction();
+        Carbon::setTestNow('2030-03-15 12:34:56');
         DB::connection('orgchain')->table('student_organizations')->insert([
             ['org_id' => 910001, 'org_name' => 'Synthetic Community Alpha', 'status' => 'active'],
             ['org_id' => 910002, 'org_name' => 'Synthetic Community Beta', 'status' => 'active'],
@@ -43,6 +45,7 @@ class CommunityReportIssuesTest extends TestCase
     {
         DB::connection('orgchain')->rollBack();
         DB::connection('mysql')->rollBack();
+        Carbon::setTestNow();
         parent::tearDown();
     }
 
@@ -149,5 +152,180 @@ class CommunityReportIssuesTest extends TestCase
         $post->forceFill(['likes_count' => 9, 'comments_count' => 8])->save();
         $this->actingAs($this->member, 'student')->getJson(route('portal.community.posts.likers', $post))
             ->assertOk()->assertJsonPath('likes_count', 0)->assertJsonPath('comments_count', 0)->assertJsonPath('likers', []);
+    }
+
+    public function test_feed_sorts_use_actual_relations_and_intersect_search_audience_and_period_filters(): void
+    {
+        $recent = $this->postRecord('feed-sort-intersection newest');
+        $recent->forceFill(['created_at' => now()->subHour(), 'likes_count' => 900, 'comments_count' => 800])->save();
+        $commented = $this->postRecord('feed-sort-intersection most comments');
+        $commented->forceFill(['created_at' => now()->subHours(2)])->save();
+        $liked = $this->postRecord('feed-sort-intersection most liked');
+        $liked->forceFill(['created_at' => now()->subHours(3)])->save();
+
+        $commented->comments()->createMany([
+            ['student_id' => $this->member->id, 'body' => 'First real comment'],
+            ['student_id' => $this->member->id, 'body' => 'Second real comment'],
+            ['student_id' => $this->author->id, 'body' => 'Third real comment'],
+        ]);
+        $liked->comments()->create(['student_id' => $this->member->id, 'body' => 'One real comment']);
+        $commented->likes()->create(['student_id' => $this->member->id, 'reaction' => 'like']);
+        $liked->likes()->createMany([
+            ['student_id' => $this->member->id, 'reaction' => 'love'],
+            ['student_id' => $this->author->id, 'reaction' => 'like'],
+        ]);
+
+        $this->postRecord('feed-sort-intersection private', 'org');
+        $this->postRecord('feed-sort-intersection department', 'department');
+        $this->postRecord('feed-sort-intersection too old')->forceFill(['created_at' => now()->subDays(7)->subSecond()])->save();
+        $this->postRecord('feed-sort-intersection future')->forceFill(['created_at' => now()->addSecond()])->save();
+        $this->postRecord('Unrelated public record');
+
+        $orders = [
+            'recent' => [$recent->id, $commented->id, $liked->id],
+            'top' => [$commented->id, $liked->id, $recent->id],
+            'popular' => [$liked->id, $commented->id, $recent->id],
+        ];
+        foreach ($orders as $sort => $expected) {
+            $response = $this->actingAs($this->outsider, 'student')->get(route('portal.community', [
+                'community_q' => 'feed-sort-intersection',
+                'community_audience' => 'public',
+                'community_period' => 'week',
+                'sort' => $sort,
+            ]))->assertOk();
+            $posts = $response->viewData('posts');
+            $this->assertSame($expected, $posts->pluck('id')->all());
+            $this->assertSame(3, $posts->total());
+            $this->assertSame($sort, $response->viewData('feedSort'));
+            $this->assertSame('public', $response->viewData('communityAudience'));
+            $this->assertSame('week', $response->viewData('communityPeriod'));
+            $byId = $posts->getCollection()->keyBy('id');
+            $this->assertSame(0, (int) $byId[$recent->id]->actual_likes_count);
+            $this->assertSame(0, (int) $byId[$recent->id]->actual_comments_count);
+            $this->assertSame(3, (int) $byId[$commented->id]->actual_comments_count);
+            $this->assertSame(1, (int) $byId[$commented->id]->actual_likes_count);
+            $this->assertSame(1, (int) $byId[$liked->id]->actual_comments_count);
+            $this->assertSame(2, (int) $byId[$liked->id]->actual_likes_count);
+        }
+    }
+
+    public function test_audience_filters_select_public_department_and_org_without_exposing_foreign_audiences(): void
+    {
+        $this->outsider->forceFill(['college' => 'Foreign Fixture College'])->save();
+        $public = $this->postRecord('feed-audience-fixture public');
+        $department = $this->postRecord('feed-audience-fixture department', 'department');
+        $organization = $this->postRecord('feed-audience-fixture organization', 'org');
+        $this->postRecord('feed-audience-fixture foreign organization', 'org')
+            ->forceFill(['student_id' => $this->outsider->id])->save();
+        $this->postRecord('feed-audience-fixture foreign department', 'department')
+            ->forceFill(['student_id' => $this->outsider->id])->save();
+
+        $expectedByAudience = [
+            'all' => [$organization->id, $department->id, $public->id],
+            'public' => [$public->id],
+            'department' => [$department->id],
+            'org' => [$organization->id],
+        ];
+        foreach ($expectedByAudience as $audience => $expected) {
+            $response = $this->actingAs($this->member, 'student')->get(route('portal.community', [
+                'community_q' => 'feed-audience-fixture',
+                'community_audience' => $audience,
+            ]))->assertOk();
+            $this->assertSame($expected, $response->viewData('posts')->pluck('id')->all());
+            $this->assertSame($audience, $response->viewData('communityAudience'));
+            $this->assertSame('all', $response->viewData('communityPeriod'));
+        }
+    }
+
+    public function test_audience_filters_preserve_owner_visibility_with_incomplete_profile_data(): void
+    {
+        $this->member->forceFill(['org_id' => null, 'college' => null])->save();
+        $ownOrg = $this->postRecord('feed-owner-fixture own organization', 'org');
+        $ownOrg->forceFill(['student_id' => $this->member->id])->save();
+        $ownDepartment = $this->postRecord('feed-owner-fixture own department', 'department');
+        $ownDepartment->forceFill(['student_id' => $this->member->id])->save();
+        $this->postRecord('feed-owner-fixture foreign organization', 'org');
+        $this->postRecord('feed-owner-fixture foreign department', 'department');
+
+        foreach (['org' => $ownOrg, 'department' => $ownDepartment] as $audience => $post) {
+            $response = $this->actingAs($this->member, 'student')->get(route('portal.community', [
+                'community_q' => 'feed-owner-fixture',
+                'community_audience' => $audience,
+            ]))->assertOk();
+            $this->assertSame([$post->id], $response->viewData('posts')->pluck('id')->all());
+        }
+    }
+
+    public function test_missing_and_unknown_feed_filters_normalize_to_all(): void
+    {
+        $public = $this->postRecord('feed-normalization-fixture public');
+        $organization = $this->postRecord('feed-normalization-fixture org', 'org');
+        foreach ([
+            [],
+            ['community_audience' => 'unknown', 'community_period' => 'year'],
+            ['community_audience' => ['public'], 'community_period' => ['day']],
+        ] as $filters) {
+            $response = $this->actingAs($this->member, 'student')->get(route('portal.community', [
+                'community_q' => 'feed-normalization-fixture',
+            ] + $filters))->assertOk();
+            $this->assertSame('all', $response->viewData('communityAudience'));
+            $this->assertSame('all', $response->viewData('communityPeriod'));
+            $this->assertSame([$organization->id, $public->id], $response->viewData('posts')->pluck('id')->all());
+        }
+    }
+
+    public function test_period_filters_use_rolling_days_and_exclude_future_creation_times(): void
+    {
+        foreach (['day' => 1, 'week' => 7, 'month' => 30] as $period => $days) {
+            $needle = 'feed-rolling-'.$period;
+            $boundary = now()->subDays($days);
+            $this->postRecord($needle.' outside')->forceFill(['created_at' => $boundary->copy()->subSecond()])->save();
+            $atBoundary = $this->postRecord($needle.' exact lower bound');
+            $atBoundary->forceFill(['created_at' => $boundary])->save();
+            $inside = $this->postRecord($needle.' just inside');
+            $inside->forceFill(['created_at' => $boundary->copy()->addSecond()])->save();
+            $atNow = $this->postRecord($needle.' exact upper bound');
+            $this->postRecord($needle.' future')->forceFill(['created_at' => now()->addSecond()])->save();
+
+            $response = $this->actingAs($this->member, 'student')->get(route('portal.community', [
+                'community_q' => $needle,
+                'community_period' => $period,
+            ]))->assertOk();
+            $this->assertSame([$atNow->id, $inside->id, $atBoundary->id], $response->viewData('posts')->pluck('id')->all());
+            $this->assertSame(3, $response->viewData('posts')->total());
+            $this->assertSame($period, $response->viewData('communityPeriod'));
+        }
+    }
+
+    public function test_feed_pagination_has_stable_ties_and_preserves_every_selected_filter(): void
+    {
+        $ids = [];
+        for ($index = 0; $index < 12; $index++) {
+            $post = $this->postRecord('feed-stable-pages public '.$index);
+            $ids[] = $post->id;
+            $this->postRecord('feed-stable-pages excluded organization '.$index, 'org');
+            $this->postRecord('Unrelated public '.$index);
+        }
+        $ids = array_reverse($ids);
+
+        foreach (['recent', 'top', 'popular'] as $sort) {
+            $filters = [
+                'community_q' => 'feed-stable-pages',
+                'community_audience' => 'public',
+                'community_period' => 'day',
+                'sort' => $sort,
+            ];
+            $first = $this->actingAs($this->member, 'student')->get(route('portal.community', $filters))->assertOk();
+            $posts = $first->viewData('posts');
+            $this->assertSame(12, $posts->total());
+            $this->assertSame(array_slice($ids, 0, 10), $posts->pluck('id')->all());
+            parse_str((string) parse_url($posts->url(2), PHP_URL_QUERY), $pageQuery);
+            foreach ($filters as $key => $value) {
+                $this->assertSame($value, $pageQuery[$key] ?? null);
+            }
+            $this->assertSame('2', $pageQuery['page'] ?? null);
+            $second = $this->get(route('portal.community', $filters + ['page' => 2]))->assertOk();
+            $this->assertSame(array_slice($ids, 10), $second->viewData('posts')->pluck('id')->all());
+        }
     }
 }

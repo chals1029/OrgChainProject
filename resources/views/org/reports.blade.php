@@ -158,7 +158,7 @@
                             <td>
                                 <button
                                     type="button"
-                                    class="org-btn org-btn-ghost org-btn-sm sr-details-btn"
+                                    class="sr-details-btn app-view-action" aria-label="View student feedback details"
                                     data-report-name="{{ $report->is_anonymous ? 'Anonymous' : ($report->author_name ?: 'Student') }}"
                                     data-report-college="{{ $report->college ?: '—' }}"
                                     data-report-program="{{ $report->program ?: '—' }}"
@@ -170,7 +170,7 @@
                                     data-report-reviewed="{{ $report->status === 'verified' ? 'Acknowledged'.($report->verified_at ? ' '.$report->verified_at->format('M j, Y g:i A') : '') : ($report->status === 'dismissed' ? 'Dismissed' : 'Not reviewed yet') }}"
                                     data-review-url="{{ route('office.student-reports.review', $report) }}"
                                     onclick="openStudentReportDetails(this)">
-                                    <i class="bi bi-eye"></i> View details
+                                    <i class="bi bi-eye" aria-hidden="true"></i> View
                                 </button>
                             </td>
                         </tr>
@@ -187,7 +187,7 @@
             </table>
         </div>
         @if (method_exists($reports, 'links'))
-            <div style="margin-top:1rem;">{{ $reports->links() }}</div>
+            <div style="margin-top:1rem;">{{ $reports->links('components.pagination') }}</div>
         @endif
     </section>
 

@@ -115,6 +115,35 @@ class OfficeSecurityBoundaryTest extends TestCase
         }
     }
 
+    public function test_notifications_follow_assigned_organization_and_review_stage_visibility(): void
+    {
+        $organization = $this->organization();
+        $own = $this->activity($organization);
+        $foreign = $this->activity($this->organization());
+        $early = $this->activity($organization);
+        $early->update(['workflow_status' => 'oso_review']);
+        foreach ([$own, $foreign, $early] as $activity) {
+            DB::connection('mysql')->table('activity_workflow_events')->insert([
+                'org_activity_id' => $activity->id, 'role' => 'oso', 'from_status' => 'oso_review',
+                'to_status' => 'sdo_review', 'created_at' => now()->subMinute(),
+            ]);
+        }
+        $future = $this->activity($organization);
+        DB::connection('mysql')->table('activity_workflow_events')->insert([
+            'org_activity_id' => $future->id, 'role' => 'oc', 'from_status' => 'oc_review',
+            'to_status' => 'oc_approved', 'created_at' => now()->addDay(),
+        ]);
+        $notifications = $this->actingAs($this->officer('so', $organization), 'office')
+            ->get('/office-desk/calendar')->assertOk()->viewData('officeNotifications');
+        $this->assertTrue($notifications->contains('url', route('office.activities', ['activity' => $own->id])));
+        $this->assertFalse($notifications->contains('url', route('office.activities', ['activity' => $foreign->id])));
+        $this->assertFalse($notifications->contains('url', route('office.activities', ['activity' => $future->id])));
+        $downstream = $this->actingAs($this->officer('oc'), 'office')
+            ->get('/office-desk/calendar')->assertOk()->viewData('officeNotifications');
+        $this->assertTrue($downstream->contains('url', route('office.activities', ['activity' => $own->id])));
+        $this->assertFalse($downstream->contains('url', route('office.activities', ['activity' => $early->id])));
+    }
+
     public function test_unassigned_and_inactive_organization_so_cannot_enter_or_export(): void
     {
         $organization = $this->organization();

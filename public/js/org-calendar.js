@@ -6,25 +6,12 @@
     let loading = false;
     let dayKey = null;
     let dayLabel = '';
-    const mobileView = window.matchMedia('(max-width: 540px)');
-
-    function syncViewControls() {
-        const mode = root.dataset.view === 'auto'
-            ? (mobileView.matches ? 'agenda' : 'month')
-            : root.dataset.view;
-        root.querySelectorAll('[data-cal-view]').forEach(link => {
-            if (link.dataset.calView === mode) link.setAttribute('aria-current', 'page');
-            else link.removeAttribute('aria-current');
-        });
-    }
 
     function initialize() {
         root = document.getElementById('orgCalendarRoot');
         if (!root) return;
         data = JSON.parse(root.querySelector('#orgCalendarData').textContent);
         dialog = root.querySelector('#orgCalendarDialog');
-        root.querySelector('input[name="view"]').value = root.dataset.view;
-        syncViewControls();
         dayKey = null;
         dayLabel = '';
     }
@@ -32,7 +19,7 @@
     function filterUrl(form) {
         const url = new URL(form.action, window.location.href);
         new FormData(form).forEach((value, key) => {
-            if (value !== '' && value !== 'all' && value !== 'auto') url.searchParams.set(key, value);
+            if (value !== '' && value !== 'all') url.searchParams.set(key, value);
         });
         return url;
     }
@@ -44,7 +31,6 @@
         let focusSelector = '#orgCalendarMonth';
         if (root.contains(focused)) {
             if (focused.name) focusSelector = `#orgCalendarFilters [name="${CSS.escape(focused.name)}"]`;
-            else if (focused.matches('[data-cal-view]')) focusSelector = `[data-cal-view="${focused.dataset.calView}"]`;
             else if (focused.matches('[data-cal-today]')) focusSelector = '[data-cal-today]';
             else if (focused.matches('.cal-nav[aria-label]')) focusSelector = `.cal-nav[aria-label="${CSS.escape(focused.getAttribute('aria-label'))}"]`;
         }
@@ -156,6 +142,15 @@
         navigate(filterUrl(event.target.form));
     });
 
+
+    const clearSearch = event => {
+        if (!root || !event.target.matches('#orgCalendarFilters input[name="q"]') || !root.contains(event.target)) return;
+        if (event.target.value === '' && new URL(window.location.href).searchParams.has('q')) {
+            navigate(filterUrl(event.target.form));
+        }
+    };
+    document.addEventListener('input', clearSearch);
+    document.addEventListener('search', clearSearch);
     document.addEventListener('click', event => {
         if (!root || !(event.target instanceof Element) || !root.contains(event.target)) return;
         const navigation = event.target.closest('[data-cal-nav]');
@@ -163,7 +158,6 @@
             if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
             const url = new URL(navigation.href, window.location.href);
-            url.searchParams.set('view', navigation.dataset.calView || root.dataset.view);
             navigate(url);
             return;
         }
@@ -207,6 +201,5 @@
     });
 
     window.addEventListener('popstate', () => window.location.reload());
-    mobileView.addEventListener('change', () => { if (root) syncViewControls(); });
     initialize();
 })();

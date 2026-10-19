@@ -1,202 +1,51 @@
 ---
-title: Quick Reference & Cheatsheet
-tags:
-  - cheatsheet
-  - reference
-  - credentials
-  - commands
+title: Quick Reference and Cheatsheet
+tags: [reference, commands, safety]
 created: 2026-08-20
+updated: 2026-10-16
 status: active
 ---
 
-# 📚 OrgChain Quick Reference & Cheatsheet
+# Quick Reference and Cheatsheet
 
-> [!tip] Developer Cheatsheet
-> Keep this document pinned for rapid access to test credentials, local route endpoints, Artisan commands, and system shortcuts.
+Start at [[Current System Guide]]. This is not a password/account list. Test/demo identities are not guaranteed to exist, and no account has a public default password.
 
----
+## Find the right guide
 
-## 🔑 All Logins & Screen Paths
+| Task | Reference |
+| --- | --- |
+| Student email-code or Google sign-in | [[Student Profile and Authentication]], [[6-Digit Email OTP Verification]] |
+| Office roles and access | [[Multi-Tier Office Roles SO OSO SDO OVCAA]] |
+| Exact current routes | [[Web and Portal Route Map]] |
+| Local ERD files and disconnected tables | [[Database Schema and ERD]] |
+| TOSA packet, Revision or evaluation | [[TOSA Application and Review Workflow]] |
+| Local prerequisites and database safety | [[Local Development Setup Laragon PHP 8.3]] |
+| Test isolation and mailbox-based OTP smoke | [[Testing and Quality Assurance Guide]] |
+| Recorded live deployment and health signals | [[VPS Pilot Deployment and Status]] |
 
-> Base URL (local): `http://127.0.0.1:8000`  
-> Updated: 2026-09-18
+## Safe local commands
 
-### 1. Student portal
+Run from the project root containing `artisan`, not on the VPS by accident:
 
-| Field | Value |
-| :---- | :---- |
-| **Login screen** | `/` (home → **Student Login** modal) or `/?login=1` |
-| **How to sign in** | SR Code + 6-digit email OTP, or Google (`/student/auth/google`) |
-| **After login** | `/portal` |
-
-| Demo SR Code | Name | Email |
-| :----------- | :--- | :---- |
-| `21-00001` | Demo Student One | `21-00001@g.batstate-u.edu.ph` |
-| `21-00002` | Demo Student Two | `21-00002@g.batstate-u.edu.ph` |
-
-**Student screens**
-- `/portal` — Home / overview (budget utilization + **on-chain budget seals**, activities)
-- `/portal/community` — Community feed
-
----
-
-### 2. Office desk (SO / OSO / SDO / OVCAA)
-
-| Field | Value |
-| :---- | :---- |
-| **Login screen** | `/orgchain-office-access-a9e2f71c4b83` |
-| **How to sign in** | BatStateU **email** + password (not username) |
-| **After login** | `/office-desk` |
-
-| Role      | Email                              | Password       |
-| :-------- | :--------------------------------- | :------------- |
-| **SO**    | `so.office@g.batstate-u.edu.ph`    | Privately provisioned |
-| **OSO**   | `oso.office@g.batstate-u.edu.ph`   | Privately provisioned |
-| **SDO**   | `sdo.office@g.batstate-u.edu.ph`   | Privately provisioned |
-| **OVCAA** | `ovcaa.office@g.batstate-u.edu.ph` | Privately provisioned |
-| OC        | oc.office@g.batstate-u.edu.ph      | Privately provisioned |
-|           |                                    |                |
-
-**Office screens after login**
-- `/office-desk` — Dashboard
-- `/office-desk/analytics` — Analytics
-- `/office-desk/activities` — Activities / proposals desk
-- `/office-desk/activities/create` — Create activity (SO): In-Campus / Local Off-Campus checklist, official template preview, budget, and uploads
-- `/office-desk/calendar` — Calendar
-- `/office-desk/budget-utilization` — Budget + receipt attachments + budget chain seals
-- `/office-desk/financial-report` — Financial report (SO / OSO)
-- `/office-desk/financial-report/print` — Printable financial report (SO / OSO)
-- `/office-desk/accomplishment-report` — Accomplishment report (SO / OSO)
-- `/office-desk/updates` — Updates / announcements
-- `/office-desk/renewal` — **Organization Renewal** (SO submit · OSO open/close) → [[Organization Renewal Filing Window]]
-- `/office-desk/archive` — Archive (OSO nav)
-- `/office-desk/tosa` — TOSA module (OSO nav)
-
-> [!note]
-> Login form requires `@g.batstate-u.edu.ph` or `@batstate-u.edu.ph`. Path comes from `.env` → `OFFICE_LOGIN_PATH`.
-> Renewal is **locked for SO** until OSO opens the filing window. SDO/OVCAA get **403** on `/office-desk/renewal`.
-> Semester AR/FR pages and staged-document links are also **SO/OSO only**. SDO and OVCAA stay focused on activity/SDG/final-approval review.
-
----
-
-### 3. Voting system
-
-| Who | Login screen | After login |
-| :-- | :----------- | :---------- |
-| **Voter (student)** | `/voting-system` → BatStateU Google | Ballot / vote flows under `/voting-system/...` |
-| **Voting Admin / Staff** | `/voting-system/ssc-access-c7b4f2e91a6d` | Admin dashboard (`/voting-system/admin/dashboard`) or Canvassing dashboard |
-
-| Side / Role | Name | Email | Password | Access & Auth Flow |
-| :--- | :--- | :---- | :------- | :----------------- |
-| **Admin Side** | Main Admin | `admin@ssc.test` | Privately provisioned | Full Admin Control Center (displays 6-digit code on-screen) |
-| **Admin Side** | SSC Election Admin | `ssc.admin@g.batstate-u.edu.ph` | Privately provisioned | Full Admin Control Center (displays 6-digit code on-screen) |
-| **Canvassing Side** | Canvassing Officer | `canvass@ssc.test` | Privately provisioned | Direct access to Canvassing Dashboard & Tally (no OTP) |
-| **Canvassing Side** | SSC Canvassing Desk | `ssc.canvass@g.batstate-u.edu.ph` | Privately provisioned | Direct access to Canvassing Dashboard & Tally (no OTP) |
-
-> [!note]
-> - **Canvassing side** signs in with Email + Password and bypasses OTP, redirecting directly to `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91`.
-> - **Admin side** enters Email + Password, then types the 6-digit verification code generated and displayed directly on the screen to reach `/voting-system/admin/dashboard`.
-
-**Voting screens**
-- `/voting-system` — Public voting home
-- `/voting-system/ssc-access-c7b4f2e91a6d` — Staff login (`ADMIN_LOGIN_PATH`)
-- `/voting-system/ssc-canvassing-dashboard-d8f3b72a4e91` — Canvassing dashboard
-- `/voting-system/ssc-canvassing-tally-73a6e2d4b8c9` — Live tally
-- `/voting-system/ssc-canvassing-reports-b61e7a42c9f8` — Canvassing reports
-- `/voting-system/admin/chain-verify` — VoteChain verification
-
----
-
-## 🌐 Key URL Routing Cheatsheet
-
-```text
-Home / Student Login:     http://127.0.0.1:8000/
-Student Portal:           http://127.0.0.1:8000/portal
-Student Community Feed:   http://127.0.0.1:8000/portal/community
-Office Secret Login:      http://127.0.0.1:8000/orgchain-office-access-a9e2f71c4b83
-Office Desk Dashboard:    http://127.0.0.1:8000/office-desk
-Budget Utilization:       http://127.0.0.1:8000/office-desk/budget-utilization
-Renewal (SO / OSO):       http://127.0.0.1:8000/office-desk/renewal
-Voting System Public:     http://127.0.0.1:8000/voting-system
-Voting System Admin:      http://127.0.0.1:8000/voting-system/ssc-access-c7b4f2e91a6d
-Canvassing Live Tally:    http://127.0.0.1:8000/voting-system/ssc-canvassing-tally-73a6e2d4b8c9
-Canvassing Reports:       http://127.0.0.1:8000/voting-system/ssc-canvassing-reports-b61e7a42c9f8
-Vote Chain Verification:  http://127.0.0.1:8000/voting-system/admin/chain-verify
-```
----
-
-## ⌨️ Essential Artisan & CLI Commands
-
-### 🔄 Database Reset & Seeding
 ```powershell
-# Run all migrations fresh and execute all seeders
-php artisan migrate:fresh --seed
-
-# Run individual seeders
-php artisan db:seed --class=OfficeUserSeeder
-php artisan db:seed --class=StudentPortalSeeder
-php artisan db:seed --class=OrgChainUserAccountsSeeder
-```
-
-### ⚡ Local Development Server
-```powershell
-# Start local PHP server on port 8000
-php -S 127.0.0.1:8000 -t public public/server-router.php
-
-# Or using standard Laravel Artisan
-php artisan serve --port=8000
-
-# Build frontend assets
+php --version
+node --version
+composer install
+npm ci
 npm run build
-npm run dev
+php -S 127.0.0.1:8000 -t public public/server-router.php
 ```
 
-### 🧪 Automated test DOCX report
-```powershell
-# ONE SHOT — backend + auth/OTP + page smoke + DOCX
-npm run test:all
-npm run test:all:open          # same, then open the Word report
-.\scripts\run-all-tests.bat    # Windows double-click / cmd
-.\scripts\run-all-tests.ps1 -Open
+Use the existing project's configuration; do not overwrite `.env` or regenerate an existing `APP_KEY`. Local development commonly uses `http://127.0.0.1:8000`; a Laragon virtual host can use another base URL.
 
-# Partial runs
-npm run test:report            # same suite without preflight banner
-npm run test:report:backend    # PHPUnit + DOCX only
-npm run test:report:auth       # PHPUnit + auth/OTP + DOCX
-npm run test:auth              # auth/OTP Playwright only
-npm run test:smoke             # page smoke only
-```
-Requires `php artisan serve --port=8000` for UI/auth. Set `EXPOSE_TEST_OTP=true` for student OTP verify.
-Backend PHPUnit also includes **DatabaseBackendTest** (live Laragon `votingsystem` + `orgchain` MySQL: connections, required tables, office roles, student OTP account, renewal CRUD, budget-chain dirs).
-Output: `storage/app/test-reports/OrgChain-Test-Report-LATEST.docx`
+## Before database or test commands
 
-### 🧹 System Cache Clearing
-```powershell
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-php artisan view:clear
-```
+- Confirm the selected connection names and whether configuration is cached.
+- Back up existing records and originals before authorized migrations or maintenance.
+- Never use a fresh/reset/seed command on a populated student or production database.
+- The schema-only SQL export is for reverse engineering; do not import it over an existing live database.
+- Database-backed tests need disposable schemas and private temporary storage. Some legacy helpers fall back to the project databases if isolation is omitted.
+- No `EXPOSE_TEST_OTP` shortcut is supported. Obtain actual test codes from the authorized institutional mailbox.
+- Do not run a blanket cache clear as a deployment ritual; invalidate only the cache affected by an authorized change.
 
-### 🧪 Test Execution
-```powershell
-php artisan test
-```
-
----
-
-## 📁 Key File System Locations
-
-| Component                 | Path                                    | Purpose                         |
-| :------------------------ | :-------------------------------------- | :------------------------------ |
-| **VoteChain Node 1**      | `storage/app/voting/chain/node-1/`      | JSONL Ledger for Node 1         |
-| **VoteChain Node 2**      | `storage/app/voting/chain/node-2/`      | JSONL Ledger for Node 2         |
-| **VoteChain Node 3**      | `storage/app/voting/chain/node-3/`      | JSONL Ledger for Node 3         |
-| **BudgetChain Nodes**     | `storage/app/orgchain/budget/node-{1,2,3}/` | Budget utilization JSONL seals |
-| **Renewal Uploads**       | `storage/app/public/renewal-documents/` | SO renewal packet files         |
-| **Uploaded Archive Docs** | `storage/app/public/archive_documents/` | Archived compliance files       |
-| **Expense Receipts**      | `storage/app/public/receipts/`          | Uploaded expense receipts       |
-| **Smoke Report**          | `storage/app/console-smoke-report.json` | Playwright console smoke output |
-| **Voting Mail Log**       | `storage/logs/voting-mail.log`          | Simulated SMTP email logs       |
-| **In-Campus Templates**   | `In Campus/`                            | Official MS Word docx templates |
-| **Off-Campus Templates**  | `Local Off Campus/`                     | Official CHED compliance docx   |
+See the detailed guides before running mutations. Native voting staff gates, Laravel office authentication and student email-code login are distinct flows; do not apply one flow's rules to another.

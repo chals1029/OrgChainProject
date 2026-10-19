@@ -13,7 +13,7 @@ status: active
 # 📝 Activity Proposal Approval Pipeline
 
 > [!info] Approval Pipeline
-> All student activities—whether academic seminars, outreach drives, or sports events—must pass through the server-side digital pipeline in [`InCampusActivitySubmission`](file:///c:/laragon/www/OrgChain/OrgChains/app/Models/InCampusActivitySubmission.php) and its linked `OrgActivity` record.
+> Activity submissions use `app/Models/InCampusActivitySubmission.php` and their linked `OrgActivity` records. SO organization ownership and the persisted review stage govern changes; a visible button does not grant permission.
 
 ---
 
@@ -61,16 +61,16 @@ The activity form now supports both filing types from the same route:
 - `in_campus` — BatStateU in-campus activity requirements.
 - `local_off_campus` — local off-campus / CHED compliance requirements.
 
-The selected type changes the visible checklist, official template links, document pack download, and conditional questions without a page reload. The allocated budget is required when an activity is saved, so the activity starts with a real budget baseline instead of a zero placeholder.
+The selected type changes the visible checklist, official template links, document pack and conditional questions. Select an activity from the organization's approved Attachment I: its title/reference are derived from that approved plan entry rather than typed independently. Allocated budget is required but may be ₱0; the server validates the submitted amount.
 
 ### Checklist submission behavior
 
-Current lifecycle update: [[Session Log 2026-09-21 Activity Budget Lifecycle]]. Submitted activities are locked for editing until returned; ended proposals cannot advance. OSO must confirm document review, SDO must save SDGs and assessment notes, OVCAA must endorse the verified package to OC, and only OC final approval checks/reserves organization funds. Historical statements about freely editing submitted/approved proposals no longer apply.
+Submitted activities are locked until returned; ended proposals cannot advance. OSO and SDO explicitly confirm document review. Every reviewing desk, including OVCAA and OC, validates the latest submitted packet and each required readable, non-empty private file inside the approval transaction. A complete older version cannot replace missing current evidence. Final OC approval also enforces the existing funding rules; a complete ₱0 proposal remains valid.
 
 1. **Save draft** stores the activity and any uploaded files already selected without requiring the final checklist files.
 2. **Submit for review** validates the required pre-activity uploads for the selected type.
-3. Conditional documents are required only when their condition is selected (for example medical, transport, tour operator, or external coordination).
-4. During-activity and after-activity records remain available for later upload and do not block the initial filing.
+3. The current official checklists require all ten in-campus files or all nine local off-campus files; the selected activity type determines the required slots.
+4. Missing, draft, unreadable or empty evidence blocks endorsement/final approval before workflow events, plan-verification metadata or budget reservations are written. Historical approval records are retained and visibly flag unavailable evidence instead of inventing documents or silently resetting approval.
 5. Submitted checklist rows are persisted in `activity_compliance_docs` with `pending` review status.
 
 ### Official document workflow
@@ -81,4 +81,6 @@ The OSO Updates page uses the same source-backed approach. Its official-template
 
 ### OSO document visibility rule (2026-09-21)
 
-The OSO review table treats the stored attachment as the source of truth. A compliance status row without a matching file in `InCampusActivitySubmission.attachments` is not shown as an uploaded document, which prevents seeded or orphan status rows from appearing as approved files. When an activity has multiple submission versions, OSO resolves the `submission_id` on the compliance row first and then searches older versions, so files from an earlier SO edit remain previewable. All preview and download links use the owning submission ID and are emitted only when the file exists on the public storage disk.
+The stored attachment is the source of truth: an orphan compliance-status row is not proof of an uploaded document. Review resolves the compliance row's owning submission and actual saved file, including retained earlier versions where applicable. Current uploads use private `local` storage, and authorized preview/download routes enforce role, organization and submission ownership before serving the original. Do not infer a public URL from a stored path.
+
+Related: [[Multi-Tier Office Roles SO OSO SDO OVCAA]], [[Office Portal API and Action Endpoints]] and [[VPS Pilot Deployment and Status]]. Current source: `OfficePortalController`, the activity form and attachment routes in `routes/web.php`. Dated session logs preserve earlier behavior and storage assumptions.

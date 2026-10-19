@@ -1,91 +1,38 @@
 ---
-title: Tech Stack & Dependencies
-tags:
-  - techstack
-  - dependencies
-  - php
-  - laravel
-  - composer
+title: Tech Stack and Dependencies
+tags: [techstack, dependencies, php, laravel, composer]
 created: 2026-08-20
+updated: 2026-10-16
 status: active
 ---
 
-# ⚙️ Tech Stack & Dependencies
+# Tech Stack and Dependencies
 
-> [!info] Technology Matrix
-> OrgChain is built upon modern, rock-solid, production-tested open-source technologies tailored for speed, reliability, and security.
+The values below are declared package constraints, not a promise that every machine runs the same installed patch release. `composer.lock` and `package-lock.json` record resolved dependencies; local CLI and deployed PHP-FPM can be different runtimes.
 
----
+## Application packages
 
-## 🛠️ Core Technology Stack
+| Dependency | Declared constraint | Use |
+| --- | --- | --- |
+| PHP | `^8.3` | Application runtime |
+| `laravel/framework` | `^13.8` | Routing, guards, ORM, views and services |
+| `laravel/tinker` | `^3.0` | Local console tooling |
+| `kornrunner/ethereum-offline-raw-tx` | `^0.9` | Ethereum-compatible transaction construction/signing dependency |
+| `phpoffice/phpspreadsheet` | `^5.10` | Spreadsheet handling and workbook exports |
+| `vite` | `^8.0.0` | Frontend bundling |
+| `laravel-vite-plugin` | `^3.1` | Laravel asset integration |
+| `tailwindcss`, `@tailwindcss/vite` | `^4.0.0` | CSS generation |
+| `playwright` | `^1.63.0` | Browser tooling |
+| `docx` | `^9.7.1` | Report-generation tooling |
 
-```mermaid
-graph LR
-    subgraph Frontend["Frontend Layer"]
-        BLADE["Laravel Blade Engine"]
-        TW["Tailwind CSS 3.x"]
-        ALP["Alpine.js (Interactivity)"]
-        VITE["Vite 6.x Bundler"]
-    end
+Source: `composer.json` and `package.json`. Use the Vite dependency's `engines` field in the lockfile when choosing Node; do not reuse the old Node 18/Vite 6/Tailwind 3 instructions.
 
-    subgraph Backend["Backend & Runtime"]
-        PHP["PHP 8.3.x (ZTS / CLI)"]
-        LARAVEL["Laravel Framework 13.x"]
-        PDO["Native PDO Database Layer"]
-        CRYPTO["PHP OpenSSL & Hash Core"]
-    end
+## Runtime services
 
-    subgraph Storage["Data & Ledgers"]
-        MYSQL["MySQL 8.0 / MariaDB 10.x"]
-        JSONL["Append-Only JSONL Multi-Node"]
-        LOCAL_DISK["Laravel Local Filesystem"]
-    end
+- Windows/Laragon local development uses the PHP 8.3 family in the existing setup note.
+- The last recorded Ubuntu VPS deployment uses PHP 8.5-FPM, MySQL 8.4, Nginx, Cloudflare Tunnel and Docker-managed Besu/conversion services. This documentation update did not query the VPS.
+- Dual-schema MySQL is the configured runtime database architecture. SQLite is used by some isolated tests; it is not evidence of full native-voting/platform compatibility.
+- Private document storage, self-hosted DOCX preview and browser PDF rendering complement the isolated legacy-Word converter. There is no in-app Word authoring/editor workflow.
+- Besu QBFT and the explicit file/JSONL driver are distinct modes. See [[High-Level Technical Architecture]].
 
-    Frontend --> Backend
-    Backend --> Storage
-```
-
----
-
-## 📦 Composer Packages & Requirements
-
-From [`composer.json`](file:///c:/laragon/www/OrgChain/OrgChains/composer.json):
-
-| Package | Version | Purpose |
-| :--- | :--- | :--- |
-| **`php`** | `^8.3` | Modern PHP engine with strict typing and JIT optimizations |
-| **`laravel/framework`** | `^13.8` | Core MVC framework, router, Eloquent ORM, and Blade |
-| **`laravel/tinker`** | `^3.0` | Interactive REPL shell for debugging and database querying |
-| **`web3p/ethereum-tx`** | `0.4.3` | Ethereum-compatible transaction signing used by the Besu chain integration |
-| **`phpunit/phpunit`** | `^12.5` | Unit and integration testing suite |
-| **`mockery/mockery`** | `^1.6` | Mock object framework for test isolation |
-| **`nunomaduro/collision`** | `^8.6` | CLI error rendering and debugging interface |
-| **`laravel/pint`** | `^1.27` | Code style linter and automatic PSR-12 formatter |
-
----
-
-## 🎨 Node & Frontend Dependencies
-
-From [`package.json`](file:///c:/laragon/www/OrgChain/OrgChains/package.json):
-
-| Package | Version | Purpose |
-| :--- | :--- | :--- |
-| **`vite`** | `^6.0` | Ultra-fast frontend development server and bundler |
-| **`laravel-vite-plugin`**| `^1.2` | Vite bridge for Laravel asset bundling |
-| **`tailwindcss`** | `^3.4` | Utility-first CSS framework for clean responsive UI |
-| **`postcss`** / **`autoprefixer`** | Latest | CSS post-processing and vendor prefixing |
-| **`concurrently`** | Latest | Runs server, queue worker, and Vite watchers in parallel |
-
-### 📝 Activity document strategy
-
-The activity form uses the official project DOCX files as the source of truth. Students preview supported DOCX files in the browser, download the original template when needed, complete it in Word or another compatible application, and upload the completed file through the checklist. There is no in-app editor or generated editor DOCX route.
-
----
-
-## 💻 Server Runtime Prerequisites
-
-To run OrgChain in local development or production:
-1. **PHP 8.3+** with extensions: `pdo_mysql`, `pdo_sqlite`, `openssl`, `mbstring`, `fileinfo`, `curl`, `gd`, `zip`.
-2. **Web Server**: Apache / Nginx / Built-in PHP Development Server (`public/server-router.php`).
-3. **Database**: MySQL 8.0+, MariaDB 10.4+, or SQLite 3.35+.
-4. **Node.js**: Node 18+ and NPM 9+.
+Use [[Local Development Setup Laragon PHP 8.3]] for safe local preparation and [[VPS Pilot Deployment and Status]] for the recorded deployment boundaries.

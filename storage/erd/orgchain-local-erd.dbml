@@ -1,0 +1,1127 @@
+// OrgChain LOCAL database structure. No records or credential values.
+// Only database-declared relationships are included.
+Project OrgChainLocal {
+  database_type: 'MySQL'
+}
+
+Table "votingsystem"."activity_compliance_docs" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_activity_id" "bigint unsigned" [null]
+  "submission_id" "bigint unsigned" [null]
+  "doc_key" "varchar(255)" [not null]
+  "title" "varchar(255)" [not null]
+  "status" "varchar(40)" [not null]
+  "returned_to" "varchar(40)" [null]
+  "remarks" "text" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_activity_id") [name: "activity_compliance_docs_org_activity_id_foreign"]
+    ("submission_id") [name: "activity_compliance_docs_submission_id_foreign"]
+  }
+}
+
+Table "votingsystem"."activity_registrations" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_activity_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "sr_code" "varchar(32)" [null]
+  "full_name" "varchar(255)" [null]
+  "year_level" "varchar(32)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_activity_id") [name: "activity_registrations_org_activity_id_index"]
+    ("org_activity_id", "student_id") [name: "activity_student_unique", unique]
+  }
+}
+
+Table "votingsystem"."activity_workflow_events" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_activity_id" "bigint unsigned" [not null]
+  "actor_id" "bigint unsigned" [null]
+  "actor_name" "varchar(255)" [null]
+  "role" "varchar(32)" [not null]
+  "from_status" "varchar(40)" [not null]
+  "to_status" "varchar(40)" [not null]
+  "notes" "text" [null]
+  "created_at" "timestamp" [not null]
+  indexes {
+    ("org_activity_id") [name: "activity_workflow_events_org_activity_id_foreign"]
+  }
+}
+
+Table "votingsystem"."admin_users" {
+  "id" "int" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "email" "varchar(255)" [not null]
+  "password_hash" "varchar(255)" [not null]
+  "role" "enum('admin','canvassing','view_only')" [not null]
+  "is_active" "tinyint(1)" [not null]
+  "created_at" "timestamp" [null]
+  indexes {
+    ("email") [name: "email", unique]
+  }
+}
+
+Table "votingsystem"."archive_documents" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "archive_folder_id" "bigint unsigned" [not null]
+  "name" "varchar(255)" [not null]
+  "original_name" "varchar(255)" [not null]
+  "file_path" "varchar(255)" [not null]
+  "file_disk" "varchar(32)" [not null]
+  "mime_type" "varchar(100)" [not null]
+  "file_size" "bigint unsigned" [not null]
+  "uploaded_by" "varchar(255)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("archive_folder_id") [name: "archive_documents_archive_folder_id_foreign"]
+  }
+}
+
+Table "votingsystem"."archive_folders" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "parent_id" "bigint unsigned" [null]
+  "name" "varchar(255)" [not null]
+  "organization_name" "varchar(255)" [not null]
+  "semester" "varchar(32)" [not null]
+  "color" "varchar(20)" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("parent_id") [name: "archive_folders_parent_id_foreign"]
+  }
+}
+
+Table "votingsystem"."audit_logs" {
+  "id" "int" [pk, not null, increment]
+  "user_id" "int" [null]
+  "actor_name" "varchar(255)" [not null]
+  "action" "varchar(255)" [not null]
+  "details" "text" [null]
+  "created_at" "datetime" [not null]
+  indexes {
+    ("created_at") [name: "idx_audit_logs_created"]
+    ("created_at") [name: "idx_audit_logs_created_at"]
+    ("user_id") [name: "user_id"]
+  }
+}
+
+Table "votingsystem"."budget_items" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "title" "varchar(255)" [not null]
+  "category" "varchar(255)" [not null]
+  "college" "varchar(255)" [null]
+  "organization_name" "varchar(255)" [null]
+  "allocated" "decimal(16,2)" [not null]
+  "utilized" "decimal(16,2)" [not null]
+  "fiscal_year" "varchar(16)" [not null]
+  "notes" "text" [null]
+  "supplier" "varchar(255)" [null]
+  "is_approved" "tinyint(1)" [not null]
+  "scope" "varchar(40)" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  "org_activity_id" "bigint unsigned" [null]
+  indexes {
+    ("org_activity_id") [name: "budget_items_org_activity_id_unique", unique]
+  }
+}
+
+Table "votingsystem"."cache" {
+  "key" "varchar(255)" [pk, not null]
+  "value" "mediumtext" [not null]
+  "expiration" "bigint" [not null]
+  indexes {
+    ("expiration") [name: "cache_expiration_index"]
+  }
+}
+
+Table "votingsystem"."cache_locks" {
+  "key" "varchar(255)" [pk, not null]
+  "owner" "varchar(255)" [not null]
+  "expiration" "bigint" [not null]
+  indexes {
+    ("expiration") [name: "cache_locks_expiration_index"]
+  }
+}
+
+Table "votingsystem"."candidates" {
+  "id" "int" [pk, not null, increment]
+  "position_id" "int" [not null]
+  "name" "varchar(255)" [not null]
+  "party" "varchar(255)" [null]
+  "image_path" "varchar(255)" [null]
+  "image_blob" "mediumblob" [null]
+  "image_mime" "varchar(100)" [null]
+  "sort_order" "int" [not null]
+  "created_at" "timestamp" [null]
+  indexes {
+    ("position_id", "sort_order") [name: "idx_candidates_position"]
+    ("position_id", "sort_order", "name") [name: "idx_candidates_position_sort"]
+    ("position_id") [name: "position_id"]
+  }
+}
+
+Table "votingsystem"."community_comments" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "post_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "body" "text" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("post_id") [name: "community_comments_post_id_foreign"]
+    ("student_id") [name: "community_comments_student_id_foreign"]
+  }
+}
+
+Table "votingsystem"."community_likes" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "post_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("post_id", "student_id") [name: "community_likes_post_id_student_id_unique", unique]
+    ("student_id") [name: "community_likes_student_id_foreign"]
+  }
+}
+
+Table "votingsystem"."community_posts" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "student_id" "bigint unsigned" [not null]
+  "activity_id" "bigint unsigned" [null]
+  "body" "text" [not null]
+  "image_path" "varchar(255)" [null]
+  "likes_count" "int unsigned" [not null]
+  "comments_count" "int unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("activity_id") [name: "community_posts_activity_id_foreign"]
+    ("student_id") [name: "community_posts_student_id_foreign"]
+  }
+}
+
+Table "votingsystem"."elections" {
+  "id" "int" [pk, not null, increment]
+  "title" "varchar(255)" [not null]
+  "status" "enum('pending','open','closed')" [not null]
+  "start_at" "datetime" [null]
+  "end_at" "datetime" [null]
+  "instructions" "text" [null]
+  "announcement" "text" [null]
+  "announcement_expires_at" "datetime" [null]
+  "created_at" "timestamp" [null]
+  "ballot_card_kicker" "varchar(255)" [null]
+  "ballot_card_heading" "varchar(512)" [null]
+  "ballot_card_body" "text" [null]
+  "ballot_card_image_path" "varchar(512)" [null]
+}
+
+Table "votingsystem"."expense_receipt_reviews" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "activity_title" "varchar(255)" [not null]
+  "item_name" "varchar(255)" [not null]
+  "supplier" "varchar(255)" [null]
+  "organization_name" "varchar(255)" [null]
+  "category" "varchar(255)" [null]
+  "quantity" "int unsigned" [not null]
+  "unit_cost" "decimal(12,2)" [not null]
+  "expense_date" "date" [not null]
+  "receipt_path" "varchar(255)" [not null]
+  "receipt_name" "varchar(255)" [not null]
+  "receipt_attachments" "json" [null]
+  "receipt_reference" "varchar(120)" [null]
+  "ocr_confidence" "tinyint unsigned" [null]
+  "ocr_quality" "varchar(40)" [null]
+  "chain_hash" "varchar(64)" [null]
+  "previous_hash" "varchar(64)" [null]
+  "nodes_confirmed" "tinyint unsigned" [not null]
+  "chain_driver" "varchar(32)" [null]
+  "chain_tx_hash" "varchar(66)" [null]
+  "chain_block_number" "bigint unsigned" [null]
+  "chain_contract_address" "varchar(42)" [null]
+  "student_confirmed" "tinyint(1)" [not null]
+  "verification_status" "varchar(24)" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  "org_activity_id" "bigint unsigned" [null]
+  "uploaded_by" "bigint unsigned" [null]
+  "request_key" "char(36)" [null]
+  "file_hash" "varchar(64)" [null]
+  "receipt_disk" "varchar(20)" [not null]
+  "receipt_scan_id" "char(36)" [null]
+  "receipt_type" "varchar(30)" [null]
+  "payment_method" "varchar(30)" [null]
+  "ocr_corrections" "json" [null]
+  indexes {
+    ("receipt_scan_id") [name: "expense_receipt_reviews_receipt_scan_id_foreign"]
+    ("request_key") [name: "expense_receipt_reviews_request_key_unique", unique]
+    ("org_activity_id", "file_hash") [name: "receipt_activity_file_index"]
+  }
+}
+
+Table "votingsystem"."failed_jobs" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "uuid" "varchar(255)" [not null]
+  "connection" "varchar(255)" [not null]
+  "queue" "varchar(255)" [not null]
+  "payload" "longtext" [not null]
+  "exception" "longtext" [not null]
+  "failed_at" "timestamp" [not null]
+  indexes {
+    ("connection", "queue", "failed_at") [name: "failed_jobs_connection_queue_failed_at_index"]
+    ("uuid") [name: "failed_jobs_uuid_unique", unique]
+  }
+}
+
+Table "votingsystem"."in_campus_activity_submissions" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_activity_id" "bigint unsigned" [null]
+  "status" "varchar(20)" [not null]
+  "workflow_status" "varchar(40)" [not null]
+  "returned_to" "varchar(40)" [null]
+  "activity_type" "varchar(30)" [not null]
+  "organization_name" "varchar(255)" [null]
+  "college" "varchar(255)" [null]
+  "rationale" "text" [null]
+  "objectives" "text" [null]
+  "participants" "text" [null]
+  "safety_plan" "text" [null]
+  "programme_html" "longtext" [null]
+  "project_proposal_html" "longtext" [null]
+  "budget_proposal_html" "longtext" [null]
+  "faculty_in_charge_html" "longtext" [null]
+  "medical_request_html" "longtext" [null]
+  "insurance_request_html" "longtext" [null]
+  "resolution_html" "longtext" [null]
+  "sample_letter_html" "longtext" [null]
+  "wpcf_html" "longtext" [null]
+  "approved_plan_html" "longtext" [null]
+  "class_schedule_html" "longtext" [null]
+  "meeting_minutes_html" "longtext" [null]
+  "off_campus_req_html" "longtext" [null]
+  "cert_compliance_html" "longtext" [null]
+  "ched_report_html" "longtext" [null]
+  "travel_matrix_html" "longtext" [null]
+  "passenger_matrix_html" "longtext" [null]
+  "course_activities_html" "longtext" [null]
+  "attachments" "json" [null]
+  "document_statuses" "json" [null]
+  "submitted_at" "timestamp" [null]
+  "sla_due_at" "timestamp" [null]
+  "reminder_sent_at" "timestamp" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_activity_id") [name: "in_campus_activity_submissions_org_activity_id_foreign"]
+  }
+}
+
+Table "votingsystem"."job_batches" {
+  "id" "varchar(255)" [pk, not null]
+  "name" "varchar(255)" [not null]
+  "total_jobs" "int" [not null]
+  "pending_jobs" "int" [not null]
+  "failed_jobs" "int" [not null]
+  "failed_job_ids" "longtext" [not null]
+  "options" "mediumtext" [null]
+  "cancelled_at" "int" [null]
+  "created_at" "int" [not null]
+  "finished_at" "int" [null]
+}
+
+Table "votingsystem"."jobs" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "queue" "varchar(255)" [not null]
+  "payload" "longtext" [not null]
+  "attempts" "smallint unsigned" [not null]
+  "reserved_at" "int unsigned" [null]
+  "available_at" "int unsigned" [not null]
+  "created_at" "int unsigned" [not null]
+  indexes {
+    ("queue") [name: "jobs_queue_index"]
+  }
+}
+
+Table "votingsystem"."migrations" {
+  "id" "int unsigned" [pk, not null, increment]
+  "migration" "varchar(255)" [not null]
+  "batch" "int" [not null]
+}
+
+Table "votingsystem"."office_announcements" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "title" "varchar(255)" [not null]
+  "type" "varchar(255)" [not null]
+  "body" "text" [not null]
+  "author" "varchar(255)" [not null]
+  "priority" "varchar(255)" [not null]
+  "attachment_path" "varchar(255)" [null]
+  "attachment_name" "varchar(255)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "votingsystem"."office_settings" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "scope" "varchar(32)" [not null]
+  "values" "json" [null]
+  "updated_by" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("scope") [name: "office_settings_scope_unique", unique]
+    ("updated_by") [name: "office_settings_updated_by_index"]
+  }
+}
+
+Table "votingsystem"."office_templates" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "category" "varchar(255)" [not null]
+  "format" "varchar(255)" [not null]
+  "size" "varchar(255)" [null]
+  "description" "text" [null]
+  "file_path" "varchar(255)" [null]
+  "original_name" "varchar(255)" [null]
+  "downloads" "int unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "votingsystem"."office_users" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "email" "varchar(255)" [not null]
+  "username" "varchar(64)" [not null]
+  "password" "varchar(255)" [not null]
+  "office_role" "varchar(16)" [not null]
+  "student_organization_id" "bigint unsigned" [null]
+  "office_title" "varchar(255)" [not null]
+  "employee_id" "varchar(80)" [null]
+  "tosa_clearance" "varchar(40)" [not null]
+  "is_active" "tinyint(1)" [not null]
+  "remember_token" "varchar(100)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  "must_change_password" "tinyint(1)" [not null]
+  "auth_version" "int unsigned" [not null]
+  indexes {
+    ("email") [name: "office_users_email_unique", unique]
+    ("student_organization_id") [name: "office_users_student_organization_id_foreign"]
+    ("username") [name: "office_users_username_unique", unique]
+  }
+}
+
+Table "votingsystem"."org_activities" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "title" "varchar(255)" [not null]
+  "description" "text" [null]
+  "status" "varchar(24)" [not null]
+  "workflow_status" "varchar(40)" [not null]
+  "returned_to" "varchar(40)" [null]
+  "activity_scope" "varchar(40)" [not null]
+  "sdg_goals" "json" [null]
+  "core_values" "json" [null]
+  "male_participants" "int unsigned" [not null]
+  "female_participants" "int unsigned" [not null]
+  "approved_budget" "decimal(16,2)" [not null]
+  "implemented_budget" "decimal(16,2)" [not null]
+  "location" "varchar(255)" [null]
+  "capacity" "int unsigned" [null]
+  "college" "varchar(255)" [null]
+  "organization_name" "varchar(255)" [null]
+  "program" "varchar(255)" [null]
+  "starts_at" "timestamp" [null]
+  "ends_at" "timestamp" [null]
+  "cover_image" "varchar(255)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  "opening_spent" "decimal(16,2)" [not null]
+  "org_fund_account_id" "bigint unsigned" [null]
+  "approved_at" "timestamp" [null]
+  "sdo_review_notes" "text" [null]
+  indexes {
+    ("org_fund_account_id") [name: "org_activities_org_fund_account_id_foreign"]
+  }
+}
+
+Table "votingsystem"."org_activity_accomplishments" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_activity_id" "bigint unsigned" [not null]
+  "organization_name" "varchar(255)" [not null]
+  "academic_year" "varchar(9)" [not null]
+  "semester" "varchar(32)" [not null]
+  "sponsor" "varchar(255)" [not null]
+  "brief_description" "longtext" [not null]
+  "objectives" "longtext" [not null]
+  "narrative" "longtext" [not null]
+  "people_involved" "longtext" [not null]
+  "problems_encountered" "longtext" [not null]
+  "recommendations" "longtext" [not null]
+  "male_participants" "int unsigned" [not null]
+  "female_participants" "int unsigned" [not null]
+  "signatories" "json" [not null]
+  "activity_snapshot" "json" [not null]
+  "financial_snapshot" "json" [not null]
+  "evidence" "json" [not null]
+  "created_by" "bigint unsigned" [null]
+  "updated_by" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("organization_name", "academic_year", "semester") [name: "accomplishment_period_index"]
+    ("org_activity_id") [name: "org_activity_accomplishments_org_activity_id_unique", unique]
+  }
+}
+
+Table "votingsystem"."org_cash_incomes" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_fund_account_id" "bigint unsigned" [not null]
+  "organization_name" "varchar(255)" [not null]
+  "org_activity_id" "bigint unsigned" [null]
+  "transaction_date" "date" [not null]
+  "amount" "decimal(16,2)" [not null]
+  "purpose" "varchar(255)" [not null]
+  "received_from" "varchar(255)" [not null]
+  "reference" "varchar(120)" [not null]
+  "request_key" "char(36)" [not null]
+  "recorded_by" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_fund_account_id", "transaction_date") [name: "org_cash_income_account_date"]
+    ("org_fund_account_id", "reference") [name: "org_cash_income_reference_unique", unique]
+    ("org_activity_id") [name: "org_cash_incomes_org_activity_id_foreign"]
+    ("request_key") [name: "org_cash_incomes_request_key_unique", unique]
+  }
+}
+
+Table "votingsystem"."org_fund_accounts" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "organization_name" "varchar(255)" [not null]
+  "college" "varchar(255)" [null]
+  "total_funds" "bigint unsigned" [not null]
+  "beginning_balance" "bigint unsigned" [not null]
+  "total_funds_received" "bigint unsigned" [not null]
+  "cash_opening_balance" "decimal(16,2)" [not null]
+  "fiscal_year" "varchar(16)" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("organization_name", "fiscal_year") [name: "org_fund_accounts_org_year_index"]
+  }
+}
+
+Table "votingsystem"."org_fund_sources" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_fund_account_id" "bigint unsigned" [not null]
+  "category" "varchar(255)" [not null]
+  "label" "varchar(255)" [not null]
+  "amount" "bigint unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_fund_account_id") [name: "org_fund_sources_org_fund_account_id_foreign"]
+  }
+}
+
+Table "votingsystem"."org_renewal_documents" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "submission_id" "bigint unsigned" [not null]
+  "doc_key" "varchar(80)" [not null]
+  "title" "varchar(255)" [not null]
+  "file_path" "varchar(255)" [not null]
+  "file_name" "varchar(255)" [not null]
+  "review_status" "varchar(20)" [not null]
+  "review_remarks" "text" [null]
+  "reviewed_at" "datetime" [null]
+  "reviewed_by" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("submission_id", "doc_key") [name: "renewal_submission_doc_unique", unique]
+  }
+}
+
+Table "votingsystem"."org_renewal_submissions" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "renewal_window_id" "bigint unsigned" [not null]
+  "organization_name" "varchar(255)" [not null]
+  "college" "varchar(255)" [null]
+  "submitted_by" "bigint unsigned" [null]
+  "adviser_name" "varchar(255)" [null]
+  "dean_name" "varchar(255)" [null]
+  "status" "varchar(40)" [not null]
+  "notes" "text" [null]
+  "review_remarks" "text" [null]
+  "reviewed_at" "timestamp" [null]
+  "submitted_at" "timestamp" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("renewal_window_id", "organization_name") [name: "renewal_window_org_unique", unique]
+  }
+}
+
+Table "votingsystem"."org_renewal_windows" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "academic_year" "varchar(32)" [not null]
+  "semester" "varchar(40)" [not null]
+  "is_open" "tinyint(1)" [not null]
+  "opens_at" "timestamp" [null]
+  "closes_at" "timestamp" [null]
+  "instructions" "text" [null]
+  "required_docs" "json" [null]
+  "opened_by" "bigint unsigned" [null]
+  "closed_by" "bigint unsigned" [null]
+  "notes" "text" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "votingsystem"."org_report_documents" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "org_report_status_id" "bigint unsigned" [not null]
+  "report_type" "varchar(20)" [not null]
+  "organization_name" "varchar(255)" [not null]
+  "semester" "varchar(32)" [not null]
+  "academic_year" "varchar(20)" [not null]
+  "name" "varchar(255)" [not null]
+  "original_name" "varchar(255)" [not null]
+  "file_path" "varchar(255)" [not null]
+  "mime_type" "varchar(100)" [not null]
+  "file_size" "bigint unsigned" [not null]
+  "financial_summary" "json" [null]
+  "accomplishment_summary" "json" [null]
+  "uploaded_by" "varchar(255)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("org_report_status_id") [name: "org_report_documents_org_report_status_id_foreign"]
+    ("report_type", "organization_name", "semester", "academic_year") [name: "org_report_documents_period_idx"]
+  }
+}
+
+Table "votingsystem"."org_report_statuses" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "batch_key" "varchar(64)" [null]
+  "report_type" "varchar(20)" [not null]
+  "organization_name" "varchar(255)" [null]
+  "college" "varchar(255)" [null]
+  "semester" "varchar(255)" [null]
+  "academic_year" "varchar(255)" [null]
+  "status" "varchar(40)" [not null]
+  "returned_to" "varchar(40)" [null]
+  "notes" "text" [null]
+  "submitted_at" "timestamp" [null]
+  "opened_at" "timestamp" [null]
+  "opened_by" "bigint unsigned" [null]
+  "reviewed_at" "timestamp" [null]
+  "reviewed_by" "bigint unsigned" [null]
+  "archived_at" "timestamp" [null]
+  "archive_folder_id" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("archive_folder_id") [name: "org_report_statuses_archive_folder_id_foreign"]
+    ("batch_key") [name: "org_report_statuses_batch_idx"]
+    ("report_type", "organization_name", "semester") [name: "org_report_statuses_period_idx"]
+  }
+}
+
+Table "votingsystem"."org_report_submission_windows" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "report_type" "varchar(2)" [not null]
+  "academic_year" "varchar(9)" [not null]
+  "semester" "varchar(32)" [not null]
+  "is_locked" "tinyint(1)" [not null]
+  "updated_by" "bigint unsigned" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("report_type", "academic_year", "semester") [name: "report_submission_window_period_unique", unique]
+  }
+}
+
+Table "votingsystem"."password_reset_tokens" {
+  "email" "varchar(255)" [pk, not null]
+  "token" "varchar(255)" [not null]
+  "created_at" "timestamp" [null]
+}
+
+Table "votingsystem"."positions" {
+  "id" "int" [pk, not null, increment]
+  "election_id" "int" [not null]
+  "title" "varchar(255)" [not null]
+  "description" "text" [null]
+  "selection_type" "enum('radio','checkbox')" [not null]
+  "max_choices" "int" [not null]
+  "sort_order" "int" [not null]
+  indexes {
+    ("election_id") [name: "election_id"]
+    ("election_id", "sort_order") [name: "idx_positions_election"]
+    ("election_id", "sort_order", "id") [name: "idx_positions_election_sort"]
+  }
+}
+
+Table "votingsystem"."rate_limit_hits" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "rl_key" "char(64)" [not null]
+  "hit_at" "int unsigned" [not null]
+  indexes {
+    ("hit_at") [name: "idx_rate_limit_hits_hit_at"]
+    ("rl_key", "hit_at") [name: "idx_rate_limit_hits_key_time"]
+  }
+}
+
+Table "votingsystem"."receipt_scans" {
+  "id" "char(36)" [pk, not null]
+  "uploaded_by" "bigint unsigned" [not null]
+  "file_hash" "varchar(64)" [not null]
+  "engine" "varchar(80)" [not null]
+  "raw_text" "text" [not null]
+  "extracted" "json" [not null]
+  "confidence" "tinyint unsigned" [not null]
+  "expires_at" "timestamp" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("expires_at") [name: "receipt_scans_expires_at_index"]
+    ("file_hash") [name: "receipt_scans_file_hash_index"]
+    ("uploaded_by") [name: "receipt_scans_uploaded_by_index"]
+  }
+}
+
+Table "votingsystem"."security_events" {
+  "id" "int" [pk, not null, increment]
+  "ip_address" "varchar(45)" [not null]
+  "user_agent" "varchar(512)" [null]
+  "method" "varchar(10)" [null]
+  "path" "varchar(255)" [not null]
+  "event_type" "varchar(100)" [not null]
+  "severity" "enum('low','medium','high','critical')" [not null]
+  "request_count" "int" [not null]
+  "details" "text" [null]
+  "created_at" "datetime" [not null]
+  indexes {
+    ("created_at") [name: "idx_security_events_created"]
+    ("ip_address", "created_at") [name: "idx_security_events_ip_created"]
+    ("event_type", "created_at") [name: "idx_security_events_type_created"]
+  }
+}
+
+Table "votingsystem"."sessions" {
+  "id" "varchar(255)" [pk, not null]
+  "user_id" "bigint unsigned" [null]
+  "ip_address" "varchar(45)" [null]
+  "user_agent" "text" [null]
+  "payload" "longtext" [not null]
+  "last_activity" "int" [not null]
+  indexes {
+    ("last_activity") [name: "sessions_last_activity_index"]
+    ("user_id") [name: "sessions_user_id_index"]
+  }
+}
+
+Table "votingsystem"."student_feedback" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "student_id" "bigint unsigned" [null]
+  "author_name" "varchar(255)" [null]
+  "college" "varchar(255)" [null]
+  "program" "varchar(255)" [null]
+  "topic" "varchar(255)" [not null]
+  "body" "text" [not null]
+  "is_anonymous" "tinyint(1)" [not null]
+  "visibility" "varchar(20)" [not null]
+  "status" "varchar(24)" [not null]
+  "review_note" "text" [null]
+  "verified_by" "bigint unsigned" [null]
+  "verified_at" "timestamp" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("student_id") [name: "student_feedback_student_id_foreign"]
+  }
+}
+
+Table "votingsystem"."student_organizations" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "short_name" "varchar(64)" [null]
+  "college" "varchar(255)" [null]
+  "academic_year" "varchar(16)" [not null]
+  "is_active" "tinyint(1)" [not null]
+  "is_qualified_for_renewal" "tinyint(1)" [not null]
+  "disqualification_reason" "varchar(500)" [null]
+  "status_updated_at" "timestamp" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("academic_year", "is_active") [name: "student_organizations_academic_year_is_active_index"]
+    ("name") [name: "student_organizations_name_unique", unique]
+  }
+}
+
+Table "votingsystem"."students" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "sr_code" "varchar(16)" [not null]
+  "name" "varchar(255)" [not null]
+  "email" "varchar(255)" [not null]
+  "password" "varchar(255)" [not null]
+  "college" "varchar(255)" [null]
+  "program" "varchar(255)" [null]
+  "year_level" "varchar(255)" [null]
+  "avatar_path" "varchar(255)" [null]
+  "is_active" "tinyint(1)" [not null]
+  "remember_token" "varchar(100)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("email") [name: "students_email_unique", unique]
+    ("sr_code") [name: "students_sr_code_unique", unique]
+  }
+}
+
+Table "votingsystem"."system_admin_audit_logs" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "system_admin_user_id" "bigint unsigned" [null]
+  "event" "varchar(100)" [not null]
+  "target" "varchar(190)" [null]
+  "details" "json" [null]
+  "ip_address" "varchar(64)" [null]
+  "user_agent" "text" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("event", "created_at") [name: "system_admin_audit_logs_event_created_at_index"]
+    ("system_admin_user_id") [name: "system_admin_audit_logs_system_admin_user_id_foreign"]
+  }
+}
+
+Table "votingsystem"."system_admin_users" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "email" "varchar(255)" [not null]
+  "username" "varchar(64)" [not null]
+  "password" "varchar(255)" [not null]
+  "role" "varchar(32)" [not null]
+  "is_active" "tinyint(1)" [not null]
+  "last_login_at" "timestamp" [null]
+  "remember_token" "varchar(100)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("email") [name: "system_admin_users_email_unique", unique]
+    ("username") [name: "system_admin_users_username_unique", unique]
+  }
+}
+
+Table "votingsystem"."tosa_applicants" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "full_name" "varchar(255)" [not null]
+  "email" "varchar(255)" [null]
+  "sr_code" "varchar(32)" [null]
+  "college" "varchar(255)" [null]
+  "program" "varchar(255)" [null]
+  "year_level" "varchar(255)" [null]
+  "gwa" "decimal(3,2)" [null]
+  "gwa_verified" "tinyint(1)" [not null]
+  "academic_year" "varchar(20)" [not null]
+  "organization_name" "varchar(255)" [null]
+  "subsection" "varchar(40)" [not null]
+  "status" "varchar(40)" [not null]
+  "requirements" "json" [null]
+  "remarks" "text" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "votingsystem"."users" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "name" "varchar(255)" [not null]
+  "email" "varchar(255)" [not null]
+  "email_verified_at" "timestamp" [null]
+  "password" "varchar(255)" [not null]
+  "remember_token" "varchar(100)" [null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("email") [name: "users_email_unique", unique]
+  }
+}
+
+Table "votingsystem"."vote_receipts" {
+  "id" "int" [pk, not null, increment]
+  "election_id" "int" [not null]
+  "voter_id" "int" [not null]
+  "reference_code" "varchar(255)" [not null]
+  "previous_hash" "varchar(64)" [null]
+  "block_hash" "varchar(64)" [null]
+  "ballot_root" "varchar(64)" [null]
+  "voter_commitment" "varchar(64)" [null]
+  "nodes_confirmed" "tinyint unsigned" [not null]
+  "node_confirmations" "json" [null]
+  "chain_driver" "varchar(32)" [null]
+  "chain_tx_hash" "varchar(66)" [null]
+  "chain_block_number" "bigint unsigned" [null]
+  "chain_contract_address" "varchar(42)" [null]
+  "created_at" "datetime" [not null]
+  indexes {
+    ("election_id") [name: "election_id"]
+    ("block_hash") [name: "idx_vote_receipts_block_hash"]
+    ("reference_code") [name: "reference_code", unique]
+    ("election_id", "voter_id") [name: "uniq_vote_receipts_election_voter", unique]
+    ("voter_id") [name: "voter_id"]
+  }
+}
+
+Table "votingsystem"."voters" {
+  "id" "int" [pk, not null, increment]
+  "sr_code" "varchar(100)" [not null]
+  "email" "varchar(255)" [not null]
+  "full_name" "varchar(255)" [not null]
+  "college" "varchar(255)" [not null]
+  "program" "varchar(255)" [null]
+  "year_level" "varchar(50)" [null]
+  "grade_level" "varchar(50)" [null]
+  "has_voted" "tinyint(1)" [not null]
+  "voted_at" "datetime" [null]
+  "created_at" "timestamp" [null]
+  indexes {
+    ("college") [name: "idx_voters_college"]
+    ("email") [name: "idx_voters_email"]
+    ("grade_level") [name: "idx_voters_grade_level"]
+    ("has_voted") [name: "idx_voters_has_voted"]
+    ("program") [name: "idx_voters_program"]
+    ("voted_at") [name: "idx_voters_voted_at"]
+    ("sr_code") [name: "sr_code", unique]
+  }
+}
+
+Table "votingsystem"."votes" {
+  "id" "int" [pk, not null, increment]
+  "election_id" "int" [not null]
+  "voter_id" "int" [not null]
+  "position_id" "int" [not null]
+  "candidate_id" "int" [not null]
+  "created_at" "datetime" [not null]
+  indexes {
+    ("candidate_id") [name: "candidate_id"]
+    ("election_id") [name: "election_id"]
+    ("candidate_id", "election_id") [name: "idx_votes_candidate_election"]
+    ("election_id", "candidate_id") [name: "idx_votes_election_candidate"]
+    ("position_id") [name: "position_id"]
+    ("election_id", "voter_id", "position_id", "candidate_id") [name: "uniq_votes_choice", unique]
+    ("voter_id") [name: "voter_id"]
+  }
+}
+
+Table "orgchain"."analytics_reports" {
+  "analytics_id" "int" [pk, not null]
+  "generated_by" "int" [null]
+  "report_name" "varchar(200)" [null]
+  "generated_date" "datetime" [null]
+  "summary_data" "text" [null]
+  indexes {
+    ("generated_by") [name: "generated_by"]
+  }
+}
+
+Table "orgchain"."approvals" {
+  "approval_id" "int" [pk, not null]
+  "proposal_id" "int" [null]
+  "approved_by" "int" [null]
+  "decision" "varchar(50)" [null]
+  "decision_date" "datetime" [null]
+  "remarks" "text" [null]
+  indexes {
+    ("approved_by") [name: "approved_by"]
+    ("proposal_id") [name: "proposal_id"]
+  }
+}
+
+Table "orgchain"."archived_reports" {
+  "archive_id" "int" [pk, not null]
+  "report_id" "int" [null]
+  "archived_date" "datetime" [null]
+  "archive_location" "varchar(255)" [null]
+  "archive_status" "varchar(50)" [null]
+  indexes {
+    ("report_id") [name: "report_id"]
+  }
+}
+
+Table "orgchain"."audit_trails" {
+  "audit_id" "int" [pk, not null]
+  "user_id" "int" [null]
+  "report_id" "int" [null]
+  "action_type" "varchar(150)" [null]
+  "hash_value" "varchar(255)" [null]
+  "timestamp" "datetime" [null]
+  indexes {
+    ("report_id") [name: "report_id"]
+    ("user_id") [name: "user_id"]
+  }
+}
+
+Table "orgchain"."community_comment_likes" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "comment_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("comment_id", "student_id") [name: "community_comment_likes_comment_id_student_id_unique", unique]
+  }
+}
+
+Table "orgchain"."community_comments" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "post_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "body" "text" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "orgchain"."community_likes" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "post_id" "bigint unsigned" [not null]
+  "student_id" "bigint unsigned" [not null]
+  "reaction" "varchar(20)" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+  indexes {
+    ("post_id", "student_id") [name: "community_likes_post_id_student_id_unique", unique]
+  }
+}
+
+Table "orgchain"."community_posts" {
+  "id" "bigint unsigned" [pk, not null, increment]
+  "student_id" "bigint unsigned" [not null]
+  "activity_id" "bigint unsigned" [null]
+  "body" "text" [not null]
+  "feeling" "varchar(100)" [null]
+  "tagged_users" "varchar(500)" [null]
+  "audience" "varchar(20)" [not null]
+  "image_path" "varchar(255)" [null]
+  "likes_count" "int unsigned" [not null]
+  "comments_count" "int unsigned" [not null]
+  "views_count" "int unsigned" [not null]
+  "created_at" "timestamp" [null]
+  "updated_at" "timestamp" [null]
+}
+
+Table "orgchain"."proposals" {
+  "proposal_id" "int" [pk, not null]
+  "org_id" "int" [null]
+  "submitted_by" "int" [null]
+  "proposal_title" "varchar(200)" [null]
+  "coa_reference" "varchar(100)" [null]
+  "description" "text" [null]
+  "date_submitted" "datetime" [null]
+  "status" "varchar(50)" [null]
+  indexes {
+    ("org_id") [name: "org_id"]
+    ("submitted_by") [name: "submitted_by"]
+  }
+}
+
+Table "orgchain"."reports" {
+  "report_id" "int" [pk, not null]
+  "org_id" "int" [null]
+  "proposal_id" "int" [null]
+  "submitted_by" "int" [null]
+  "report_type" "varchar(50)" [null]
+  "file_name" "varchar(255)" [null]
+  "file_path" "varchar(255)" [null]
+  "submitted_date" "datetime" [null]
+  "verification_status" "varchar(50)" [null]
+  "remarks" "text" [null]
+  indexes {
+    ("org_id") [name: "org_id"]
+    ("proposal_id") [name: "proposal_id"]
+    ("submitted_by") [name: "submitted_by"]
+  }
+}
+
+Table "orgchain"."student_organizations" {
+  "org_id" "int" [pk, not null]
+  "org_name" "varchar(150)" [null]
+  "adviser_name" "varchar(150)" [null]
+  "status" "varchar(50)" [null]
+  "created_at" "datetime" [null]
+}
+
+Table "orgchain"."user_accounts" {
+  "user_id" "int" [pk, not null]
+  "org_id" "int" [null]
+  "sr_code" "varchar(100)" [null]
+  "full_name" "varchar(150)" [null]
+  "college" "varchar(255)" [null]
+  "program" "varchar(255)" [null]
+  "year_level" "varchar(50)" [null]
+  "password_hash" "varchar(255)" [null]
+  "email" "varchar(150)" [null]
+  "role" "varchar(50)" [null]
+  "account_status" "varchar(50)" [null]
+  "remember_token" "varchar(100)" [null]
+  "created_at" "datetime" [null]
+  indexes {
+    ("org_id") [name: "org_id"]
+  }
+}
+
+Ref "votingsystem__activity_compliance_docs__activity_compliance_docs_org_activity_id_foreign": "votingsystem"."activity_compliance_docs"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: set null, update: no action]
+Ref "votingsystem__activity_compliance_docs__activity_compliance_docs_submission_id_foreign": "votingsystem"."activity_compliance_docs"."submission_id" > "votingsystem"."in_campus_activity_submissions"."id" [delete: set null, update: no action]
+Ref "votingsystem__activity_registrations__activity_registrations_org_activity_id_foreign": "votingsystem"."activity_registrations"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: cascade, update: no action]
+Ref "votingsystem__activity_workflow_events__activity_workflow_events_org_activity_id_foreign": "votingsystem"."activity_workflow_events"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: cascade, update: no action]
+Ref "votingsystem__archive_documents__archive_documents_archive_folder_id_foreign": "votingsystem"."archive_documents"."archive_folder_id" > "votingsystem"."archive_folders"."id" [delete: cascade, update: no action]
+Ref "votingsystem__archive_folders__archive_folders_parent_id_foreign": "votingsystem"."archive_folders"."parent_id" > "votingsystem"."archive_folders"."id" [delete: cascade, update: no action]
+Ref "votingsystem__audit_logs__audit_logs_ibfk_1": "votingsystem"."audit_logs"."user_id" > "votingsystem"."admin_users"."id" [delete: set null, update: no action]
+Ref "votingsystem__budget_items__budget_items_org_activity_id_foreign": "votingsystem"."budget_items"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: cascade, update: no action]
+Ref "votingsystem__candidates__candidates_ibfk_1": "votingsystem"."candidates"."position_id" > "votingsystem"."positions"."id" [delete: cascade, update: no action]
+Ref "votingsystem__community_comments__community_comments_post_id_foreign": "votingsystem"."community_comments"."post_id" > "votingsystem"."community_posts"."id" [delete: cascade, update: no action]
+Ref "votingsystem__community_comments__community_comments_student_id_foreign": "votingsystem"."community_comments"."student_id" > "votingsystem"."students"."id" [delete: cascade, update: no action]
+Ref "votingsystem__community_likes__community_likes_post_id_foreign": "votingsystem"."community_likes"."post_id" > "votingsystem"."community_posts"."id" [delete: cascade, update: no action]
+Ref "votingsystem__community_likes__community_likes_student_id_foreign": "votingsystem"."community_likes"."student_id" > "votingsystem"."students"."id" [delete: cascade, update: no action]
+Ref "votingsystem__community_posts__community_posts_activity_id_foreign": "votingsystem"."community_posts"."activity_id" > "votingsystem"."org_activities"."id" [delete: set null, update: no action]
+Ref "votingsystem__community_posts__community_posts_student_id_foreign": "votingsystem"."community_posts"."student_id" > "votingsystem"."students"."id" [delete: cascade, update: no action]
+Ref "votingsystem__expense_receipt_reviews__expense_receipt_reviews_org_activity_id_foreign": "votingsystem"."expense_receipt_reviews"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: restrict, update: no action]
+Ref "votingsystem__expense_receipt_reviews__expense_receipt_reviews_receipt_scan_id_foreign": "votingsystem"."expense_receipt_reviews"."receipt_scan_id" > "votingsystem"."receipt_scans"."id" [delete: set null, update: no action]
+Ref "votingsystem__in_campus_activity_submissions__in_campus_activity_submissions_org_activity_id_foreign": "votingsystem"."in_campus_activity_submissions"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: set null, update: no action]
+Ref "votingsystem__office_users__office_users_student_organization_id_foreign": "votingsystem"."office_users"."student_organization_id" > "votingsystem"."student_organizations"."id" [delete: set null, update: no action]
+Ref "votingsystem__org_activities__org_activities_org_fund_account_id_foreign": "votingsystem"."org_activities"."org_fund_account_id" > "votingsystem"."org_fund_accounts"."id" [delete: restrict, update: no action]
+Ref "votingsystem__org_cash_incomes__org_cash_incomes_org_activity_id_foreign": "votingsystem"."org_cash_incomes"."org_activity_id" > "votingsystem"."org_activities"."id" [delete: restrict, update: no action]
+Ref "votingsystem__org_cash_incomes__org_cash_incomes_org_fund_account_id_foreign": "votingsystem"."org_cash_incomes"."org_fund_account_id" > "votingsystem"."org_fund_accounts"."id" [delete: restrict, update: no action]
+Ref "votingsystem__org_fund_sources__org_fund_sources_org_fund_account_id_foreign": "votingsystem"."org_fund_sources"."org_fund_account_id" > "votingsystem"."org_fund_accounts"."id" [delete: cascade, update: no action]
+Ref "votingsystem__org_renewal_documents__org_renewal_documents_submission_id_foreign": "votingsystem"."org_renewal_documents"."submission_id" > "votingsystem"."org_renewal_submissions"."id" [delete: cascade, update: no action]
+Ref "votingsystem__org_renewal_submissions__org_renewal_submissions_renewal_window_id_foreign": "votingsystem"."org_renewal_submissions"."renewal_window_id" > "votingsystem"."org_renewal_windows"."id" [delete: cascade, update: no action]
+Ref "votingsystem__org_report_documents__org_report_documents_org_report_status_id_foreign": "votingsystem"."org_report_documents"."org_report_status_id" > "votingsystem"."org_report_statuses"."id" [delete: cascade, update: no action]
+Ref "votingsystem__org_report_statuses__org_report_statuses_archive_folder_id_foreign": "votingsystem"."org_report_statuses"."archive_folder_id" > "votingsystem"."archive_folders"."id" [delete: set null, update: no action]
+Ref "votingsystem__positions__positions_ibfk_1": "votingsystem"."positions"."election_id" > "votingsystem"."elections"."id" [delete: cascade, update: no action]
+Ref "votingsystem__system_admin_audit_logs__system_admin_audit_logs_system_admin_user_id_foreign": "votingsystem"."system_admin_audit_logs"."system_admin_user_id" > "votingsystem"."system_admin_users"."id" [delete: set null, update: no action]
+Ref "votingsystem__vote_receipts__vote_receipts_ibfk_1": "votingsystem"."vote_receipts"."election_id" > "votingsystem"."elections"."id" [delete: cascade, update: no action]
+Ref "votingsystem__vote_receipts__vote_receipts_ibfk_2": "votingsystem"."vote_receipts"."voter_id" > "votingsystem"."voters"."id" [delete: cascade, update: no action]
+Ref "votingsystem__votes__votes_ibfk_1": "votingsystem"."votes"."election_id" > "votingsystem"."elections"."id" [delete: cascade, update: no action]
+Ref "votingsystem__votes__votes_ibfk_2": "votingsystem"."votes"."voter_id" > "votingsystem"."voters"."id" [delete: cascade, update: no action]
+Ref "votingsystem__votes__votes_ibfk_3": "votingsystem"."votes"."position_id" > "votingsystem"."positions"."id" [delete: cascade, update: no action]
+Ref "votingsystem__votes__votes_ibfk_4": "votingsystem"."votes"."candidate_id" > "votingsystem"."candidates"."id" [delete: cascade, update: no action]
+Ref "orgchain__analytics_reports__analytics_reports_ibfk_1": "orgchain"."analytics_reports"."generated_by" > "orgchain"."user_accounts"."user_id" [delete: no action, update: no action]
+Ref "orgchain__approvals__approvals_ibfk_1": "orgchain"."approvals"."proposal_id" > "orgchain"."proposals"."proposal_id" [delete: no action, update: no action]
+Ref "orgchain__approvals__approvals_ibfk_2": "orgchain"."approvals"."approved_by" > "orgchain"."user_accounts"."user_id" [delete: no action, update: no action]
+Ref "orgchain__archived_reports__archived_reports_ibfk_1": "orgchain"."archived_reports"."report_id" > "orgchain"."reports"."report_id" [delete: no action, update: no action]
+Ref "orgchain__audit_trails__audit_trails_ibfk_1": "orgchain"."audit_trails"."user_id" > "orgchain"."user_accounts"."user_id" [delete: no action, update: no action]
+Ref "orgchain__audit_trails__audit_trails_ibfk_2": "orgchain"."audit_trails"."report_id" > "orgchain"."reports"."report_id" [delete: no action, update: no action]
+Ref "orgchain__proposals__proposals_ibfk_1": "orgchain"."proposals"."org_id" > "orgchain"."student_organizations"."org_id" [delete: no action, update: no action]
+Ref "orgchain__proposals__proposals_ibfk_2": "orgchain"."proposals"."submitted_by" > "orgchain"."user_accounts"."user_id" [delete: no action, update: no action]
+Ref "orgchain__reports__reports_ibfk_1": "orgchain"."reports"."org_id" > "orgchain"."student_organizations"."org_id" [delete: no action, update: no action]
+Ref "orgchain__reports__reports_ibfk_2": "orgchain"."reports"."proposal_id" > "orgchain"."proposals"."proposal_id" [delete: no action, update: no action]
+Ref "orgchain__reports__reports_ibfk_3": "orgchain"."reports"."submitted_by" > "orgchain"."user_accounts"."user_id" [delete: no action, update: no action]
+Ref "orgchain__user_accounts__user_accounts_ibfk_1": "orgchain"."user_accounts"."org_id" > "orgchain"."student_organizations"."org_id" [delete: no action, update: no action]

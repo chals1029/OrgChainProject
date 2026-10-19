@@ -449,8 +449,7 @@
             cursor: pointer;
         }
 
-        .org-report-page-btn:hover:not(:disabled),
-        .org-report-page-btn.is-active {
+        .org-report-page-btn:hover:not(:disabled) {
             background: #7a1222;
             border-color: #7a1222;
             color: #ffffff;
@@ -720,15 +719,9 @@
             const end = Math.min(safePage * pageSize, total);
             info.innerHTML = `Showing <strong>${start}</strong> to <strong>${end}</strong> of <strong>${total}</strong> ${label}`;
 
-            let html = `<button type="button" class="org-report-page-btn" ${safePage === 1 ? 'disabled' : ''} onclick="${handler}(${safePage - 1})" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>`;
-            for (let p = 1; p <= totalPages; p += 1) {
-                if (totalPages <= 7 || p === 1 || p === totalPages || (p >= safePage - 1 && p <= safePage + 1)) {
-                    html += `<button type="button" class="org-report-page-btn ${p === safePage ? 'is-active' : ''}" onclick="${handler}(${p})" aria-label="Page ${p}" ${p === safePage ? 'aria-current="page"' : ''}>${p}</button>`;
-                } else if (p === safePage - 2 || p === safePage + 2) {
-                    html += '<span aria-hidden="true">&hellip;</span>';
-                }
-            }
-            html += `<button type="button" class="org-report-page-btn" ${safePage === totalPages ? 'disabled' : ''} onclick="${handler}(${safePage + 1})" aria-label="Next page"><i class="bi bi-chevron-right"></i></button>`;
+            const html = `<button type="button" class="org-report-page-btn" ${safePage === 1 ? 'disabled' : ''} onclick="${handler}(${safePage - 1})">Previous</button>
+                <span aria-live="polite">Page ${safePage} of ${totalPages}</span>
+                <button type="button" class="org-report-page-btn" ${safePage === totalPages ? 'disabled' : ''} onclick="${handler}(${safePage + 1})">Next</button>`;
             bar.style.display = 'flex';
             nav.innerHTML = html;
         }
@@ -884,11 +877,11 @@
                         </div>
                     </div>
                     ${doc.url
-                        ? `<a href="${escFinancial(doc.url)}" target="_blank" rel="noopener" class="org-doc-btn" title="View Document" style="text-decoration:none;display:inline-flex;">
-                            <i class="bi bi-eye-fill"></i>
+                        ? `<a href="${escFinancial(doc.url)}" target="_blank" rel="noopener" class="org-doc-btn app-view-action" aria-label="View ${escFinancial(doc.name)}">
+                            <i class="bi bi-eye" aria-hidden="true"></i> View
                            </a>`
-                        : `<span class="org-doc-btn" style="opacity:.4;" title="No file on record">
-                            <i class="bi bi-eye-slash"></i>
+                        : `<span class="org-doc-btn app-view-action" aria-disabled="true" title="No file on record">
+                            <i class="bi bi-eye" aria-hidden="true"></i> View
                            </span>`}
                 `;
                 grid.appendChild(card);

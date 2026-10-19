@@ -221,10 +221,10 @@
                                 <td><div class="tosa-actions">
                                     @if ($template)
                                         @if ($reference['key'] === 'computation')
-                                            <a class="org-btn org-btn-ghost org-btn-sm" href="{{ route('office.tosa.workbook.reference') }}" target="_blank" rel="noopener">View reference workbook</a>
+                                            <a class="app-view-action" href="{{ route('office.tosa.workbook.reference') }}" target="_blank" rel="noopener" aria-label="View reference workbook"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                                         @endif
                                         @if ($template['format'] === 'PDF')
-                                            <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="openTemplatePreview('{{ $template['id'] }}')">Preview PDF</button>
+                                            <button type="button" class="app-view-action" aria-label="View {{ $reference['title'] }}" onclick="openTemplatePreview('{{ $template['id'] }}')"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                         @endif
                                         <a class="org-btn org-btn-ghost org-btn-sm" href="{{ $template['url'] }}?download=1">Download {{ $template['format'] }}</a>
                                     @endif
@@ -297,7 +297,7 @@
                     <p class="tosa-note" id="tosaScoringBusy" role="status" hidden>A review or scoring save is in progress. You may inspect dossiers; editing is temporarily disabled until the server responds.</p>
                     <div id="tosaScoreSummary" aria-live="polite"></div>
                     <div class="tosa-actions" id="tosaScoreWorkbookLinks" hidden>
-                        <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookPreview" target="_blank" rel="noopener">View computed workbook</a>
+                        <a class="app-view-action" id="tosaScoreWorkbookPreview" target="_blank" rel="noopener" aria-label="View computed workbook"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                         <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookDownload">Download computed XLSX</a>
                     </div>
                     <form id="tosaScoringForm" method="post">
@@ -499,7 +499,7 @@
         function documentItems(documents) {
             return documents.map(doc => `<div class="tosa-doc-item">
                 <div><span class="tosa-name">${escapeHtml(doc.title)}</span><span class="tosa-secondary">${escapeHtml(doc.name || '')} · ${escapeHtml(doc.type)}</span></div>
-                ${doc.url ? `<div class="tosa-actions">${['PDF', 'PNG', 'JPG', 'JPEG'].includes(doc.type) ? `<button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="viewTosaDocPreview('${escapeHtml(doc.key)}')">Preview</button>` : ''}<a class="org-btn org-btn-ghost org-btn-sm" href="${escapeHtml(downloadUrl(doc.url))}">Download</a></div>` : '<span class="tosa-error">Document unavailable.</span>'}
+                ${doc.url ? `<div class="tosa-actions">${['PDF', 'PNG', 'JPG', 'JPEG'].includes(doc.type) ? `<button type="button" class="app-view-action" aria-label="View ${escapeHtml(doc.title)}" onclick="viewTosaDocPreview('${escapeHtml(doc.key)}')"><i class="bi bi-eye" aria-hidden="true"></i> View</button>` : ''}<a class="org-btn org-btn-ghost org-btn-sm" href="${escapeHtml(downloadUrl(doc.url))}">Download</a></div>` : '<span class="tosa-error">Document unavailable.</span>'}
             </div>`).join('');
         }
 

@@ -84,6 +84,7 @@ class OfficePortalController extends Controller
             'office' => $office,
             'brand' => $brand,
             'officeSettings' => $officeSettings,
+            'officeNotifications' => $this->officeNotifications($office),
             'officeUsers' => $isOso
                 ? OfficeUser::query()->with('studentOrganization')->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
                 : collect(),
@@ -96,6 +97,34 @@ class OfficePortalController extends Controller
                 'reports_pending' => StudentFeedback::query()->where('status', 'pending')->count(),
             ],
         ];
+    }
+
+    private function officeNotifications(OfficeUser $office): Collection
+    {
+        $workflow = app(OrgWorkflowService::class);
+        $activities = $this->constrainToOfficeOrganization(OrgActivity::query())
+            ->get(['id', 'title', 'workflow_status'])
+            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails($office->office_role, $activity->workflow_status ?: 'created'))
+            ->keyBy('id');
+        $updates = DB::connection('mysql')->table('activity_workflow_events')
+            ->whereIn('org_activity_id', $activities->keys())
+            ->where('created_at', '<=', now())->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get()
+            ->map(fn ($event): array => [
+                'title' => $activities[$event->org_activity_id]->title,
+                'detail' => $workflow->label($event->to_status),
+                'url' => route('office.activities', ['activity' => $event->org_activity_id]),
+                'at' => Carbon::parse($event->created_at),
+            ]);
+        $announcements = OfficeAnnouncement::query()->where('created_at', '<=', now())
+            ->latest()->orderByDesc('id')->limit(10)->get()
+            ->map(fn (OfficeAnnouncement $announcement): array => [
+                'title' => $announcement->title,
+                'detail' => 'Announcement',
+                'url' => route('office.updates', ['announcement' => $announcement->id]),
+                'at' => $announcement->created_at,
+            ]);
+
+        return $updates->concat($announcements)->sortByDesc('at')->take(10)->values();
     }
 
     /**
@@ -688,6 +717,10 @@ class OfficePortalController extends Controller
 
         $normalized = preg_replace('/[^a-z0-9]+/', ' ', strtolower($display)) ?? '';
         $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? '');
+        $abbreviations = ['cabeihm' => 'CABEIHM', 'cas' => 'CAS', 'ccje' => 'CCJE', 'chs' => 'CHS', 'cics' => 'CICS', 'cte' => 'CTE'];
+        if (isset($abbreviations[$normalized])) {
+            return $abbreviations[$normalized];
+        }
 
         if (str_contains($normalized, 'accountancy')
             || str_contains($normalized, 'international hospitality management')) {
@@ -1087,9 +1120,33 @@ class OfficePortalController extends Controller
 
     public function activities(Request $request): View
     {
-        $organization = trim((string) $request->query('organization', ''));
+        $organization = $this->organizationFilterForOffice($request->query('organization'));
         $academicYear = trim((string) $request->query('academic_year', ''));
-        $allActivities = $this->orgActivitiesList($organization, $academicYear);
+        $officeRole = Auth::guard('office')->user()?->office_role ?? '';
+        $collegeMap = StudentOrganization::query()->pluck('college', 'name');
+        $pipelineColleges = $this->constrainToOfficeOrganization(OrgActivity::query())
+            ->get(['college', 'organization_name', 'workflow_status'])
+            ->filter(fn (OrgActivity $activity): bool => app(OrgWorkflowService::class)
+                ->canViewActivityDetails($officeRole, $activity->workflow_status ?: 'created'))
+            ->map(fn (OrgActivity $activity): string => $this->departmentLabel(
+                $activity->college ?: $collegeMap->get($activity->organization_name),
+            ))->unique()->sort()->values()->all();
+        $validated = $request->validate([
+            'college' => ['nullable', 'string', Rule::in($pipelineColleges)],
+            'submission_year' => ['sometimes', 'required', 'regex:/^(all|[1-9]\d{3})$/'],
+            'submission_semester' => ['sometimes', 'required', Rule::in(['all', 'sem1', 'sem2', 'midyear'])],
+            'submission_month' => ['sometimes', 'required', Rule::in(['all', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])],
+            'activity_scope' => ['sometimes', 'required', Rule::in(['all', 'in-campus', 'off-campus'])],
+        ]);
+        $pipelineFilters = [
+            'college' => $validated['college'] ?? '',
+            'submission_year' => $validated['submission_year'] ?? 'all',
+            'submission_semester' => $validated['submission_semester'] ?? 'all',
+            'submission_month' => $validated['submission_month'] ?? 'all',
+            'activity_scope' => $validated['activity_scope'] ?? 'all',
+        ];
+        $pipelineContextActive = $request->hasAny(array_keys($pipelineFilters));
+        $allActivities = $this->orgActivitiesList($organization, $academicYear, $pipelineFilters);
         $activityAcademicYears = collect($this->activityAcademicYearOptions($organization))
             ->merge(collect($allActivities)->pluck('academic_year'))
             ->filter()
@@ -1116,6 +1173,9 @@ class OfficePortalController extends Controller
             'selectedOrganization' => $organization,
             'activityAcademicYears' => $activityAcademicYears,
             'selectedAcademicYear' => $academicYear,
+            'pipelineFilters' => $pipelineFilters,
+            'pipelineColleges' => $pipelineColleges,
+            'pipelineContextActive' => $pipelineContextActive,
             'forApprovalCount' => collect($allActivities)->where('filter_category', 'for_approval')->count(),
             'approvedCount' => collect($allActivities)->where('filter_category', 'approved')->count(),
             'inReviewCount' => collect($allActivities)->where('filter_category', 'in_review')->count(),
@@ -1630,7 +1690,6 @@ class OfficePortalController extends Controller
             'scope' => $choice('scope', ['all', 'in', 'off'], 'all'),
             'status' => $choice('status', ['all', 'pending', 'approved', 'completed', 'returned'], 'all'),
             'timing' => $choice('timing', ['all', 'upcoming', 'ongoing', 'past'], 'all'),
-            'view' => $choice('view', ['auto', 'month', 'agenda'], 'auto'),
         ];
         $workflow = app(OrgWorkflowService::class);
         $role = Auth::guard('office')->user()?->office_role ?? '';
@@ -1735,7 +1794,7 @@ class OfficePortalController extends Controller
             'todayKey' => $now->toDateString(),
             'todayMonth' => $now->format('Y-m'),
             'days' => $days,
-            'agendaDays' => collect($days)->filter(fn (array $day): bool => $day['inMonth'] && count($day['events']))->values(),
+            'monthHasEvents' => collect($days)->contains(fn (array $day): bool => $day['inMonth'] && count($day['events']) > 0),
             'events' => $events,
             'eventsByDate' => $eventsByDate,
             'upcomingEvents' => $events->where('timing_key', 'upcoming')->values(),
@@ -4527,7 +4586,7 @@ class OfficePortalController extends Controller
             ->all();
     }
 
-    private function orgActivitiesList(?string $organization = null, ?string $academicYear = null): array
+    private function orgActivitiesList(?string $organization = null, ?string $academicYear = null, array $pipelineFilters = []): array
     {
         $workflow = app(OrgWorkflowService::class);
         $officeRole = Auth::guard('office')->user()?->office_role ?? '';
@@ -4549,44 +4608,35 @@ class OfficePortalController extends Controller
             ->when($yearBounds !== null, fn ($q) => $q->whereBetween('starts_at', $yearBounds))
             ->orderByDesc('starts_at')
             ->get();
+        $collegeMap = StudentOrganization::query()->pluck('college', 'name');
+        $db = $db->filter(function (OrgActivity $activity) use ($pipelineFilters, $collegeMap, $workflow, $officeRole): bool {
+            if (! $workflow->canViewActivityDetails($officeRole, $activity->workflow_status ?: 'created')) {
+                return false;
+            }
+            $college = $this->departmentLabel($activity->college ?: $collegeMap->get($activity->organization_name));
+            $scope = str_contains(strtolower((string) $activity->activity_scope), 'off') ? 'off-campus' : 'in-campus';
+            $period = $this->reportingPeriod($activity->created_at);
+
+            return (($pipelineFilters['college'] ?? '') === '' || $pipelineFilters['college'] === $college)
+                && (($pipelineFilters['activity_scope'] ?? 'all') === 'all' || $pipelineFilters['activity_scope'] === $scope)
+                && (($pipelineFilters['submission_year'] ?? 'all') === 'all' || (int) $pipelineFilters['submission_year'] === $period['year'])
+                && (($pipelineFilters['submission_semester'] ?? 'all') === 'all' || $pipelineFilters['submission_semester'] === $period['sem'])
+                && (($pipelineFilters['submission_month'] ?? 'all') === 'all' || $pipelineFilters['submission_month'] === $period['mon']);
+        });
 
         if ($db->isEmpty()) {
-            if ($organization !== '' || $yearBounds !== null) {
-                return [];
-            }
-
-            $demo = collect($this->demoOrgActivitiesList())
-                ->filter(fn (array $activity): bool => $workflow->canViewActivityDetails(
-                    $officeRole,
-                    (string) ($activity['status_key'] ?? 'created'),
-                ))
-                ->map(function (array $activity) use ($workflow, $officeRole): array {
-                    $statusKey = (string) ($activity['status_key'] ?? 'created');
-                    $canViewDocuments = $workflow->canViewActivityDocuments($officeRole, $statusKey);
-                    $reviewDeskRole = in_array($officeRole, ['oso', 'sdo', 'ovcaa', 'oc'], true);
-
-                    $activity['documents'] = $canViewDocuments ? ($activity['documents'] ?? []) : [];
-                    $activity['documents_locked'] = $reviewDeskRole && ! $canViewDocuments;
-                    $activity['documents_lock_message'] = $activity['documents_locked']
-                        ? $this->activityDocumentLockMessage($officeRole)
-                        : null;
-
-                    return $activity;
-                });
-
-            return $organization !== ''
-                ? $demo->filter(fn (array $activity): bool => ($activity['organization'] ?? '') === $organization)->values()->all()
-                : $demo->all();
+            return [];
         }
 
         // Keep every submission version, newest first. A compliance row can
         // still point at an older submission after an edit, so selecting only
         // the newest row can make a real uploaded file disappear from OSO.
         $submissionFiles = InCampusActivitySubmission::query()
+            ->whereIn('org_activity_id', $db->modelKeys())
             ->latest('id')
             ->get()
             ->groupBy('org_activity_id');
-        $rsvpsByActivity = ActivityRegistration::query()->orderByDesc('created_at')->get()->groupBy('org_activity_id');
+        $rsvpsByActivity = ActivityRegistration::query()->whereIn('org_activity_id', $db->modelKeys())->orderByDesc('created_at')->get()->groupBy('org_activity_id');
         $organizationAliases = StudentOrganization::query()->pluck('short_name', 'name')->all();
 
         return $db->map(function (OrgActivity $activity) use ($workflow, $officeRole, $submissionFiles, $rsvpsByActivity, $organizationAliases): array {
@@ -4778,6 +4828,7 @@ class OfficePortalController extends Controller
                 'id' => $activity->id,
                 'slug' => (string) $activity->id,
                 'submission_id' => $submission?->id,
+                'document_issue' => $workflow->documentIssue($activity, $submission),
                 'title' => $activity->title,
                 'status' => $workflow->label($statusKey),
                 'status_key' => $statusKey,
@@ -4832,39 +4883,10 @@ class OfficePortalController extends Controller
             'approved_at' => $activity->approved_at,
             ];
         })
-        ->filter(fn (array $activity): bool => $workflow->canViewActivityDetails(
-            $officeRole,
-            (string) ($activity['status_key'] ?? 'created'),
-        ))
         ->values()
         ->all();
 }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function demoOrgActivitiesList(): array
-    {
-        return [[
-            'id' => null,
-            'slug' => 'demo-activity',
-            'title' => 'Demo Activity (seed PreOralDemoSeeder)',
-            'status' => 'Created',
-            'status_key' => 'created',
-            'badge_style' => 'blue',
-            'filter_category' => 'in_review',
-            'date' => 'TBA',
-            'location' => 'TBA',
-            'timestamp_note' => 'No DB activities found',
-            'activity_type' => 'In-Campus Activity',
-            'start_time' => 'TBA',
-            'end_time' => 'TBA',
-            'organization' => 'Student Organization',
-            'rationale' => 'Run php artisan db:seed --class=PreOralDemoSeeder',
-            'objectives' => ['Seed demo data to populate activities.'],
-            'documents' => [],
-        ]];
-    }
     public function advanceActivity(OrgActivity $activity): RedirectResponse
     {
         $role = Auth::guard('office')->user()?->office_role ?? 'so';
@@ -4891,13 +4913,6 @@ class OfficePortalController extends Controller
             $verifiedTag = '[Verified against Approved Plan of Activities (Attachment I)]';
             $review['review_notes'] = $notes !== '' ? "{$verifiedTag} {$notes}" : $verifiedTag;
 
-            $submission = InCampusActivitySubmission::where('org_activity_id', $activity->id)->latest('id')->first();
-            if ($submission) {
-                $attachments = is_array($submission->attachments) ? $submission->attachments : [];
-                $attachments['plan_of_activities_verified'] = true;
-                $attachments['plan_of_activities_verified_at'] = now()->toIso8601String();
-                $submission->update(['attachments' => $attachments]);
-            }
         }
 
         try {
@@ -5317,6 +5332,22 @@ class OfficePortalController extends Controller
         return back()->with('success', 'Applicant moved to '.$validated['subsection'].'.');
     }
 
+    private function reportingPeriod(?Carbon $date): array
+    {
+        $period = $this->academicPeriod($date);
+
+        return [
+            'year' => $date?->year,
+            'sem' => match ($period['semester']) {
+                '1st Semester' => 'sem1',
+                '2nd Semester' => 'sem2',
+                'Midyear' => 'midyear',
+                default => null,
+            },
+            'mon' => $date?->format('M'),
+        ];
+    }
+
     /**
      * Live OSO oversight dataset: every activity as a filterable row plus
      * pre-aggregated KPIs, ranking, and the action transactions table.
@@ -5330,7 +5361,7 @@ class OfficePortalController extends Controller
         $collegeMap = StudentOrganization::query()->pluck('college', 'name')->all();
         $shortOf = fn (?string $name) => $shortMap[$name ?? ''] ?? \Illuminate\Support\Str::limit($name ?: 'Student Organization', 26);
 
-        $reviewStages = ['college_review', 'oso_review', 'sdo_review', 'ovcaa_review', 'oc_review', 'verification'];
+        $dbActivities = $dbActivities->filter(fn (OrgActivity $activity): bool => $activity->created_at !== null);
         $bucketOf = fn (?string $st) => in_array($st, ['oc_approved', 'completed'], true)
             ? 'approved'
             : ($st === 'returned' ? 'revision' : 'pending');
@@ -5339,10 +5370,9 @@ class OfficePortalController extends Controller
             // Submission dashboards are periodized by the date the record was
             // filed, not by the date the activity will happen. The schedule is
             // still used below for the SLA/urgency calculation.
-            $ref = $a->created_at ?? $a->starts_at ?? now();
-            $m = (int) $ref->format('n');
-            $y = (int) $ref->format('Y');
-            $ay = $m >= 8 ? $y.'-'.($y + 1) : ($y - 1).'-'.$y;
+            $ref = $a->created_at;
+            $period = $this->reportingPeriod($ref);
+            $ay = $this->academicPeriod($ref)['academic_year'];
             $college = trim((string) ($a->college ?: ($collegeMap[$a->organization_name] ?? '')));
 
             return [
@@ -5355,9 +5385,9 @@ class OfficePortalController extends Controller
                 'bucket' => $bucketOf($a->workflow_status),
                 'status' => $a->workflow_status ?: 'created',
                 'ay' => $ay,
-                'year' => $y,
-                'sem' => in_array($m, [8, 9, 10, 11, 12], true) ? 'sem1' : (in_array($m, [1, 2, 3, 4, 5], true) ? 'sem2' : 'midyear'),
-                'mon' => $ref->format('M'),
+                'year' => $period['year'],
+                'sem' => $period['sem'],
+                'mon' => $period['mon'],
                 'ym' => $ref->format('Y-m'),
                 'date' => $a->created_at ? $a->created_at->format('M j, Y') : '',
                 'url' => route('office.activities', ['activity' => $a->id]),
@@ -5432,7 +5462,7 @@ class OfficePortalController extends Controller
         })->all();
 
         $windowIds = OrgRenewalWindow::query()->pluck('id');
-        $renewalRows = OrgRenewalSubmission::query()->get();
+        $renewalRows = OrgRenewalSubmission::query()->with('window')->get();
         $renewalPending = $renewalRows
             ->whereIn('status', ['submitted', 'oso_review'])
             ->when($windowIds->isNotEmpty(), fn ($rows) => $rows->whereIn('renewal_window_id', $windowIds))
@@ -5452,20 +5482,7 @@ class OfficePortalController extends Controller
 
         // A common period payload lets the browser apply the same year,
         // semester, month, and scope filters to every OSO transaction type.
-        $periodOf = function ($date): array {
-            $date = $date instanceof Carbon ? $date : ($date ? Carbon::parse($date) : null);
-            if (! $date) {
-                return ['year' => null, 'sem' => null, 'mon' => null];
-            }
-
-            return [
-                'year' => $date->year,
-                'sem' => in_array($date->month, [8, 9, 10, 11, 12], true)
-                    ? 'sem1'
-                    : (in_array($date->month, [1, 2, 3, 4, 5], true) ? 'sem2' : 'midyear'),
-                'mon' => $date->format('M'),
-            ];
-        };
+        $periodOf = fn (?Carbon $date): array => $this->reportingPeriod($date);
         $typeRows = $rows->map(fn (array $row): array => [
             'kind' => 'proposal',
             'year' => $row['year'],
@@ -5486,85 +5503,106 @@ class OfficePortalController extends Controller
             $typeRows->push(array_merge(['kind' => 'tosa', 'scope' => null], $period));
         }
 
-        // Real average turnaround for reports and TOSA decisions. A draft or
-        // still-open record intentionally has no processing-time bar.
-        $averageDays = static function ($records, string $start, string $end): ?float {
-            $durations = $records->map(function ($record) use ($start, $end): ?float {
-                $from = $record->{$start};
-                $to = $record->{$end};
-                if (! $from || ! $to) {
-                    return null;
-                }
-
-                return Carbon::parse($from)->diffInHours(Carbon::parse($to)) / 24;
-            })->filter(fn ($days) => $days !== null);
-
-            return $durations->isNotEmpty() ? round($durations->avg(), 1) : null;
+        // A processing sample requires an explicit submission and a recorded
+        // decision. Mutable updated_at and record creation are not review clocks.
+        $processingRows = collect();
+        $asDate = static function ($value): ?Carbon {
+            try {
+                return $value ? Carbon::parse($value) : null;
+            } catch (\Throwable) {
+                return null;
+            }
         };
-        $reportReviewed = $reportRows->filter(fn (OrgReportStatus $row): bool => (bool) $row->submitted_at && (bool) $row->reviewed_at);
-        $financialAvg = $averageDays($reportReviewed->where('report_type', 'fr'), 'submitted_at', 'reviewed_at');
-        $accomplishmentAvg = $averageDays($reportReviewed->where('report_type', 'ar'), 'submitted_at', 'reviewed_at');
-        $tosaReviewed = $tosaRows->whereIn('subsection', ['accepted', 'rejected']);
-        $tosaAvg = $averageDays($tosaReviewed, 'created_at', 'updated_at');
+        $sampleNow = now();
+        $addSample = function (string $kind, $submitted, $decided, ?string $scope = null) use ($processingRows, $asDate, $sampleNow): void {
+            $from = $asDate($submitted);
+            $to = $asDate($decided);
+            if (! $from || ! $to || $from->gt($to) || $from->gt($sampleNow) || $to->gt($sampleNow)) {
+                return;
+            }
+            $processingRows->push(array_merge([
+                'kind' => $kind,
+                'scope' => $scope,
+                'days' => $from->diffInSeconds($to, false) / 86400,
+            ], $this->reportingPeriod($from)));
+        };
+        $activityIds = $dbActivities->modelKeys();
+        $packets = InCampusActivitySubmission::query()->whereIn('org_activity_id', $activityIds)
+            ->latest('id')->get()->unique('org_activity_id')->keyBy('org_activity_id');
+        $events = DB::connection('mysql')->table('activity_workflow_events')
+            ->whereIn('org_activity_id', $activityIds)->orderBy('id')->get()->groupBy('org_activity_id');
+        foreach ($dbActivities as $activity) {
+            $status = $activity->workflow_status;
+            if (! in_array($status, ['oc_approved', 'completed', 'returned', 'rejected'], true)) {
+                continue;
+            }
+            $submitted = $packets->get($activity->id)?->submitted_at;
+            $decisionStatus = $status === 'completed' ? 'oc_approved' : $status;
+            $decision = $events->get($activity->id, collect())->last(fn ($event): bool => $event->to_status === $decisionStatus);
+            $decided = in_array($status, ['oc_approved', 'completed'], true)
+                ? ($activity->approved_at ?? $decision?->created_at)
+                : $decision?->created_at;
+            $scope = str_contains(strtolower((string) $activity->activity_scope), 'off') ? 'off-campus' : 'in-campus';
+            $addSample('proposal', $submitted, $decided, $scope);
+        }
+        foreach ($renewalRows->whereIn('status', ['approved', 'returned', 'rejected']) as $row) {
+            $addSample('renewal', $row->submitted_at, $row->reviewed_at);
+        }
+        foreach ($reportRows->whereIn('status', ['verified', 'archived', 'returned', 'rejected']) as $row) {
+            $addSample($row->report_type, $row->submitted_at, $row->reviewed_at);
+        }
+        // TOSA has no immutable submitted/decision pair; its duration is unknown.
+        $averageDays = static function (string $kind) use ($processingRows): ?float {
+            $samples = $processingRows->where('kind', $kind);
 
+            return $samples->isNotEmpty() ? round($samples->avg('days'), 1) : null;
+        };
+        $proposalAvg = $averageDays('proposal');
+        $renewalAvg = $averageDays('renewal');
+        $financialAvg = $averageDays('fr');
+        $accomplishmentAvg = $averageDays('ar');
+        $tosaAvg = null;
+
+        $returnRows = collect();
+        foreach ($rows as $row) {
+            foreach ($events->get($row['id'], collect())->where('to_status', 'returned') as $event) {
+                $returnRows->push([
+                    'activity_id' => $row['id'],
+                    'reason' => trim((string) $event->notes) ?: 'No reason recorded',
+                    'year' => $row['year'],
+                    'sem' => $row['sem'],
+                    'mon' => $row['mon'],
+                    'scope' => $row['scope'],
+                ]);
+            }
+        }
+        $returnCauses = $returnRows->groupBy('reason')->map(fn ($items, $reason): array => [
+            'label' => $reason,
+            'count' => $items->count(),
+            'pct' => round($items->count() / $returnRows->count() * 100).'% of recorded events',
+        ])->sortByDesc('count')->values()->all();
+
+        $recognitionRows = collect();
+        $addRecognition = static function (?string $name, ?string $academicYear) use ($recognitionRows): void {
+            $key = Str::lower(trim((string) $name));
+            $academicYear = trim((string) $academicYear);
+            if ($key === '' || ! preg_match('/^([1-9]\d{3})-([1-9]\d{3})$/', $academicYear, $matches)
+                || (int) $matches[2] !== (int) $matches[1] + 1) {
+                return;
+            }
+            $recognitionRows->push(['organization_key' => $key, 'academic_year' => $academicYear]);
+        };
+        foreach (StudentOrganization::active()->get(['name', 'academic_year']) as $organization) {
+            $addRecognition($organization->name, $organization->academic_year);
+        }
+        foreach ($renewalRows->where('status', 'approved') as $renewal) {
+            $addRecognition($renewal->organization_name, $renewal->window?->academic_year);
+        }
+        $recognitionRows = $recognitionRows->unique(fn (array $row): string => $row['organization_key'].'|'.$row['academic_year'])->values();
+        $selectedRosterYear = now()->year.'-'.(now()->year + 1);
         $pendingSubmissions = $pending + $revision;
         $pendingTrx = $pendingSubmissions + $renewalPending + $pendingReports + $tosaPending;
         $currentAcademicYear = $this->academicPeriod(now())['academic_year'];
-
-        // Real average turnaround: decided activities (created -> last update)
-        // and reviewed renewal packets (submitted -> last update), in days.
-        $decided = $dbActivities->whereIn('workflow_status', ['oc_approved', 'completed', 'returned']);
-        $proposalAvg = $decided->count() > 0
-            ? round($decided->avg(fn (OrgActivity $a) => ($a->created_at && $a->updated_at)
-                ? $a->created_at->diffInHours($a->updated_at) / 24 : 0), 1)
-            : null;
-        $reviewedRenewals = OrgRenewalSubmission::query()
-            ->whereIn('status', ['approved', 'returned'])
-            ->whereNotNull('submitted_at')->get();
-        $renewalAvg = $reviewedRenewals->count() > 0
-            ? round($reviewedRenewals->avg(fn ($s) => $s->submitted_at->diffInHours($s->updated_at) / 24), 1)
-            : null;
-
-        // Real return-cause analysis from reviewer remarks on returned docs.
-        $causeBuckets = [
-            'Missing Faculty Adviser / Dean Signature' => ['sign', 'adviser', 'dean'],
-            'Budget Itemization vs Receipt Discrepancy' => ['budget', 'receipt', 'discrep', 'amount', 'expense'],
-            'Lacking SDO Waste Policy (WPCF) Form' => ['waste', 'wpcf'],
-            'Incomplete Safety Protocol & Medical Clearance' => ['safety', 'medical', 'clearance', 'protocol'],
-        ];
-        $causeCounts = array_fill_keys(array_keys($causeBuckets), 0);
-        $causeOther = 0;
-        $returnedRemarks = ActivityComplianceDoc::query()
-            ->where('status', 'returned')->whereNotNull('remarks')->pluck('remarks');
-        foreach ($returnedRemarks as $remark) {
-            $text = strtolower((string) $remark);
-            $matched = false;
-            foreach ($causeBuckets as $label => $keywords) {
-                foreach ($keywords as $kw) {
-                    if (str_contains($text, $kw)) {
-                        $causeCounts[$label]++;
-                        $matched = true;
-                        break 2;
-                    }
-                }
-            }
-            if (! $matched) {
-                $causeOther++;
-            }
-        }
-        $causeTotal = array_sum($causeCounts) + $causeOther;
-        $returnCauses = $causeTotal > 0 ? collect($causeCounts)
-            ->map(fn ($c, $label) => [
-                'label' => $label,
-                'count' => $c,
-                'pct' => $causeTotal > 0 ? round(($c / $causeTotal) * 100).'% of returns' : '—',
-            ])
-            ->when($causeOther > 0, fn ($col) => $col->push([
-                'label' => 'Other compliance remarks',
-                'count' => $causeOther,
-                'pct' => $causeTotal > 0 ? round(($causeOther / $causeTotal) * 100).'% of returns' : '—',
-            ]))
-            ->sortByDesc('count')->values()->all() : [];
 
         $typeLabels = $hideSemesterReportMetrics
             ? ['Activity Proposal', 'Renewal', 'TOSA Award']
@@ -5595,19 +5633,22 @@ class OfficePortalController extends Controller
             'collegeRanking' => $collegeRanking,
             'transactions' => $transactions,
             'kpis' => [
-                'totalOrgs' => StudentOrganization::active()->count(),
+                'totalOrgs' => $recognitionRows->where('academic_year', $selectedRosterYear)->unique('organization_key')->count(),
                 'pendingTrx' => $pendingTrx,
                 'pendingSub' => $pendingSubmissions.' Proposals · '.$renewalPending.' Renewal · '.$pendingReports.' AR/FR Reports · '.$tosaPending.' TOSA',
                 'totalSubmissions' => $total,
-                'revisionRate' => $total > 0 ? round(($revision / $total) * 100, 1).'%' : '0%',
+                'revisionRate' => $total > 0 ? round(($returnRows->unique('activity_id')->count() / $total) * 100, 1).'%' : '0%',
             ],
-            'orgSub' => 'Recognized orgs · A.Y. '.($currentAcademicYear ?: '—'),
+            'orgSub' => 'Recognized orgs · A.Y. '.$selectedRosterYear.' (calendar year '.now()->year.' → A.Y. '.$selectedRosterYear.')',
             'currentAcademicYear' => $currentAcademicYear,
+            'recognitionRows' => $recognitionRows->all(),
             'typeLabels' => $typeLabels,
             'typeBreakdown' => $typeBreakdown,
             'typeRows' => $typeRows->values()->all(),
             'processingLabels' => $processingLabels,
             'processingTime' => $processingTime,
+            'processingRows' => $processingRows->all(),
+            'returnRows' => $returnRows->all(),
             'returnCauses' => $returnCauses,
         ];
     }

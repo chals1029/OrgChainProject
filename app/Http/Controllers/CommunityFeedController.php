@@ -34,7 +34,6 @@ class CommunityFeedController extends Controller
             'activity_id' => ['nullable', 'integer', 'exists:org_activities,id'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
             'feeling' => ['nullable', 'string', 'max:100'],
-            'tagged_users' => ['nullable', 'string', 'max:500'],
             'audience' => ['nullable', 'string', 'in:public,department,org'],
         ], [
             'body.required' => 'Write something about your experience.',
@@ -56,7 +55,6 @@ class CommunityFeedController extends Controller
             'body' => $validated['body'],
             'image_path' => $imagePath,
             'feeling' => $validated['feeling'] ?? null,
-            'tagged_users' => $validated['tagged_users'] ?? null,
             'audience' => $audience,
             'likes_count' => 0,
             'comments_count' => 0,

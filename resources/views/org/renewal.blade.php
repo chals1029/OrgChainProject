@@ -298,7 +298,7 @@
                         </div>
                     </div>
                     <div class="so-renewal-banner-actions">
-                        <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-document-preview
+                        <button type="button" class="app-view-action" data-document-preview
                                 data-document-preview-url="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).pdf"
                                 data-document-preview-title="BatStateU-FO-SOA-01 Master Application Form" data-document-preview-type="pdf"
                                 data-document-preview-download="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx">
@@ -343,7 +343,7 @@
                                     </div>
                                     <div class="so-renewal-template-links">
                                         @if ($tmplPdf)
-                                            <a href="{{ $tmplPdfUrl }}" class="rn-link" data-document-preview
+                                            <a href="{{ $tmplPdfUrl }}" class="rn-link app-view-action" aria-label="View {{ $doc['title'] }}" data-document-preview
                                                data-document-preview-url="{{ $tmplPdfUrl }}" data-document-preview-download="{{ $tmplDocxUrl }}"
                                                data-document-preview-title="{{ $label }}: {{ $doc['title'] }}" data-document-preview-type="{{ $officialFile['preview_type'] ?? '' }}"><i class="bi bi-eye"></i> View</a>
                                         @endif

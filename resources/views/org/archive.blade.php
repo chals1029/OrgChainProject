@@ -1091,7 +1091,7 @@
                                         <span><i class="bi bi-calendar3"></i> {{ $doc['date'] ?? '—' }}</span>
                                     </div>
                                     <div class="gdrive-file-actions">
-                                        <button type="button" class="gdrive-btn-preview" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
+                                        <button type="button" class="gdrive-btn-preview app-view-action" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-label="View {{ $doc['name'] }}">
                                             <i class="bi bi-eye"></i> View
                                         </button>
                                         <a href="{{ $doc['download_url'] }}" class="gdrive-btn-download" download="{{ $originalName }}">
@@ -1156,7 +1156,7 @@
                                         <td style="font-size: 0.84rem; font-weight: 600;">{{ $doc['author'] ?? '—' }}</td>
                                         <td style="text-align: right; white-space: nowrap;">
                                             <div class="gdrive-tbl-actions">
-                                                <button type="button" class="gdrive-tbl-btn is-preview" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}">
+                                                <button type="button" class="gdrive-tbl-btn is-preview app-view-action" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $originalName }}" data-document-preview-type="{{ $type }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-label="View {{ $doc['name'] }}">
                                                     <i class="bi bi-eye"></i> View
                                                 </button>
                                                 <a href="{{ $doc['download_url'] }}" class="gdrive-tbl-btn is-download" download="{{ $originalName }}">

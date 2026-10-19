@@ -146,12 +146,19 @@ class OrgWorkflowService
             if (! $locked->starts_at || ($locked->ends_at ?? $locked->starts_at)->isPast()) {
                 throw new \RuntimeException('An ended activity cannot be submitted or approved. Return it for a corrected schedule.');
             }
-            if (in_array($role, ['oso', 'sdo'], true)) {
-                if (empty($review['documents_reviewed'])) throw new \RuntimeException('Confirm that you reviewed the submitted files.');
+            if (in_array($role, ['oso', 'sdo', 'ovcaa', 'oc'], true)) {
                 $this->checkDocuments($locked);
+            }
+            if (in_array($role, ['oso', 'sdo'], true) && empty($review['documents_reviewed'])) {
+                throw new \RuntimeException('Confirm that you reviewed the submitted files.');
             }
             if ($role === 'oso') {
                 ActivityComplianceDoc::query()->where('org_activity_id', $locked->id)->update(['status' => 'approved', 'returned_to' => null]);
+                $submission = InCampusActivitySubmission::query()->where('org_activity_id', $locked->id)->latest('id')->firstOrFail();
+                $attachments = $submission->attachments;
+                $attachments['plan_of_activities_verified'] = true;
+                $attachments['plan_of_activities_verified_at'] = now()->toIso8601String();
+                $submission->update(['attachments' => $attachments]);
             }
             if ($role === 'sdo') {
                 $locked->sdo_review_notes = 'SDO checked the submitted DOCX files and Waste Policy Compliance Form.';
@@ -174,18 +181,32 @@ class OrgWorkflowService
 
     public function checkDocuments(OrgActivity $activity): void
     {
-        $submission = InCampusActivitySubmission::query()->where('org_activity_id', $activity->id)->latest('id')->first();
-        if (! $submission) throw new \RuntimeException('No submitted document package is attached to this activity.');
-        $files = $submission->attachments ?? [];
+        // A locking read avoids opening a stale snapshot before final approval locks the cash account.
+        $submission = InCampusActivitySubmission::query()->where('org_activity_id', $activity->id)->latest('id')->lockForUpdate()->first();
+        $issue = $this->documentIssue($activity, $submission);
+        if ($issue !== null) throw new \RuntimeException($issue);
+    }
+
+    public function documentIssue(OrgActivity $activity, ?InCampusActivitySubmission $submission): ?string
+    {
+        if (! $submission || $submission->status !== 'submitted' || ! $submission->submitted_at) {
+            return 'No submitted document package is attached to this activity.';
+        }
+        $files = is_array($submission->attachments) ? $submission->attachments : [];
         $requirements = app(ActivityRequirements::class);
         $requirements = $activity->activity_scope === 'local_off_campus' ? $requirements->localOffCampusRequirements() : $requirements->inCampusRequirements();
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
         foreach ($requirements as $requirement) {
             if (empty($requirement['required_on_submit'])) continue;
             $file = $files[$requirement['key']] ?? null;
-            if (! is_array($file) || empty($file['path']) || ! \Illuminate\Support\Facades\Storage::disk('local')->exists($file['path'])) {
-                throw new \RuntimeException('Missing required upload: '.$requirement['title'].'. Ask SO to upload it to the matching checklist slot.');
+            $path = is_array($file) ? trim((string) ($file['path'] ?? '')) : '';
+            $absolute = $path !== '' && ! str_contains(str_replace('\\', '/', $path), '../') ? $disk->path($path) : '';
+            clearstatcache(true, $absolute);
+            if ($absolute === '' || ! is_file($absolute) || ! is_readable($absolute) || (int) filesize($absolute) === 0) {
+                return 'Missing required upload: '.$requirement['title'].'. Ask SO to upload it to the matching checklist slot.';
             }
         }
+        return null;
     }
 
     public function event(OrgActivity $activity, string $role, string $from, string $to, ?string $notes): void

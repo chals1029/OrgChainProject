@@ -9,6 +9,7 @@
     var submitHelp = document.getElementById('tosaSubmitHelp');
     var submitStatus = document.getElementById('tosaSubmitStatus');
     var submitWrapper = submitForm.querySelector('[data-tosa-submit-wrapper]');
+    var submitTooltip = document.getElementById('tosaSubmitTooltip');
     var dialog = document.getElementById('tosaStudentDocViewerModal');
     var entries = [];
     var maxBytes = 25 * 1024 * 1024;
@@ -44,9 +45,12 @@
             submitHelp.textContent = 'Saving files and sending your packet to OSO. Please wait.';
         } else if (remaining) {
             submitStatus.textContent = 'Complete your packet before submitting';
-            submitHelp.textContent = incomplete.map(function (entry) {
-                return 'Section ' + entry.code + ': ' + (entry.input.files[0] ? validationMessage(entry) : 'file required.');
-            }).join(' ');
+            var missing = incomplete.filter(function (entry) { return !entry.input.files[0]; });
+            var invalid = incomplete.filter(function (entry) { return Boolean(entry.input.files[0]); });
+            submitHelp.textContent = [
+                missing.length ? 'Add files for sections ' + missing.map(function (entry) { return entry.code; }).join(', ') + '.' : '',
+                invalid.length ? 'Replace invalid files in sections ' + invalid.map(function (entry) { return entry.code; }).join(', ') + '.' : ''
+            ].filter(Boolean).join(' ');
         } else {
             submitStatus.textContent = revision ? 'Revision · Ready to resubmit' : 'Package ready for review';
             submitHelp.textContent = revision
@@ -54,8 +58,11 @@
                 : 'Review your files, then submit the complete packet to OSO.';
         }
         if (submitWrapper) {
-            submitWrapper.title = submitHelp.textContent;
-            submitWrapper.setAttribute('aria-label', submitHelp.textContent);
+            submitWrapper.tabIndex = submitButton.disabled ? 0 : -1;
+        }
+        if (submitTooltip) {
+            submitTooltip.textContent = submitHelp.textContent;
+            submitTooltip.hidden = !submitButton.disabled;
         }
     }
 

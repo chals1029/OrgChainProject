@@ -185,7 +185,7 @@
                             <td><span class="oso-expense-tag">{{ $detailExpense['status'] ?? 'Not recorded' }}</span></td>
                             <td>
                                 @if (filled($detailExpense['receiptUrl'] ?? null))
-                                    <a class="oso-expense-receipt" href="{{ $detailExpense['receiptUrl'] }}" data-budget-dialog-receipt="{{ $detailExpense['id'] }}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog"><i class="bi bi-receipt" aria-hidden="true"></i> View</a>
+                                    <a class="oso-expense-receipt app-view-action" href="{{ $detailExpense['receiptUrl'] }}" data-budget-dialog-receipt="{{ $detailExpense['id'] }}" aria-haspopup="dialog" aria-controls="budgetReceiptPreviewDialog"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                                 @else
                                     <span class="oso-expense-empty">Original unavailable</span>
                                 @endif

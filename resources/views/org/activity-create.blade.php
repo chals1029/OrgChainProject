@@ -77,25 +77,7 @@
             'rejected' => 'Renewal rejected',
             default => 'Renewal not submitted',
         };
-        $sdgDefinitions = [
-            1 => ['No Poverty', 'people-fill', '#e5243b'],
-            2 => ['Zero Hunger', 'cup-hot-fill', '#dda63a'],
-            3 => ['Good Health and Well-being', 'heart-pulse-fill', '#4c9f38'],
-            4 => ['Quality Education', 'book-fill', '#c5192d'],
-            5 => ['Gender Equality', 'gender-ambiguous', '#ff3a21'],
-            6 => ['Clean Water and Sanitation', 'droplet-fill', '#26bde2'],
-            7 => ['Affordable and Clean Energy', 'sun-fill', '#fcc30b'],
-            8 => ['Decent Work and Economic Growth', 'bar-chart-fill', '#a21942'],
-            9 => ['Industry, Innovation and Infrastructure', 'boxes', '#fd6925'],
-            10 => ['Reduced Inequalities', 'arrows-expand', '#dd1367'],
-            11 => ['Sustainable Cities and Communities', 'houses-fill', '#fd9d24'],
-            12 => ['Responsible Consumption and Production', 'recycle', '#bf8b2e'],
-            13 => ['Climate Action', 'globe-americas', '#3f7e44'],
-            14 => ['Life Below Water', 'water', '#0a97d9'],
-            15 => ['Life on Land', 'tree-fill', '#56c02b'],
-            16 => ['Peace, Justice and Strong Institutions', null, '#00689d'],
-            17 => ['Partnerships for the Goals', 'link-45deg', '#19486a'],
-        ];
+        $sdgDefinitions = \App\Services\SdgCatalogue::GOALS;
         $documentDisk = \Illuminate\Support\Facades\Storage::disk('local');
         $hasStoredFile = static fn ($file): bool => is_array($file)
             && !empty($file['path'])
@@ -243,20 +225,7 @@
                                            aria-label="SDG {{ $number }}: {{ $goalName }}" @checked(in_array('SDG '.$number, $editSdgGoals, true))>
                                     <span class="ap-sdg-tile">
                                         <span class="ap-sdg-icon" style="--sdg-color: {{ $goalColor }}" aria-hidden="true">
-                                            @if ($number === 16)
-                                                <svg width="20" height="20" viewBox="0 0 72 72" fill="currentColor" focusable="false">
-                                                    <path d="M8 17C24 13 29 35 43 23C48 18 51 18 54 24L59 28L54 29C46 29 47 36 46 43C44 53 33 58 20 56C13 56 9 51 6 49C16 53 18 48 24 45C12 43 16 23 8 17Z"/>
-                                                    <path d="M54 34C51 27 53 23 62 13M26 54V61M31 54V61" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                                                    <path d="M62 13C59 9 60 6 64 4C65 9 65 12 62 13ZM58 18C54 16 53 13 54 10C58 11 60 14 58 18ZM61 18C63 14 66 14 68 15C66 19 64 20 61 18ZM55 23C51 21 50 18 51 15C55 17 57 20 55 23ZM57 24C60 21 63 21 65 24C61 27 59 27 57 24Z"/>
-                                                    <path d="M4 60L42 61V64L4 65Z"/>
-                                                    <rect x="0" y="59" width="3" height="7" rx="1.5"/>
-                                                    <rect x="42" y="57" width="14" height="11" rx="1"/>
-                                                    <rect x="41" y="53" width="16" height="3" rx="1.5"/>
-                                                    <rect x="41" y="69" width="16" height="3" rx="1.5"/>
-                                                </svg>
-                                            @else
-                                                <i class="bi bi-{{ $goalIcon }}"></i>
-                                            @endif
+                                            @include('org.partials.sdg-symbol', ['number' => $number, 'goalIcon' => $goalIcon])
                                         </span>
                                         <span class="ap-sdg-number">{{ str_pad($number, 2, '0', STR_PAD_LEFT) }}</span>
                                     </span>
@@ -308,7 +277,7 @@
                                     </div>
                                     <p>{{ $requirement['description'] }}</p>
                                     <div class="ap-document-links">
-                                        <button type="button" data-document-preview
+                                        <button type="button" class="app-view-action" aria-label="View official {{ $requirement['title'] }} template" data-document-preview
                                                 data-document-preview-url="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile, 'preview' => 1]) }}"
                                                 data-document-preview-title="{{ $requirement['title'] }} — Official template"
                                                 data-document-original-name="{{ $sourceFile }}" data-document-preview-type="{{ strtolower(pathinfo($sourceFile, PATHINFO_EXTENSION)) }}"
@@ -319,13 +288,13 @@
                                     @error('attachments.'.$requirement['key']) <em>{{ $message }}</em> @enderror
                                     @if ($hasFile && $submission->exists)
                                         <div class="ap-document-links">
-                                            <button type="button" data-document-preview
+                                            <button type="button" class="app-view-action" aria-label="View current {{ $requirement['title'] }} file" data-document-preview
                                                     data-document-preview-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
                                                     data-document-preview-title="{{ $storedFile['name'] ?? $requirement['title'] }}"
                                                     data-document-original-name="{{ $storedFile['name'] ?? basename($storedFile['path']) }}"
                                                     data-document-preview-type="{{ strtolower(pathinfo($storedFile['name'] ?? $storedFile['path'], PATHINFO_EXTENSION)) }}"
                                                     data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
-                                                    data-document-preview-download="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}">View current file</button>
+                                                    data-document-preview-download="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                             <button type="button" data-attachment-delete
                                                     data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $requirement['key']]) }}"
                                                     data-attachment-name="{{ $storedFile['name'] ?? $requirement['title'] }}">Remove current file</button>
@@ -371,7 +340,7 @@
                                     <p>{{ $doc['status'] }}{{ filled($doc['date'] ?? '') && $doc['date'] !== '—' ? ' · '.$doc['date'] : '' }}</p>
                                 </div>
                                 <div class="ap-document-links">
-                                    <button type="button" data-document-preview data-document-preview-url="{{ $doc['url'] }}" data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['name'] }}" data-document-preview-type="{{ strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye"></i> View</button>
+                                    <button type="button" class="app-view-action" aria-label="View {{ $doc['name'] }}" data-document-preview data-document-preview-url="{{ $doc['url'] }}" data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['name'] }}" data-document-preview-type="{{ strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                     <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
                                     <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
                                 </div>
