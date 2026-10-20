@@ -265,7 +265,8 @@ class OfficeSecurityBoundaryTest extends TestCase
         $organization->update(['is_active' => false]);
         $this->post(route('office.oso.remind', $activity))->assertRedirect()->assertSessionHas('error');
         $this->post(route('office.updates.announcements.store'), [
-            'type' => 'Advisory', 'body' => 'Security publication', 'priority' => 'normal',
+            'type' => 'General Announcement', 'body' => 'Security publication', 'priority' => 'normal',
+            'expires_at' => now()->addDay()->format('Y-m-d\TH:i'),
         ])->assertRedirect();
         $this->assertDatabaseHas('office_announcements', ['body' => 'Security publication']);
     }

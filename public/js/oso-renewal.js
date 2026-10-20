@@ -59,39 +59,9 @@
     /* Renewal window */
 
     function initWindowForm() {
-        var form = byId('osoRenewalWindowForm');
-        var hidden = byId('osoRenewalOpenValue');
-        var toggle = byId('osoRenewalToggle');
-        var pill = byId('osoRenewalWindowState');
         var opensAt = byId('osoRenewalOpensAt');
         var closesAt = byId('osoRenewalClosesAt');
 
-        if (hidden && toggle) {
-            var savedValue = (hidden.dataset.savedValue || hidden.value) === '1' ? '1' : '0';
-            var savedPillText = pill ? pill.textContent : '';
-            var savedPillClass = pill ? pill.className : '';
-
-            var render = function () {
-                var isOpen = hidden.value === '1';
-                toggle.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
-                toggle.textContent = isOpen ? 'Lock renewal' : 'Enable renewal';
-                if (!pill) return;
-                if (hidden.value === savedValue) {
-                    pill.textContent = savedPillText;
-                    pill.className = savedPillClass;
-                } else {
-                    pill.textContent = isOpen ? 'Will open on save' : 'Will lock on save';
-                    pill.className = 'or-pill is-amber';
-                }
-            };
-
-            toggle.type = 'button';
-            toggle.addEventListener('click', function () {
-                hidden.value = hidden.value === '1' ? '0' : '1';
-                render();
-            });
-            render();
-        }
 
         if (opensAt && closesAt) {
             var checkDates = function () {

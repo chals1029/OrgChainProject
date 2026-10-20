@@ -1,4 +1,4 @@
-@if ($showOrganizationArchives && !$selectedArchiveOrganization)
+@if ($showOrganizationArchives)
     <form method="get" action="{{ route('office.archive') }}" class="archive-filters">
         <label class="archive-filter">
             Academic year
@@ -23,7 +23,7 @@
             <input type="search" name="search" value="{{ $archiveFilters['search'] }}" placeholder="Organization name or abbreviation">
         </label>
         <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-search"></i> Search</button>
-        <a href="{{ route('office.archive') }}" class="org-btn org-btn-ghost org-btn-sm">Reset</a>
+        <a href="{{ route('office.archive') }}" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</a>
     </form>
 
     <section class="archive-panel" aria-labelledby="archiveOrganizationsHeading">
@@ -36,7 +36,7 @@
         </div>
         <div class="archive-org-grid">
             @forelse ($archiveOrganizations as $organizationArchive)
-                <article class="archive-org-card">
+                <article class="archive-org-card" id="archive-org-{{ substr(hash('sha256', $organizationArchive['key']), 0, 12) }}">
                     <div class="archive-org-identity">
                         <span class="archive-org-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
                         <span>{{ $organizationArchive['short_name'] ?: $organizationArchive['name'] }}</span>
@@ -72,9 +72,12 @@
 @endif
 
 @if ($selectedArchiveOrganization)
-    <section class="archive-panel" aria-labelledby="archiveOrganizationTitle">
+    @php
+        $archiveCloseUrl = route('office.archive', $archiveQuery).'#archive-org-'.substr(hash('sha256', $selectedArchiveOrganization['key']), 0, 12);
+    @endphp
+    <dialog id="archiveOrganizationDialog" class="archive-org-dialog" aria-labelledby="archiveOrganizationTitle" data-close-url="{{ $archiveCloseUrl }}">
         <header class="archive-detail-header">
-            <a href="{{ route('office.archive', $archiveQuery) }}" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-arrow-left"></i> Back to archives</a>
+            <a href="{{ $archiveCloseUrl }}" class="org-btn org-btn-ghost org-btn-sm archive-dialog-close" data-archive-close autofocus><i class="bi bi-x-lg" aria-hidden="true"></i> Close</a>
             <h2 id="archiveOrganizationTitle">{{ $selectedArchiveOrganization['name'] }}</h2>
             <p class="archive-muted">
                 {{ $selectedArchiveOrganization['short_name'] ?: $selectedArchiveOrganization['name'] }}
@@ -111,6 +114,7 @@
                                 <small>{{ $doc['name'] }}@if (!empty($doc['folder_name'])) · {{ $doc['folder_name'] }}@endif · {{ strtoupper($fileType) }}@if (!empty($doc['date'])) · {{ $doc['date'] }}@endif @if (!empty($doc['size'])) · {{ $doc['size'] }}@endif</small>
                             </div>
                             <button type="button" class="app-view-action" data-document-preview data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['original_name'] }}" data-document-preview-type="{{ $fileType }}" data-document-preview-url="{{ $doc['url'] }}" data-document-preview-download="{{ $doc['download_url'] }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-label="View {{ $doc['original_name'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
+                            <a class="org-btn org-btn-ghost org-btn-sm" href="{{ $doc['download_url'] }}" download aria-label="Download {{ $doc['original_name'] }}"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
                         </div>
                     @empty
                         <p class="archive-empty">No archived documents in this category.</p>
@@ -118,5 +122,5 @@
                 </details>
             @endforeach
         </div>
-    </section>
+    </dialog>
 @endif

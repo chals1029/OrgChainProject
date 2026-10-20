@@ -1,5 +1,5 @@
 @php
-    $filingEnabled = (bool) old('is_open', $window?->is_open ?? false);
+    $filingEnabled = (bool) ($window?->is_open ?? false);
     $windowState = $isOpen ? 'Renewal open' : (! $window?->is_open ? 'Renewal locked' : ($window->opens_at?->isFuture() ? 'Scheduled opening' : 'Schedule ended'));
     $formContext = old('form_context');
     $editingFile = $officialRequirementFiles[old('doc_key', '')] ?? null;
@@ -11,7 +11,7 @@
 <div id="osoRenewalDashboard" class="or-dashboard">
     <section class="or-metrics" aria-label="Organization renewal totals">
         @foreach ([
-            ['label' => 'Total organizations', 'value' => $orgStats['total'], 'hint' => 'Official OSO records', 'icon' => 'people', 'color' => 'red'],
+            ['label' => 'Registered organizations', 'value' => $orgStats['total'], 'hint' => 'All registry records, including inactive', 'icon' => 'people', 'color' => 'red'],
             ['label' => 'Qualified to renew', 'value' => $orgStats['qualified'], 'hint' => 'OSO filing eligibility', 'icon' => 'check-lg', 'color' => 'green'],
             ['label' => 'Not qualified', 'value' => $orgStats['not_qualified'], 'hint' => 'Unresolved filing eligibility', 'icon' => 'x-lg', 'color' => 'red'],
             ['label' => 'Inactive organizations', 'value' => $orgStats['inactive'], 'hint' => 'Inactive or not renewed', 'icon' => 'archive', 'color' => 'muted'],
@@ -26,13 +26,21 @@
     <section class="or-card" aria-labelledby="osoRenewalWindowHeading">
         <header class="or-card-head">
             <div class="or-title"><span class="or-title-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span><div><h2 id="osoRenewalWindowHeading">OSO Renewal Window</h2><p class="or-subtitle">Configure when eligible organizations can access and submit their renewal applications.</p></div></div>
-            <div class="or-head-actions"><span id="osoRenewalWindowState" class="or-pill is-{{ $isOpen ? 'green' : 'red' }}">{{ $windowState }}</span><button id="osoRenewalToggle" type="button" class="or-button is-small" aria-pressed="{{ $filingEnabled ? 'true' : 'false' }}" aria-controls="osoRenewalOpenValue">{{ $filingEnabled ? 'Lock renewal' : 'Enable renewal' }}</button></div>
+            <div class="or-head-actions">
+                <span id="osoRenewalWindowState" class="or-pill is-{{ $isOpen ? 'green' : ($filingEnabled ? 'amber' : 'muted') }}">{{ $windowState }}</span>
+                <form id="osoRenewalToggleForm" method="POST" action="{{ route('office.renewal.window') }}" data-confirm-message="{{ $filingEnabled ? 'Close renewal submissions for the saved filing period? Existing applications will remain available for review.' : 'Enable renewal submissions for the saved filing period? Its saved opening and closing schedule will still apply.' }}">
+                    @csrf
+                    <input type="hidden" name="toggle_only" value="1">
+                    <input type="hidden" name="window_id" value="{{ $window?->id }}">
+                    <input type="hidden" name="is_open" value="{{ $filingEnabled ? '0' : '1' }}">
+                    <button id="osoRenewalToggle" type="submit" class="or-submission-switch" role="switch" aria-checked="{{ $filingEnabled ? 'true' : 'false' }}" aria-label="Renewal submissions" @disabled(!$window) title="{{ $window ? 'Change the saved renewal submission state' : 'Save a renewal window first' }}"><span class="or-switch-track" aria-hidden="true"><span></span></span><span>{{ $filingEnabled ? 'Open' : 'Closed' }}</span></button>
+                </form>
+            </div>
         </header>
         <form id="osoRenewalWindowForm" class="or-window-form" method="POST" action="{{ route('office.renewal.window') }}">
             @csrf
             <input type="hidden" name="window_id" value="{{ $window?->id }}">
             <input type="hidden" name="form_context" value="window">
-            <input id="osoRenewalOpenValue" type="hidden" name="is_open" value="{{ $filingEnabled ? '1' : '0' }}" data-saved-value="{{ $window?->is_open ? '1' : '0' }}">
             <div class="or-fields">
                 <label class="or-field">Academic Year<input name="academic_year" value="{{ old('academic_year', $window?->academic_year ?? '2026-2027') }}" maxlength="32" required></label>
                 <label class="or-field">Semester<select name="semester" required>@foreach (array_unique(['Annual', '1st Semester', '2nd Semester', 'Summer', old('semester', $window?->semester ?? 'Annual')]) as $semester)<option value="{{ $semester }}" @selected(old('semester', $window?->semester ?? 'Annual') === $semester)>{{ $semester }}</option>@endforeach</select></label>
@@ -40,13 +48,13 @@
                 <label class="or-field">Closes at<input id="osoRenewalClosesAt" type="datetime-local" name="closes_at" value="{{ old('closes_at', $window?->closes_at?->format('Y-m-d\TH:i')) }}"></label>
                 <label class="or-field or-full">Instructions<textarea name="instructions" rows="3" maxlength="5000" placeholder="Submit all required official attachments, with complete details and signatures.">{{ old('instructions', $window?->instructions) }}</textarea></label>
             </div>
-            <footer class="or-form-footer"><p class="or-helper"><i class="bi bi-info-circle" aria-hidden="true"></i> Changes take effect after saving. A different academic year or semester starts a new filing period.</p><button type="submit" class="or-button is-primary">Save Settings</button></footer>
+            <footer class="or-form-footer"><p class="or-helper"><i class="bi bi-info-circle" aria-hidden="true"></i> Save settings for period, schedule and instruction changes. The switch changes only saved submission access.</p><button type="submit" class="or-button is-primary"><i class="bi bi-floppy" aria-hidden="true"></i> Save Settings</button></footer>
         </form>
     </section>
 
     <section class="or-card" aria-labelledby="osoRenewalApplicationsHeading">
         <header class="or-card-head"><div><h2 id="osoRenewalApplicationsHeading">Renewal Applications</h2><p class="or-subtitle">Organization standing is based on the final OSO renewal decision, not account existence or uploads alone.</p></div><button id="osoRenewalExport" type="button" class="or-button is-small"><i class="bi bi-download" aria-hidden="true"></i> Export list</button></header>
-        <div class="or-note"><i class="bi bi-award" aria-hidden="true"></i><div><strong>Official OSO status basis</strong><p><strong>Active · Renewed</strong> means the current filing period has final OSO approval and the organization is operationally enabled. Otherwise its standing remains inactive or not renewed. Filing eligibility and operational flags are managed separately.</p></div></div>
+        <div class="or-note"><i class="bi bi-award" aria-hidden="true"></i><p><strong>Official OSO status basis:</strong> <strong>Active · Renewed</strong> requires final approval in the current period and operational eligibility. Other organizations remain inactive or not renewed; filing eligibility is managed separately.</p></div>
         <div class="or-filters"><label class="or-search"><i class="bi bi-search" aria-hidden="true"></i><input id="osoRenewalSearch" type="search" placeholder="Search organization or college…" aria-label="Search organization or college"></label><select id="osoRenewalStatusFilter" aria-label="Filter renewal applications"><option value="all">All statuses</option><option value="submitted">Pending Review</option><option value="returned">For Revision</option><option value="approved">Renewed</option><option value="rejected">Rejected</option><option value="draft">Draft</option><option value="none">Pending Filing</option><option value="active">Active · Renewed</option><option value="inactive">Inactive organizations</option><option value="qualified">Qualified to renew</option><option value="not_qualified">Not qualified</option></select></div>
         <div class="or-table-scroll">
             <table id="osoRenewalApplicationsTable" class="or-table"><thead><tr><th scope="col">Organization</th><th scope="col">Official Status</th><th scope="col">Submitted</th><th scope="col">Renewal Status</th><th scope="col">Requirements</th><th scope="col">Action</th></tr></thead><tbody>
@@ -88,11 +96,11 @@
                         <form method="POST" action="{{ route('office.renewal.requirements.template') }}" enctype="multipart/form-data" data-or-replace-form data-confirm-message="Replace this official renewal template? Existing signed submissions will not change.">
                             @csrf<input type="hidden" name="window_id" value="{{ $window?->id }}"><input type="hidden" name="doc_key" value="{{ $file['key'] }}"><input type="hidden" name="form_context" value="replace_template">
                             <input type="file" name="document" accept="{{ $templateAccept }}" required data-or-file data-status-target="#osoRenewalReplaceStatus{{ $loop->iteration }}" aria-label="Replace official file for {{ $file['title'] }}" hidden>
-                            <button type="button" class="or-button is-small" data-or-replace @disabled(! $window)>{{ $file['file_available'] ? 'Replace File' : 'Upload File' }}</button>
-                            <button type="submit" class="or-button is-primary is-small" data-or-replace-submit hidden disabled>Save File</button>
+                            <button type="button" class="or-button is-small" data-or-replace @disabled(! $window)><i class="bi bi-{{ $file['file_available'] ? 'arrow-repeat' : 'cloud-arrow-up' }}" aria-hidden="true"></i> {{ $file['file_available'] ? 'Replace File' : 'Upload File' }}</button>
+                            <button type="submit" class="or-button is-primary is-small" data-or-replace-submit hidden disabled><i class="bi bi-floppy" aria-hidden="true"></i> Save File</button>
                         </form>
-                        <button type="button" class="or-button is-blue is-small" data-or-edit data-key="{{ $file['key'] }}" data-code="{{ $file['code'] }}" data-title="{{ $file['title'] }}" data-description="{{ $file['description'] ?? '' }}" data-template-name="{{ $file['file_name'] ?? 'No file attached' }}" data-update-url="{{ route('office.renewal.requirements.update', $file['key']) }}" @disabled(! $window)>Edit</button>
-                        <button type="button" class="or-button is-danger is-small" data-or-delete data-key="{{ $file['key'] }}" data-title="{{ $file['title'] }}" data-delete-url="{{ route('office.renewal.requirements.destroy', $file['key']) }}" @disabled(! $window || count($docs) <= 1)>Delete</button>
+                        <button type="button" class="or-button is-blue is-small" data-or-edit data-key="{{ $file['key'] }}" data-code="{{ $file['code'] }}" data-title="{{ $file['title'] }}" data-description="{{ $file['description'] ?? '' }}" data-template-name="{{ $file['file_name'] ?? 'No file attached' }}" data-update-url="{{ route('office.renewal.requirements.update', $file['key']) }}" @disabled(! $window)><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</button>
+                        <button type="button" class="or-button is-danger is-small" data-or-delete data-key="{{ $file['key'] }}" data-title="{{ $file['title'] }}" data-delete-url="{{ route('office.renewal.requirements.destroy', $file['key']) }}" @disabled(! $window || count($docs) <= 1)><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
                     </div>
                     <span id="osoRenewalReplaceStatus{{ $loop->iteration }}" class="or-file-status" aria-live="polite"></span>
                 </article>
@@ -111,7 +119,7 @@
                 <label class="or-field"><span class="or-field-label">Official Template File <small>Required</small></span><span class="or-file-picker"><input id="osoRenewalAddFile" type="file" name="document" accept="{{ $templateAccept }}" required data-or-file data-status-target="#osoRenewalAddFileStatus"></span><small class="or-helper">PDF, Office documents, PNG or JPG · maximum 20 MB</small><span id="osoRenewalAddFileStatus" class="or-file-status" aria-live="polite"></span></label>
                 @if ($errors->any() && $formContext === 'add_requirement')<p class="or-file-status">{{ $errors->first() }} Select the official file again before submitting.</p>@endif
             </div>
-            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button id="osoRenewalAddSubmit" type="submit" class="or-button is-primary" disabled>Add Requirement</button></footer>
+            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button id="osoRenewalAddSubmit" type="submit" class="or-button is-primary" disabled><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Requirement</button></footer>
         </form>
     </dialog>
 
@@ -126,7 +134,7 @@
                 <div class="or-current-file"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><div><small class="or-helper">Current template</small><strong id="osoRenewalEditCurrentFile">{{ $editingFile['file_name'] ?? 'No file attached' }}</strong></div></div>
                 @if ($errors->any() && $formContext === 'edit_requirement')<p class="or-file-status">{{ $errors->first() }}</p>@endif
             </div>
-            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button id="osoRenewalEditSubmit" type="submit" class="or-button is-primary">Save Changes</button></footer>
+            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button id="osoRenewalEditSubmit" type="submit" class="or-button is-primary"><i class="bi bi-floppy" aria-hidden="true"></i> Save Changes</button></footer>
         </form>
     </dialog>
 
@@ -135,12 +143,12 @@
             @csrf @method('DELETE')<input type="hidden" name="window_id" value="{{ $window?->id }}"><input id="osoRenewalDeleteKey" type="hidden" name="doc_key">
             <header class="or-dialog-head"><h2 id="osoRenewalDeleteHeading">Remove Official Requirement</h2><button type="button" class="or-dialog-close" data-or-close aria-label="Close remove requirement"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
             <div class="or-dialog-body"><strong id="osoRenewalDeleteTitle"></strong><p class="or-subtitle">Remove this requirement from the current filing checklist? Existing signed uploads and historical template files will remain unchanged.</p></div>
-            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button type="submit" class="or-button is-primary">Remove Requirement</button></footer>
+            <footer class="or-dialog-footer"><button type="button" class="or-button" data-or-close>Cancel</button><button type="submit" class="or-button is-primary"><i class="bi bi-trash" aria-hidden="true"></i> Remove Requirement</button></footer>
         </form>
     </dialog>
 
     <dialog id="osoRenewalPreviewDialog" class="or-dialog or-preview-dialog" aria-labelledby="osoRenewalPreviewTitle">
-        <header class="or-dialog-head"><h2 id="osoRenewalPreviewTitle">Official Template</h2><div class="or-head-actions"><a id="osoRenewalPreviewDownload" class="or-button is-small" href="#">Download</a><a id="osoRenewalPreviewExternal" class="or-button is-small" href="#" target="_blank" rel="noopener">Open File</a><button type="button" class="or-dialog-close" data-or-close aria-label="Close official template preview"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div></header>
+        <header class="or-dialog-head"><h2 id="osoRenewalPreviewTitle">Official Template</h2><div class="or-head-actions"><a id="osoRenewalPreviewDownload" class="or-button is-small" href="#"><i class="bi bi-download" aria-hidden="true"></i> Download</a><a id="osoRenewalPreviewExternal" class="or-button is-small" href="#" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open File</a><button type="button" class="or-dialog-close" data-or-close aria-label="Close official template preview"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div></header>
         <div class="or-preview-body"><p id="osoRenewalPreviewMessage" class="or-preview-message" role="status" hidden></p><iframe id="osoRenewalPreviewFrame" class="or-preview-frame" title="Official renewal template preview" hidden></iframe><div id="osoRenewalPreviewDocx" class="or-preview-docx" hidden></div></div>
     </dialog>
 </div>

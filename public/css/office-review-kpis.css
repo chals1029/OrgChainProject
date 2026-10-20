@@ -1,0 +1,8 @@
+.office-review-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1.1rem; min-width:0; }
+.office-review-kpi { display:flex; flex-direction:column; align-items:flex-start; gap:.35rem; min-width:0; padding:1.4rem 1.6rem; border:1.5px solid #f0e6e8; border-radius:20px; background:#fff; box-shadow:0 4px 16px rgba(90,15,30,.03); }
+.office-review-kpi-icon { display:inline-grid; place-items:center; width:34px; height:34px; margin-bottom:.3rem; border-radius:10px; background:#fdf0f2; border:1px solid #fae1e5; color:#8b1828; }
+.office-review-kpi-value { color:#8b1828; font-size:2.15rem; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.office-review-kpi-label { color:#1a1618; font-size:.98rem; font-weight:700; overflow-wrap:anywhere; }
+.office-review-kpi-hint { margin:0; color:#7a7074; font-size:.78rem; overflow-wrap:anywhere; }
+@media(max-width:1100px) { .office-review-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:560px) { .office-review-kpis { gap:.65rem; } .office-review-kpi { padding:1rem; } .office-review-kpi-value { font-size:1.8rem; } .office-review-kpi-label { font-size:.85rem; } }

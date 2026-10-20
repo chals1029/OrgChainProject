@@ -10,6 +10,8 @@ use App\Models\UserAccount;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -92,6 +94,7 @@ class AnnouncementFeedbackTest extends TestCase
         $body = 'The filing deadline for the isolated publication fixture is Friday.';
         $this->actingAs($office, 'office')->post(route('office.updates.announcements.store'), [
             'type' => 'Deadline', 'body' => $body, 'priority' => 'high',
+            'expires_at' => '2030-05-02T10:00',
         ])->assertRedirect(route('office.updates'));
         $published = OfficeAnnouncement::query()->where('body', $body)->firstOrFail();
         for ($index = 1; $index <= 16; $index++) {
@@ -153,7 +156,6 @@ class AnnouncementFeedbackTest extends TestCase
         $this->assertNull($secondRow['acknowledged_at']);
         $this->postJson($url)->assertOk();
         $this->assertSame(2, OfficeAnnouncementAcknowledgment::query()->where('office_announcement_id', $notice->id)->count());
-        $this->get($firstRow['document_url'])->assertOk();
     }
 
     public function test_notice_acknowledgment_requires_an_active_office_account(): void
@@ -216,5 +218,126 @@ class AnnouncementFeedbackTest extends TestCase
         $view = $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk();
         $this->assertNull(collect($view->viewData('feedbackNotifications'))->firstWhere('id', 'feedback-'.$feedback->id));
         $this->assertTrue($view->viewData('myFeedback')->contains('id', $feedback->id));
+    }
+
+    public function test_expiration_hides_notices_across_active_feeds_without_deleting_legacy_records(): void
+    {
+        $legacy = $this->announcement();
+        $active = $this->announcement();
+        $active->update(['expires_at' => now()->addMinute()]);
+        $boundary = $this->announcement();
+        $boundary->update(['expires_at' => now()]);
+        $expired = $this->announcement();
+        $expired->update(['expires_at' => now()->subSecond()]);
+        $fixtureIds = [$legacy->id, $active->id, $boundary->id, $expired->id];
+        $office = $this->officer();
+        $updates = $this->actingAs($office, 'office')->get(route('office.updates'))->assertOk();
+        $visible = collect($updates->viewData('announcements'))->pluck('id')->intersect($fixtureIds)->sort()->values()->all();
+        $this->assertSame([$legacy->id, $active->id], $visible);
+        $dashboard = $this->get(route('office.home'))->assertOk();
+        $notificationUrls = $dashboard->viewData('officeNotifications')->pluck('url');
+        $this->assertTrue($notificationUrls->contains(route('office.updates', ['announcement' => $active->id])));
+        $this->assertFalse($notificationUrls->contains(route('office.updates', ['announcement' => $boundary->id])));
+        $student = $this->student();
+        $portal = $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk();
+        $studentVisible = collect($portal->viewData('announcements'))->pluck('announcement_id')->intersect($fixtureIds)->sort()->values()->all();
+        $this->assertSame([$legacy->id, $active->id], $studentVisible);
+        Carbon::setTestNow(now()->addMinute());
+        $this->assertFalse(OfficeAnnouncement::published()->whereKey($active->id)->exists());
+        $this->assertTrue(OfficeAnnouncement::published()->whereKey($legacy->id)->exists());
+        $this->assertSame(4, OfficeAnnouncement::whereKey($fixtureIds)->count());
+    }
+
+    public function test_invalid_publication_fields_write_no_announcement_or_attachment(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->officer(), 'office');
+        $valid = ['type' => 'Deadline', 'priority' => 'normal', 'body' => 'Real publication details.', 'expires_at' => '2030-05-02T10:00'];
+        $before = OfficeAnnouncement::count();
+        foreach ([
+            ['expires_at' => null], ['expires_at' => '2030-05-01T09:59'],
+            ['expires_at' => '2030-05-01T10:00'], ['expires_at' => 'invalid'],
+            ['body' => '   '], ['type' => 'Official Notice'],
+        ] as $invalid) {
+            $field = array_key_first($invalid);
+            $this->postJson(route('office.updates.announcements.store'), array_replace($valid, $invalid))
+                ->assertUnprocessable()->assertJsonValidationErrors($field);
+            $this->assertSame($before, OfficeAnnouncement::count());
+            $this->assertSame([], Storage::disk('public')->allFiles());
+        }
+    }
+
+    public function test_future_text_only_notice_persists_the_local_expiration_time(): void
+    {
+        $this->actingAs($this->officer(), 'office')->post(route('office.updates.announcements.store'), [
+            'type' => 'Reminder', 'priority' => 'normal', 'body' => 'Text-only notice without an attachment.',
+            'expires_at' => '2030-05-02T15:45',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('office.updates'));
+        $notice = OfficeAnnouncement::where('body', 'Text-only notice without an attachment.')->firstOrFail();
+        $this->assertSame('2030-05-02 15:45:00', $notice->expires_at->format('Y-m-d H:i:s'));
+        $this->assertNull($notice->attachment_path);
+        $this->assertTrue(OfficeAnnouncement::published()->whereKey($notice->id)->exists());
+    }
+
+    public function test_attachment_limit_accepts_exactly_fifteen_mebibytes_and_rejects_zero_and_one_byte_over(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->officer(), 'office');
+        $payload = ['type' => 'Deadline', 'priority' => 'normal', 'body' => 'Attachment boundary notice.', 'expires_at' => '2030-05-02T10:00'];
+        $before = OfficeAnnouncement::count();
+        foreach ([0, 15 * 1024 * 1024 + 1] as $size) {
+            $bytes = $size ? "%PDF-1.4\n".str_repeat(' ', $size - 9) : '';
+            $this->postJson(route('office.updates.announcements.store'), $payload + [
+                'attachment' => UploadedFile::fake()->createWithContent('boundary.pdf', $bytes),
+            ])->assertUnprocessable()->assertJsonValidationErrors('attachment');
+            $this->assertSame($before, OfficeAnnouncement::count());
+            $this->assertSame([], Storage::disk('public')->allFiles());
+        }
+        $bytes = "%PDF-1.4\n".str_repeat(' ', 15 * 1024 * 1024 - 9);
+        $this->post(route('office.updates.announcements.store'), $payload + [
+            'attachment' => UploadedFile::fake()->createWithContent('boundary.pdf', $bytes),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('office.updates'));
+        $notice = OfficeAnnouncement::where('body', $payload['body'])->firstOrFail();
+        $this->assertSame(15 * 1024 * 1024, Storage::disk('public')->size($notice->attachment_path));
+    }
+
+    public function test_nonempty_sub_kilobyte_attachment_is_not_treated_as_an_empty_file(): void
+    {
+        Storage::fake('public');
+        $bytes = "%PDF-1.4\n%%EOF\n";
+        $this->actingAs($this->officer(), 'office')->post(route('office.updates.announcements.store'), [
+            'type' => 'Reminder', 'priority' => 'normal', 'body' => 'Small attachment notice.',
+            'expires_at' => '2030-05-02T10:00',
+            'attachment' => UploadedFile::fake()->createWithContent('small.pdf', $bytes),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('office.updates'));
+        $notice = OfficeAnnouncement::where('body', 'Small attachment notice.')->firstOrFail();
+        $this->assertSame(strlen($bytes), Storage::disk('public')->size($notice->attachment_path));
+    }
+
+    public function test_attachment_download_and_inline_preview_preserve_original_bytes_and_filename(): void
+    {
+        Storage::fake('public');
+        $bytes = "%PDF-1.4\nOriginal notice attachment\n%%EOF\n";
+        Storage::disk('public')->put('announcements/original.pdf', $bytes);
+        $notice = $this->announcement();
+        $notice->update(['attachment_path' => 'announcements/original.pdf', 'attachment_name' => 'Minutes "Résumé".pdf']);
+        $this->actingAs($this->officer(), 'office');
+        $download = $this->get(route('office.updates.announcements.attachment', $notice))->assertOk()->assertDownload();
+        $this->assertSame(1, preg_match("/filename\\*=utf-8''([^;]+)/i", $download->headers->get('Content-Disposition'), $filename));
+        $this->assertSame('Minutes "Résumé".pdf', rawurldecode($filename[1]));
+        $this->assertSame($bytes, file_get_contents($download->baseResponse->getFile()->getPathname()));
+        $preview = $this->get(route('office.updates.announcements.attachment', ['announcement' => $notice, 'preview' => 1]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('inline;', $preview->headers->get('Content-Disposition'));
+        $this->assertSame($bytes, file_get_contents($preview->baseResponse->getFile()->getPathname()));
+    }
+
+    public function test_missing_or_empty_legacy_attachment_is_unavailable_not_a_server_error(): void
+    {
+        Storage::fake('public');
+        $notice = $this->announcement();
+        $notice->update(['attachment_path' => 'announcements/unavailable.pdf', 'attachment_name' => 'unavailable.pdf']);
+        $this->actingAs($this->officer(), 'office')->get(route('office.updates.announcements.attachment', $notice))->assertNotFound();
+        Storage::disk('public')->put($notice->attachment_path, '');
+        $this->get(route('office.updates.announcements.attachment', ['announcement' => $notice, 'preview' => 1]))->assertNotFound();
     }
 }

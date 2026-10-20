@@ -479,6 +479,50 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertSame('Same period notes', $this->window->fresh()->notes);
     }
 
+    public function test_submission_switch_preserves_settings_documents_and_schedule_when_reopened(): void
+    {
+        $this->window->update(['opens_at' => now()->addDays(2), 'closes_at' => now()->addDays(3)]);
+        $approved = $this->submission('approved');
+        $fields = ['academic_year', 'semester', 'opens_at', 'closes_at', 'instructions', 'notes', 'required_docs'];
+        $before = $this->window->fresh()->only($fields);
+        $this->actingAs($this->oso, 'office')->post(route('office.renewal.window'), [
+            'toggle_only' => 1, 'window_id' => $this->window->id, 'is_open' => 0,
+            'academic_year' => 'Unsaved period', 'instructions' => 'Unsaved draft',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('office.renewal'));
+        $this->assertFalse($this->window->fresh()->is_open);
+        $this->assertEquals($before, $this->window->fresh()->only($fields));
+        $this->post(route('office.renewal.window'), ['toggle_only' => 1, 'window_id' => $this->window->id, 'is_open' => 1])->assertSessionHasNoErrors();
+        $this->assertTrue($this->window->fresh()->is_open);
+        $this->assertFalse($this->window->fresh()->isAcceptingSubmissions());
+        $this->assertEquals($before, $this->window->fresh()->only($fields));
+        $this->assertSame('approved', $approved->fresh()->status);
+    }
+
+    public function test_submission_switch_rejects_other_roles_and_stale_windows_without_changing_either_period(): void
+    {
+        $payload = ['toggle_only' => 1, 'window_id' => $this->window->id, 'is_open' => 0];
+        $this->actingAs($this->so, 'office')->post(route('office.renewal.window'), $payload)->assertForbidden();
+        $this->assertTrue($this->window->fresh()->is_open);
+        $newWindow = $this->renewalWindow($this->definitions());
+        $this->actingAs($this->oso, 'office')->from(route('office.renewal'))->post(route('office.renewal.window'), $payload)->assertSessionHasErrors('renewal');
+        $this->assertTrue($newWindow->fresh()->is_open);
+        $this->assertTrue($this->window->fresh()->is_open);
+    }
+
+    public function test_settings_save_preserves_closed_access_and_new_period_starts_closed(): void
+    {
+        $this->window->update(['is_open' => false, 'closed_by' => $this->oso->id]);
+        $this->actingAs($this->oso, 'office')->post(route('office.renewal.window'), $this->windowPayload(['instructions' => 'Saved while closed']))->assertSessionHasNoErrors();
+        $this->assertFalse($this->window->fresh()->is_open);
+        $this->assertSame('Saved while closed', $this->window->fresh()->instructions);
+        $this->assertSame($this->oso->id, $this->window->fresh()->closed_by);
+        $this->window->update(['is_open' => true]);
+        $this->post(route('office.renewal.window'), $this->windowPayload(['semester' => 'New closed period']))->assertSessionHasNoErrors();
+        $newWindow = OrgRenewalWindow::query()->latest('id')->firstOrFail();
+        $this->assertFalse($newWindow->is_open);
+        $this->assertTrue($this->window->fresh()->is_open);
+    }
+
     public function test_oso_roster_standing_uses_current_window_approval_separately_from_admin_flags(): void
     {
         $prior = $this->submission('approved');
@@ -649,7 +693,6 @@ class RenewalRequirementManagementTest extends TestCase
             'window_id' => (int) OrgRenewalWindow::query()->max('id'),
             'academic_year' => $window->academic_year,
             'semester' => $window->semester,
-            'is_open' => 1,
             'instructions' => $window->instructions,
             'notes' => $window->notes,
         ], $overrides);

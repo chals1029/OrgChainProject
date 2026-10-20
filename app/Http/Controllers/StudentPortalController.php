@@ -661,7 +661,7 @@ class StudentPortalController extends Controller
             $colleges = $colleges->prepend($studentCollege)->unique()->values();
         }
 
-        $announcements = OfficeAnnouncement::query()
+        $announcements = OfficeAnnouncement::query()->published()
             ->latest()->orderByDesc('id')->get()
             ->map(fn (OfficeAnnouncement $announcement): array => $announcement->studentPublication())
             ->all();

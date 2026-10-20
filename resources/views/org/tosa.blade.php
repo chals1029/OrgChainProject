@@ -9,6 +9,7 @@
 
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/office-review-kpis.css') }}?v={{ filemtime(public_path('css/office-review-kpis.css')) }}">
     @php
         $requirements = collect(\App\Services\TosaRequirements::SUBMISSIONS)
             ->map(fn ($document, $key) => ['key' => $key] + $document)->values()->all();
@@ -57,6 +58,7 @@
                 'workbookDownloadUrl' => route('office.tosa.workbook.download', $applicant),
             ];
         })->values();
+        $tosaKpis = ['total' => $tosaApplicantsJs->count(), 'pending' => $tosaApplicantsJs->where('subsection', 'pending')->count(), 'revision' => $tosaApplicantsJs->where('subsection', 'returned')->count(), 'evaluated' => $tosaApplicantsJs->filter(fn ($applicant) => $applicant['evaluation'] !== null)->count()];
         $templateDocuments = collect($references)->map(function ($reference) use ($tosaTemplates) {
             $template = ($tosaTemplates ?? [])[$reference['title']] ?? null;
             if ($template === null) {
@@ -135,6 +137,29 @@
         .tosa-evidence-row button { justify-self: start; }
         .tosa-scoring-section [aria-invalid="true"] { border-color: #a12638; outline: 1px solid #a12638; }
         #tosaScoreSummary { font-size: .84rem; overflow-wrap: anywhere; }
+        .tosa-modal { animation:none !important; transform:none; }
+        .tosa-applicants-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom:1rem; }
+        .tosa-applicants-head .tosa-heading { margin:0; }
+        .tosa-applicants-head .tosa-toolbar { justify-content:flex-end; margin:0; flex:0 1 800px; min-width:0; }
+        .tosa-applicants-head .tosa-search { flex:1 1 220px; min-width:0; }
+        .tosa-applicants-head select { max-width:160px; }
+        .tosa-qualification-card { min-width:0; padding:1rem; border:1px solid var(--tosa-border); border-radius:14px; background:#fcfafb; }
+        .tosa-locked-field { position:relative; display:block; margin-top:.35rem; }
+        .tosa-locked-field > i { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); color:#8b7b80; }
+        .tosa-locked-field .tosa-input { padding-left:2.1rem; margin-top:0; box-sizing:border-box; }
+        .tosa-input[readonly] { background:#f1f2f4; color:#5e5960; cursor:default; }
+        .tosa-qualification-footer { display:flex; justify-content:flex-end; padding-top:.85rem; margin-top:.85rem; border-top:1px solid var(--tosa-border); }
+        .tosa-evaluator-modal { width:min(1000px,calc(100vw - 2rem)); max-height:calc(100dvh - 2rem); overflow:hidden; }
+        .tosa-evaluator-modal[open] { display:flex; flex-direction:column; }
+        .tosa-evaluator-head,.tosa-evaluator-footer { flex:0 0 auto; padding:1rem 1.25rem; background:#fff; }
+        .tosa-evaluator-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; border-bottom:1px solid var(--tosa-border); }
+        .tosa-evaluator-head .tosa-note { margin:0; }
+        .tosa-evaluator-body { min-height:0; overflow:auto; padding:1rem 1.25rem; }
+        .tosa-evaluator-modal .tosa-scoring-section { margin:0; padding:0; border:0; }
+        .tosa-evaluator-footer { display:flex; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; border-top:1px solid var(--tosa-border); }
+        .tosa-evaluator-modal #tosaScoringFields { margin:0; border-radius:12px; }
+        .tosa-evaluator-modal #tosaScoringFields > .tosa-actions { margin-bottom:.8rem; }
+        @media(max-width:720px) { .tosa-applicants-head .tosa-toolbar { flex-basis:100%; } .tosa-applicants-head select { max-width:none; } .tosa-evaluator-head,.tosa-evaluator-body,.tosa-evaluator-footer { padding:.85rem; } .tosa-evaluator-footer .org-btn { flex:1 1 auto; } }
         @media (max-width: 720px) {
             .tosa-review-grid { grid-template-columns: 1fr; }
             .tosa-score-inputs, .tosa-evidence-row { grid-template-columns: minmax(0, 1fr); }
@@ -161,12 +186,19 @@
         </nav>
 
         <section id="tosaTabSectionApplicants" role="tabpanel" aria-labelledby="tabBtnApplicants" class="tosa-card">
+            <div class="office-review-kpis" aria-label="Submitted applicant totals">
+                @foreach ([['total', 'Total applicants', 'people', 'Submitted dossiers only'], ['pending', 'Pending', 'hourglass-split', 'Awaiting initial review'], ['revision', 'For revision', 'arrow-repeat', 'Returned to the applicant'], ['evaluated', 'Evaluated', 'check2-circle', 'Saved scoring evaluations']] as [$key, $label, $icon, $hint])
+                    <article class="office-review-kpi"><span class="office-review-kpi-icon"><i class="bi bi-{{ $icon }}" aria-hidden="true"></i></span><strong class="office-review-kpi-value" data-tosa-kpi="{{ $key }}">{{ $tosaKpis[$key] }}</strong><span class="office-review-kpi-label">{{ $label }}</span><p class="office-review-kpi-hint">{{ $hint }}</p></article>
+                @endforeach
+            </div>
+            <div class="tosa-applicants-head"><h2 class="tosa-heading">Applicants</h2>
             <div class="tosa-toolbar">
                 <div class="tosa-search"><input type="search" class="tosa-input" id="tosaApplicantSearch" aria-label="Search applicants" placeholder="Search name, student ID, program, or organization…" oninput="filterApplicants()"></div>
                 <select class="tosa-input" id="tosaStatusFilter" aria-label="Review stage" onchange="filterApplicants()"><option value="">All review stages</option></select>
                 <select class="tosa-input" id="tosaProgramFilter" aria-label="Program" onchange="filterApplicants()"><option value="">All programs</option></select>
                 <select class="tosa-input" id="tosaYearFilter" aria-label="Year level" onchange="filterApplicants()"><option value="">All year levels</option></select>
                 <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="exportApplicantReport()"><i class="bi bi-download"></i> Export roster</button>
+            </div>
             </div>
             <div class="tosa-table-wrap">
                 <table class="tosa-table">
@@ -268,6 +300,7 @@
                         <h3 class="tosa-heading">Application documents</h3>
                         <div id="revDocListContainer"></div>
                     </div>
+                    <div class="tosa-qualification-card">
                     <form id="tosaReviewForm" method="post" data-confirm-message="Save this applicant qualification review?" onsubmit="saveApplicantReview(event)">
                         @csrf
                         <h3 class="tosa-heading">Qualification review</h3>
@@ -278,56 +311,62 @@
                             </select>
                         </label>
                         <label class="tosa-field" for="revGwa">GWA
-                            <input class="tosa-input" id="revGwa" name="gwa" type="number" min="1" max="5" step="0.01" placeholder="Not provided" @readonly(!($tosaCanReview ?? false))>
+                            <span class="tosa-locked-field"><i class="bi bi-lock-fill" aria-hidden="true"></i><input class="tosa-input" id="revGwa" name="gwa" type="number" min="1" max="5" step="0.01" placeholder="Not provided" readonly></span>
                         </label>
+                        @if ($tosaCanReview ?? false)<button type="button" class="org-btn org-btn-ghost org-btn-sm" id="editQualificationGwa" aria-pressed="false" onclick="toggleAcademicEditing('qualification')"><i class="bi bi-pencil" aria-hidden="true"></i> Edit GWA</button>@endif
                         <label class="tosa-check"><input type="checkbox" id="revGwaVerified" name="gwa_verified" value="1" @disabled(!($tosaCanReview ?? false))> GWA verified by reviewer</label>
                         <label class="tosa-field" for="revRemarksInput">Reviewer remarks
                             <textarea class="tosa-input" id="revRemarksInput" name="remarks" rows="5" maxlength="1000" @readonly(!($tosaCanReview ?? false))></textarea>
                         </label>
                         @if ($tosaCanReview ?? false)
-                            <button type="submit" class="org-btn org-btn-primary org-btn-sm" id="saveReviewButton">Save review</button>
+                            <button type="submit" class="org-btn org-btn-primary org-btn-sm" id="saveReviewButton"><i class="bi bi-floppy" aria-hidden="true"></i> Save review</button>
                         @endif
                         <p class="tosa-feedback" id="reviewFeedback" role="status" aria-live="polite"></p>
                     </form>
+                    <div class="tosa-qualification-footer"><button type="button" class="org-btn org-btn-ghost org-btn-sm" id="openScoringButton" onclick="openScoringModal()"><i class="bi bi-calculator" aria-hidden="true"></i> {{ ($tosaCanReview ?? false) ? 'Evaluator scoring' : 'View scoring' }}</button></div>
+                    </div>
                 </div>
-                <section class="tosa-scoring-section" aria-labelledby="tosaScoringTitle">
-                    <h3 class="tosa-heading" id="tosaScoringTitle">Evaluator-verified scoring</h3>
+            </div>
+        </dialog>
+
+        <dialog class="tosa-modal tosa-evaluator-modal" id="tosaScoringModal" aria-labelledby="tosaScoringTitle">
+            <header class="tosa-evaluator-head"><div><h2 class="tosa-heading" id="tosaScoringTitle">Evaluator-verified scoring</h2><p class="tosa-note" id="tosaScoringApplicant"></p></div><button type="button" class="tosa-close" aria-label="Close evaluator scoring" onclick="closeScoringModal()">&times;</button></header>
+            <div class="tosa-evaluator-body">
+                <section class="tosa-scoring-section">
                     <p class="tosa-note">Enter only actual achievements checked against the original A–G packet. Qualification review remains separate. Saving provisional scoring removes rank eligibility; finalization does not accept or endorse an applicant.</p>
-                    @unless ($tosaCanReview ?? false)<p class="tosa-note">Read-only clearance: inspect the evidence and computation below; only authorized evaluators may save or finalize.</p>@endunless
-                    <p class="tosa-note" id="tosaScoringBusy" role="status" hidden>A review or scoring save is in progress. You may inspect dossiers; editing is temporarily disabled until the server responds.</p>
+                    @unless ($tosaCanReview ?? false)<p class="tosa-note">Read-only clearance: only authorized evaluators may save or finalize.</p>@endunless
+                    <p class="tosa-note" id="tosaScoringBusy" role="status" hidden>A review or scoring save is in progress. Editing is disabled until the server responds.</p>
                     <div id="tosaScoreSummary" aria-live="polite"></div>
                     <div class="tosa-actions" id="tosaScoreWorkbookLinks" hidden>
                         <a class="app-view-action" id="tosaScoreWorkbookPreview" target="_blank" rel="noopener" aria-label="View computed workbook"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
-                        <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookDownload">Download computed XLSX</a>
+                        <a class="org-btn org-btn-ghost org-btn-sm" id="tosaScoreWorkbookDownload"><i class="bi bi-download" aria-hidden="true"></i> Download computed XLSX</a>
                     </div>
                     <form id="tosaScoringForm" method="post">
                         @csrf
                         <fieldset id="tosaScoringFields" @disabled(!($tosaCanReview ?? false))>
                             <legend class="tosa-heading">Verified inputs</legend>
                             <div class="tosa-score-inputs">
-                                <label class="tosa-field" for="tosaScoreYear">Academic year
-                                    <input class="tosa-input" id="tosaScoreYear" name="academic_year" maxlength="9" pattern="[0-9]{4}-[0-9]{4}" placeholder="2025-2026">
-                                </label>
-                                <label class="tosa-field" for="tosaScoreGwa">GWA
-                                    <input class="tosa-input" id="tosaScoreGwa" name="gwa" type="number" min="1" max="5" step="0.01" placeholder="Not provided">
-                                </label>
+                                <label class="tosa-field" for="tosaScoreYear">Academic year<span class="tosa-locked-field"><i class="bi bi-lock-fill" aria-hidden="true"></i><input class="tosa-input" id="tosaScoreYear" name="academic_year" maxlength="9" pattern="[0-9]{4}-[0-9]{4}" placeholder="Not recorded" readonly></span></label>
+                                <label class="tosa-field" for="tosaScoreGwa">GWA<span class="tosa-locked-field"><i class="bi bi-lock-fill" aria-hidden="true"></i><input class="tosa-input" id="tosaScoreGwa" name="gwa" type="number" min="1" max="5" step="0.01" placeholder="Not provided" readonly></span></label>
                             </div>
+                            @if ($tosaCanReview ?? false)<div class="tosa-actions"><button type="button" class="org-btn org-btn-ghost org-btn-sm" id="editScoringAcademics" aria-pressed="false" onclick="toggleAcademicEditing('scoring')"><i class="bi bi-pencil" aria-hidden="true"></i> Edit academic details</button></div>@endif
                             <label class="tosa-check"><input id="tosaScoreGwaVerified" type="checkbox"> GWA checked against the transcript</label>
                             <label class="tosa-check"><input id="tosaScoreEligible" type="checkbox"> Eligibility checked against the guidelines and complete original A–G packet</label>
-                            <p class="tosa-note">An empty category is explicitly saved as zero verified claims. Add a row only for a real verified claim; remove unwanted rows rather than saving blanks. Finalization requires GWA ≤ 3.00, both verifications, a consecutive academic year and a complete submitted packet not returned or rejected.</p>
-                            <p class="tosa-note">The server applies the corrected 2025 rubric, not the original workbook's demonstration entries or erroneous local-leadership formulas. Seminar points use verified attended days (1–5), not training titles or assumed attendance.</p>
+                            <p class="tosa-note">Empty categories mean zero verified claims. Finalization requires GWA ≤ 3.00, both verifications, a consecutive academic year and a complete submitted packet not returned or rejected.</p>
+                            <p class="tosa-note">The server applies the corrected 2025 rubric, not workbook demonstration entries. Seminar points use verified attended days (1–5), not training titles or assumed attendance.</p>
                             <div id="tosaEvidenceCategories"></div>
-                            @if ($tosaCanReview ?? false)
-                                <div class="tosa-actions">
-                                    <button type="submit" class="org-btn org-btn-ghost org-btn-sm" value="draft" data-confirm-message="Save provisional scoring? This removes rank eligibility.">Save provisional</button>
-                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm" value="finalize" data-confirm-message="Finalize this verified evaluation?">Finalize verified</button>
-                                </div>
-                            @endif
                         </fieldset>
                         <p id="tosaScoringFeedback" class="tosa-feedback" role="status" aria-live="polite"></p>
                     </form>
                 </section>
             </div>
+            <footer class="tosa-evaluator-footer">
+                <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="closeScoringModal()">Close</button>
+                @if ($tosaCanReview ?? false)
+                    <button type="submit" form="tosaScoringForm" class="org-btn org-btn-ghost org-btn-sm" value="draft" data-confirm-message="Save provisional scoring? This removes rank eligibility."><i class="bi bi-floppy" aria-hidden="true"></i> Save provisional</button>
+                    <button type="submit" form="tosaScoringForm" class="org-btn org-btn-primary org-btn-sm" value="finalize" data-confirm-message="Finalize this verified evaluation?"><i class="bi bi-check2-circle" aria-hidden="true"></i> Finalize verified</button>
+                @endif
+            </footer>
         </dialog>
 
         @if ($tosaCanManageTemplates ?? false)
@@ -448,6 +487,8 @@
         }
 
         function renderApplicantsTable() {
+            const counts = { total: tosaApplicants.length, pending: tosaApplicants.filter(a => a.subsection === 'pending').length, revision: tosaApplicants.filter(a => a.subsection === 'returned').length, evaluated: tosaApplicants.filter(a => a.evaluation !== null && a.evaluation !== undefined).length };
+            document.querySelectorAll('[data-tosa-kpi]').forEach(element => { element.textContent = counts[element.dataset.tosaKpi]; });
             const applicants = filteredApplicants();
             const pages = Math.max(1, Math.ceil(applicants.length / PAGE_SIZE));
             currentApplicantPage = Math.min(currentApplicantPage, pages);
@@ -524,10 +565,29 @@
             document.getElementById('applicantReviewModal').showModal();
         }
 
+        function openScoringModal() {
+            if (!activeReviewApplicant) return;
+            document.getElementById('tosaScoringApplicant').textContent = [activeReviewApplicant.name, activeReviewApplicant.studentId, activeReviewApplicant.academicYear].filter(Boolean).join(' · ');
+            document.getElementById('tosaScoringModal').showModal();
+        }
+
+        function closeScoringModal() { document.getElementById('tosaScoringModal').close(); }
+
+        function academicFields(scope) { return scope === 'qualification' ? ['revGwa'] : ['tosaScoreYear', 'tosaScoreGwa']; }
+        function setAcademicEditing(scope, editing) {
+            academicFields(scope).forEach(id => { const input = document.getElementById(id); input.readOnly = !editing; input.parentElement.querySelector('i').className = 'bi bi-' + (editing ? 'unlock' : 'lock-fill'); });
+            const button = document.getElementById(scope === 'qualification' ? 'editQualificationGwa' : 'editScoringAcademics');
+            if (button) { button.setAttribute('aria-pressed', String(editing)); button.lastChild.textContent = editing ? ' Lock fields' : (scope === 'qualification' ? ' Edit GWA' : ' Edit academic details'); }
+        }
+        function lockAcademicFields() { setAcademicEditing('qualification', false); setAcademicEditing('scoring', false); }
+        function toggleAcademicEditing(scope) {
+            if (!TOSA_CAN_REVIEW || document.getElementById('tosaScoringFields').disabled) return;
+            setAcademicEditing(scope, document.getElementById(academicFields(scope)[0]).readOnly);
+        }
+
         function closeReviewModal() {
             document.getElementById('applicantReviewModal').close();
             activeReviewApplicant = null;
-            window.TosaScoring.close();
         }
 
         async function saveApplicantReview(event) {
@@ -662,7 +722,8 @@
         }
 
         document.getElementById('tosaDocViewerModal').addEventListener('close', releaseDocumentPreview);
-        document.getElementById('applicantReviewModal').addEventListener('close', () => { activeReviewApplicant = null; });
+        document.getElementById('applicantReviewModal').addEventListener('close', () => { activeReviewApplicant = null; closeScoringModal(); });
+        document.getElementById('tosaScoringModal').addEventListener('click', event => { const dialog = event.currentTarget; const rect = dialog.getBoundingClientRect(); if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close(); });
         populateApplicantFilters();
         const initialStage = @json(($selectedSubsection ?? 'all') === 'all' ? '' : $selectedSubsection);
         if (initialStage && ![...document.getElementById('tosaStatusFilter').options].some(option => option.value === initialStage)) {
@@ -674,8 +735,9 @@
             applicants: tosaApplicants,
             ranking: @json($tosaScoringRanking ?? []),
             canReview: TOSA_CAN_REVIEW,
-            escapeHtml, dossierButton,
+            escapeHtml, dossierButton, lockAcademicFields,
             onSaved(applicant) {
+                if (activeReviewApplicant === applicant) {
                 document.getElementById('revGwa').value = applicant.gwa ?? '';
                 document.getElementById('revGwaVerified').checked = applicant.gwaVerified;
                 document.getElementById('revStage').value = applicant.subsection;
@@ -683,6 +745,7 @@
                 document.querySelector('#revDetails div:last-child dd').textContent = applicant.stage;
                 const academicYear = document.querySelector('#revDetails div:nth-child(4) dd');
                 if (academicYear) academicYear.textContent = applicant.academicYear || 'Not provided';
+                }
                 renderApplicantsTable();
             },
         });

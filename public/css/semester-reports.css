@@ -31,7 +31,6 @@
 .sr-directory th:first-child { width:48%; }
 .sr-directory td > strong { font-size:.78rem; }
 .sr-directory .sr-status { padding:.2rem .5rem; font-size:.66rem; font-weight:600; }
-.sr-period-card { border:0; box-shadow:none; padding:.35rem 0 .2rem; background:transparent; }
 .sr-period-card .sr-filters { margin:.85rem 0 0; }
 .sr-submission-card { background:#f3f4f7; border-color:#e9eaef; }
 .sr-submission-controls { display:grid; gap:.7rem; margin-top:.85rem; }

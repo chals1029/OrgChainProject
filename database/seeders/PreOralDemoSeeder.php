@@ -8,7 +8,6 @@ use App\Models\OrgActivity;
 use App\Models\OrgFundAccount;
 use App\Models\OrgFundSource;
 use App\Models\OrgReportStatus;
-use App\Models\StudentFeedback;
 use App\Models\TosaApplicant;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -284,28 +283,5 @@ class PreOralDemoSeeder extends Seeder
             );
         }
 
-        StudentFeedback::query()->updateOrCreate(
-            ['body' => 'Please improve announcement lead time for major campus events.'],
-            [
-                'author_name' => 'Student Voice',
-                'college' => 'College of Informatics and Computing Sciences',
-                'program' => 'BSIT',
-                'topic' => 'admin',
-                'is_anonymous' => false,
-                'visibility' => 'oso',
-            ]
-        );
-
-        StudentFeedback::query()->updateOrCreate(
-            ['body' => 'More wellness activities would help during midterms.'],
-            [
-                'author_name' => 'Anonymous',
-                'college' => 'College of Health Sciences',
-                'program' => 'BS Nursing',
-                'topic' => 'activities',
-                'is_anonymous' => true,
-                'visibility' => 'oso',
-            ]
-        );
     }
 }

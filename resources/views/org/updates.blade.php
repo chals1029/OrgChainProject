@@ -14,6 +14,7 @@
         @else
             Official announcements, notices, and compliance template downloads from the Office of Student Organizations.
         @endif
+        <span data-organization-registry-total="{{ $organizationRegistry['registered'] }}">{{ $organizationRegistry['registered'] }} registered organizations · all academic years, including inactive records.</span>
     </p>
 @endsection
 
@@ -53,6 +54,13 @@
         }
 
         /* Composer / Form Section */
+        .aso-directory-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--aso-border-subtle); color:var(--aso-ink-muted); font-size:.8rem; }
+        .aso-directory-footer .app-pagination { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; }
+        .aso-directory-footer .app-pagination-control { padding:.35rem .65rem; min-height:32px; border:1px solid #eadde1; border-radius:8px; background:#fff; color:#8b1828; font:inherit; cursor:pointer; }
+        .aso-directory-footer .app-pagination-control:disabled { opacity:.45; cursor:not-allowed; }
+        .aso-directory-footer .app-pagination-control:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
+        .aso-directory-footer [hidden] { display:none !important; }
+        .aso-composer, .aso-section-card { min-width: 0; }
         .aso-composer {
             background: #ffffff;
             border: 1.5px solid var(--aso-border);
@@ -144,6 +152,10 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .aso-composer .aso-input-group { min-width: 0; }
+        .aso-composer input[type="datetime-local"] { min-width: 0; max-width: 100%; }
+        .aso-composer-footer > div { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 
         .aso-input-group label {
             display: block;
@@ -1141,7 +1153,7 @@
         }
     </style>
 
-    {{-- 1. Create Announcement: Official Notice / Composer Form --}}
+    {{-- 1. Create Announcement --}}
     @if ($isOso)
         <section class="aso-composer" id="composerSection">
             <div class="aso-composer-header">
@@ -1149,7 +1161,7 @@
                     <div class="aso-avatar">{{ $office->initials() }}</div>
                     <div class="aso-composer-info">
                         <strong>{{ $office->name }} <i class="bi bi-patch-check-fill" style="color: #2563eb;" title="Verified University Entity"></i></strong>
-                        <span><i class="bi bi-broadcast"></i> Broadcast to All 48 Student Organizations</span>
+                        <span><i class="bi bi-broadcast"></i> Broadcast to all {{ $organizationRegistry['registered'] }} registered student organizations</span>
                     </div>
                 </div>
                 <div class="aso-composer-pills-live">
@@ -1162,32 +1174,39 @@
                 </div>
             </div>
 
-            <form id="announcementComposerForm" method="post" action="{{ route('office.updates.announcements.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Publish this announcement to students and office accounts?">
+            <form id="announcementComposerForm" method="post" action="{{ route('office.updates.announcements.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Publish this announcement to students and office accounts?" data-server-now="{{ now()->toIso8601String() }}" data-timezone-offset="{{ now()->format('P') }}">
                 @csrf
+                @if ($errors->any())
+                    <div class="org-upload-status is-error" role="alert"><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+                @endif
                 <div class="aso-form-row">
                     <div class="aso-input-group">
                         <label for="postTypeSelect">Announcement Type *</label>
-                        <select id="postTypeSelect" name="type" class="aso-select" onchange="updateComposerTypePreview(this.value)">
-                            <option value="General Announcement">General Announcement</option>
-                            <option value="Deadline">Deadline Notice</option>
-                            <option value="Guideline">Policy &amp; Guideline</option>
-                            <option value="Reminder">Compliance Reminder</option>
-                            <option value="Official Notice">Official Notice</option>
+                        <select id="postTypeSelect" name="type" class="aso-select" required onchange="updateComposerTypePreview(this.value)">
+                            <option value="General Announcement" @selected(old('type', 'General Announcement') === 'General Announcement')>General Announcement</option>
+                            <option value="Deadline" @selected(old('type') === 'Deadline')>Deadline Notice</option>
+                            <option value="Guideline" @selected(old('type') === 'Guideline')>Policy &amp; Guideline</option>
+                            <option value="Reminder" @selected(old('type') === 'Reminder')>Compliance Reminder</option>
                         </select>
                     </div>
 
                     <div class="aso-input-group">
                         <label for="postPrioritySelect">Announcement Priority *</label>
-                        <select id="postPrioritySelect" name="priority" class="aso-select" onchange="updateComposerPriorityPreview(this.value)">
-                            <option value="normal">Normal Priority</option>
-                            <option value="high">High Priority (Urgent)</option>
+                        <select id="postPrioritySelect" name="priority" class="aso-select" required onchange="updateComposerPriorityPreview(this.value)">
+                            <option value="normal" @selected(old('priority', 'normal') === 'normal')>Normal Priority</option>
+                            <option value="high" @selected(old('priority') === 'high')>High Priority (Urgent)</option>
                         </select>
+                    </div>
+                    <div class="aso-input-group">
+                        <label for="postExpiresAt">Expiration date &amp; time *</label>
+                        <input type="datetime-local" id="postExpiresAt" name="expires_at" class="aso-input" value="{{ old('expires_at') }}" required aria-describedby="announcementExpiryStatus">
+                        <small id="announcementExpiryStatus" aria-live="polite">{{ config('app.timezone') }} · Choose a future date and time.</small>
                     </div>
                 </div>
 
                 <div class="aso-input-group">
                     <label for="postBody">Official Announcement Details &amp; Directives *</label>
-                    <textarea id="postBody" name="body" class="aso-textarea" placeholder="Write the complete details, guidelines, requirements, schedule breakdown, or instructions for student leaders..." required></textarea>
+                    <textarea id="postBody" name="body" class="aso-textarea" placeholder="Write the complete details, guidelines, requirements, schedule breakdown, or instructions for student leaders..." required maxlength="10000">{{ old('body') }}</textarea>
                 </div>
 
                 {{-- Attached File Preview Chip --}}
@@ -1205,20 +1224,22 @@
                         <button type="button" class="aso-btn-attach" onclick="document.getElementById('postFileInput').click()">
                             <i class="bi bi-paperclip"></i> <span id="attachButtonLabel">Attach Supporting File</span>
                         </button>
-                        <input type="file" id="postFileInput" name="attachment" style="display: none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" data-org-upload data-max-size="15360" onchange="handleComposerFileChange(this)">
+                        <input type="file" id="postFileInput" name="attachment" style="display: none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" data-org-upload data-max-size="15360" data-min-size="1" data-upload-status-id="announcementAttachmentStatus" aria-describedby="announcementAttachmentStatus">
                         <span style="font-size: 0.78rem; color: var(--aso-ink-muted);">PDF, Word, Excel, or Image (Max 15MB)</span>
+                        <span id="announcementAttachmentStatus" class="org-upload-status" aria-live="polite"></span>
                     </div>
 
                     <div style="display: flex; gap: 0.65rem; align-items: center;">
                         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="resetComposerForm()">
                             Clear
                         </button>
-                        <button type="submit" class="aso-btn-publish" id="publishSubmitBtn">
+                        <button type="submit" class="aso-btn-publish" id="publishSubmitBtn" disabled>
                             <i class="bi bi-send-fill"></i> Publish Announcement
                         </button>
                     </div>
                 </div>
             </form>
+            <script src="{{ asset('js/announcement-composer.js') }}?v={{ filemtime(public_path('js/announcement-composer.js')) }}" defer></script>
         </section>
     @endif
 
@@ -1335,9 +1356,9 @@
                                     <i class="bi bi-download"></i>
                                 </a>
                             @endif
-                            <a class="aso-action-btn" title="Preview Notice" href="#" onclick="event.preventDefault(); previewOfficeDoc('{{ route('office.updates.announcements.document', $item['id']) }}', '{{ addslashes($item['title']) }}')" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">
-                                <i class="bi bi-file-earmark-word"></i>
-                            </a>
+                            @if (!empty($item['attachment_preview_url']))
+                                <button type="button" class="app-view-action" aria-label="View attachment {{ $item['attachment'] }}" data-preview-url="{{ $item['attachment_preview_url'] }}" data-download-url="{{ $item['attachment_url'] }}" data-title="{{ $item['attachment'] }}" onclick="previewDirectoryFile(this)"><i class="bi bi-eye" aria-hidden="true"></i> View file</button>
+                            @endif
                             <button type="button" class="aso-action-btn" title="Copy Link" onclick="copyAnnouncementLink({{ $item['id'] }})">
                                 <i class="bi bi-link-45deg"></i>
                             </button>
@@ -1400,13 +1421,13 @@
                                 </td>
                                 <td style="white-space: nowrap;">
                                     @if (!empty($item['attachment_url']))
-                                        <a class="aso-tbl-btn-action is-download" title="{{ $item['attachment'] }}" href="{{ $item['attachment_url'] }}" style="text-decoration:none;">
-                                            <i class="bi bi-paperclip"></i> File
-                                        </a>
+                                        <button type="button" class="app-view-action" aria-label="View attachment {{ $item['attachment'] }}" data-preview-url="{{ $item['attachment_preview_url'] }}" data-download-url="{{ $item['attachment_url'] }}" data-title="{{ $item['attachment'] }}" onclick="previewDirectoryFile(this)"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
+                                        <a class="aso-tbl-btn-action is-download" aria-label="Download attachment {{ $item['attachment'] }}" href="{{ $item['attachment_url'] }}"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                                    @elseif (!empty($item['attachment']))
+                                        <span class="aso-ink-muted">File unavailable</span>
+                                    @else
+                                        <span class="aso-ink-muted">No attachment</span>
                                     @endif
-                                    <a class="aso-tbl-btn-action is-download" title="Preview Notice" href="#" onclick="event.preventDefault(); previewOfficeDoc('{{ route('office.updates.announcements.document', $item['id']) }}', '{{ addslashes($item['title']) }}')" style="text-decoration:none;">
-                                        <i class="bi bi-file-earmark-word"></i> Preview
-                                    </a>
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <div class="aso-tbl-actions">
@@ -1430,6 +1451,14 @@
             <strong style="display: block; font-size: 1rem; color: var(--aso-ink-dark); margin-bottom: 0.25rem;">No Announcements Found</strong>
             <span>Try clearing your search query or selecting another filter category.</span>
         </div>
+        <footer class="aso-directory-footer">
+            <span id="feedPageSummary" role="status" aria-live="polite"></span>
+            <nav id="feedPageNav" class="app-pagination" aria-label="Announcement pages">
+                <button type="button" id="feedPagePrevious" class="app-pagination-control" onclick="changeDirectoryPage('feed', -1)">Previous</button>
+                <span id="feedPagePosition" class="app-pagination-position"></span>
+                <button type="button" id="feedPageNext" class="app-pagination-control" onclick="changeDirectoryPage('feed', 1)">Next</button>
+            </nav>
+        </footer>
     </section>
 
     {{-- 3. Official Template Documents Section (With Grid & List Table Options) --}}
@@ -1497,7 +1526,7 @@
                             <span><i class="bi bi-arrow-down-circle"></i> <strong class="tpl-download-count">{{ $tpl['downloads'] }}</strong> downloads</span>
                         </div>
                         <div class="aso-tpl-actions">
-                            <button type="button" class="aso-btn-preview app-view-action" aria-label="View {{ $tpl['name'] }}" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
+                            <button type="button" class="aso-btn-preview app-view-action" aria-label="View {{ $tpl['name'] }}" data-preview-url="{{ $tpl['preview_url'] }}" data-download-url="{{ $tpl['download_url'] }}" data-title="{{ $tpl['name'] }}" onclick="previewDirectoryFile(this)">
                                 <i class="bi bi-eye" aria-hidden="true"></i> View
                             </button>
                             @if (!empty($tpl['download_url']))
@@ -1565,7 +1594,7 @@
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <div class="aso-tbl-actions">
-                                        <button type="button" class="aso-tbl-btn-action is-preview app-view-action" aria-label="View {{ $tpl['name'] }}" onclick="openTemplatePreviewModal('{{ addslashes($tpl['name']) }}', '{{ $tpl['category'] }}', '{{ $format }}', '{{ $tpl['size'] }}', '{{ $tpl['updated'] ?? 'Recent' }}', '{{ addslashes($tpl['description'] ?? '') }}', '{{ $tpl['download_url'] ?? '' }}', '{{ $tpl['preview_url'] ?? route('office.updates.templates.document', ['id' => $tpl['id'], 'preview' => 1]) }}')">
+                                        <button type="button" class="aso-tbl-btn-action is-preview app-view-action" aria-label="View {{ $tpl['name'] }}" data-preview-url="{{ $tpl['preview_url'] }}" data-download-url="{{ $tpl['download_url'] }}" data-title="{{ $tpl['name'] }}" onclick="previewDirectoryFile(this)">
                                             <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </button>
                                         @if (!empty($tpl['download_url']))
@@ -1587,6 +1616,15 @@
             <strong style="display: block; font-size: 1rem; color: var(--aso-ink-dark); margin-bottom: 0.25rem;">No Templates Matched</strong>
             <span>Check your keyword or browse the official document categories.</span>
         </div>
+        <footer class="aso-directory-footer">
+            <span id="templatePageSummary" role="status" aria-live="polite"></span>
+            <nav id="templatePageNav" class="app-pagination" aria-label="Template pages">
+                <button type="button" id="templatePagePrevious" class="app-pagination-control" onclick="changeDirectoryPage('template', -1)">Previous</button>
+                <span id="templatePagePosition" class="app-pagination-position"></span>
+                <button type="button" id="templatePageNext" class="app-pagination-control" onclick="changeDirectoryPage('template', 1)">Next</button>
+            </nav>
+        </footer>
+        <p style="margin:.75rem 0 0;font-size:.75rem;color:var(--aso-ink-muted);">Counts track catalogue download requests, not previews. Bundled-template tracking starts with this update.</p>
     </section>
 
     {{-- Announcement Full Detail Modal --}}
@@ -1626,6 +1664,7 @@
                                 <span style="font-size: 0.75rem; color: var(--aso-ink-muted);" id="modalAttachSize">1.2 MB</span>
                             </div>
                         </div>
+                        <button type="button" class="app-view-action" id="modalAttachViewBtn"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                         <button type="button" class="aso-btn-download" id="modalAttachDownloadBtn">
                             <i class="bi bi-download"></i> Download
                         </button>
@@ -1694,36 +1733,6 @@
         </dialog>
     @endif
 
-    {{-- Template Preview Modal --}}
-    <dialog class="aso-modal" id="templatePreviewModal">
-        <div class="aso-modal-box">
-            <div class="aso-modal-header">
-                <h3><i class="bi bi-file-earmark-ruled-fill" style="color: var(--aso-maroon);"></i> <span id="prevTplTitle">Document Preview</span></h3>
-                <button type="button" class="aso-modal-close" onclick="closeTemplatePreviewModal()">&times;</button>
-            </div>
-            
-            <div style="margin-bottom: 1.25rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                    <span class="aso-tpl-category" id="prevTplCategory">Proposal</span>
-                    <span class="aso-tpl-format-badge" id="prevTplFormat">PDF</span>
-                    <span style="font-size: 0.8rem; color: var(--aso-ink-muted); margin-left: auto;" id="prevTplSize">245 KB</span>
-                </div>
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; font-size: 0.9rem; color: var(--aso-ink-body); line-height: 1.6;" id="prevTplBody">
-                    Official template document details and preview instructions.
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.8rem; color: var(--aso-ink-muted);" id="prevTplUpdated">Updated recently</span>
-                <div style="display: flex; gap: 0.65rem;">
-                    <button type="button" class="org-btn org-btn-ghost" onclick="closeTemplatePreviewModal()">Close</button>
-                    <button type="button" class="aso-btn-publish" id="prevTplDownloadBtn">
-                        <i class="bi bi-download"></i> Download Template
-                    </button>
-                </div>
-            </div>
-        </div>
-    </dialog>
 
     {{-- Toast Notification Box --}}
     <div class="aso-toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -1758,9 +1767,11 @@
     <script>
         let currentFilter = 'all';
         let currentSearch = '';
-        let pendingAttachedFile = null;
         let currentAnnouncementView = 'grid'; // 'grid' | 'list'
         let currentTemplateView = 'grid'; // 'grid' | 'list'
+        let announcementPage = 1;
+        let templatePage = 1;
+        const directoryPageSize = 10;
         const persistedAnnouncements = new Map(@json($announcements).map(item => [Number(item.id), item]));
 
         function focusAnnouncementComposer() {
@@ -1819,7 +1830,7 @@
                 btnGrid.classList.remove('is-active');
             }
 
-            handleSearchTemplates(document.getElementById('templateSearchInput')?.value || '');
+            handleSearchTemplates(document.getElementById('templateSearchInput')?.value || '', false);
         }
 
         function updateComposerTypePreview(type) {
@@ -1849,31 +1860,6 @@
             return 'aso-badge-type-general';
         }
 
-        function handleComposerFileChange(input) {
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                pendingAttachedFile = file;
-                document.getElementById('attachedFileName').textContent = file.name;
-                document.getElementById('attachedFileSize').textContent = `(${formatBytes(file.size)})`;
-                document.getElementById('attachedFileContainer').style.display = 'block';
-                document.getElementById('attachButtonLabel').textContent = 'Change File';
-                showToast(`Attached ${file.name}`, 'info');
-            }
-        }
-
-        function removeAttachedFile() {
-            pendingAttachedFile = null;
-            document.getElementById('postFileInput').value = '';
-            document.getElementById('attachedFileContainer').style.display = 'none';
-            document.getElementById('attachButtonLabel').textContent = 'Attach Supporting File';
-        }
-
-        function resetComposerForm() {
-            document.getElementById('announcementComposerForm').reset();
-            removeAttachedFile();
-            updateComposerTypePreview('General Announcement');
-            updateComposerPriorityPreview('normal');
-        }
 
 
         // =========================================================================
@@ -1881,6 +1867,7 @@
         // =========================================================================
         function filterAnnouncements(filter, btn) {
             currentFilter = filter;
+            announcementPage = 1;
             document.querySelectorAll('#feedFilterButtons .aso-filter-btn').forEach(b => b.classList.remove('is-active'));
             if (btn) btn.classList.add('is-active');
             applyAnnouncementFilters();
@@ -1888,13 +1875,13 @@
 
         function handleSearchAnnouncements(query) {
             currentSearch = query.toLowerCase().trim();
+            announcementPage = 1;
             applyAnnouncementFilters();
         }
 
         function applyAnnouncementFilters() {
             const cards = document.querySelectorAll('#announcementsGrid .aso-announce-card');
             const rows = document.querySelectorAll('#announcementsTableBody tr');
-            let visibleCount = 0;
 
             const checkMatch = (item) => {
                 const priority = item.getAttribute('data-priority') || '';
@@ -1917,28 +1904,39 @@
                 return matchesFilter && matchesSearch;
             };
 
-            cards.forEach(card => {
-                if (checkMatch(card)) {
-                    card.style.display = '';
-                    if (currentAnnouncementView === 'grid') visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            announcementPage = paginateDirectory(cards, rows, checkMatch, announcementPage, 'feed', 'announcements');
+        }
 
-            rows.forEach(row => {
-                if (checkMatch(row)) {
-                    row.style.display = '';
-                    if (currentAnnouncementView === 'list') visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+        function paginateDirectory(cards, rows, matches, requestedPage, prefix, label) {
+            const filtered = Array.from(cards).filter(matches);
+            const total = filtered.length;
+            const pages = Math.max(1, Math.ceil(total / directoryPageSize));
+            const page = Math.min(Math.max(1, requestedPage), pages);
+            const start = (page - 1) * directoryPageSize;
+            const ids = new Set(filtered.slice(start, start + directoryPageSize).map(item => item.dataset.id));
+            cards.forEach(item => { item.style.display = ids.has(item.dataset.id) ? '' : 'none'; });
+            rows.forEach(item => { item.style.display = ids.has(item.dataset.id) ? '' : 'none'; });
+            document.getElementById(prefix + 'PageSummary').textContent = total ? `Showing ${start + 1}–${Math.min(start + directoryPageSize, total)} of ${total} ${label}` : `0 ${label}`;
+            document.getElementById(prefix + 'PagePosition').textContent = `Page ${page} of ${pages}`;
+            document.getElementById(prefix + 'PagePrevious').disabled = page === 1;
+            document.getElementById(prefix + 'PageNext').disabled = page === pages;
+            document.getElementById(prefix + 'PageNav').hidden = pages <= 1;
+            document.getElementById(prefix === 'feed' ? 'feedEmptyState' : 'templatesEmptyState').style.display = total ? 'none' : 'block';
+            return page;
+        }
 
-            const emptyState = document.getElementById('feedEmptyState');
-            if (emptyState) {
-                emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+        function changeDirectoryPage(prefix, delta) {
+            if (prefix === 'feed') {
+                announcementPage += delta;
+                applyAnnouncementFilters();
+            } else {
+                templatePage += delta;
+                handleSearchTemplates(document.getElementById('templateSearchInput')?.value || '', false);
             }
+        }
+
+        function previewDirectoryFile(button) {
+            previewOfficeDoc(button.dataset.previewUrl, button.dataset.title, button.dataset.downloadUrl);
         }
 
         // =========================================================================
@@ -1977,6 +1975,7 @@
                 document.getElementById('modalAttachDownloadBtn').onclick = function() {
                     window.location.href = attachUrl;
                 };
+                document.getElementById('modalAttachViewBtn').onclick = () => previewOfficeDoc(item.attachment_preview_url, attachment, attachUrl);
                 attachSection.style.display = 'block';
             } else {
                 attachSection.style.display = 'none';
@@ -1994,71 +1993,15 @@
         // =========================================================================
         // Template Search, Preview & Upload
         // =========================================================================
-        function handleSearchTemplates(query) {
+        function handleSearchTemplates(query, resetPage = true) {
+            if (resetPage) templatePage = 1;
             const q = query.toLowerCase().trim();
             const cards = document.querySelectorAll('#templateGrid .aso-tpl-card');
             const rows = document.querySelectorAll('#templateTableBody tr');
-            let visibleCount = 0;
-
-            cards.forEach(card => {
-                const name = card.getAttribute('data-name') || '';
-                const category = card.getAttribute('data-category') || '';
-                if (!q || name.includes(q) || category.includes(q)) {
-                    card.style.display = '';
-                    if (currentTemplateView === 'grid') visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-
-            rows.forEach(row => {
-                const name = row.getAttribute('data-name') || '';
-                const category = row.getAttribute('data-category') || '';
-                if (!q || name.includes(q) || category.includes(q)) {
-                    row.style.display = '';
-                    if (currentTemplateView === 'list') visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            const emptyState = document.getElementById('templatesEmptyState');
-            if (emptyState) {
-                emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
-            }
+            const matches = item => !q || item.dataset.name.includes(q) || item.dataset.category.includes(q);
+            templatePage = paginateDirectory(cards, rows, matches, templatePage, 'template', 'templates');
         }
 
-        function openTemplatePreviewModal(name, category, format, size, updated, desc, downloadUrl, previewUrl) {
-            if (previewUrl || downloadUrl) {
-                previewOfficeDoc(previewUrl || downloadUrl, name, downloadUrl || previewUrl);
-                return;
-            }
-
-            document.getElementById('prevTplTitle').textContent = name;
-            document.getElementById('prevTplCategory').textContent = category;
-            document.getElementById('prevTplFormat').textContent = format;
-            document.getElementById('prevTplSize').textContent = size;
-            document.getElementById('prevTplUpdated').textContent = `Last updated: ${updated}`;
-            document.getElementById('prevTplBody').textContent = desc || `Official template format for ${name}. All organizations must comply with this standard university template.`;
-            document.getElementById('prevTplDownloadBtn').onclick = function() {
-                if (downloadUrl) {
-                    window.location.href = downloadUrl;
-                } else if (previewUrl) {
-                    window.location.href = previewUrl;
-                } else {
-                    showToast(`The original file for "${name}" is unavailable.`, 'info');
-                }
-                closeTemplatePreviewModal();
-            };
-
-            const dialog = document.getElementById('templatePreviewModal');
-            if (dialog) dialog.showModal();
-        }
-
-        function closeTemplatePreviewModal() {
-            const dialog = document.getElementById('templatePreviewModal');
-            if (dialog) dialog.close();
-        }
 
         function openUploadTemplateModal() {
             const dialog = document.getElementById('uploadTemplateModal');
@@ -2227,6 +2170,9 @@
                 if (container?.parentElement === dialog) document.body.appendChild(container);
             });
         });
+
+        applyAnnouncementFilters();
+        handleSearchTemplates(document.getElementById('templateSearchInput')?.value || '');
 
         const sharedAnnouncement = new URL(window.location.href).searchParams.get('announcement');
         if (sharedAnnouncement) openAnnouncementDetailModal(sharedAnnouncement);

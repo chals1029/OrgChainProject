@@ -27,7 +27,6 @@ use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
 use App\Services\ApprovedPlanOfActivitiesService;
 use App\Services\BudgetChainService;
-use App\Services\DocxBuilder;
 use App\Services\FinancialReportPreviewGate;
 use App\Services\FinancialWorkbookService;
 use App\Services\OrgWorkflowService;
@@ -79,11 +78,13 @@ class OfficePortalController extends Controller
         if ($isOso) {
             $brand['title'] = data_get($officeSettings, 'general.office_name', $brand['title']);
         }
+        $registry = StudentOrganization::query()->selectRaw('COUNT(*) AS registered, COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) AS enabled')->first();
 
         return [
             'office' => $office,
             'brand' => $brand,
             'officeSettings' => $officeSettings,
+            'organizationRegistry' => ['registered' => (int) $registry->registered, 'enabled' => (int) $registry->enabled],
             'officeNotifications' => $this->officeNotifications($office),
             'officeUsers' => $isOso
                 ? OfficeUser::query()->with('studentOrganization')->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
@@ -115,7 +116,7 @@ class OfficePortalController extends Controller
                 'url' => route('office.activities', ['activity' => $event->org_activity_id]),
                 'at' => Carbon::parse($event->created_at),
             ]);
-        $announcements = OfficeAnnouncement::query()->where('created_at', '<=', now())
+        $announcements = OfficeAnnouncement::query()->published()->where('created_at', '<=', now())
             ->latest()->orderByDesc('id')->limit(10)->get()
             ->map(fn (OfficeAnnouncement $announcement): array => [
                 'title' => $announcement->title,
@@ -544,7 +545,7 @@ class OfficePortalController extends Controller
             ->values();
 
         // Match View All: this feed contains posted announcements, not workflow movements.
-        $recentUpdates = OfficeAnnouncement::query()->latest()->limit(4)->get()->map(fn (OfficeAnnouncement $announcement) => [
+        $recentUpdates = OfficeAnnouncement::query()->published()->latest()->limit(4)->get()->map(fn (OfficeAnnouncement $announcement) => [
             'chip' => 'OSO',
             'chip_style' => 'background: #e0f2fe; color: #0284c7;',
             'title' => $announcement->title,
@@ -2101,25 +2102,31 @@ class OfficePortalController extends Controller
         $acknowledgments = OfficeAnnouncementAcknowledgment::query()
             ->where('office_user_id', Auth::guard('office')->id())
             ->pluck('acknowledged_at', 'office_announcement_id');
-        $liveAnnouncements = OfficeAnnouncement::query()
+        $liveAnnouncements = OfficeAnnouncement::query()->published()
             ->latest()
             ->get()
-            ->map(fn (OfficeAnnouncement $a): array => [
-                'id' => (int) $a->id,
-                'title' => $a->title,
-                'type' => $a->type,
-                'body' => $a->body,
-                'author' => $a->author,
-                'time' => optional($a->created_at)->diffForHumans() ?? 'Recently',
-                'priority' => $a->priority,
-                'attachment' => $a->attachment_name,
-                'attachment_size' => null,
-                'attachment_url' => $a->attachment_path ? route('office.updates.announcements.attachment', $a) : null,
-                'url' => route('office.updates', ['announcement' => $a->id]),
-                'document_url' => route('office.updates.announcements.document', $a->id),
-                'acknowledge_url' => route('office.updates.announcements.acknowledge', $a),
-                'acknowledged_at' => $acknowledgments->get($a->id),
-            ])->all();
+            ->map(function (OfficeAnnouncement $a) use ($acknowledgments): array {
+                $path = $a->attachment_path ? Storage::disk('public')->path($a->attachment_path) : null;
+                $available = $path && is_file($path) && is_readable($path) && filesize($path) > 0;
+
+                return [
+                    'id' => (int) $a->id,
+                    'title' => $a->title,
+                    'type' => $a->type,
+                    'body' => $a->body,
+                    'author' => $a->author,
+                    'time' => optional($a->created_at)->diffForHumans() ?? 'Recently',
+                    'priority' => $a->priority,
+                    'expires_at' => $a->expires_at?->toIso8601String(),
+                    'attachment' => $a->attachment_name,
+                    'attachment_size' => $available ? $this->formatFileSize((int) filesize($path)) : null,
+                    'attachment_url' => $available ? route('office.updates.announcements.attachment', $a) : null,
+                    'attachment_preview_url' => $available ? route('office.updates.announcements.attachment', ['announcement' => $a, 'preview' => 1]) : null,
+                    'url' => route('office.updates', ['announcement' => $a->id]),
+                    'acknowledge_url' => route('office.updates.announcements.acknowledge', $a),
+                    'acknowledged_at' => $acknowledgments->get($a->id),
+                ];
+            })->all();
 
         $liveTemplates = OfficeTemplate::query()
             ->where('category', '!=', 'TOSA')
@@ -2269,7 +2276,9 @@ class OfficePortalController extends Controller
         ];
         $definitions = array_merge($definitions, TosaRequirements::sourceDefinitions());
 
-        return array_values(array_filter(array_map(function (array $definition): ?array {
+        $downloadCounts = DB::connection('mysql')->table('office_template_downloads')->pluck('downloads', 'template_key');
+
+        return array_values(array_filter(array_map(function (array $definition) use ($downloadCounts): ?array {
             $path = base_path($definition['source_path']);
             if (! is_file($path)) {
                 return null;
@@ -2282,7 +2291,7 @@ class OfficePortalController extends Controller
             return array_merge($definition, [
                 'format' => $format ?: 'FILE',
                 'size' => $bytes > 0 ? $this->formatFileSize($bytes) : '0 B',
-                'downloads' => 0,
+                'downloads' => (int) $downloadCounts->get($id, 0),
                 'updated' => date('M j, Y', (int) filemtime($path)),
                 'download_url' => route('office.updates.templates.document', ['id' => $id]),
                 'preview_url' => route('office.updates.templates.document', ['id' => $id, 'preview' => 1]),
@@ -2290,37 +2299,6 @@ class OfficePortalController extends Controller
         }, $definitions)));
     }
 
-    /**
-     * Download an announcement as a real Word (.docx) notice.
-     */
-    public function downloadAnnouncementDocument(string $id): Response
-    {
-        $a = OfficeAnnouncement::query()->findOrFail($id);
-        $item = [
-            'title' => $a->title,
-            'type' => $a->type,
-            'body' => $a->body,
-            'author' => $a->author,
-            'time' => optional($a->created_at)->format('M j, Y g:i A') ?? '',
-            'attachment' => $a->attachment_name,
-        ];
-
-        $doc = (new DocxBuilder())
-            ->title($item['title'])
-            ->p(($item['type'] ?? 'General').'  ·  '.($item['author'] ?? 'OSO').'  ·  '.($item['time'] ?? ''), true)
-            ->spacer()
-            ->p($item['body'] ?? '')
-            ->spacer();
-        if (! empty($item['attachment'])) {
-            $doc->p('Attachment on file: '.$item['attachment']);
-        }
-        $doc->spacer()->p('Generated from OrgChain Updates on '.now()->format('M j, Y g:i A').'.');
-
-        return response($doc->build(), 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'attachment; filename="'.$this->docxFileName($item['title']).'"',
-        ]);
-    }
 
     /**
      * Serve an official template from its original source file.
@@ -2335,7 +2313,12 @@ class OfficePortalController extends Controller
                 $template = TosaRequirements::bundledTemplate($key);
                 abort_unless($template, 404, 'Official template source not found.');
 
-                return TosaRequirements::fileResponse($key, $template['path'], $template['name'], $request->boolean('preview'));
+                $response = TosaRequirements::fileResponse($key, $template['path'], $template['name'], $request->boolean('preview'));
+                if ($request->isMethod('GET') && ! $request->boolean('preview')) {
+                    $this->recordOfficialTemplateDownload($id);
+                }
+
+                return $response;
             }
         }
         if (str_starts_with($id, 'db-')) {
@@ -2352,7 +2335,12 @@ class OfficePortalController extends Controller
                 $template = TosaRequirements::uploadedTemplate($key, $t);
                 abort_unless($template, 404);
 
-                return TosaRequirements::fileResponse($key, $template['path'], $template['name'], $request->boolean('preview'));
+                $response = TosaRequirements::fileResponse($key, $template['path'], $template['name'], $request->boolean('preview'));
+                if ($request->isMethod('GET') && ! $request->boolean('preview')) {
+                    $t->increment('downloads');
+                }
+
+                return $response;
             }
             abort_unless($t->file_path && Storage::disk('public')->exists($t->file_path), 404, 'Template source file not found.');
 
@@ -2367,7 +2355,9 @@ class OfficePortalController extends Controller
                 ]);
             }
 
-            $t->increment('downloads');
+            if ($request->isMethod('GET')) {
+                $t->increment('downloads');
+            }
 
             return response()->download($storedPath, $filename, ['Content-Type' => $mime]);
         }
@@ -2397,14 +2387,21 @@ class OfficePortalController extends Controller
             ]);
         }
 
-        return response()->download($sourcePath, $sourceFilename, ['Content-Type' => $mime]);
+        $response = response()->download($sourcePath, $sourceFilename, ['Content-Type' => $mime]);
+        if ($request->isMethod('GET')) {
+            $this->recordOfficialTemplateDownload($id);
+        }
+
+        return $response;
     }
 
-    private function docxFileName(string $name): string
+    private function recordOfficialTemplateDownload(string $id): void
     {
-        $safe = preg_replace('/[^A-Za-z0-9]+/', '_', $name) ?: 'document';
-
-        return trim($safe, '_').'.docx';
+        DB::connection('mysql')->table('office_template_downloads')->upsert(
+            [['template_key' => $id, 'downloads' => 1]],
+            ['template_key'],
+            ['downloads' => DB::raw('downloads + 1')],
+        );
     }
 
     private function templateMimeType(string $path): string
@@ -2429,10 +2426,19 @@ class OfficePortalController extends Controller
     {
         $this->osoOfficer();
         $validated = $request->validate([
-            'type' => ['required', 'string', 'max:64'],
+            'type' => ['required', Rule::in(OfficeAnnouncement::PUBLICATION_TYPES)],
             'body' => ['required', 'string', 'max:10000'],
             'priority' => ['required', 'in:normal,high'],
-            'attachment' => ['nullable', 'file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:15360'],
+            'expires_at' => ['required', 'date_format:Y-m-d\TH:i', 'after:now'],
+            'attachment' => [
+                'nullable', 'file', 'max:15360',
+                function (string $attribute, mixed $file, \Closure $fail): void {
+                    if ($file instanceof \Illuminate\Http\UploadedFile && $file->getSize() === 0) {
+                        $fail('The attachment must not be empty.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg',
+            ],
         ]);
 
         $words = preg_split('/\s+/', trim($validated['body'])) ?: [];
@@ -2447,6 +2453,7 @@ class OfficePortalController extends Controller
             'body' => $validated['body'],
             'author' => Auth::guard('office')->user()?->name ?? 'Office of Student Organizations (OSO)',
             'priority' => $validated['priority'],
+            'expires_at' => Carbon::createFromFormat('!Y-m-d\TH:i', $validated['expires_at'], config('app.timezone')),
         ];
 
         if ($request->hasFile('attachment')) {
@@ -2455,7 +2462,14 @@ class OfficePortalController extends Controller
             $data['attachment_name'] = $file->getClientOriginalName();
         }
 
-        OfficeAnnouncement::query()->create($data);
+        try {
+            OfficeAnnouncement::query()->create($data);
+        } catch (\Throwable $error) {
+            if (isset($data['attachment_path'])) {
+                Storage::disk('public')->delete($data['attachment_path']);
+            }
+            throw $error;
+        }
 
         return redirect()->route('office.updates')->with('success', 'Announcement published.');
     }
@@ -2480,14 +2494,21 @@ class OfficePortalController extends Controller
     /**
      * Download an announcement attachment from storage.
      */
-    public function downloadAnnouncementAttachment(OfficeAnnouncement $announcement): BinaryFileResponse
+    public function downloadAnnouncementAttachment(Request $request, OfficeAnnouncement $announcement): BinaryFileResponse
     {
-        abort_unless($announcement->attachment_path && Storage::disk('public')->exists($announcement->attachment_path), 404);
+        $request->validate(['preview' => ['nullable', 'boolean']]);
+        $path = $announcement->attachment_path ? Storage::disk('public')->path($announcement->attachment_path) : null;
+        abort_unless($path && is_file($path) && is_readable($path) && filesize($path) > 0, 404, 'Announcement attachment not found.');
+        $name = basename(str_replace('\\', '/', str_replace(["\r", "\n"], '', $announcement->attachment_name ?: basename($path))));
+        $response = response()->download($path, $name, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+        if ($request->boolean('preview')) {
+            $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $name);
+        }
 
-        return Storage::disk('public')->download(
-            $announcement->attachment_path,
-            $announcement->attachment_name ?: basename($announcement->attachment_path)
-        );
+        return $response;
     }
 
     /**
@@ -2526,7 +2547,7 @@ class OfficePortalController extends Controller
     /**
      * Download a stored template file (increments the counter).
      */
-    public function downloadTemplate(OfficeTemplate $template): StreamedResponse|BinaryFileResponse
+    public function downloadTemplate(Request $request, OfficeTemplate $template): StreamedResponse|BinaryFileResponse
     {
         if ($template->category === 'TOSA') {
             $key = null;
@@ -2539,13 +2560,17 @@ class OfficePortalController extends Controller
             abort_unless($key !== null, 404);
             $active = TosaRequirements::uploadedTemplate($key, $template);
             abort_unless($active, 404);
-            $template->increment('downloads');
+            if ($request->isMethod('GET')) {
+                $template->increment('downloads');
+            }
 
             return TosaRequirements::fileResponse($key, $active['path'], $active['name'], false);
         }
         abort_unless($template->file_path && Storage::disk('public')->exists($template->file_path), 404);
 
-        $template->increment('downloads');
+        if ($request->isMethod('GET')) {
+            $template->increment('downloads');
+        }
 
         return Storage::disk('public')->download(
             $template->file_path,
@@ -3015,11 +3040,30 @@ class OfficePortalController extends Controller
     {
         $office = Auth::guard('office')->user();
         abort_unless(($office?->office_role ?? '') === 'oso', 403);
+        if ($request->boolean('toggle_only')) {
+            $request->validate([
+                'toggle_only' => ['required', 'accepted'],
+                'window_id' => ['required', 'integer', 'min:1'],
+                'is_open' => ['required', 'boolean'],
+            ]);
+            DB::connection('mysql')->transaction(function () use ($request, $office): void {
+                $window = $this->lockedRenewalWindow($request);
+                $open = $request->boolean('is_open');
+                $window->update([
+                    'is_open' => $open,
+                    'opened_by' => $open ? $office->id : $window->opened_by,
+                    'closed_by' => $open ? null : $office->id,
+                ]);
+            });
+
+            return redirect()->route('office.renewal')->with('success', $request->boolean('is_open') ? 'Renewal submissions enabled. The saved opening and closing schedule still applies.' : 'Renewal submissions closed. Existing applications remain available for review.');
+        }
         $validated = $request->validate([
             'window_id' => ['nullable', 'integer'],
+            'toggle_only' => ['nullable', 'boolean'],
             'academic_year' => ['required', 'string', 'max:32'],
             'semester' => ['required', 'string', 'max:40'],
-            'is_open' => ['required', 'boolean'],
+            'is_open' => ['prohibited'],
             'opens_at' => ['nullable', 'date'],
             'closes_at' => ['nullable', 'date', 'after_or_equal:opens_at'],
             'instructions' => ['nullable', 'string', 'max:5000'],
@@ -3027,26 +3071,27 @@ class OfficePortalController extends Controller
             'required_docs' => ['prohibited'],
         ]);
 
-        DB::connection('mysql')->transaction(function () use ($request, $validated, $office): void {
+        DB::connection('mysql')->transaction(function () use ($validated, $office): void {
             $window = OrgRenewalWindow::query()->latest('id')->lockForUpdate()->first();
             if (($window?->id ?? 0) !== (int) ($validated['window_id'] ?? 0)) {
                 throw ValidationException::withMessages(['renewal' => 'The renewal window changed. Refresh the dashboard before saving.']);
             }
-            $isOpen = $request->boolean('is_open');
+            $samePeriod = $window && $window->academic_year === trim($validated['academic_year']) && $window->semester === trim($validated['semester']);
+            $isOpen = $samePeriod && $window->is_open;
             $payload = [
                 'academic_year' => trim($validated['academic_year']),
                 'semester' => trim($validated['semester']),
                 'is_open' => $isOpen,
-                'opens_at' => $validated['opens_at'] ?? ($isOpen ? now() : null),
+                'opens_at' => $validated['opens_at'] ?? null,
                 'closes_at' => $validated['closes_at'] ?? null,
                 'instructions' => $validated['instructions'] ?? null,
                 'notes' => $validated['notes'] ?? $window?->notes,
                 'required_docs' => $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs(),
-                'opened_by' => $isOpen ? $office->id : $window?->opened_by,
-                'closed_by' => $isOpen ? null : $office->id,
+                'opened_by' => $samePeriod ? $window->opened_by : null,
+                'closed_by' => $samePeriod ? $window->closed_by : $office->id,
             ];
             // A new period must not inherit last year's final approvals.
-            if ($window && $window->academic_year === $payload['academic_year'] && $window->semester === $payload['semester']) {
+            if ($samePeriod) {
                 $window->update($payload);
             } else {
                 OrgRenewalWindow::query()->create($payload);

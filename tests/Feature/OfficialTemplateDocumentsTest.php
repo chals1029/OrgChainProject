@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\OfficeTemplate;
 use App\Services\TosaRequirements;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -80,5 +81,32 @@ class OfficialTemplateDocumentsTest extends TestCase
                 $preview->assertDownload($document['filename']);
             }
         }
+    }
+    public function test_bundled_download_counts_do_not_include_previews_or_unknown_sources(): void
+    {
+        $id = 'source-in-campus-project-proposal';
+        DB::connection('mysql')->table('office_template_downloads')->updateOrInsert(['template_key' => $id], ['downloads' => 4]);
+        $this->actingAs($this->ensureOfficeUser('oso'), 'office');
+        $this->get(route('office.updates.templates.document', ['id' => $id, 'preview' => 1]))->assertOk();
+        $this->head(route('office.updates.templates.document', $id))->assertOk();
+        $this->assertSame(4, (int) DB::connection('mysql')->table('office_template_downloads')->where('template_key', $id)->value('downloads'));
+        $this->get(route('office.updates.templates.document', $id))->assertOk()->assertDownload();
+        $this->assertSame(5, (int) DB::connection('mysql')->table('office_template_downloads')->where('template_key', $id)->value('downloads'));
+        $this->get(route('office.updates.templates.document', 'source-does-not-exist'))->assertNotFound();
+        $this->assertFalse(DB::connection('mysql')->table('office_template_downloads')->where('template_key', 'source-does-not-exist')->exists());
+    }
+
+    public function test_uploaded_template_download_routes_share_the_existing_counter_but_preview_does_not(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('templates/counter.pdf', "%PDF-1.4\n%%EOF\n");
+        $template = OfficeTemplate::create(['name' => 'Counter fixture', 'category' => 'Forms', 'format' => 'PDF', 'size' => '14 B', 'file_path' => 'templates/counter.pdf', 'original_name' => 'counter.pdf', 'downloads' => 2]);
+        $this->actingAs($this->ensureOfficeUser('oso'), 'office');
+        $this->get(route('office.updates.templates.document', ['id' => 'db-'.$template->id, 'preview' => 1]))->assertOk();
+        $this->head(route('office.updates.templates.download', $template))->assertOk();
+        $this->assertSame(2, (int) $template->fresh()->downloads);
+        $this->get(route('office.updates.templates.document', 'db-'.$template->id))->assertOk()->assertDownload('counter.pdf');
+        $this->get(route('office.updates.templates.download', $template))->assertOk()->assertDownload('counter.pdf');
+        $this->assertSame(4, (int) $template->fresh()->downloads);
     }
 }

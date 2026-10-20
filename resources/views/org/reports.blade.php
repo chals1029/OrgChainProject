@@ -21,20 +21,19 @@
 @endsection
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/office-review-kpis.css') }}?v={{ filemtime(public_path('css/office-review-kpis.css')) }}">
     <style>
-        .sr-card { background:#fff; border:1.5px solid #f0e6e8; border-radius:20px; padding:1.35rem 1.5rem; box-shadow:0 4px 16px rgba(90,15,30,.03); margin-bottom:1.1rem; }
+        .sr-card { min-width:0; background:#fff; border:1.5px solid #f0e6e8; border-radius:20px; padding:1.35rem 1.5rem; box-shadow:0 4px 16px rgba(90,15,30,.03); margin-bottom:1.1rem; }
         .sr-card h3 { margin:0 0 0.35rem; font-size:1.02rem; font-weight:800; color:#1a1618; display:flex; align-items:center; gap:0.45rem; }
-        .sr-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.75rem; margin-bottom:1.1rem; }
-        .sr-stat { background:#fff; border:1.5px solid #f0e6e8; border-radius:16px; padding:0.9rem 1.1rem; }
-        .sr-stat strong { display:block; font-size:1.5rem; color:#1a1618; }
-        .sr-stat span { font-size:0.75rem; font-weight:700; color:#7a7074; text-transform:uppercase; letter-spacing:0.04em; }
         .sr-pill { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.7rem; font-weight:800; text-transform:uppercase; }
         .sr-pill.pending { background:#fefce8; color:#b45309; border:1px solid #fde68a; }
         .sr-pill.verified { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
         .sr-pill.dismissed { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
-        .sr-filters { display:flex; flex-wrap:wrap; gap:0.6rem; align-items:end; }
-        .sr-filters label { display:grid; gap:0.25rem; font-size:0.75rem; font-weight:700; color:#554d50; }
-        .sr-filters select { padding:0.5rem 0.7rem; border-radius:10px; border:1px solid #e8dedf; font-size:0.82rem; }
+        .sr-queue-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.8rem; margin-bottom:1rem; }
+        .sr-queue-head h3 { margin:0; }
+        .sr-filters { display:flex; flex:0 1 660px; flex-wrap:wrap; gap:.5rem; align-items:end; min-width:0; }
+        .sr-filters label { display:grid; flex:1 1 110px; min-width:0; gap:.25rem; font-size:.7rem; font-weight:700; color:#554d50; }
+        .sr-filters select { width:100%; min-width:0; max-width:230px; min-height:36px; padding:.45rem .6rem; border:1px solid #e8dedf; border-radius:9px; background:#fff; color:#30272a; font:inherit; font-size:.8rem; }
         .sr-details-btn { white-space:nowrap; }
         .sr-table-wrap { width:100%; overflow-x:auto; }
         .sr-table { width:100%; min-width:760px; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:0.86rem; text-align:left; }
@@ -80,19 +79,18 @@
             .sr-detail-actions { flex-direction:column-reverse; }
             .sr-detail-actions form, .sr-detail-actions button { width:100%; }
         }
-        @media (max-width:640px) { .sr-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     </style>
 
-    <div class="sr-stats">
-        <div class="sr-stat"><strong>{{ $stats['total'] ?? 0 }}</strong><span>Total reports</span></div>
-        <div class="sr-stat"><strong>{{ $stats['pending'] ?? 0 }}</strong><span>Pending review</span></div>
-        <div class="sr-stat"><strong>{{ $stats['verified'] ?? 0 }}</strong><span>Acknowledged</span></div>
-        <div class="sr-stat"><strong>{{ $stats['dismissed'] ?? 0 }}</strong><span>Dismissed</span></div>
+    <div class="office-review-kpis" aria-label="Student feedback totals">
+        @foreach ([['total', 'Total reports', 'chat-square-text', 'All submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['dismissed', 'Dismissed', 'archive', 'Dismissed by OSO']] as [$key, $label, $icon, $hint])
+            <article class="office-review-kpi"><span class="office-review-kpi-icon"><i class="bi bi-{{ $icon }}" aria-hidden="true"></i></span><strong class="office-review-kpi-value">{{ $stats[$key] ?? 0 }}</strong><span class="office-review-kpi-label">{{ $label }}</span><p class="office-review-kpi-hint">{{ $hint }}</p></article>
+        @endforeach
     </div>
 
     <section class="sr-card">
-        <h3><i class="bi bi-funnel-fill"></i> Filter queue</h3>
-        <form method="GET" action="{{ route('office.student-reports') }}" class="sr-filters">
+        <div class="sr-queue-head">
+            <h3><i class="bi bi-chat-square-text-fill" aria-hidden="true"></i> Feedback review queue</h3>
+            <form method="GET" action="{{ route('office.student-reports') }}" class="sr-filters" aria-label="Filter feedback queue">
             <label>
                 Status
                 <select name="status">
@@ -123,10 +121,7 @@
             <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-search"></i> Apply</button>
             <a href="{{ route('office.student-reports') }}" class="org-btn org-btn-ghost org-btn-sm">Reset</a>
         </form>
-    </section>
-
-    <section class="sr-card">
-        <h3><i class="bi bi-chat-square-text-fill"></i> Feedback review queue</h3>
+        </div>
         <div class="sr-table-wrap">
             <table class="sr-table">
                 <thead>

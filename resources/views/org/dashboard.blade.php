@@ -1477,37 +1477,6 @@
             border-bottom: none;
         }
 
-        .org-btn-view-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 104px;
-            height: 32px;
-            padding: 0 0.5rem;
-            border-radius: 9999px;
-            background: #8b1828;
-            color: #ffffff !important;
-            font-size: 0.78rem;
-            font-weight: 700;
-            line-height: 1;
-            text-decoration: none;
-            white-space: nowrap;
-            box-sizing: border-box;
-            transition: all 0.18s ease;
-            box-shadow: 0 2px 6px rgba(139, 24, 40, 0.15);
-            border: 1px solid transparent;
-        }
-
-        .org-btn-view-pill:hover {
-            background: #6e101d;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 24, 40, 0.28);
-            color: #ffffff !important;
-        }
-
-        .org-btn-view-pill:active {
-            transform: translateY(0);
-        }
         /* =========================================================
            OSO Officer Dedicated Analytics & Operations Dashboard
            ========================================================= */
@@ -2337,6 +2306,7 @@
                     </div>
                     <h3 class="org-kpi-title">Recognized Organizations</h3>
                     <p class="org-kpi-sub" id="kpiTotalOrgsSub">{{ $osoOverview['orgSub'] ?? 'Recognized organizations' }}</p>
+                    <p class="org-kpi-sub" data-organization-registry-total="{{ $organizationRegistry['registered'] }}">Registry: {{ $organizationRegistry['registered'] }} total · {{ $organizationRegistry['enabled'] }} operationally enabled. Recognition above is year-scoped.</p>
                 </article>
 
                 {{-- Card 2: Pending Transactions --}}
@@ -2403,7 +2373,7 @@
                         <div class="oso-donut-legend-list">
                             <div class="oso-donut-legend-row">
                                 <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #10b981;"></span>
+                                    <span class="oso-color-dot" style="background: #8b1828;"></span>
                                     <span>Approved</span>
                                 </div>
                                 <div class="oso-donut-legend-right">
@@ -2414,7 +2384,7 @@
 
                             <div class="oso-donut-legend-row">
                                 <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #f59e0b;"></span>
+                                    <span class="oso-color-dot" style="background: #b85a68;"></span>
                                     <span>Pending Review</span>
                                 </div>
                                 <div class="oso-donut-legend-right">
@@ -2425,7 +2395,7 @@
 
                             <div class="oso-donut-legend-row">
                                 <div class="oso-donut-legend-left">
-                                    <span class="oso-color-dot" style="background: #e11d48;"></span>
+                                    <span class="oso-color-dot" style="background: #e2b4bd;"></span>
                                     <span>For Revision</span>
                                 </div>
                                 <div class="oso-donut-legend-right">
@@ -2583,9 +2553,6 @@
                         </h3>
                         <span style="font-size: 0.78rem; color: #786f73;">Latest submitted student organization documents in the OSO review pipeline</span>
                     </div>
-                    <a href="{{ route('office.activities', ['submission_year' => now()->year, 'submission_semester' => 'all', 'submission_month' => 'all', 'activity_scope' => 'all']) }}" data-oso-pipeline-link class="app-view-action" aria-label="View full activity pipeline">
-                        <i class="bi bi-eye" aria-hidden="true"></i> View
-                    </a>
                 </div>
 
                 <div class="oso-table-container">
@@ -2628,7 +2595,7 @@
                                         </span>
                                     </td>
                                     <td style="text-align: right;">
-                                        <a href="{{ $trx['url'] }}" class="org-btn-view-pill app-view-action" aria-label="View transaction details">
+                                        <a href="{{ $trx['url'] }}" class="app-view-action" aria-label="View transaction details">
                                             <i class="bi bi-eye" aria-hidden="true"></i> View
                                         </a>
                                     </td>
@@ -3954,7 +3921,7 @@
                 if (donutCanvas) {
                     const donutLabels = ['Approved', 'Pending Review', 'For Revision'];
                     const donutData = initialOsoData.approvalDonut;
-                    const donutColors = ['#10b981', '#f59e0b', '#e11d48'];
+                    const donutColors = ['#8b1828', '#b85a68', '#e2b4bd'];
                     window.osoCharts.donut = new Chart(donutCanvas.getContext('2d'), {
                         type: 'doughnut',
                         data: {
@@ -4070,11 +4037,11 @@
                                 label: 'Transactions',
                                 data: initialOsoData.typeBreakdown,
                                 backgroundColor: [
+                                    '#64111d',
                                     '#8b1828',
-                                    '#ca8a04',
-                                    '#1d4ed8',
-                                    '#7e22ce',
-                                    '#15803d'
+                                    '#ad4758',
+                                    '#cb7d8b',
+                                    '#e5bcc4'
                                 ].slice(0, osoLiveMeta.typeLabels.length),
                                 borderRadius: 8,
                                 maxBarThickness: 38

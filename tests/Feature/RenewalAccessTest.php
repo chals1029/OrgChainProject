@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\OrgRenewalWindow;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -14,9 +15,18 @@ class RenewalAccessTest extends TestCase
     {
         parent::setUp();
         $this->useLaragonDatabase();
+        DB::connection('mysql')->beginTransaction();
+        DB::connection('orgchain')->beginTransaction();
         $this->ensureOfficeUser('so');
         $this->ensureOfficeUser('oso');
         $this->ensureOfficeUser('sdo');
+    }
+
+    protected function tearDown(): void
+    {
+        DB::connection('orgchain')->rollBack();
+        DB::connection('mysql')->rollBack();
+        parent::tearDown();
     }
 
     public function test_guest_is_redirected_from_renewal(): void
@@ -83,11 +93,14 @@ class RenewalAccessTest extends TestCase
             ->post('/office-desk/renewal/window', [
                 'academic_year' => '2026-2027',
                 'semester' => 'Annual',
-                'is_open' => '1',
                 'instructions' => 'Automated test open.',
             ])
             ->assertRedirect(route('office.renewal'));
 
+        $window = OrgRenewalWindow::query()->latest('id')->firstOrFail();
+        $this->assertFalse($window->is_open);
+        $this->post(route('office.renewal.window'), ['toggle_only' => 1, 'window_id' => $window->id, 'is_open' => 1])
+            ->assertSessionHasNoErrors()->assertRedirect(route('office.renewal'));
         $this->assertTrue((bool) OrgRenewalWindow::query()->latest('id')->value('is_open'));
     }
 

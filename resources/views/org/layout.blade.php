@@ -121,11 +121,6 @@
                     <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
                         <i class="bi bi-arrow-repeat is-ico-gold"></i>
                         <span>Renewal</span>
-                        @if (($office->office_role ?? '') === 'oso')
-                            <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-sliders" style="font-size: 0.65rem;"></i></em>
-                        @else
-                            <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
-                        @endif
                     </a>
                 @endif
                 @if (in_array($officeRole, ['so', 'oso'], true))
@@ -469,15 +464,19 @@
                 const status = statusFor(input);
                 const maxBytes = Number(input.dataset.maxSize || 20480) * 1024;
                 const oversized = files.find((file) => file.size > maxBytes);
+                const undersized = files.find((file) => file.size < Number(input.dataset.minSize || 0));
+                const invalid = oversized || undersized;
 
-                input.dataset.uploadInvalid = oversized ? 'true' : 'false';
-                input.setCustomValidity(oversized ? `${oversized.name} is larger than ${formatBytes(maxBytes)}.` : '');
+                input.dataset.uploadInvalid = invalid ? 'true' : 'false';
+                input.setCustomValidity(oversized ? `${oversized.name} is larger than ${formatBytes(maxBytes)}.` : (undersized ? `${undersized.name} is empty.` : ''));
 
                 if (!status) return;
-                status.classList.toggle('is-selected', files.length > 0 && !oversized);
-                status.classList.toggle('is-error', Boolean(oversized));
+                status.classList.toggle('is-selected', files.length > 0 && !invalid);
+                status.classList.toggle('is-error', Boolean(invalid));
                 if (oversized) {
                     status.textContent = `${oversized.name} is too large. Maximum: ${formatBytes(maxBytes)}.`;
+                } else if (undersized) {
+                    status.textContent = `${undersized.name} is empty. Choose a non-empty file.`;
                 } else if (!files.length) {
                     status.textContent = 'No file selected.';
                 } else if (files.length === 1) {

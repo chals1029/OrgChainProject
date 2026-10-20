@@ -136,8 +136,8 @@
         clearErrors();
         const input = applicant.evaluation?.input || {};
         el('tosaScoreYear').value = applicant.academicYear || '';
-        el('tosaScoreGwa').value = input.gwa ?? applicant.gwa ?? '';
-        el('tosaScoreGwaVerified').checked = input.gwa_verified ?? applicant.gwaVerified ?? false;
+        el('tosaScoreGwa').value = applicant.gwa ?? '';
+        el('tosaScoreGwaVerified').checked = applicant.gwaVerified === true;
         el('tosaScoreEligible').checked = input.eligible_verified === true;
         categories.forEach(category => {
             el(`tosaRows_${category.key}`).replaceChildren();
@@ -149,12 +149,14 @@
         el('tosaScoreWorkbookPreview').href = applicant.workbookUrl;
         el('tosaScoreWorkbookDownload').href = applicant.workbookDownloadUrl;
         syncLocks();
+        config.lockAcademicFields();
     }
 
     function syncLocks() {
         const busy = pending.size > 0;
         el('tosaScoringBusy').hidden = !busy;
         el('tosaScoringFields').disabled = !config.canReview || !current || busy;
+        document.querySelectorAll('button[form="tosaScoringForm"]').forEach(button => { button.disabled = !config.canReview || !current || busy; });
         el('tosaReviewForm').querySelectorAll('input:not([name="_token"]), select, textarea, button').forEach(control => {
             control.disabled = !config.canReview || !current || busy;
         });
@@ -226,9 +228,9 @@
             Object.assign(applicant, { evaluation: result.evaluation, gwa: result.gwa, gwaVerified: result.gwaVerified, academicYear: result.academicYear });
             ranking = result.ranking;
             renderRanking();
+            config.onSaved(applicant);
             if (current === applicant) {
                 renderForm(applicant);
-                config.onSaved(applicant);
                 if (generation === requestGeneration) el('tosaScoringFeedback').textContent = result.evaluation.status === 'finalized'
                     ? 'Verified evaluation finalized. Qualification stage remains unchanged.' : 'Provisional evaluation saved. It does not contribute to ranking.';
             }

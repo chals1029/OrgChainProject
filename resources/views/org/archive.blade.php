@@ -8,6 +8,7 @@
         'year' => $archiveFilters['year'],
         'scope' => $archiveFilters['scope'],
         'search' => $archiveFilters['search'],
+        'page' => $archiveOrganizations->currentPage(),
     ];
 @endphp
 
@@ -64,20 +65,22 @@
         /* 1. Summary KPI Bar */
         .gdrive-stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
 
         .gdrive-stat-card {
             background: #ffffff;
-            border: 1.5px solid var(--g-border);
-            border-radius: var(--g-radius-lg);
-            padding: 1.1rem 1.3rem;
+            border: 1.5px solid #f0e6e8;
+            border-radius: 20px;
+            padding: 1.4rem 1.6rem;
             display: flex;
-            align-items: center;
-            gap: 1rem;
-            box-shadow: var(--g-shadow-sm);
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.6rem;
+            min-width: 0;
+            box-shadow: 0 4px 16px rgba(90,15,30,.03);
             transition: all 0.2s ease;
         }
 
@@ -88,9 +91,9 @@
         }
 
         .gdrive-stat-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -98,26 +101,26 @@
             flex-shrink: 0;
         }
 
-        .gdrive-stat-icon.is-red { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-        .gdrive-stat-icon.is-gold { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
-        .gdrive-stat-icon.is-green { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-        .gdrive-stat-icon.is-blue { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+        .gdrive-stat-icon.is-red, .gdrive-stat-icon.is-gold, .gdrive-stat-icon.is-green, .gdrive-stat-icon.is-blue { background:#fdf0f2; color:#8b1828; border:1px solid #fae1e5; }
+        @media (max-width:1100px) { .gdrive-stats-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media (max-width:560px) { .gdrive-stat-card { padding:1rem; } }
 
         .gdrive-stat-meta strong {
             display: block;
-            font-size: 1.35rem;
+            font-size: 2.15rem;
             font-weight: 800;
-            color: var(--g-ink-dark);
-            line-height: 1.2;
+            color: #8b1828;
+            line-height: 1;
+            overflow-wrap: anywhere;
             letter-spacing: -0.02em;
         }
 
         .gdrive-stat-meta span {
-            font-size: 0.78rem;
-            color: var(--g-ink-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
+            display: block;
+            margin-top: .35rem;
+            font-size: .98rem;
+            color: #1a1618;
+            font-weight: 700;
         }
 
         /* 2. Google Drive Navigation Toolbar & Breadcrumbs Bar */
@@ -1320,6 +1323,7 @@
     </dialog>
 
     @include('org.partials.document-preview')
+    <script src="{{ asset('js/archive-directory.js') }}?v={{ filemtime(public_path('js/archive-directory.js')) }}" defer></script>
     <script>
         let currentGdriveView = localStorage.getItem('gdrive_archive_view') || 'grid';
 

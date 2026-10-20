@@ -137,7 +137,6 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/updates/templates', [OfficePortalController::class, 'storeTemplate'])->name('updates.templates.store');
     Route::get('/updates/templates/{template}/download', [OfficePortalController::class, 'downloadTemplate'])->name('updates.templates.download');
     Route::get('/updates/templates/{id}/document', [OfficePortalController::class, 'downloadTemplateDocument'])->name('updates.templates.document');
-    Route::get('/updates/announcements/{id}/document', [OfficePortalController::class, 'downloadAnnouncementDocument'])->name('updates.announcements.document');
     Route::post('/settings', [OfficePortalController::class, 'updateOsoSettings'])->name('settings.update');
     Route::post('/settings/account', [OfficePortalController::class, 'updateOsoAccount'])->name('settings.account');
     Route::post('/settings/password', [OfficePortalController::class, 'updateOsoPassword'])->name('settings.password');
