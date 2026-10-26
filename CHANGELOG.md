@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Restored the original VotingSystemOfSSC voting theme: full-width gradient headers, cream backgrounds, original card styling and Public Sans/Outfit typography replace the liquid-glass overrides. Retained OrgChain branding, mobile ballot navigation/review controls and public blockchain ledger/receipt UI; voting logic, authentication and election records are unchanged.
 - Added database-backed Student Reports and submitted-applicant TOSA KPI cards with compact responsive filters. Student feedback acknowledgment/dismissal and owner-only visibility remain unchanged; retired feedback creation from the demo seeder and narrowly removed the two verified legacy demo feedback records after private backup.
 - Separated TOSA qualification review from a viewport-bounded evaluator scoring dialog with a scrolling body and visible action footer. Academic year/GWA start locked and require explicit authorized editing; provisional/finalized calculations, late-response applicant isolation and read-only clearance restrictions are preserved.
 - Removed the redundant dashboard transaction-header View action and restored readable outlined row-action text. Replaced hardcoded Updates/Renewal organization totals with registered/enabled registry counts; the dashboard's recognized-organization KPI remains academic-year scoped, not a competing registry total.

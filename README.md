@@ -148,6 +148,8 @@ Business submissions, reviews, deletions and settings changes require confirmati
 
 Integrated official voting module (admin, voter flows, Google OAuth, canvassing) served through `App\VotingSystem\Kernel` under the `/voting-system` prefix.
 
+Voting pages use the original `VotingSystemOfSSC` teal, sage, cream and orange design with full-width gradient headers, warm backgrounds, original cards and Public Sans/Outfit typography. OrgChain branding, mounted routes, privacy consent, mobile ballot drawer/review dock and public blockchain ledger/receipt features are retained. The separate staff sign-in design is unchanged.
+
 ## Authentication
 
 - **Students** (`student` guard, `App\Models\UserAccount` on the `orgchain` connection, keyed by `sr_code` with `full_name`, `college`, `program`, `year_level`):
