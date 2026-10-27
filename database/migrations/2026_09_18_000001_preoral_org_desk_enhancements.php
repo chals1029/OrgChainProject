@@ -137,7 +137,7 @@ return new class extends Migration
         if (! Schema::hasTable('student_feedback')) {
             Schema::create('student_feedback', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('student_id')->nullable()->constrained('students')->nullOnDelete();
+                $table->unsignedBigInteger('student_id')->nullable();
                 $table->string('author_name')->nullable();
                 $table->string('college')->nullable();
                 $table->string('program')->nullable();

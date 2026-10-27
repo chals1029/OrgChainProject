@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::connection('orgchain')->create('community_posts', function (Blueprint $table) {
+        Schema::connection('mysql')->create('community_posts', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('student_id');
             $table->unsignedBigInteger('activity_id')->nullable();
@@ -19,7 +19,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::connection('orgchain')->create('community_comments', function (Blueprint $table) {
+        Schema::connection('mysql')->create('community_comments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('post_id');
             $table->unsignedBigInteger('student_id');
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::connection('orgchain')->create('community_likes', function (Blueprint $table) {
+        Schema::connection('mysql')->create('community_likes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('post_id');
             $table->unsignedBigInteger('student_id');
@@ -38,8 +38,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('orgchain')->dropIfExists('community_likes');
-        Schema::connection('orgchain')->dropIfExists('community_comments');
-        Schema::connection('orgchain')->dropIfExists('community_posts');
+        Schema::connection('mysql')->dropIfExists('community_likes');
+        Schema::connection('mysql')->dropIfExists('community_comments');
+        Schema::connection('mysql')->dropIfExists('community_posts');
     }
 };

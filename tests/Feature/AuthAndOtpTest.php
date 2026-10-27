@@ -21,9 +21,9 @@ class AuthAndOtpTest extends TestCase
     {
         parent::setUp();
         $memory = ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '', 'foreign_key_constraints' => true];
-        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.orgchain' => $memory, 'cache.default' => 'array', 'mail.default' => 'array']);
+        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.voting' => $memory, 'cache.default' => 'array', 'mail.default' => 'array']);
         DB::purge('mysql');
-        DB::purge('orgchain');
+        DB::purge('voting');
         Schema::connection('mysql')->create('office_templates', function (Blueprint $table) {
             $table->id();
             foreach (['name', 'category', 'original_name', 'file_path', 'size'] as $column) {
@@ -54,7 +54,7 @@ class AuthAndOtpTest extends TestCase
             $table->string('password');
             $table->boolean('is_active')->default(true);
         });
-        Schema::connection('orgchain')->create('user_accounts', function (Blueprint $table) {
+        Schema::connection('mysql')->create('user_accounts', function (Blueprint $table) {
             $table->increments('user_id');
             foreach (['sr_code', 'full_name', 'email', 'college', 'program', 'year_level', 'role', 'account_status', 'password_hash', 'remember_token'] as $column) {
                 $table->string($column)->nullable();
@@ -125,6 +125,27 @@ class AuthAndOtpTest extends TestCase
         $this->post('/student/login/verify', ['sr_code' => $this->student->sr_code, 'code' => $this->mailedCode()])->assertRedirect(route('portal.home'));
         $this->assertAuthenticatedAs($this->student, 'student');
         $this->assertNull(session('student_login_code'));
+    }
+
+    public function test_student_sign_in_syncs_college_from_separate_voting_roster(): void
+    {
+        $this->student->forceFill(['college' => 'Previous College'])->save();
+        Schema::connection('voting')->create('voters', function (Blueprint $table): void {
+            $table->id();
+            $table->string('sr_code');
+            $table->string('college');
+        });
+        DB::connection('voting')->table('voters')->insert([
+            'sr_code' => $this->student->sr_code,
+            'college' => 'College of Informatics and Computing Sciences',
+        ]);
+
+        $this->post('/student/login/code', ['sr_code' => $this->student->sr_code])->assertSessionHas('code_sent');
+        $this->post('/student/login/verify', ['sr_code' => $this->student->sr_code, 'code' => $this->mailedCode()])
+            ->assertRedirect(route('portal.home'));
+
+        $this->assertAuthenticatedAs($this->student, 'student');
+        $this->assertSame('College of Informatics and Computing Sciences', $this->student->fresh()->college);
     }
 
     public function test_student_otp_wrong_code_is_rejected_and_locks_after_five_failures(): void

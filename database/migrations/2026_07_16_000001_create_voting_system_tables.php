@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('admin_users')) {
-            Schema::create('admin_users', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('admin_users')) {
+            Schema::connection('voting')->create('admin_users', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
                 $table->string('email')->unique();
@@ -20,8 +20,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('elections')) {
-            Schema::create('elections', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('elections')) {
+            Schema::connection('voting')->create('elections', function (Blueprint $table) {
                 $table->id();
                 $table->string('title');
                 $table->enum('status', ['pending', 'open', 'closed'])->default('pending');
@@ -38,8 +38,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('voters')) {
-            Schema::create('voters', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('voters')) {
+            Schema::connection('voting')->create('voters', function (Blueprint $table) {
                 $table->id();
                 $table->string('sr_code', 100)->unique();
                 $table->string('email');
@@ -54,8 +54,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('positions')) {
-            Schema::create('positions', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('positions')) {
+            Schema::connection('voting')->create('positions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('election_id')->constrained('elections')->cascadeOnDelete();
                 $table->string('title');
@@ -66,8 +66,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('candidates')) {
-            Schema::create('candidates', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('candidates')) {
+            Schema::connection('voting')->create('candidates', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('position_id')->constrained('positions')->cascadeOnDelete();
                 $table->string('name');
@@ -80,8 +80,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('vote_receipts')) {
-            Schema::create('vote_receipts', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('vote_receipts')) {
+            Schema::connection('voting')->create('vote_receipts', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('election_id')->constrained('elections')->cascadeOnDelete();
                 $table->foreignId('voter_id')->constrained('voters')->cascadeOnDelete();
@@ -91,8 +91,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('votes')) {
-            Schema::create('votes', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('votes')) {
+            Schema::connection('voting')->create('votes', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('election_id')->constrained('elections')->cascadeOnDelete();
                 $table->foreignId('voter_id')->constrained('voters')->cascadeOnDelete();
@@ -103,8 +103,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('audit_logs')) {
-            Schema::create('audit_logs', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('audit_logs')) {
+            Schema::connection('voting')->create('audit_logs', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->nullable()->constrained('admin_users')->nullOnDelete();
                 $table->string('actor_name');
@@ -114,8 +114,8 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('security_events')) {
-            Schema::create('security_events', function (Blueprint $table) {
+        if (! Schema::connection('voting')->hasTable('security_events')) {
+            Schema::connection('voting')->create('security_events', function (Blueprint $table) {
                 $table->id();
                 $table->string('ip_address', 45);
                 $table->string('user_agent', 512)->nullable();
@@ -135,14 +135,14 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('security_events');
-        Schema::dropIfExists('audit_logs');
-        Schema::dropIfExists('votes');
-        Schema::dropIfExists('vote_receipts');
-        Schema::dropIfExists('candidates');
-        Schema::dropIfExists('positions');
-        Schema::dropIfExists('voters');
-        Schema::dropIfExists('elections');
-        Schema::dropIfExists('admin_users');
+        Schema::connection('voting')->dropIfExists('security_events');
+        Schema::connection('voting')->dropIfExists('audit_logs');
+        Schema::connection('voting')->dropIfExists('votes');
+        Schema::connection('voting')->dropIfExists('vote_receipts');
+        Schema::connection('voting')->dropIfExists('candidates');
+        Schema::connection('voting')->dropIfExists('positions');
+        Schema::connection('voting')->dropIfExists('voters');
+        Schema::connection('voting')->dropIfExists('elections');
+        Schema::connection('voting')->dropIfExists('admin_users');
     }
 };

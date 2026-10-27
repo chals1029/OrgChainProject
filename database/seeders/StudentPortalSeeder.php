@@ -6,56 +6,15 @@ use App\Models\BudgetItem;
 use App\Models\CommunityComment;
 use App\Models\CommunityPost;
 use App\Models\OrgActivity;
-use App\Models\Student;
+use App\Models\UserAccount;
 use Illuminate\Database\Seeder;
 
 class StudentPortalSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = (string) env('STUDENT_DEMO_PASSWORD');
-        if ($password === '') {
-            throw new \RuntimeException('Set STUDENT_DEMO_PASSWORD privately before seeding demo students.');
-        }
-
-        $demo = Student::query()->updateOrCreate(
-            ['sr_code' => '21-00001'],
-            [
-                'name' => 'Demo Student One',
-                'email' => '21-00001@g.batstate-u.edu.ph',
-                'password' => $password,
-                'college' => 'College of Informatics and Computing Sciences',
-                'program' => 'BS Information Technology',
-                'year_level' => '4th Year',
-                'is_active' => true,
-            ]
-        );
-
-        Student::query()->updateOrCreate(
-            ['sr_code' => '21-00002'],
-            [
-                'name' => 'Demo Student Two',
-                'email' => '21-00002@g.batstate-u.edu.ph',
-                'password' => $password,
-                'college' => 'College of Arts and Sciences',
-                'program' => 'BS Psychology',
-                'year_level' => '3rd Year',
-                'is_active' => true,
-            ]
-        );
-
-        Student::query()->updateOrCreate(
-            ['sr_code' => '21-00003'],
-            [
-                'name' => 'Demo Student Three',
-                'email' => '21-00003@g.batstate-u.edu.ph',
-                'password' => $password,
-                'college' => 'College of Informatics and Computing Sciences',
-                'program' => 'BS Information Technology',
-                'year_level' => '3rd Year',
-                'is_active' => true,
-            ]
-        );
+        $this->call(OrgChainUserAccountsSeeder::class);
+        $demo = UserAccount::query()->where('sr_code', '21-00001')->firstOrFail();
 
         if (BudgetItem::query()->count() === 0) {
             BudgetItem::insert([
@@ -155,7 +114,7 @@ class StudentPortalSeeder extends Seeder
         if (CommunityPost::query()->count() === 0) {
             $townHall = OrgActivity::query()->where('title', 'Transparency Town Hall')->first();
             $orientation = OrgActivity::query()->where('title', 'Freshmen Orientation Booth')->first();
-            $maria = Student::query()->where('sr_code', '21-00002')->first();
+            $maria = UserAccount::query()->where('sr_code', '21-00002')->firstOrFail();
 
             $post1 = CommunityPost::create([
                 'student_id' => $demo->id,

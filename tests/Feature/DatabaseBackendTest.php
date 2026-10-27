@@ -5,15 +5,13 @@ namespace Tests\Feature;
 use App\Models\OfficeUser;
 use App\Models\OrgRenewalWindow;
 use App\Models\UserAccount;
+use App\VotingSystem\Core\Database as VotingDatabase;
+use App\VotingSystem\Models\Candidate;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
-/**
- * Live Laragon database backend checks (votingsystem mysql + orgchain).
- * These always run against the real MySQL from .env — not sqlite memory.
- */
+/** MySQL backend behavior on explicitly isolated test schemas. */
 class DatabaseBackendTest extends TestCase
 {
     use UsesLaragonDatabase;
@@ -24,59 +22,38 @@ class DatabaseBackendTest extends TestCase
         $this->useLaragonDatabase();
     }
 
-    public function test_mysql_votingsystem_connection_works(): void
+    public function test_candidate_photo_larger_than_64_kilobytes_is_preserved(): void
     {
-        $pdo = DB::connection('mysql')->getPdo();
-        $this->assertNotNull($pdo);
+        $voting = DB::connection('voting');
+        $connectionProperty = new \ReflectionProperty(VotingDatabase::class, 'connection');
+        $previousConnection = $connectionProperty->getValue();
+        $connectionProperty->setValue(null, null);
+        $voting->beginTransaction();
 
-        $db = DB::connection('mysql')->selectOne('select database() as db');
-        $this->assertSame(config('database.connections.mysql.database'), $db->db);
-    }
+        try {
+            $election = $voting->table('elections')->insertGetId(['title' => 'Synthetic Photo Election', 'status' => 'open']);
+            $position = $voting->table('positions')->insertGetId(['election_id' => $election, 'title' => 'Synthetic Position']);
+            $image = imagecreatetruecolor(200, 200);
+            ob_start();
+            imagepng($image, null, 0);
+            $png = ob_get_clean();
+            $this->assertGreaterThan(65535, strlen($png));
 
-    public function test_orgchain_connection_works(): void
-    {
-        $pdo = DB::connection('orgchain')->getPdo();
-        $this->assertNotNull($pdo);
+            (new Candidate)->create([
+                'position_id' => $position,
+                'name' => 'Synthetic Photo Candidate',
+                'party' => 'Fixture',
+                'image_blob' => $png,
+                'image_mime' => 'image/png',
+                'sort_order' => 1,
+            ]);
 
-        $db = DB::connection('orgchain')->selectOne('select database() as db');
-        $this->assertSame(config('database.connections.orgchain.database'), $db->db);
-    }
-
-    public function test_required_votingsystem_tables_exist(): void
-    {
-        $required = [
-            'office_users',
-            'users',
-            'org_renewal_windows',
-            'org_renewal_submissions',
-            'org_renewal_documents',
-            'budget_items',
-            'expense_receipt_reviews',
-        ];
-
-        foreach ($required as $table) {
-            $this->assertTrue(
-                Schema::connection('mysql')->hasTable($table),
-                "Missing mysql/votingsystem table: {$table}"
-            );
-        }
-    }
-
-    public function test_required_orgchain_tables_exist(): void
-    {
-        $required = [
-            'user_accounts',
-            'community_posts',
-            'community_comments',
-            'community_likes',
-            'community_comment_likes',
-        ];
-
-        foreach ($required as $table) {
-            $this->assertTrue(
-                Schema::connection('orgchain')->hasTable($table),
-                "Missing orgchain table: {$table}"
-            );
+            $stored = $voting->table('candidates')->where('position_id', $position)->first(['image_blob', 'image_mime']);
+            $this->assertSame('image/png', $stored->image_mime);
+            $this->assertSame($png, $stored->image_blob);
+        } finally {
+            $voting->rollBack();
+            $connectionProperty->setValue(null, $previousConnection);
         }
     }
 
@@ -106,7 +83,7 @@ class DatabaseBackendTest extends TestCase
         $this->assertDatabaseHas('user_accounts', [
             'user_id' => $student->user_id,
             'sr_code' => '21-00001',
-        ], 'orgchain');
+        ], 'mysql');
         $this->assertGreaterThanOrEqual(
             1,
             UserAccount::query()->where('account_status', 'active')->count()

@@ -23,20 +23,20 @@ class ActivityDocumentApprovalTest extends TestCase
     {
         parent::setUp();
         $env = $this->readProjectEnv();
-        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_ORGCHAIN_DATABASE' => 'DB_ORGCHAIN_DATABASE'] as $test => $project) {
+        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_VOTING_DATABASE' => 'VOTING_DB_DATABASE'] as $test => $project) {
             if (! getenv($test) || getenv($test) === ($env[$project] ?? null)) {
                 throw new \RuntimeException('Document approval tests require isolated databases.');
             }
         }
         $this->useLaragonDatabase();
-        foreach (['mysql', 'orgchain'] as $connection) DB::connection($connection)->beginTransaction();
+        foreach (['mysql'] as $connection) DB::connection($connection)->beginTransaction();
         Carbon::setTestNow('2030-10-01 09:00:00');
         Storage::fake('local');
     }
 
     protected function tearDown(): void
     {
-        foreach (['orgchain', 'mysql'] as $connection) {
+        foreach (['mysql'] as $connection) {
             while (DB::connection($connection)->transactionLevel() > 0) DB::connection($connection)->rollBack();
         }
         Carbon::setTestNow();

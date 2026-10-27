@@ -22,16 +22,15 @@ class CommunityReportIssuesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        if (! getenv('ORGCHAIN_TEST_DATABASE') || ! getenv('ORGCHAIN_TEST_ORGCHAIN_DATABASE')) {
-            throw new \RuntimeException('CommunityReportIssuesTest requires isolated ORGCHAIN_TEST_DATABASE and ORGCHAIN_TEST_ORGCHAIN_DATABASE databases.');
+        if (! getenv('ORGCHAIN_TEST_DATABASE') || ! getenv('ORGCHAIN_TEST_VOTING_DATABASE')) {
+            throw new \RuntimeException('CommunityReportIssuesTest requires isolated core and voting test databases.');
         }
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         Carbon::setTestNow('2030-03-15 12:34:56');
-        DB::connection('orgchain')->table('student_organizations')->insert([
-            ['org_id' => 910001, 'org_name' => 'Synthetic Community Alpha', 'status' => 'active'],
-            ['org_id' => 910002, 'org_name' => 'Synthetic Community Beta', 'status' => 'active'],
+        DB::connection('mysql')->table('student_organizations')->insert([
+            ['id' => 910001, 'name' => 'Synthetic Community Alpha', 'college' => 'CICS', 'academic_year' => '2026-2027', 'is_active' => true],
+            ['id' => 910002, 'name' => 'Synthetic Community Beta', 'college' => 'CICS', 'academic_year' => '2026-2027', 'is_active' => true],
         ]);
         $this->author = $this->ensureActiveStudent('99-41001');
         $this->member = $this->ensureActiveStudent('99-41002');
@@ -43,7 +42,6 @@ class CommunityReportIssuesTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection('orgchain')->rollBack();
         DB::connection('mysql')->rollBack();
         Carbon::setTestNow();
         parent::tearDown();

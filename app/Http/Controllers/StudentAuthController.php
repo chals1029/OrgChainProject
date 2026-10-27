@@ -257,7 +257,7 @@ class StudentAuthController extends Controller
     }
 
     /**
-     * Pull college/department from voting roster (voters / students tables)
+     * Pull college/department from the voting roster
      * so the portal shows the same full college names as the election list.
      */
     private function syncCollegeFromVotingRoster(UserAccount $student): void
@@ -268,8 +268,7 @@ class StudentAuthController extends Controller
         }
 
         try {
-            $roster = DB::connection('mysql')->table('voters')->where('sr_code', $sr)->first()
-                ?? DB::connection('mysql')->table('students')->where('sr_code', $sr)->first();
+            $roster = DB::connection('voting')->table('voters')->where('sr_code', $sr)->first();
         } catch (Throwable) {
             return;
         }

@@ -12,17 +12,6 @@ return [
         'path' => storage_path('app/voting/sessions'),
     ],
 
-    // Used only as fallback if Laravel DB connection is unavailable.
-    'database' => [
-        'driver' => env('VOTING_DB_DRIVER', env('DB_CONNECTION', 'mysql') === 'sqlite' ? 'mysql' : env('DB_CONNECTION', 'mysql')),
-        'host' => env('VOTING_DB_HOST', env('DB_HOST', '127.0.0.1')),
-        'port' => env('VOTING_DB_PORT', env('DB_PORT', '3306')),
-        'name' => env('VOTING_DB_DATABASE', env('DB_DATABASE', 'votingsystem')),
-        'username' => env('VOTING_DB_USERNAME', env('DB_USERNAME', 'root')),
-        'password' => env('VOTING_DB_PASSWORD', env('DB_PASSWORD', '')),
-        'charset' => 'utf8mb4',
-        'seed_demo' => filter_var(env('ALLOW_DEMO_SEED', false), FILTER_VALIDATE_BOOLEAN),
-    ],
 
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID', ''),

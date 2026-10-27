@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityComment extends Model
 {
-    protected $connection = 'orgchain';
+    protected $connection = 'mysql';
 
     protected $fillable = [
         'post_id',

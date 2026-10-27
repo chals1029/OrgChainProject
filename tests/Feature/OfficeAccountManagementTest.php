@@ -31,12 +31,10 @@ class OfficeAccountManagementTest extends TestCase
         parent::setUp();
         $this->useLaragonDatabase();
         DB::beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
     }
 
     protected function tearDown(): void
     {
-        DB::connection('orgchain')->rollBack();
         DB::rollBack();
         parent::tearDown();
     }
@@ -385,7 +383,7 @@ class OfficeAccountManagementTest extends TestCase
         $admins = [$this->officer(), $this->officer()];
         $payloads = [$this->payload(), $this->payload()];
         DB::commit();
-        DB::connection('orgchain')->commit();
+        DB::connection('mysql')->commit();
         $processes = [];
         try {
             $code = <<<'PHP'
@@ -434,7 +432,7 @@ PHP;
             OfficeUser::whereIn('id', [$outgoing->id, $admins[0]->id, $admins[1]->id])->delete();
             $organization->delete();
             DB::beginTransaction();
-            DB::connection('orgchain')->beginTransaction();
+            DB::connection('mysql')->beginTransaction();
         }
     }
 }

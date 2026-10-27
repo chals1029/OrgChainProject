@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::connection('orgchain')->table('user_accounts', function (Blueprint $table) {
+        Schema::connection('mysql')->table('user_accounts', function (Blueprint $table) {
             $table->renameColumn('username', 'sr_code');
             $table->string('college', 255)->nullable()->after('full_name');
             $table->string('program', 255)->nullable()->after('college');
@@ -18,7 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('orgchain')->table('user_accounts', function (Blueprint $table) {
+        Schema::connection('mysql')->table('user_accounts', function (Blueprint $table) {
             $table->dropColumn(['college', 'program', 'year_level']);
             $table->renameColumn('sr_code', 'username');
         });

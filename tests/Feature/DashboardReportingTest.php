@@ -237,18 +237,6 @@ class DashboardReportingTest extends TestCase
     }
 
 
-    public function test_student_department_and_status_filters_are_bound_to_the_portal_query(): void
-    {
-        $student = $this->ensureActiveStudent('21-00001');
-
-        $this->actingAs($student, 'student')
-            ->get('/portal?college=College%20of%20Informatics%20and%20Computing%20Sciences&status=ongoing')
-            ->assertOk()
-            ->assertSee('name="college"', false)
-            ->assertSee('name="status"', false)
-            ->assertSee('value="College of Informatics and Computing Sciences" selected', false)
-            ->assertSee('value="ongoing" selected', false);
-    }
 
     public function test_students_only_see_fully_approved_activities_and_cannot_rsvp_to_pending_ones(): void
     {

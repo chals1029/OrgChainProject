@@ -27,13 +27,13 @@ class ReportingPeriodContractTest extends TestCase
     {
         parent::setUp();
         $projectEnv = $this->readProjectEnv();
-        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_ORGCHAIN_DATABASE' => 'DB_ORGCHAIN_DATABASE'] as $testKey => $projectKey) {
+        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_VOTING_DATABASE' => 'VOTING_DB_DATABASE'] as $testKey => $projectKey) {
             if (! getenv($testKey) || getenv($testKey) === ($projectEnv[$projectKey] ?? null)) {
-                throw new \RuntimeException('ReportingPeriodContractTest requires separate isolated ORGCHAIN_TEST_DATABASE and ORGCHAIN_TEST_ORGCHAIN_DATABASE databases.');
+                throw new \RuntimeException('ReportingPeriodContractTest requires isolated core and voting test databases.');
             }
         }
         $this->useLaragonDatabase();
-        foreach (['mysql', 'orgchain'] as $connection) {
+        foreach (['mysql'] as $connection) {
             DB::connection($connection)->beginTransaction();
         }
         Carbon::setTestNow('2030-10-15 12:00:00');
@@ -48,7 +48,7 @@ class ReportingPeriodContractTest extends TestCase
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        foreach (['orgchain', 'mysql'] as $connection) {
+        foreach (['mysql'] as $connection) {
             if (DB::connection($connection)->transactionLevel() > 0) {
                 DB::connection($connection)->rollBack();
             }

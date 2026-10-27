@@ -283,121 +283,110 @@ class StudentPortalController extends Controller
         $newPaths = [];
         $replacedPaths = [];
         $srCode = '';
-        $committed = false;
 
         try {
-            // An applicant may not exist yet, so lock the persisted student identity
-            // on orgchain before taking the mysql applicant lock. Only mysql writes.
-            DB::connection('orgchain')->transaction(function () use ($student, $documents, &$newPaths, &$replacedPaths, &$srCode, &$committed): void {
+            // Lock the persisted student identity before the applicant, in one core transaction.
+            $replacedPaths = DB::connection('mysql')->transaction(function () use ($student, $documents, &$newPaths, &$srCode): array {
                 $ownerStudent = UserAccount::query()->whereKey($student->getAuthIdentifier())->lockForUpdate()->first();
                 abort_unless($ownerStudent, 403, 'Your student record is unavailable.');
                 $srCode = trim((string) $ownerStudent->sr_code);
                 abort_unless($srCode !== '' && ! in_array($srCode, ['.', '..'], true)
                     && strpbrk($srCode, "/\\:\0") === false, 403, 'Your student record has no valid SR code.');
 
-                $replacedPaths = DB::connection('mysql')->transaction(function () use ($ownerStudent, $srCode, $documents, &$newPaths): array {
-                    $applicant = TosaApplicant::query()->where('sr_code', $srCode)->lockForUpdate()->first();
-                    if ($applicant?->studentSubmissionLocked()) {
-                        throw ValidationException::withMessages(['tosa' => 'Your submitted application is locked. Only OSO returning it for revision allows changes or resubmission.']);
+                $applicant = TosaApplicant::query()->where('sr_code', $srCode)->lockForUpdate()->first();
+                if ($applicant?->studentSubmissionLocked()) {
+                    throw ValidationException::withMessages(['tosa' => 'Your submitted application is locked. Only OSO returning it for revision allows changes or resubmission.']);
+                }
+                foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
+                    $available = isset($documents[$key])
+                        ? TosaRequirements::validSubmissionFile($key, $documents[$key]->getPathname(), $documents[$key]->getClientOriginalName())
+                        : $applicant?->requirementFile($key) !== null;
+                    if (! $available) {
+                        throw ValidationException::withMessages(['tosa' => 'Choose every required packet section or keep its available saved original before submitting.']);
                     }
-                    foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
-                        $available = isset($documents[$key])
-                            ? TosaRequirements::validSubmissionFile($key, $documents[$key]->getPathname(), $documents[$key]->getClientOriginalName())
-                            : $applicant?->requirementFile($key) !== null;
-                        if (! $available) {
-                            throw ValidationException::withMessages(['tosa' => 'Choose every required packet section or keep its available saved original before submitting.']);
-                        }
-                    }
+                }
 
-                    $candidate = $applicant ?? new TosaApplicant([
-                        'sr_code' => $srCode,
-                        'full_name' => $ownerStudent->full_name ?? $ownerStudent->name ?? 'Student',
-                        'email' => $ownerStudent->email,
-                        'college' => $ownerStudent->college,
-                        'program' => $ownerStudent->program,
-                        'year_level' => $ownerStudent->year_level,
-                    ]);
-                    $requirements = is_array($candidate->requirements) ? $candidate->requirements : [];
-                    $oldPaths = [];
-                    $disk = Storage::disk('local');
-                    if ($documents !== []) {
-                        $disk->makeDirectory('tosa/'.$srCode);
-                        $root = realpath($disk->path(''));
-                        $owner = realpath($disk->path('tosa/'.$srCode));
-                        abort_unless($root && $owner && $owner === $root.DIRECTORY_SEPARATOR.'tosa'.DIRECTORY_SEPARATOR.$srCode,
-                            403, 'The private upload location is unavailable.');
+                $candidate = $applicant ?? new TosaApplicant([
+                    'sr_code' => $srCode,
+                    'full_name' => $ownerStudent->full_name ?? $ownerStudent->name ?? 'Student',
+                    'email' => $ownerStudent->email,
+                    'college' => $ownerStudent->college,
+                    'program' => $ownerStudent->program,
+                    'year_level' => $ownerStudent->year_level,
+                ]);
+                $requirements = is_array($candidate->requirements) ? $candidate->requirements : [];
+                $oldPaths = [];
+                $disk = Storage::disk('local');
+                if ($documents !== []) {
+                    $disk->makeDirectory('tosa/'.$srCode);
+                    $root = realpath($disk->path(''));
+                    $owner = realpath($disk->path('tosa/'.$srCode));
+                    abort_unless($root && $owner && $owner === $root.DIRECTORY_SEPARATOR.'tosa'.DIRECTORY_SEPARATOR.$srCode,
+                        403, 'The private upload location is unavailable.');
 
-                        foreach ($documents as $key => $file) {
-                            $oldPath = $candidate->requirementPath($key);
-                            $oldFile = $candidate->ownedRequirementFile($key);
-                            if ($oldPath && $oldFile && ! is_link($disk->path($oldPath))) {
-                                $oldPaths[$oldPath] = $oldFile;
-                            }
-                            $filename = $key.'-'.Str::uuid().'.'.strtolower($file->getClientOriginalExtension());
-                            $path = 'tosa/'.$srCode.'/'.$filename;
-                            abort_if($disk->exists($path) || is_link($disk->path($path)), 403, 'The private upload location is unavailable.');
-                            // Record the intended path before a write, including writes
-                            // that leave partial bytes and then return false or throw.
-                            $newPaths[$path] = $owner.DIRECTORY_SEPARATOR.$filename;
-                            $stored = $file->storeAs('tosa/'.$srCode, $filename, 'local');
-                            if ($stored !== $path) {
-                                throw new \RuntimeException('The selected packet file could not be stored.');
-                            }
-                            $requirements[$key] = [
-                                'title' => TosaRequirements::SUBMISSIONS[$key]['title'],
-                                'name' => $file->getClientOriginalName(),
-                                'path' => $path,
-                                'uploaded_at' => now()->toIso8601String(),
-                            ];
+                    foreach ($documents as $key => $file) {
+                        $oldPath = $candidate->requirementPath($key);
+                        $oldFile = $candidate->ownedRequirementFile($key);
+                        if ($oldPath && $oldFile && ! is_link($disk->path($oldPath))) {
+                            $oldPaths[$oldPath] = $oldFile;
                         }
-                    }
-                    $candidate->requirements = $requirements;
-                    foreach (array_keys(TosaRequirements::SUBMISSIONS) as $key) {
-                        if ($candidate->requirementFile($key) === null) {
-                            throw ValidationException::withMessages(['tosa' => 'Every packet section must have a readable, nonempty private original before submitting.']);
+                        $filename = $key.'-'.Str::uuid().'.'.strtolower($file->getClientOriginalExtension());
+                        $path = 'tosa/'.$srCode.'/'.$filename;
+                        abort_if($disk->exists($path) || is_link($disk->path($path)), 403, 'The private upload location is unavailable.');
+                        // Record the intended path before a write, including writes
+                        // that leave partial bytes and then return false or throw.
+                        $newPaths[$path] = $owner.DIRECTORY_SEPARATOR.$filename;
+                        $stored = $file->storeAs('tosa/'.$srCode, $filename, 'local');
+                        if ($stored !== $path) {
+                            throw new \RuntimeException('The selected packet file could not be stored.');
                         }
+                        $requirements[$key] = [
+                            'title' => TosaRequirements::SUBMISSIONS[$key]['title'],
+                            'name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'uploaded_at' => now()->toIso8601String(),
+                        ];
                     }
-                    $candidate->status = 'submitted';
-                    $candidate->subsection = 'screening';
-                    if ($documents !== []) {
-                        $candidate->gwa = null;
-                        $candidate->gwa_verified = false;
-                        $candidate->remarks = null;
-                        $candidate->score_evaluation = null;
+                }
+                $candidate->requirements = $requirements;
+                foreach (array_keys(TosaRequirements::SUBMISSIONS) as $key) {
+                    if ($candidate->requirementFile($key) === null) {
+                        throw ValidationException::withMessages(['tosa' => 'Every packet section must have a readable, nonempty private original before submitting.']);
                     }
-                    if (! $candidate->save()) {
-                        throw new \RuntimeException('The selected packet could not be committed.');
-                    }
+                }
+                $candidate->status = 'submitted';
+                $candidate->subsection = 'screening';
+                if ($documents !== []) {
+                    $candidate->gwa = null;
+                    $candidate->gwa_verified = false;
+                    $candidate->remarks = null;
+                    $candidate->score_evaluation = null;
+                }
+                if (! $candidate->save()) {
+                    throw new \RuntimeException('The selected packet could not be committed.');
+                }
 
-                    // An old path still referenced by any retained historical or
-                    // active metadata must not be deleted after replacement.
-                    foreach ($requirements as $document) {
-                        if (is_array($document) && is_string($document['path'] ?? null)) {
-                            unset($oldPaths[$document['path']]);
-                        }
+                // An old path still referenced by any retained historical or
+                // active metadata must not be deleted after replacement.
+                foreach ($requirements as $document) {
+                    if (is_array($document) && is_string($document['path'] ?? null)) {
+                        unset($oldPaths[$document['path']]);
                     }
+                }
 
-                    return $oldPaths;
-                });
-                $committed = true;
+                return $oldPaths;
             });
         } catch (Throwable $exception) {
-            if (! $committed) {
-                $this->deleteOwnedTosaFiles($srCode, $newPaths);
-                if ($exception instanceof ValidationException) {
-                    return $this->tosaRedirect()->withErrors($exception->errors())->withInput();
-                }
-                if ($exception instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
-                    throw $exception;
-                }
-                report($exception);
-
-                return $this->tosaRedirect()->withErrors(['tosa' => 'The packet could not be saved. Your previous application was not changed. Try again.']);
+            $this->deleteOwnedTosaFiles($srCode, $newPaths);
+            if ($exception instanceof ValidationException) {
+                return $this->tosaRedirect()->withErrors($exception->errors())->withInput();
             }
-            // The outer transaction only held an identity lock; mysql has already
-            // committed. Never remove newly published originals if that lock's
-            // read-only transaction fails while releasing.
+            if ($exception instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                throw $exception;
+            }
             report($exception);
+
+            return $this->tosaRedirect()->withErrors(['tosa' => 'The packet could not be saved. Your previous application was not changed. Try again.']);
         }
 
         $this->deleteOwnedTosaFiles($srCode, $replacedPaths);

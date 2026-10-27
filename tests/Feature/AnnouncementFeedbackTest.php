@@ -22,19 +22,18 @@ class AnnouncementFeedbackTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        if (! getenv('ORGCHAIN_TEST_DATABASE') || ! getenv('ORGCHAIN_TEST_ORGCHAIN_DATABASE')) {
-            throw new \RuntimeException('AnnouncementFeedbackTest requires isolated ORGCHAIN_TEST_DATABASE and ORGCHAIN_TEST_ORGCHAIN_DATABASE databases.');
+        if (! getenv('ORGCHAIN_TEST_DATABASE') || ! getenv('ORGCHAIN_TEST_VOTING_DATABASE')) {
+            throw new \RuntimeException('AnnouncementFeedbackTest requires isolated core and voting test databases.');
         }
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         Carbon::setTestNow('2030-05-01 10:00:00');
     }
 
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        foreach (['orgchain', 'mysql'] as $connection) {
+        foreach (['mysql'] as $connection) {
             if (DB::connection($connection)->transactionLevel() > 0) {
                 DB::connection($connection)->rollBack();
             }

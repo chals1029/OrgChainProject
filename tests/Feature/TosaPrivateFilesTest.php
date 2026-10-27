@@ -26,12 +26,11 @@ class TosaPrivateFilesTest extends TestCase
     {
         parent::setUp();
         $memory = ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];
-        config(['database.connections.mysql' => $memory, 'database.connections.orgchain' => $memory]);
+        config(['database.connections.mysql' => $memory, 'database.connections.voting' => $memory]);
         DB::purge('mysql');
-        DB::purge('orgchain');
         Storage::fake('local');
         Storage::fake('public');
-        Schema::connection('orgchain')->create('user_accounts', function (Blueprint $table): void {
+        Schema::connection('mysql')->create('user_accounts', function (Blueprint $table): void {
             $table->increments('user_id');
             foreach (['sr_code', 'full_name', 'email', 'college', 'program', 'year_level', 'account_status', 'role'] as $column) {
                 $table->text($column)->nullable();
@@ -62,7 +61,6 @@ class TosaPrivateFilesTest extends TestCase
     protected function tearDown(): void
     {
         DB::purge('mysql');
-        DB::purge('orgchain');
         parent::tearDown();
     }
 

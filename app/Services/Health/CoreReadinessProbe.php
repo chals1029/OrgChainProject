@@ -42,10 +42,9 @@ class CoreReadinessProbe
 
     private function database(): string
     {
-        // Voting normally uses Laravel's default connection. Do not invoke its
-        // Database adapter: opening it can run application schema migrations.
+        // Probe both stores without mutating shared connections or application data.
         $healthy = 0;
-        foreach ([(string) config('database.default', ''), 'orgchain'] as $name) {
+        foreach (['mysql', 'voting'] as $name) {
             $connection = null;
             try {
                 $configured = config('database.connections.'.$name);

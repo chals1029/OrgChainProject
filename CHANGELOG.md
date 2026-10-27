@@ -2,6 +2,8 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Separate OrgChain's core/student/community data from the election database using canonical `mysql` and `voting` connections. Preserve existing rows and older prototype records through a backed-up, fingerprint-checked table move; route migrations, seeders, roster reads and isolated test databases to their proper owners. Replace request-time voting DDL with explicit migrations, add fresh-install account ownership, and link student membership to the active organization registry.
+- Fixed fresh voting databases rejecting valid candidate photos larger than 64 KB. An additive migration expands undersized MySQL photo columns without shrinking existing data.
 - Redesigned department-scoped student SDG Highlights and Student Voice, including searchable related activities, owner-only history, saved OSO remarks and evidence-backed timelines. Normalized department aliases before access checks; unmapped departments fail closed and final-approved off-campus budgets remain visible within the department.
 - Reworked OSO Student Reports into a searchable concern queue and responsive detail/action panel; preserved all user-entered reports. Shared authority-colored workflow pills across Dashboard/Analytics, moved Budget Utilization above Student Reports and removed the two requested dashboard analysis charts.
 - Cleared invalid announcement selections while retaining the validation notice and disabled publication state; right-aligned template controls and retained independent working pagination. Simplified OSO Archive to the filtered organization directory and eye-icon View dialog without removing SO folder/upload access or private originals.

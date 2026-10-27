@@ -21,7 +21,7 @@ class PrivateDocumentMigrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['database.connections.mysql' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '']]);
+        config(['database.default' => 'mysql', 'database.connections.mysql' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '']]);
         DB::purge('mysql');
         Storage::fake('public');
         Storage::fake('local');

@@ -54,7 +54,7 @@ class VotingStaffSeeder extends Seeder
         ];
 
         foreach ($accounts as $acc) {
-            $existing = DB::connection('mysql')->table('admin_users')->where('email', $acc['email'])->first();
+            $existing = DB::connection('voting')->table('admin_users')->where('email', $acc['email'])->first();
 
             $data = [
                 'name' => $acc['name'],
@@ -65,9 +65,9 @@ class VotingStaffSeeder extends Seeder
             ];
 
             if ($existing) {
-                DB::connection('mysql')->table('admin_users')->where('id', $existing->id)->update($data);
+                DB::connection('voting')->table('admin_users')->where('id', $existing->id)->update($data);
             } else {
-                DB::connection('mysql')->table('admin_users')->insert($data);
+                DB::connection('voting')->table('admin_users')->insert($data);
             }
         }
     }

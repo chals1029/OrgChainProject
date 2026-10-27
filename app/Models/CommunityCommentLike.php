@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CommunityCommentLike extends Model
 {
-    protected $connection = 'orgchain';
+    protected $connection = 'mysql';
 
     protected $fillable = [
         'comment_id',

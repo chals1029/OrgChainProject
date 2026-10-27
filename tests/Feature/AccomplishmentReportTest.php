@@ -52,7 +52,7 @@ class AccomplishmentReportTest extends TestCase
         parent::setUp();
         $this->useLaragonDatabase();
 
-        foreach (['mysql', 'orgchain'] as $connection) {
+        foreach (['mysql'] as $connection) {
             DB::connection($connection)->beginTransaction();
         }
 
@@ -84,7 +84,7 @@ class AccomplishmentReportTest extends TestCase
             foreach ($this->temporaryFiles as $path) {
                 @unlink($path);
             }
-            foreach (['mysql', 'orgchain'] as $connection) {
+            foreach (['mysql'] as $connection) {
                 while (DB::connection($connection)->transactionLevel() > 0) {
                     DB::connection($connection)->rollBack();
                 }

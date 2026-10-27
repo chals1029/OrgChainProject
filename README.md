@@ -177,9 +177,19 @@ Turnover retains organization activities, cash ledger, AR/FR, renewal and archiv
 
 ## Key data
 
-- Default `mysql` connection (`DB_DATABASE`, voting data): `office_users`, `org_activities`, `in_campus_activity_submissions` (in-campus + `local_off_campus` types, TinyMCE HTML columns, JSON attachments), `expense_receipt_reviews`, `archive_folders`, `archive_documents`, `budget_items`.
-- `orgchain` connection (`DB_ORGCHAIN_DATABASE`): `user_accounts` (students by `sr_code`), `community_posts`, `community_comments`, `community_likes`.
+- Default `mysql` connection (`DB_DATABASE=orgchain`): all office, organization, activity, budget, report, renewal, archive, TOSA, student-account and community tables. Cross-feature transactions share this connection.
+- Dedicated `voting` connection (`VOTING_DB_DATABASE=votingsystem`): elections, positions, candidates, voters, ballots/receipts, voting staff and voting audit/security tables. Student sign-in reads the election roster through this connection; it never writes voting data into the core database.
+- `legacy_*` tables in `orgchain` preserve older unused prototype/student/community records. They are archived data, not active model targets; do not merge their IDs into current accounts or posts by guesswork.
+- Schema changes run through Laravel migrations, not voting web requests or a `schema.lock` marker. Fresh installs create active student accounts and community tables only; the account baseline preserves pre-existing imported accounts on rollback, and organization membership points to the active registry. The candidate-photo migration widens undersized MySQL BLOB columns to accommodate the existing 2 MB upload limit without shrinking larger columns.
 - Legacy document records may retain `public` disk paths, but confidential storage prefixes are denied by the supplied Nginx, Apache and development-router rules; authenticated document endpoints enforce ownership and workflow stage. New TOSA, community-photo and manual archive uploads use the private `local` disk. Community images, including preserved existing files, are served only through the audience-checked photo route; direct `/storage/community/` access is denied. `archive_documents.file_disk` preserves legacy disk selection.
+
+### Existing mixed-database cutover
+
+Enter maintenance mode before moving the old mixed schema. `scripts/separate-databases.php` takes an operation and an existing private directory under `storage/app/private/backups`. Run `backup` first: it creates complete SQL dumps, ordered-row fingerprints, a table-move manifest and reverse rename SQL. Keep the original database-name configuration until this backup is captured.
+
+Run `restore-copy`, then `move ... --copy` and `verify ... --copy` using that same private directory to rehearse on disposable databases. Verify their foreign keys stay within the disposable pair. Deploy the connection/migration changes and rehearse migration upgrades there before the live operation.
+
+Run `move` without `--copy` only in maintenance mode after successful backup restoration. It atomically renames non-voting tables into `orgchain`, preserving IDs and row bytes; colliding obsolete tables receive `legacy_*` names. Then set `DB_CONNECTION=mysql`, `DB_DATABASE=orgchain` and `VOTING_DB_DATABASE=votingsystem`, remove `DB_ORGCHAIN_DATABASE`, clear the config cache, and run `php artisan migrate --force`. The central migration history belongs to `orgchain`; voting migrations explicitly target `voting`. Run `verify`, rebuild the config cache and smoke-check both portals before `php artisan up`. Keep the private backups; do not reset or reseed either live database.
 
 ## Source control and private configuration
 
@@ -189,7 +199,7 @@ Account seeders have no public password defaults. Configure `OFFICE_SEED_PASSWOR
 
 Configure `BLOCKCHAIN_NODE_SECRET` privately and consistently across the participating nodes. The slim node also accepts `ORGCHAIN_NODE_SECRET`; it refuses startup without a secret, and the receive API rejects missing server configuration or mismatched tokens. The PowerShell launcher requests a private secret without echoing it or saving it in its connection handout. Office smoke scripts require private `E2E_OFFICE_PASSWORD` configuration.
 
-For the announcement/community regressions, use disposable schema-only copies of both legacy databases, set `ORGCHAIN_TEST_DATABASE` and `ORGCHAIN_TEST_ORGCHAIN_DATABASE` explicitly, apply pending migrations, then run `php artisan test tests/Feature/AnnouncementFeedbackTest.php tests/Feature/CommunityReportIssuesTest.php`. These tests refuse missing isolated-database configuration; never point them at production or user records.
+For the announcement/community regressions, use disposable schema-only core and voting databases, set `ORGCHAIN_TEST_DATABASE` and `ORGCHAIN_TEST_VOTING_DATABASE` explicitly, apply migrations, then run `php artisan test tests/Feature/AnnouncementFeedbackTest.php tests/Feature/CommunityReportIssuesTest.php`. Never point these variables at production or user records.
 
 ## Tech stack
 
@@ -239,7 +249,7 @@ docker build -t orgchain/document-converter:local infra/document-converter
 
 The PHP runtime needs Docker CLI/daemon access and writable private storage. Docker daemon access is host-admin privileged: restrict the runtime account and never expose the socket publicly. If Laravel itself runs in a container, conversion bind-mount paths must exist at the same absolute paths on the Docker host. `OFFICE_DOCUMENT_CONVERTER_IMAGE` and `OFFICE_DOCUMENT_DOCKER_BINARY` configure the image/CLI. Conversion runs without network access, with macros disabled, resource/time limits and private per-job workspaces cleaned after completion; missing Docker/image support returns an explicit preview error rather than substituting a blank template.
 
-Create `.env` and set at minimum: `DB_DATABASE`, `DB_ORGCHAIN_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `OFFICE_LOGIN_PATH`, Google OAuth (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_ALLOWED_DOMAIN`), mail credentials for login codes, and `TINYMCE_API_KEY`.
+Create `.env` and set at minimum: `DB_CONNECTION=mysql`, `DB_DATABASE=orgchain`, `VOTING_DB_DATABASE=votingsystem`, `DB_USERNAME`, `DB_PASSWORD`, `OFFICE_LOGIN_PATH`, Google OAuth (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_ALLOWED_DOMAIN`), mail credentials for login codes, and `TINYMCE_API_KEY`. Voting has independent optional `VOTING_DB_HOST`, `VOTING_DB_PORT`, `VOTING_DB_USERNAME`, `VOTING_DB_PASSWORD` and `VOTING_DB_URL`; do not point it at the core database.
 
 ```bash
 php artisan key:generate
@@ -338,9 +348,9 @@ Inspect `systemctl status orgchain-health.timer orgchain-health.service` private
 
 ### Safe regression and browser checks
 
-For disposable MySQL schemas, set `ORGCHAIN_TEST_DATABASE` and `ORGCHAIN_TEST_ORGCHAIN_DATABASE`; the existing Laragon test helper otherwise uses the configured databases. Use schema-only clones, not copies of real student rows. Override `LARAVEL_STORAGE_PATH` and `APP_CONFIG_CACHE` to temporary paths, copy required official `storage/Template` sources into that isolated storage root, and set `BLOCKCHAIN_DRIVER=file` explicitly for file-ledger checks. Never run destructive storage tests against live uploads.
+For disposable MySQL schemas, set `ORGCHAIN_TEST_DATABASE` for the core database and `ORGCHAIN_TEST_VOTING_DATABASE` for voting. Use schema-only databases, not copies of real student rows, for functional tests. Override `LARAVEL_STORAGE_PATH` and `APP_CONFIG_CACHE` to private temporary paths, copy required official `storage/Template` sources into that isolated storage root, and set `BLOCKCHAIN_DRIVER=file` for file-ledger checks. Never run destructive storage tests against live uploads.
 
-Schema-only clones must receive the application's pending migrations before testing. In particular, the current announcement/template workflows require `2026_10_15_000001_create_office_announcement_acknowledgments_table`, `2026_10_20_000001_add_expiration_to_office_announcements_table` and `2026_10_20_000002_create_office_template_downloads_table`; cloning an older schema alone leaves these tables/columns missing. Apply them only to the explicitly configured disposable connections when preparing QA. On Windows, use project-relative `APP_*_CACHE` paths into ignored QA storage: Laravel's cache-path resolver does not recognize a drive-letter path as absolute.
+Apply all migrations to the explicitly configured disposable pair before testing; do not clone an outdated schema and assume the new tables and columns exist. The main migration ledger is on the core connection, while voting migrations route to `voting`. On Windows, use project-relative `APP_*_CACHE` paths into ignored private storage: Laravel's cache-path resolver does not recognize a drive-letter path as absolute.
 
 `node --test tests/Unit/calendar-charts.test.mjs` executes the actual dashboard/analytics aggregation functions using the complete server reporting-metadata shape. Private-file symlink and unreadable-file checks need a native Linux filesystem and a non-root user to exercise POSIX permissions; Windows skips and root bypasses are not passing evidence. Keep their skip guards, and record the Linux execution separately from the Windows suite.
 

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CommunityLike extends Model
 {
-    protected $connection = 'orgchain';
+    protected $connection = 'mysql';
 
     protected $fillable = [
         'post_id',

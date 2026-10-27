@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $schema = Schema::connection('orgchain');
+        $schema = Schema::connection('mysql');
 
         if (! $schema->hasTable('community_comment_likes')) {
             $schema->create('community_comment_likes', function (Blueprint $table): void {
@@ -23,6 +23,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('orgchain')->dropIfExists('community_comment_likes');
+        Schema::connection('mysql')->dropIfExists('community_comment_likes');
     }
 };

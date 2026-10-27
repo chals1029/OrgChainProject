@@ -21,7 +21,7 @@ class RenewalRequirementManagementTest extends TestCase
 {
     use UsesLaragonDatabase;
 
-    private const CONNECTIONS = ['mysql', 'orgchain'];
+    private const CONNECTIONS = ['mysql'];
 
     private OfficeUser $oso;
     private OfficeUser $so;

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityPost extends Model
 {
-    protected $connection = 'orgchain';
+    protected $connection = 'mysql';
 
     protected $fillable = [
         'student_id',

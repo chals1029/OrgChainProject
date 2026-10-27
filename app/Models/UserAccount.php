@@ -10,7 +10,7 @@ class UserAccount extends Authenticatable
 {
     use Notifiable;
 
-    protected $connection = 'orgchain';
+    protected $connection = 'mysql';
     protected $table = 'user_accounts';
     protected $primaryKey = 'user_id';
     public $incrementing = true;

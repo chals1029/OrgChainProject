@@ -26,21 +26,20 @@ class ReportReviewBoundaryTest extends TestCase
     {
         parent::setUp();
         $env = $this->readProjectEnv();
-        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_ORGCHAIN_DATABASE' => 'DB_ORGCHAIN_DATABASE'] as $test => $source) {
+        foreach (['ORGCHAIN_TEST_DATABASE' => 'DB_DATABASE', 'ORGCHAIN_TEST_VOTING_DATABASE' => 'VOTING_DB_DATABASE'] as $test => $source) {
             if (!getenv($test) || getenv($test) === ($env[$source] ?? null)) {
                 throw new \RuntimeException('Report review tests require isolated databases.');
             }
         }
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         Storage::fake('local');
         Storage::fake('public');
     }
 
     protected function tearDown(): void
     {
-        foreach (['orgchain', 'mysql'] as $connection) {
+        foreach (['mysql'] as $connection) {
             while (DB::connection($connection)->transactionLevel() > 0) {
                 DB::connection($connection)->rollBack();
             }

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $schema = Schema::connection('orgchain');
+        $schema = Schema::connection('mysql');
 
         if ($schema->hasTable('community_likes') && ! $schema->hasColumn('community_likes', 'reaction')) {
             $schema->table('community_likes', function (Blueprint $table): void {
@@ -19,7 +19,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $schema = Schema::connection('orgchain');
+        $schema = Schema::connection('mysql');
 
         if ($schema->hasTable('community_likes') && $schema->hasColumn('community_likes', 'reaction')) {
             $schema->table('community_likes', function (Blueprint $table): void {

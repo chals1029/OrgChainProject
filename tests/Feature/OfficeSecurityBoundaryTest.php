@@ -30,7 +30,6 @@ class OfficeSecurityBoundaryTest extends TestCase
         parent::setUp();
         $this->useLaragonDatabase();
         DB::beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         Storage::fake('local');
         Storage::fake('public');
         OfficeSetting::forScope('oso')->update(['values' => OfficeSetting::defaults()]);
@@ -38,7 +37,6 @@ class OfficeSecurityBoundaryTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection('orgchain')->rollBack();
         DB::rollBack();
         parent::tearDown();
     }

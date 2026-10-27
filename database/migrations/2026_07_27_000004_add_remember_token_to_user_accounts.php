@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::connection('orgchain')->table('user_accounts', function (Blueprint $table) {
+        Schema::connection('mysql')->table('user_accounts', function (Blueprint $table) {
             $table->rememberToken()->after('account_status');
         });
     }
 
     public function down(): void
     {
-        Schema::connection('orgchain')->table('user_accounts', function (Blueprint $table) {
+        Schema::connection('mysql')->table('user_accounts', function (Blueprint $table) {
             $table->dropColumn('remember_token');
         });
     }

@@ -23,9 +23,8 @@ class TosaScoringTest extends TestCase
     {
         parent::setUp();
         $memory = ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];
-        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.orgchain' => $memory]);
+        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.voting' => $memory]);
         DB::purge('mysql');
-        DB::purge('orgchain');
         Storage::fake('local');
         Schema::connection('mysql')->create('tosa_applicants', function (Blueprint $table): void {
             $table->id();
@@ -60,7 +59,6 @@ class TosaScoringTest extends TestCase
     protected function tearDown(): void
     {
         DB::purge('mysql');
-        DB::purge('orgchain');
         parent::tearDown();
     }
 

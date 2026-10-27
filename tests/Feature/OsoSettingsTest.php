@@ -27,13 +27,11 @@ class OsoSettingsTest extends TestCase
         parent::setUp();
         $this->useLaragonDatabase();
         DB::beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         OfficeSetting::forScope('oso')->update(['values' => OfficeSetting::defaults()]);
     }
 
     protected function tearDown(): void
     {
-        DB::connection('orgchain')->rollBack();
         DB::rollBack();
         parent::tearDown();
     }

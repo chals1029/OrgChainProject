@@ -16,7 +16,6 @@ class RenewalAccessTest extends TestCase
         parent::setUp();
         $this->useLaragonDatabase();
         DB::connection('mysql')->beginTransaction();
-        DB::connection('orgchain')->beginTransaction();
         $this->ensureOfficeUser('so');
         $this->ensureOfficeUser('oso');
         $this->ensureOfficeUser('sdo');
@@ -24,7 +23,6 @@ class RenewalAccessTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection('orgchain')->rollBack();
         DB::connection('mysql')->rollBack();
         parent::tearDown();
     }

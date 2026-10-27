@@ -9,23 +9,26 @@ use App\Models\UserAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * Point Feature tests at the real Laragon MySQL backends (votingsystem + orgchain).
- * PHPUnit forces DB_DATABASE=:memory: for the default sqlite connection; this restores
- * named mysql/orgchain connections (and default) from the project .env so backend
- * auth / renewal / DB tests never skip.
- */
+/** Configure explicitly isolated core and voting databases for MySQL feature tests. */
 trait UsesLaragonDatabase
 {
     protected function useLaragonDatabase(): void
     {
         $env = $this->readProjectEnv();
 
+        $coreDatabase = getenv('ORGCHAIN_TEST_DATABASE');
+        $votingDatabase = getenv('ORGCHAIN_TEST_VOTING_DATABASE');
+        $live = ['orgchain', 'votingsystem', $env['DB_DATABASE'] ?? '', $env['VOTING_DB_DATABASE'] ?? ''];
+        if (! $coreDatabase || ! $votingDatabase || $coreDatabase === $votingDatabase
+            || in_array($coreDatabase, $live, true) || in_array($votingDatabase, $live, true)) {
+            throw new \RuntimeException('Set distinct isolated ORGCHAIN_TEST_DATABASE and ORGCHAIN_TEST_VOTING_DATABASE schemas.');
+        }
+
         $mysql = [
             'driver' => 'mysql',
             'host' => $env['DB_HOST'] ?? '127.0.0.1',
             'port' => $env['DB_PORT'] ?? '3306',
-            'database' => getenv('ORGCHAIN_TEST_DATABASE') ?: ($env['DB_DATABASE'] ?? 'votingsystem'),
+            'database' => $coreDatabase,
             'username' => $env['DB_USERNAME'] ?? 'root',
             'password' => $env['DB_PASSWORD'] ?? '',
             'charset' => 'utf8mb4',
@@ -35,17 +38,17 @@ trait UsesLaragonDatabase
             'engine' => null,
         ];
 
-        $orgchain = $mysql;
-        $orgchain['database'] = getenv('ORGCHAIN_TEST_ORGCHAIN_DATABASE') ?: ($env['DB_ORGCHAIN_DATABASE'] ?? 'orgchain');
+        $voting = $mysql;
+        $voting['database'] = $votingDatabase;
 
         config([
             'database.default' => 'mysql',
             'database.connections.mysql' => array_merge(config('database.connections.mysql', []), $mysql),
-            'database.connections.orgchain' => array_merge(config('database.connections.orgchain', []), $orgchain),
+            'database.connections.voting' => $voting,
         ]);
 
         DB::purge('mysql');
-        DB::purge('orgchain');
+        DB::purge('voting');
         DB::setDefaultConnection('mysql');
     }
 

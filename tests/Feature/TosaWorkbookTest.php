@@ -26,11 +26,10 @@ class TosaWorkbookTest extends TestCase
     {
         parent::setUp();
         $memory = ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];
-        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.orgchain' => $memory]);
+        config(['database.default' => 'mysql', 'database.connections.mysql' => $memory, 'database.connections.voting' => $memory]);
         DB::purge('mysql');
-        DB::purge('orgchain');
         DB::setDefaultConnection('mysql');
-        Schema::connection('orgchain')->create('user_accounts', function (Blueprint $table): void {
+        Schema::connection('mysql')->create('user_accounts', function (Blueprint $table): void {
             $table->increments('user_id');
             $table->text('sr_code');
             $table->text('full_name');
@@ -67,7 +66,6 @@ class TosaWorkbookTest extends TestCase
     protected function tearDown(): void
     {
         DB::purge('mysql');
-        DB::purge('orgchain');
         parent::tearDown();
     }
 
