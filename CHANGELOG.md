@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Replaced SDO, OVCAA and OC dashboard sample figures, fabricated review actions, fixed sidebar counts and analytics budget fallbacks with role-filtered persisted data. Review queues count all pending packages and link real activities; upcoming cards show only genuine future events. Empty views expose no-data states, analytics preserves zero spending and unknown document compliance exports as N/A. Real activity titles wrap within narrow dashboard cards.
 - Separate OrgChain's core/student/community data from the election database using canonical `mysql` and `voting` connections. Preserve existing rows and older prototype records through a backed-up, fingerprint-checked table move; route migrations, seeders, roster reads and isolated test databases to their proper owners. Replace request-time voting DDL with explicit migrations, add fresh-install account ownership, and link student membership to the active organization registry.
 - Fixed fresh voting databases rejecting valid candidate photos larger than 64 KB. An additive migration expands undersized MySQL photo columns without shrinking existing data.
 - Redesigned department-scoped student SDG Highlights and Student Voice, including searchable related activities, owner-only history, saved OSO remarks and evidence-backed timelines. Normalized department aliases before access checks; unmapped departments fail closed and final-approved off-campus budgets remain visible within the department.

@@ -388,7 +388,7 @@
             stroke-width: 8;
             stroke-linecap: round;
             stroke-dasharray: 251.3;
-            stroke-dashoffset: 150.8; /* 40% filled: 251.3 * (1 - 0.40) */
+            stroke-dashoffset: 251.3;
             transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
@@ -605,6 +605,25 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .org-review-queue .ovcaa-action-meta {
+            min-width: 0;
+        }
+
+        .org-review-queue .ovcaa-action-meta strong,
+        .org-review-queue .ovcaa-action-meta small {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .org-review-queue .app-view-action {
+            flex-shrink: 0;
+        }
+
+        .org-review-queue .org-dash-card-header {
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
 
         .ovcaa-action-right {
@@ -1143,14 +1162,20 @@
         /* Bottom Row */
         .org-dash-bottom-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 1.25rem;
+        }
+
+        .org-dash-bottom-grid > * {
+            min-width: 0;
         }
 
         .org-upcoming-card-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 0.65rem;
+            flex-wrap: wrap;
             padding: 0.75rem 0.85rem;
             border-radius: 14px;
             background: #faf4f5;
@@ -1168,6 +1193,8 @@
             display: flex;
             align-items: center;
             gap: 0.85rem;
+            min-width: 0;
+            flex: 1 1 10rem;
         }
 
         .org-date-badge {
@@ -1193,6 +1220,12 @@
             font-size: 0.65rem;
             text-transform: uppercase;
             font-weight: 700;
+        }
+
+        .org-upcoming-meta {
+            display: block;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .org-upcoming-meta strong {
@@ -1334,27 +1367,6 @@
             padding: 0.75rem 0 1.25rem;
         }
 
-        .oso-pie-chart-wrap {
-            position: relative;
-            width: 130px;
-            height: 130px;
-            flex-shrink: 0;
-        }
-
-        .oso-pie-chart {
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            background: conic-gradient(
-                #8b1828 0% 40%, 
-                #ffffff 40% 40.5%, 
-                #c43b52 40.5% 80%, 
-                #ffffff 80% 80.5%, 
-                #4a0a15 80.5% 99.5%, 
-                #ffffff 99.5% 100%
-            );
-            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-        }
 
         .oso-legend-list {
             display: flex;
@@ -2084,7 +2096,8 @@
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
             }
-            .org-dash-2col {
+            .org-dash-2col,
+            .org-dash-bottom-grid {
                 grid-template-columns: 1fr;
             }
             .oso-analytics-2col {
@@ -2130,6 +2143,9 @@
         }
 
         @media (max-width: 580px) {
+            .org-top-actions {
+                flex-wrap: wrap;
+            }
             .org-kpi-row {
                 grid-template-columns: 1fr;
                 gap: 0.85rem;
@@ -2554,56 +2570,56 @@
                             <div class="ovcaa-stat-icon is-maroon">
                                 <i class="bi bi-clipboard-data-fill"></i>
                             </div>
-                            <strong>{{ $stats['total'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">Total Monitored</span>
                     </a>
 
-                    {{-- 2. Documents cleared --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Documents cleared and endorsed">
+                    {{-- 2. Forwarded packages --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Packages forwarded beyond SDO review">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-green">
                                 <i class="bi bi-check2-circle"></i>
                             </div>
-                            <strong>{{ $stats['approved'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Documents Cleared</span>
+                        <span class="ovcaa-stat-title">Forwarded by SDO</span>
                     </a>
 
-                    {{-- 3. Under document review --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Under document and WPCF review">
+                    {{-- 3. Awaiting SDO review --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Packages awaiting SDO review">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-blue">
                                 <i class="bi bi-hourglass-split"></i>
                             </div>
-                            <strong>{{ $stats['in_review'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['pending'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Under Document Review</span>
+                        <span class="ovcaa-stat-title">Awaiting SDO Review</span>
                     </a>
 
-                    {{-- 4. Needs document revision --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Needs document revision">
+                    {{-- 4. Final approvals --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Packages finally approved by OC">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-amber">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
                             </div>
-                            <strong>{{ $stats['returned'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['finalApproved'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Needs Document Revision</span>
+                        <span class="ovcaa-stat-title">Finally Approved by OC</span>
                     </a>
                 @elseif ($isOc)
                     {{-- OC final approval desk KPIs --}}
                     <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Open activities awaiting OC final approval">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-blue"><i class="bi bi-shield-check"></i></div>
-                            <strong>{{ $stats['oc_pending'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['pending'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">Awaiting OC Approval</span>
                     </a>
                     <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="View activities approved by OC">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-green"><i class="bi bi-check2-circle"></i></div>
-                            <strong>{{ $stats['approved'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['finalApproved'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">OC Approved</span>
                     </a>
@@ -2617,42 +2633,42 @@
                     <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="View all activity packages">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-maroon"><i class="bi bi-collection-fill"></i></div>
-                            <strong>{{ $stats['total'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">Total Packages</span>
                     </a>
                 @elseif ($isOvcaa)
-                    {{-- 1. Pending Final Approval --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Open Pending Final Approval Queue">
+                    {{-- 1. Pending OVCAA review --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Packages awaiting OVCAA review">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-blue">
                                 <i class="bi bi-patch-check-fill"></i>
                             </div>
-                            <strong>{{ $stats['ovcaa_pending'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['pending'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Pending Final Approval</span>
+                        <span class="ovcaa-stat-title">Awaiting OVCAA Review</span>
                     </a>
 
-                    {{-- 2. OVCAA Approved --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="View OVCAA Approved Activities">
+                    {{-- 2. Forwarded packages --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Packages forwarded beyond OVCAA review">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-green">
                                 <i class="bi bi-check2-circle"></i>
                             </div>
-                            <strong>{{ $stats['approved'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">OVCAA Approved</span>
+                        <span class="ovcaa-stat-title">Forwarded by OVCAA</span>
                     </a>
 
-                    {{-- 3. Return for Revision --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="View Activities Returned for Revision">
+                    {{-- 3. Final approvals --}}
+                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Packages finally approved by OC">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-amber">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </div>
-                            <strong>{{ $stats['returned'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['finalApproved'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Return for Revision</span>
+                        <span class="ovcaa-stat-title">Finally Approved by OC</span>
                     </a>
 
                     {{-- 4. Total Submissions --}}
@@ -2661,7 +2677,7 @@
                             <div class="ovcaa-stat-icon is-maroon">
                                 <i class="bi bi-collection-fill"></i>
                             </div>
-                            <strong>{{ $stats['total'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">Total Submissions</span>
                     </a>
@@ -2711,318 +2727,8 @@
 
             {{-- 2. Middle Section --}}
             <div class="org-dash-2col {{ ($isSo ?? false) ? 'is-balanced' : '' }}">
-                @if ($isSdo)
-                    {{-- Hidden SVG Defs for SDO Donut Gradient --}}
-                    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
-                        <defs>
-                            <linearGradient id="sdoDonutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#15803d" />
-                                <stop offset="100%" stop-color="#22c55e" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-
-                    {{-- SDO: document and WPCF monitoring overview --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-file-earmark-check-fill" style="color: #8b1828;"></i> Document Compliance Monitoring
-                            </h3>
-                            <a href="{{ route('office.activities') }}" class="org-dash-link">
-                                Review Queue <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
-                            Review of submitted activity documents and Waste Policy Compliance Forms (WPCF).
-                        </p>
-
-                        <div class="ovcaa-overview-body">
-                            {{-- Split Hero: document compliance & donut ring (80%) --}}
-                            <div class="ovcaa-metrics-split">
-                                <div class="ovcaa-kpi-block">
-                                    <span class="ovcaa-kpi-subhead" style="color: #15803d;">Document Compliance</span>
-                                    <h2>80% Verified</h2>
-                                    <p>4 of 5 proposed activity packages cleared</p>
-                                </div>
-
-                                {{-- Circular Progress / Donut Ring: 80% --}}
-                                <div class="ovcaa-donut-wrap" title="Document compliance: 80% verified">
-                                    <svg class="ovcaa-donut-svg" viewBox="0 0 98 98">
-                                        <circle class="ovcaa-donut-track" cx="49" cy="49" r="40"></circle>
-                                        <circle class="ovcaa-donut-fill" cx="49" cy="49" r="40" style="stroke: url(#sdoDonutGrad); stroke-dashoffset: 50.3;"></circle>
-                                    </svg>
-                                    <div class="ovcaa-donut-content">
-                                        <span class="ovcaa-donut-val" style="color: #8b1828;">80%</span>
-                                        <span class="ovcaa-donut-lbl">Verified</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Progress Indicators --}}
-                            <div class="ovcaa-distribution-box">
-                                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
-                                    <span>Document packages cleared</span>
-                                    <strong style="color: #8b1828;">4 / 5 Activities (80%)</strong>
-                                </div>
-                                <div class="org-mini-progress" style="margin-bottom: 0.75rem; height: 7px;">
-                                    <div class="org-mini-fill-green" style="width: 80%; background: linear-gradient(90deg, #8b1828, #c43b52);"></div>
-                                </div>
-
-                                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">
-                                    <span>WPCF Protocol Compliance</span>
-                                    <strong style="color: #1a1618;">3 Cleared · 1 Pending (75%)</strong>
-                                </div>
-                                <div class="org-mini-progress" style="margin-bottom: 0.25rem; height: 7px;">
-                                    <div class="org-mini-fill-maroon" style="width: 75%; background: linear-gradient(90deg, #4a0a15, #8b1828);"></div>
-                                </div>
-                            </div>
-
-                            {{-- Sub-stats & document-type chips --}}
-                            <div class="org-budget-sub-stats" style="margin-top: -0.25rem;">
-                                <div class="org-budget-sub-box is-maroon" style="background: #fdf0f2; border: 1px solid #fae1e5; padding: 0.65rem 0.85rem;">
-                                    <span style="color: #8b1828; font-size: 0.7rem;">WPCF clearance</span>
-                                    <strong style="color: #8b1828; font-size: 0.88rem;">3 cleared · 1 pending</strong>
-                                </div>
-                                <div class="org-budget-sub-box is-pink" style="background: #fdf0f2; border: 1px solid #fae1e5; padding: 0.65rem 0.85rem;">
-                                    <span style="color: #8b1828; font-size: 0.7rem;">Awaiting document check</span>
-                                    <strong style="color: #8b1828; font-size: 0.88rem;">2 Proposals</strong>
-                                </div>
-                            </div>
-
-                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                                <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">Activity proposal</span>
-                                <span class="org-chip" style="background: #f8fafc; color: #1e293b; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #e2e8f0;">DOCX files</span>
-                                <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-weight: 700; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">WPCF</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    {{-- SDO document-check action items --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-clipboard-check-fill" style="color: #8b1828;"></i> Document Review Action Items
-                            </h3>
-                            <span class="ovcaa-endorsed-badge">
-                                <i class="bi bi-clipboard-check-fill"></i> 3 Pending
-                            </span>
-                        </div>
-                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
-                            Proposals requiring DOCX review and Waste Policy Compliance Form clearance.
-                        </p>
-
-                        <div class="org-action-items-list">
-                            {{-- Action 1: Campus Wellness Week --}}
-                            <div class="ovcaa-action-item">
-                                <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
-                                        <i class="bi bi-heart-pulse-fill"></i>
-                                    </div>
-                                    <div class="ovcaa-action-meta">
-                                        <strong>Review Waste Protocol &amp; Health Plan</strong>
-                                        <small>Campus Wellness Week · Proposal and WPCF documents</small>
-                                    </div>
-                                </div>
-                                <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fae1e5;">WPCF</span>
-                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="ovcaa-btn-decide">
-                                        Review <i class="bi bi-arrow-right-short"></i>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {{-- Action 2: Leadership Summit 2026 --}}
-                            <div class="ovcaa-action-item">
-                                <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
-                                        <i class="bi bi-award-fill"></i>
-                                    </div>
-                                    <div class="ovcaa-action-meta">
-                                        <strong>Verify Zero Single-Use Plastics Dossier</strong>
-                                        <small>Leadership Summit 2026 · DOCX package review</small>
-                                    </div>
-                                </div>
-                                <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #f8fafc; color: #1e293b; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #e2e8f0;">DOCX</span>
-                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="ovcaa-btn-decide">
-                                        Review <i class="bi bi-arrow-right-short"></i>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {{-- Action 3: BatStateU Sportsfest 2026 --}}
-                            <div class="ovcaa-action-item">
-                                <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon" style="background: #fdf0f2; color: #8b1828; border-color: #fae1e5;">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </div>
-                                    <div class="ovcaa-action-meta">
-                                        <strong>Review Returned Documents</strong>
-                                        <small>BatStateU Sportsfest 2026 · Returned for revision</small>
-                                    </div>
-                                </div>
-                                <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #fefce8; color: #b45309; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #fef08a;">Needs Fix</span>
-                                    <a href="{{ route('office.activities', ['activity' => 'batstateu-sportsfest-2026']) }}" class="ovcaa-btn-decide">
-                                        Review <i class="bi bi-arrow-right-short"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                @elseif ($isOc)
-                    {{-- OC: final approval queue driven by persisted workflow rows --}}
-                    <section class="org-dash-card" style="grid-column: 1 / -1;">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title"><i class="bi bi-shield-check" style="color:#334155;"></i> OC Final Approval Queue</h3>
-                            <a href="{{ route('office.activities') }}" class="org-dash-link">Open queue <i class="bi bi-arrow-right"></i></a>
-                        </div>
-                        <p class="org-dash-card-sub" style="margin-top:-.5rem;margin-bottom:1rem;font-size:.8rem;color:#64748b;">
-                            Only packages endorsed by OSO, SDO, and OVCAA appear here. Final approval is recorded by the OC desk.
-                        </p>
-                        <div style="display:grid;gap:.7rem;">
-                            @forelse (collect($updates ?? [])->where('status_key', 'oc_review')->take(8) as $item)
-                                <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1rem;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc;">
-                                    <div style="min-width:0;">
-                                        <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $item['title'] }}</strong>
-                                        <small style="color:#475569;">{{ $item['organization'] ?? 'Student Organization' }} · Complete review package received</small>
-                                    </div>
-                                    <a href="{{ route('office.activities', ['activity' => $item['id'] ?? $item['title']]) }}" class="app-view-action" aria-label="View {{ $item['title'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
-                                </div>
-                            @empty
-                                <div style="padding:1.25rem;border:1px dashed #cbd5e1;border-radius:14px;color:#475569;background:#f8fafc;">
-                                    No activity packages are awaiting OC final approval.
-                                </div>
-                            @endforelse
-                        </div>
-                    </section>
-                @elseif ($isOvcaa)
-                    {{-- Hidden SVG Defs for Donut Gradient --}}
-                    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
-                        <defs>
-                            <linearGradient id="ovcaaDonutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#7a1222" />
-                                <stop offset="100%" stop-color="#c43b52" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-
-                    {{-- 1. Executive Approvals Overview (KPI + Donut + Segmented Bar) --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-patch-check-fill" style="color: #8b1828;"></i> Executive Approvals Overview
-                            </h3>
-                            <a href="{{ route('office.activities') }}" class="org-dash-link">
-                                Approval Queue <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
-                            Final university authorization checkpoint for student organization activities.
-                        </p>
-
-                        <div class="ovcaa-overview-body">
-                            {{-- Split Hero: KPI Large Metric & Donut Ring Approval Rate --}}
-                            <div class="ovcaa-metrics-split">
-                                <div class="ovcaa-kpi-block">
-                                    <span class="ovcaa-kpi-subhead">Total Submitted Activities</span>
-                                    <h2>5 Activities</h2>
-                                    <p>AY 2025–2026 · Across All Recognized Portfolios</p>
-                                </div>
-
-                                {{-- Circular Progress / Donut Ring: Approval Rate (40%) --}}
-                                <div class="ovcaa-donut-wrap" title="Approval Rate: 40% executed/approved">
-                                    <svg class="ovcaa-donut-svg" viewBox="0 0 98 98">
-                                        <circle class="ovcaa-donut-track" cx="49" cy="49" r="40"></circle>
-                                        <circle class="ovcaa-donut-fill" cx="49" cy="49" r="40"></circle>
-                                    </svg>
-                                    <div class="ovcaa-donut-content">
-                                        <span class="ovcaa-donut-val">40%</span>
-                                        <span class="ovcaa-donut-lbl">Approved</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Approval Distribution: Segmented Progress Bar --}}
-                            <div class="ovcaa-distribution-box">
-                                <div class="ovcaa-dist-head">
-                                    <span>Approval Distribution</span>
-                                    <strong>5 Total Submissions</strong>
-                                </div>
-                                <div class="ovcaa-segmented-bar" title="40% Approved · 40% Governance Queue · 20% Revision">
-                                    <div class="ovcaa-seg is-approved" style="width: 40%;" title="2 Approved (40%)"></div>
-                                    <div class="ovcaa-seg is-queue" style="width: 40%;" title="2 In Governance Queue (40%)"></div>
-                                    <div class="ovcaa-seg is-revision" style="width: 20%;" title="1 Return for Revision (20%)"></div>
-                                </div>
-                                <div class="ovcaa-dist-chips">
-                                    <span class="ovcaa-dist-chip is-approved">
-                                        <span class="ovcaa-dist-dot"></span> 2 Approved
-                                    </span>
-                                    <span class="ovcaa-dist-chip is-queue">
-                                        <span class="ovcaa-dist-dot"></span> 2 Governance Queue
-                                    </span>
-                                    <span class="ovcaa-dist-chip is-revision">
-                                        <span class="ovcaa-dist-dot"></span> 1 Revision
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {{-- 2. Executive Action Queue --}}
-                    <section class="org-dash-card">
-                        <div class="org-dash-card-header">
-                            <h3 class="org-dash-card-title">
-                                <i class="bi bi-shield-lock-fill" style="color: #8b1828;"></i> Executive Action Queue
-                            </h3>
-                            <span class="ovcaa-endorsed-badge">
-                                <i class="bi bi-patch-check-fill"></i> 2 Endorsed
-                            </span>
-                        </div>
-                        <p class="org-dash-card-sub" style="margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
-                            Activities requiring executive decision and final university sign-off.
-                        </p>
-
-                        <div class="org-action-items-list">
-                            {{-- Action 1: Campus Wellness Week --}}
-                            <div class="ovcaa-action-item">
-                                <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon">
-                                        <i class="bi bi-heart-pulse-fill"></i>
-                                    </div>
-                                    <div class="ovcaa-action-meta">
-                                        <strong>Campus Wellness Week</strong>
-                                        <small>SDO document clearance certified · Ready for final review</small>
-                                    </div>
-                                </div>
-                                <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #f0fdf4; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px;">Documents Cleared</span>
-                                    <a href="{{ route('office.activities', ['activity' => 'campus-wellness-week']) }}" class="ovcaa-btn-decide">
-                                        Decide <i class="bi bi-arrow-right-short"></i>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {{-- Action 2: Leadership Summit 2026 --}}
-                            <div class="ovcaa-action-item">
-                                <div class="ovcaa-action-left">
-                                    <div class="ovcaa-action-icon">
-                                        <i class="bi bi-trophy-fill"></i>
-                                    </div>
-                                    <div class="ovcaa-action-meta">
-                                        <strong>Leadership Summit 2026</strong>
-                                        <small>OSO clearance approved · Awaiting executive authorization</small>
-                                    </div>
-                                </div>
-                                <div class="ovcaa-action-right">
-                                    <span class="org-chip" style="background: #fdf0f2; color: #8b1828; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #f0e6e8;">OSO Cleared</span>
-                                    <a href="{{ route('office.activities', ['activity' => 'leadership-summit-2026']) }}" class="ovcaa-btn-decide">
-                                        Decide <i class="bi bi-arrow-right-short"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                @if ($isSdo || $isOvcaa || $isOc)
+                    @include('org.partials.review-dashboard')
                 @else
                     {{-- Student Org: Budget Snapshot --}}
                     <section class="org-dash-card org-budget-snapshot" style="grid-column: 1 / -1;">
@@ -3334,7 +3040,18 @@
                         </div>
 
                         <div class="org-upcoming-list">
-                            <p style="margin:0;color:#786f73;font-size:.82rem;">Open Activities or Calendar to view the live upcoming schedule.</p>
+                            @forelse ($upcomingList as $act)
+                                @php $upcomingDate = \Illuminate\Support\Carbon::parse($act['upcoming_at']); @endphp
+                                <a href="{{ route('office.activities', ['activity' => $act['id']]) }}" class="org-upcoming-card-item">
+                                    <div class="org-upcoming-left">
+                                        <div class="org-date-badge"><strong>{{ $upcomingDate->format('j') }}</strong><small>{{ strtoupper($upcomingDate->format('M')) }}</small></div>
+                                        <div class="org-upcoming-meta"><strong>{{ $act['title'] }}</strong><small>{{ $act['location'] ?: 'Venue not recorded' }} · {{ $act['organization'] ?: 'Organization not recorded' }}</small></div>
+                                    </div>
+                                    <span class="org-status-pill org-status-blue">{{ $act['status'] }}</span>
+                                </a>
+                            @empty
+                                <p style="margin:0;color:#786f73;font-size:.82rem;">No upcoming activities scheduled for this desk.</p>
+                            @endforelse
                         </div>
                     </section>
 

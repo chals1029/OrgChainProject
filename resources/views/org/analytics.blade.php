@@ -962,12 +962,12 @@
     {{-- 1. Overall Budget Health KPIs (Dashboard Liquid-Glass Cards & Effects) --}}
     <div class="org-health-grid">
         {{-- Card 1: Overall Budget Health --}}
-        <article class="ovcaa-stat-card liquid-glass is-green" title="Overall Budget Health: {{ $overview['healthScore'] }}%">
+        <article class="ovcaa-stat-card liquid-glass is-green" title="{{ empty($activityFinancials) ? 'No budget health data' : 'Overall Budget Health: '.$overview['healthScore'].'%' }}">
             <div class="ovcaa-stat-top">
                 <div class="ovcaa-stat-icon is-green">
                     <i class="bi bi-heart-pulse-fill"></i>
                 </div>
-                <strong class="val" id="kpiHealthScore">{{ $overview['healthScore'] }}% · {{ $overview['healthScore'] >= 80 ? 'Optimal' : ($overview['healthScore'] >= 60 ? 'Watch' : 'Needs Attention') }}</strong>
+                <strong class="val" id="kpiHealthScore">{{ empty($activityFinancials) ? 'No Data' : $overview['healthScore'].'% · '.($overview['healthScore'] >= 80 ? 'Optimal' : ($overview['healthScore'] >= 60 ? 'Watch' : 'Needs Attention')) }}</strong>
             </div>
             <span class="ovcaa-stat-title">Overall Budget Health</span>
         </article>
@@ -1028,7 +1028,7 @@
                     @endif
                 </span>
             </div>
-            @empty($collegeStats)
+            @if ($collegeStats->isEmpty())
                 <p style="margin:0; color:#7a7074; font-size:0.88rem; padding: 1.5rem 0; text-align: center;">No college performance data available for this period.</p>
             @else
                 <div class="org-table-responsive">
@@ -1067,9 +1067,9 @@
                         </tbody>
                     </table>
                 </div>
-            @endempty
+            @endif
 
-            @if (!empty($topUtilization) || !empty($topActivities))
+            @if ($topUtilization->isNotEmpty() || $topActivities->isNotEmpty())
                 <div class="org-ranking-grid">
                     @isset($topUtilization)
                         <div class="org-ranking-card">
@@ -1481,7 +1481,10 @@
             const utilized = document.getElementById('kpiUtilized');
             const remaining = document.getElementById('kpiRemaining');
 
-            if (health) health.textContent = `${totals.health}% · ${healthLabel(totals.health, rows)}`;
+            if (health) {
+                health.textContent = rows.length ? `${totals.health}% · ${healthLabel(totals.health, rows)}` : 'No Data';
+                health.closest('article').title = rows.length ? `Overall Budget Health: ${totals.health}%` : 'No budget health data';
+            }
             if (allocated) allocated.textContent = money(totals.allocated);
             if (utilized) utilized.textContent = money(totals.utilized);
             if (remaining) remaining.textContent = money(totals.remaining);

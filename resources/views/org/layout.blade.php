@@ -71,7 +71,7 @@
                         <span>Activities</span>
                     @endif
                     @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count">12</em>
+                        <em class="org-badge-count" title="Activity packages visible to this desk">{{ $navBadges['activities'] }}</em>
                     @endif
                 </a>
 
@@ -79,7 +79,7 @@
                     <i class="bi bi-calendar3 is-ico-blue"></i>
                     <span>Calendar</span>
                     @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count">3</em>
+                        <em class="org-badge-count" title="Future activities visible to this desk">{{ $navBadges['upcoming'] }}</em>
                     @endif
                 </a>
 
@@ -101,12 +101,12 @@
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
                     <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
                     <span>Financial Report</span>
-                    <em class="org-badge-count">{{ $navBadges['fr_attachments'] ?? 4 }}</em>
+                    <em class="org-badge-count">{{ $navBadges['fr_attachments'] }}</em>
                 </a>
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
                     <i class="bi bi-trophy is-ico-gold"></i>
                     <span>Accomplishment Report</span>
-                    <em class="org-badge-count">{{ $navBadges['ar_attachments'] ?? 3 }}</em>
+                    <em class="org-badge-count">{{ $navBadges['ar_attachments'] }}</em>
                 </a>
                 @endif
 
@@ -114,7 +114,7 @@
                     <i class="bi bi-megaphone-fill is-ico-red"></i>
                     <span>Updates</span>
                     @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count">3</em>
+                        <em class="org-badge-count" title="Published announcements">{{ $navBadges['announcements'] }}</em>
                     @endif
                 </a>
                 @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))

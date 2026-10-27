@@ -79,13 +79,18 @@ class OfficePortalController extends Controller
             $brand['title'] = data_get($officeSettings, 'general.office_name', $brand['title']);
         }
         $registry = StudentOrganization::query()->selectRaw('COUNT(*) AS registered, COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) AS enabled')->first();
+        $workflow = app(OrgWorkflowService::class);
+        $visibleActivities = $this->constrainToOfficeOrganization(OrgActivity::query())
+            ->get(['id', 'title', 'workflow_status', 'starts_at'])
+            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails($office->office_role, $activity->workflow_status ?: 'created'))
+            ->keyBy('id');
 
         return [
             'office' => $office,
             'brand' => $brand,
             'officeSettings' => $officeSettings,
             'organizationRegistry' => ['registered' => (int) $registry->registered, 'enabled' => (int) $registry->enabled],
-            'officeNotifications' => $this->officeNotifications($office),
+            'officeNotifications' => $this->officeNotifications($visibleActivities),
             'officeUsers' => $isOso
                 ? OfficeUser::query()->with('studentOrganization')->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
                 : collect(),
@@ -96,17 +101,16 @@ class OfficePortalController extends Controller
                 'fr_attachments' => $canAccessSemesterReports ? count($this->frAttachmentList()) : 0,
                 'ar_attachments' => $canAccessSemesterReports ? count($this->arAttachmentList()) : 0,
                 'reports_pending' => StudentFeedback::query()->where('status', 'pending')->count(),
+                'activities' => $visibleActivities->count(),
+                'upcoming' => $visibleActivities->filter(fn (OrgActivity $activity): bool => $activity->starts_at?->isFuture() ?? false)->count(),
+                'announcements' => OfficeAnnouncement::query()->published()->count(),
             ],
         ];
     }
 
-    private function officeNotifications(OfficeUser $office): Collection
+    private function officeNotifications(Collection $activities): Collection
     {
         $workflow = app(OrgWorkflowService::class);
-        $activities = $this->constrainToOfficeOrganization(OrgActivity::query())
-            ->get(['id', 'title', 'workflow_status'])
-            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails($office->office_role, $activity->workflow_status ?: 'created'))
-            ->keyBy('id');
         $updates = DB::connection('mysql')->table('activity_workflow_events')
             ->whereIn('org_activity_id', $activities->keys())
             ->where('created_at', '<=', now())->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get()
@@ -446,27 +450,8 @@ class OfficePortalController extends Controller
     public function dashboard(): View
     {
         $officeRole = Auth::guard('office')->user()?->office_role ?? '';
-        $isOsoDashboard = $officeRole === 'oso';
         $pipeline = $this->pipelineActivities();
         $workflow = app(OrgWorkflowService::class);
-        $upcomingFiltered = collect($pipeline)
-            ->filter(function (array $item): bool {
-                if (($item['upcoming_at'] ?? null) === null) {
-                    return false;
-                }
-
-                return \Illuminate\Support\Carbon::parse($item['upcoming_at'])->isFuture()
-                    || ! empty($item['force_upcoming']);
-            })
-            ->sortBy('upcoming_at')
-            ->values();
-
-        $upcomingList = $upcomingFiltered->isNotEmpty()
-            ? $upcomingFiltered->take(4)->values()
-            : collect($pipeline)->take(4)->values();
-
-        $upcoming = $upcomingList->first() ?? collect($pipeline)->first();
-
         $dbActivities = $this->constrainToOfficeOrganization(OrgActivity::query())
             ->get()
             ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails(
@@ -474,36 +459,56 @@ class OfficePortalController extends Controller
                 $activity->workflow_status ?: 'created',
             ))
             ->values();
-        $approved = $dbActivities->whereIn('workflow_status', ['oc_approved'])->count();
-        $pending = $dbActivities->whereNotIn('workflow_status', ['oc_approved'])->count();
-        if (! $isOsoDashboard && $dbActivities->isEmpty()) {
-            $approved = collect($pipeline)->whereIn('status_key', ['ovcaa_approved', 'completed', 'oc_approved'])->count();
-            $pending = collect($pipeline)->whereIn('status_key', ['created', 'verification', 'pending', 'returned', 'oso_review', 'sdo_review', 'ovcaa_review', 'oc_review'])->count();
-        }
-
+        $approved = $dbActivities->whereIn('workflow_status', ['oc_approved', 'completed'])->count();
+        $pending = $dbActivities->count() - $approved;
         $reviewStages = ['college_review', 'oso_review', 'sdo_review', 'ovcaa_review', 'oc_review', 'verification', 'pending'];
-        if ($dbActivities->isNotEmpty()) {
-            $kpiTotal = $dbActivities->count();
-            $kpiApproved = $dbActivities->whereIn('workflow_status', ['oc_approved', 'completed'])->count();
-            $kpiInReview = $dbActivities->whereIn('workflow_status', $reviewStages)->count();
-            $kpiReturned = $dbActivities->where('workflow_status', 'returned')->count();
-            $kpiOvcaa = $dbActivities->where('workflow_status', 'ovcaa_review')->count();
-            $kpiOc = $dbActivities->where('workflow_status', 'oc_review')->count();
-        } elseif ($isOsoDashboard) {
-            $kpiTotal = 0;
-            $kpiApproved = 0;
-            $kpiInReview = 0;
-            $kpiReturned = 0;
-            $kpiOvcaa = 0;
-            $kpiOc = 0;
-        } else {
-            $pipe = collect($pipeline);
-            $kpiTotal = $pipe->count();
-            $kpiApproved = $pipe->whereIn('status_key', ['ovcaa_approved', 'completed', 'oc_approved'])->count();
-            $kpiInReview = $pipe->whereIn('status_key', ['created', 'verification', 'pending', 'oso_review', 'sdo_review', 'ovcaa_review', 'oc_review', 'college_review'])->count();
-            $kpiReturned = $pipe->where('status_key', 'returned')->count();
-            $kpiOvcaa = $pipe->where('status_key', 'ovcaa_review')->count();
-            $kpiOc = $pipe->where('status_key', 'oc_review')->count();
+        $kpiInReview = $dbActivities->whereIn('workflow_status', $reviewStages)->count();
+        $kpiReturned = $dbActivities->where('workflow_status', 'returned')->count();
+        $kpiOvcaa = $dbActivities->where('workflow_status', 'ovcaa_review')->count();
+        $kpiOc = $dbActivities->where('workflow_status', 'oc_review')->count();
+
+        $upcomingList = $dbActivities
+            ->filter(fn (OrgActivity $activity): bool => $activity->starts_at?->isFuture() ?? false)
+            ->sortBy([['starts_at', 'asc'], ['id', 'asc']])
+            ->take(4)
+            ->map(fn (OrgActivity $activity): array => [
+                'id' => $activity->id,
+                'title' => $activity->title,
+                'organization' => $activity->organization_name,
+                'location' => $activity->location,
+                'activity_scope' => $activity->activity_scope,
+                'upcoming_at' => $activity->starts_at->format('Y-m-d H:i:s'),
+                'status' => $workflow->label($activity->workflow_status ?: 'created'),
+            ])->values();
+        $upcoming = $upcomingList->first();
+
+        $reviewOverview = null;
+        if (in_array($officeRole, ['sdo', 'ovcaa', 'oc'], true)) {
+            $pendingStage = $officeRole.'_review';
+            $queue = $dbActivities->where('workflow_status', $pendingStage)
+                ->sortBy([['created_at', 'asc'], ['id', 'asc']]);
+            $forwardedStages = match ($officeRole) {
+                'sdo' => ['ovcaa_review', 'oc_review', 'oc_approved', 'completed'],
+                'ovcaa' => ['oc_review', 'oc_approved', 'completed'],
+                'oc' => ['oc_approved', 'completed'],
+            };
+            $forwarded = $dbActivities->whereIn('workflow_status', $forwardedStages)->count();
+            $total = $dbActivities->count();
+            $reviewOverview = [
+                'total' => $total,
+                'pending' => $queue->count(),
+                'forwarded' => $forwarded,
+                'finalPending' => $kpiOc,
+                'finalApproved' => $approved,
+                'forwardedPercent' => $total > 0 ? round($forwarded / $total * 100, 1) : null,
+                'queueCount' => $queue->count(),
+                'queue' => $queue->take(8)->map(fn (OrgActivity $activity): array => [
+                    'id' => (int) $activity->id,
+                    'title' => $activity->title,
+                    'organization' => $activity->organization_name,
+                    'status' => $workflow->label($activity->workflow_status),
+                ])->values()->all(),
+            ];
         }
 
         $fundYear = app(\App\Services\ActivityBudgetService::class)->period()['academic_year'];
@@ -555,7 +560,7 @@ class OfficePortalController extends Controller
     return view('org.dashboard', array_merge($this->deskContext(), [
             'activeNav' => 'dashboard',
             'stats' => [
-                'total' => $isOsoDashboard ? $dbActivities->count() : ($dbActivities->count() ?: count($pipeline)),
+                'total' => $dbActivities->count(),
                 'approved' => $approved,
                 'pending' => $pending,
                 'in_review' => $kpiInReview,
@@ -579,7 +584,8 @@ class OfficePortalController extends Controller
             'chartPayload' => $chartPayload,
             'soBudgetChart' => $soBudgetChart,
             'osoOverview' => $this->buildOsoOverview($dbActivities),
-        'recentUpdates' => $recentUpdates,
+            'reviewOverview' => $reviewOverview,
+            'recentUpdates' => $recentUpdates,
             'workflowStages' => OrgWorkflowService::FLOW,
             'upcoming' => $upcoming,
             'upcomingList' => $upcomingList,
@@ -620,7 +626,7 @@ class OfficePortalController extends Controller
             fputcsv($out, ['Total budget utilized', $money($o['totalUtilized'] ?? 0)]);
             fputcsv($out, ['Remaining reserve', $money($o['remainingBalance'] ?? 0)]);
             fputcsv($out, ['Burn rate', ($o['burnRate'] ?? 0).'%']);
-            fputcsv($out, ['Compliance rate', ($o['complianceRate'] ?? 0).'%']);
+            fputcsv($out, ['Compliance rate', $o['complianceRate'] === null ? 'N/A' : $o['complianceRate'].'%']);
             fputcsv($out, []);
 
             fputcsv($out, ['COLLEGE PERFORMANCE']);
@@ -1004,13 +1010,6 @@ class OfficePortalController extends Controller
             ->sortByDesc('utilization_percent')
             ->values();
 
-        if ($collegeStats->isEmpty() && $organization === '') {
-            $collegeStats = collect([
-                ['college' => 'CICS', 'activities' => 3, 'completed' => 1, 'completion_percent' => 33, 'allocated' => 50000, 'approved_budget' => 45000, 'implemented_budget' => 32000, 'utilization_percent' => 64],
-                ['college' => 'CHS', 'activities' => 2, 'completed' => 1, 'completion_percent' => 50, 'allocated' => 42500, 'approved_budget' => 42500, 'implemented_budget' => 24900, 'utilization_percent' => 59],
-                ['college' => 'CAS', 'activities' => 2, 'completed' => 1, 'completion_percent' => 50, 'allocated' => 115000, 'approved_budget' => 115000, 'implemented_budget' => 62750, 'utilization_percent' => 55],
-            ]);
-        }
 
         $activityFinancials = $dbActivities->map(function (OrgActivity $a) use ($workflow) {
             $allocated = (int) ($a->approved_budget ?: 0);
@@ -1061,22 +1060,20 @@ class OfficePortalController extends Controller
         $totalAllocated = (int) collect($activityFinancials)->sum('allocated');
         $totalUtilized = (int) collect($activityFinancials)->sum('utilized');
 
-        // Live health + compliance (no hardcoded constants):
-        // health blends budget discipline (burn near the 75% target) with
-        // approval completion; compliance is the share of approved docs.
-        $fallbackAllocated = $organization === '' ? 185000 : 0;
-        $fallbackUtilized = $organization === '' ? 115150 : 0;
-        $burnRate = ($totalAllocated ?: $fallbackAllocated) > 0
-            ? round((($totalUtilized ?: $fallbackUtilized) / ($totalAllocated ?: $fallbackAllocated)) * 100, 1)
+        // Match the client-side analytics formula using recorded amounts only.
+        $burnRate = $totalAllocated > 0
+            ? round($totalUtilized / $totalAllocated * 100, 1)
             : 0;
         $completionPct = $dbActivities->count() > 0
             ? round(($dbActivities->whereIn('workflow_status', ['oc_approved', 'completed'])->count() / $dbActivities->count()) * 100, 1)
             : 0;
-        $budgetHealth = max(0, 100 - abs($burnRate - 75) * 2);
-        $healthScore = (int) round((0.6 * $budgetHealth) + (0.4 * $completionPct));
+        $budgetHealth = $totalAllocated > 0 ? max(0, 100 - abs($burnRate - 75) * 2) : 0;
+        $healthScore = $dbActivities->isNotEmpty()
+            ? (int) round((0.6 * $budgetHealth) + (0.4 * $completionPct))
+            : 0;
         $docTotal = ActivityComplianceDoc::query()->whereIn('org_activity_id', $dbActivities->pluck('id'))->count();
         $docApproved = ActivityComplianceDoc::query()->whereIn('org_activity_id', $dbActivities->pluck('id'))->where('status', 'approved')->count();
-        $complianceRate = $docTotal > 0 ? round(($docApproved / $docTotal) * 100, 1) : 100.0;
+        $complianceRate = $docTotal > 0 ? round(($docApproved / $docTotal) * 100, 1) : null;
 
         return [
             'byStatus' => $byStatus,
@@ -1097,9 +1094,9 @@ class OfficePortalController extends Controller
             ],
             'overview' => [
                 'healthScore' => $healthScore,
-                'totalAllocated' => $totalAllocated ?: $fallbackAllocated,
-                'totalUtilized' => $totalUtilized ?: $fallbackUtilized,
-                'remainingBalance' => max(0, ($totalAllocated ?: $fallbackAllocated) - ($totalUtilized ?: $fallbackUtilized)),
+                'totalAllocated' => $totalAllocated,
+                'totalUtilized' => $totalUtilized,
+                'remainingBalance' => max(0, $totalAllocated - $totalUtilized),
                 'burnRate' => $burnRate,
                 'complianceRate' => $complianceRate,
                 'inCampusAllocated' => (int) $inCampus->sum('allocated'),
