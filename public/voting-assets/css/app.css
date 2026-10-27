@@ -5176,6 +5176,9 @@ h4 {
 
 .js-tally-filter-form .filter-group {
     min-width: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .js-tally-filter-form .filter-select {

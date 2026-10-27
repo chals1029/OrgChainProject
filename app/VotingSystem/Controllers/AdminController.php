@@ -41,7 +41,6 @@ class AdminController extends Controller
             'programFilterOptions' => $dashboard->programOptionsByCollege(),
             'positionOptions' => (new Position())->forElection((int) $election['id']),
             'results' => $dashboard->results((int) $election['id'], $college, $position, $yearLevel, $program),
-            'recentVotes' => $dashboard->recentVotes(),
             'recentActivity' => $dashboard->recentActivity(),
             'filterCollege' => $college,
             'filterProgram' => $program,
@@ -75,7 +74,6 @@ class AdminController extends Controller
             'turnoutByProgram' => $dashboard->turnoutByProgram(),
             'turnoutByGradeLevel' => $dashboard->turnoutByGradeLevel(),
             'results' => $dashboard->results((int) $election['id']),
-            'recentVotes' => $dashboard->recentVotes(6),
         ], 'admin');
     }
 
@@ -99,7 +97,6 @@ class AdminController extends Controller
             'programFilterOptions' => $dashboard->programOptionsByCollege(),
             'positionOptions' => (new Position())->forElection((int) $election['id']),
             'results' => $dashboard->results((int) $election['id'], $college, $position, $yearLevel, $program),
-            'recentVotes' => $dashboard->recentVotes(12),
             'filterCollege' => $college,
             'filterProgram' => $program,
             'filterPosition' => $position,

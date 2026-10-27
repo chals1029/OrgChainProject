@@ -74,56 +74,6 @@
         {{-- SDG highlights --}}
         @include('portal.sdg-highlights')
 
-        {{-- Department filter and student voice --}}
-        <section class="sp-section">
-            <form method="get" action="{{ route('portal.home') }}" style="display:flex;flex-wrap:wrap;gap:0.65rem;align-items:end;margin-bottom:1rem;">
-                <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:700;">
-                    Filter by department
-                    <select name="college" style="padding:0.45rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;max-width:min(100%,28rem);">
-                        <option value="" @selected(($collegeFilterExplicit ?? false) && ($selectedCollege ?? '') === '')>All departments</option>
-                        @foreach (($colleges ?? []) as $college)
-                            <option value="{{ $college }}" @selected(($selectedCollege ?? '') === $college)>{{ $college }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label style="display:grid;gap:0.25rem;font-size:0.78rem;font-weight:700;">
-                    Status
-                    <select name="status" style="padding:0.45rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
-                        <option value="">All</option>
-                        <option value="upcoming" @selected(($selectedStatus ?? '') === 'upcoming')>Upcoming</option>
-                        <option value="ongoing" @selected(($selectedStatus ?? '') === 'ongoing')>Ongoing</option>
-                    </select>
-                </label>
-                <button type="submit" class="sp-chip" style="border:none;cursor:pointer;background:#7a1222;color:#fff;padding:0.45rem 0.9rem;">Apply</button>
-            </form>
-
-            <div class="liquid-glass" style="padding:1rem 1.15rem;border-radius:18px;">
-                <h3 style="margin:0 0 0.5rem;font-size:1rem;"><i class="bi bi-chat-heart"></i> Student voice</h3>
-                <p style="margin:0 0 0.75rem;font-size:0.85rem;color:#786f73;">Say what you want or feel about admin / campus life. OSO can review submissions.</p>
-                <form method="post" action="{{ route('portal.feedback.store') }}" data-confirm-message="Send this feedback to OSO?" style="display:grid;gap:0.65rem;">
-                    @csrf
-                    <select name="category" style="padding:0.5rem 0.7rem;border-radius:10px;border:1px solid #e8dedf;">
-                        <option value="campus">Campus life</option>
-                        <option value="admin">Admin / offices</option>
-                        <option value="activities">Activities</option>
-                        <option value="general">General</option>
-                    </select>
-                    <textarea name="message" required maxlength="2000" rows="3" placeholder="Your feedback..." style="padding:0.65rem 0.8rem;border-radius:12px;border:1px solid #e8dedf;">{{ old('message') }}</textarea>
-                    <button type="submit" style="justify-self:start;background:#7a1222;color:#fff;border:none;border-radius:999px;padding:0.5rem 1.1rem;font-weight:700;cursor:pointer;">Send feedback</button>
-                </form>
-                <div class="sp-feedback-history" aria-label="Your feedback history">
-                    @forelse (($myFeedback ?? collect()) as $feedback)
-                        <article id="feedback-{{ $feedback->id }}" class="sp-feedback-history-item">
-                            <strong>{{ $feedback->status === 'verified' ? 'Acknowledged' : ucfirst($feedback->status) }}</strong>
-                            <small>{{ $feedback->created_at?->format('M j, Y · g:i A') }}</small>
-                            <p>{{ $feedback->body }}</p>
-                        </article>
-                    @empty
-                        <p>No feedback sent yet.</p>
-                    @endforelse
-                </div>
-            </div>
-        </section>
 
         {{-- Budget Utilization --}}
         <section class="sp-section">
@@ -293,6 +243,8 @@
                 </div>
             @endif
         </section>
+
+        @include('portal.student-voice')
 
         {{-- Activities & Announcements (Upcoming, Recent, Announcements Side-by-Side Table Cards) --}}
         <section class="sp-section">
@@ -1585,11 +1537,11 @@
         <section class="sp-section">
             @php
                 $feedHasFilters = ($communityAudience ?? 'all') !== 'all' || ($communityPeriod ?? 'all') !== 'all';
-                $feedQuery = array_merge(request()->only(['college', 'status']), [
+                $feedQuery = [
                     'community_q' => $communitySearch ?? '',
                     'community_audience' => $communityAudience ?? 'all',
                     'community_period' => $communityPeriod ?? 'all',
-                ]);
+                ];
             @endphp
             <div class="sp-section-head sp-feed-header-row">
                 <div class="sp-feed-title-wrap">
@@ -1615,9 +1567,6 @@
                         <form method="get" action="{{ route('portal.community') }}" class="sp-feed-filter-panel liquid-glass" aria-label="Filter community posts">
                             <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
                             <input type="hidden" name="community_q" value="{{ $communitySearch ?? '' }}">
-                            @foreach (request()->only(['college', 'status']) as $filterName => $filterValue)
-                                <input type="hidden" name="{{ $filterName }}" value="{{ $filterValue }}">
-                            @endforeach
                             <label>Audience
                                 <select name="community_audience">
                                     @foreach (['all' => 'All visible posts', 'public' => 'Public posts', 'department' => 'Department posts', 'org' => 'Organization posts'] as $value => $label)
@@ -1633,7 +1582,7 @@
                                 </select>
                             </label>
                             <div class="sp-feed-filter-actions">
-                                <a href="{{ route('portal.community', array_merge(request()->only(['college', 'status']), ['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent'])) }}">Clear filters</a>
+                                <a href="{{ route('portal.community', ['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent']) }}">Clear filters</a>
                                 <button type="submit">Apply filters</button>
                             </div>
                         </form>

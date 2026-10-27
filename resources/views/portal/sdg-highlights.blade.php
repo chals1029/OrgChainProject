@@ -49,9 +49,25 @@
                     <h3 title="{{ $goalName }}">{{ $sdg['sdg'] }}</h3>
                     <p data-sdg-activity-count>{{ $sdg['count'] }} {{ $sdg['count'] === 1 ? 'activity' : 'activities' }}</p>
                     <p class="sp-sdg-activity-titles" data-sdg-activity-titles>{{ $activityTitles->take(3)->implode(' · ') }}</p>
+                    <button type="button" class="app-view-action" data-sdg-open aria-label="View activities for {{ $sdg['sdg'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View activities</button>
                 </div>
             </article>
         @endforeach
     </div>
     <p class="sp-sdg-empty" data-sdg-empty @if ($highlights->isNotEmpty()) hidden @endif>No SDG-tagged activities yet.</p>
+    <dialog class="sp-sdg-dialog" data-sdg-dialog aria-labelledby="sdgRelatedTitle">
+        <header><div><h2 id="sdgRelatedTitle" data-sdg-dialog-title>Related activities</h2><p data-sdg-dialog-summary></p></div><button type="button" class="app-view-action" data-sdg-close aria-label="Close related activities"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button></header>
+        <ul data-sdg-dialog-activities></ul>
+    </dialog>
+    <style>
+        .sp-sdg-highlights [hidden] { display:none !important; }
+        .sp-sdg-card-copy .app-view-action { margin-top:.6rem; }
+        .sp-sdg-dialog { box-sizing:border-box; width:min(640px,calc(100vw - 2rem)); max-width:none; max-height:calc(100dvh - 2rem); margin:auto; padding:1.25rem; border:1px solid #e9d9df; border-radius:18px; background:#fff; color:#3b2b34; }
+        .sp-sdg-dialog::backdrop { background:rgba(32,18,25,.5); backdrop-filter:blur(3px); }
+        .sp-sdg-dialog header { display:flex; align-items:start; justify-content:space-between; gap:1rem; border-bottom:1px solid #eee1e7; padding-bottom:.8rem; }
+        .sp-sdg-dialog h2 { margin:0; font-size:1.15rem; }
+        .sp-sdg-dialog p { margin:.35rem 0 0; color:#8c7582; font-size:.8rem; }
+        .sp-sdg-dialog ul { list-style:none; padding:0; margin:1rem 0 0; display:grid; gap:.6rem; }
+        .sp-sdg-dialog li { padding:.85rem; border:1px solid #efdfE6; border-radius:10px; background:#fff8fb; font-size:.87rem; line-height:1.6; overflow-wrap:anywhere; }
+    </style>
 </section>

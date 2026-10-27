@@ -534,6 +534,9 @@ class TosaPrivateFilesTest extends TestCase
         } finally {
             unlink($link);
         }
+        // The replacement submitted and locked the packet; revision must be open
+        // before the separate directory-symlink guard can be exercised.
+        $applicant->refresh()->forceFill(['subsection' => 'returned'])->save();
         foreach (self::SECTIONS as $key) {
             Storage::disk('local')->put('tosa/fixture-foreign/'.$key.'.pdf', $this->evidenceBytes());
         }

@@ -52,7 +52,7 @@
                     @if (!empty($organizationArchive['updated_at']))
                         <small class="archive-muted">Last archived {{ $organizationArchive['updated_at'] }}</small>
                     @endif
-                    <a href="{{ route('office.archive', array_merge($archiveQuery, ['archive_org' => $organizationArchive['key']])) }}" class="org-btn org-btn-ghost org-btn-sm" aria-label="Open archive for {{ $organizationArchive['name'] }}">Open archive <i class="bi bi-arrow-right"></i></a>
+                    <a href="{{ route('office.archive', array_merge($archiveQuery, ['archive_org' => $organizationArchive['key']])) }}" class="app-view-action" aria-label="View archive for {{ $organizationArchive['name'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
                 </article>
             @empty
                 <p class="archive-empty">No organization archives match these filters.</p>

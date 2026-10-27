@@ -19,6 +19,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
     <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
+    <style>.sp-sidebar .sp-nav-link span { font-weight:800; } .sp-sidebar .sp-brand-text span { white-space:normal; line-height:1.4; }</style>
     <script src="{{ asset('js/sdg-highlights.js') }}?v={{ filemtime(public_path('js/sdg-highlights.js')) }}" defer></script>
 </head>
 <body class="landing-body portal-body" data-portal-tab="{{ $tab ?? 'home' }}">
@@ -35,7 +36,7 @@
                 <img src="{{ asset('Orgchain logo.png') }}" alt="OrgChain Logo" class="sp-brand-logo">
                 <div class="sp-brand-text">
                     <strong>OrgChain</strong>
-                    <span>Student Portal</span>
+                    <span>BatStateU Student Portal</span>
                 </div>
             </div>
 
@@ -104,9 +105,6 @@
                         <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
                         <input type="hidden" name="community_audience" value="{{ $communityAudience ?? 'all' }}">
                         <input type="hidden" name="community_period" value="{{ $communityPeriod ?? 'all' }}">
-                        @foreach (request()->only(['college', 'status']) as $filterName => $filterValue)
-                            <input type="hidden" name="{{ $filterName }}" value="{{ $filterValue }}">
-                        @endforeach
                         <button type="submit" class="sp-link-btn">Search</button>
                     </form>
                     <div class="sp-top-menu-wrap">

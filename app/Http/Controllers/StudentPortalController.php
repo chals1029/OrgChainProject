@@ -78,6 +78,7 @@ class StudentPortalController extends Controller
     {
         $student = Auth::guard('student')->user();
         abort_unless($student, 401);
+        abort_unless($this->studentActivities()->whereKey($activity->id)->exists(), 404);
 
         if (($activity->workflow_status ?? '') !== 'oc_approved') {
             return response()->json([
@@ -123,7 +124,7 @@ class StudentPortalController extends Controller
             in_array($receipt->verification_status, ['approved', 'verified'], true)
             && filled($receipt->chain_hash)
             && $receipt->org_activity_id
-            && OrgActivity::query()->visibleToStudents()->whereKey($receipt->org_activity_id)->exists(),
+            && $this->studentActivities()->visibleToStudents()->whereKey($receipt->org_activity_id)->exists(),
             404,
         );
 
@@ -436,28 +437,35 @@ class StudentPortalController extends Controller
         return redirect()->to(route('portal.home').'#tosa');
     }
 
+    private function studentActivities(): \Illuminate\Database\Eloquent\Builder
+    {
+        $student = Auth::guard('student')->user();
+        $department = strtoupper(\college_abbreviation($student?->displayCollege() ?? ''));
+        if (! $student || \college_sort_rank($department) === 999) {
+            return OrgActivity::query()->whereRaw('1 = 0');
+        }
+        $colleges = OrgActivity::query()->whereNotNull('college')->distinct()->pluck('college')
+            ->filter(fn ($college): bool => strtoupper(\college_abbreviation($college)) === $department)
+            ->values()->all();
+
+        return OrgActivity::query()->whereIn('college', $colleges);
+    }
+
     private function portal(Request $request, string $tab): View
     {
         $student = Auth::guard('student')->user();
-        $statusFilter = trim((string) $request->query('status', ''));
-
-        // Default activities to the student's college/department; ?college= (empty) = All.
         $studentCollege = trim((string) ($student?->displayCollege() ?: $student?->college ?: ''));
-        if ($request->has('college')) {
-            $collegeFilter = trim((string) $request->query('college', ''));
-        } else {
-            $collegeFilter = $studentCollege;
-        }
+        $studentActivities = $this->studentActivities()->visibleToStudents();
 
         // Use the approved activity ledger once; legacy category rows must
         // not duplicate new per-activity budget allocations.
-        $budgetActivities = OrgActivity::query()->visibleToStudents()
-            ->whereIn('activity_scope', ['in_campus', 'off_campus'])->get();
+        $budgetActivities = (clone $studentActivities)
+            ->whereIn('activity_scope', ['in_campus', 'off_campus', 'local_off_campus'])->get();
         $budgetCategoryBreakdown = collect([
             'in_campus' => 'In-Campus',
             'off_campus' => 'Off-Campus',
         ])->map(function (string $label, string $scope) use ($budgetActivities): array {
-            $rows = $budgetActivities->where('activity_scope', $scope);
+            $rows = $budgetActivities->whereIn('activity_scope', $scope === 'off_campus' ? ['off_campus', 'local_off_campus'] : ['in_campus']);
 
             return [
                 'category' => $label,
@@ -473,7 +481,7 @@ class StudentPortalController extends Controller
         $publicExpenses = ExpenseReceiptReview::query()
             ->whereIn('verification_status', ['approved', 'verified'])
             ->whereNotNull('chain_hash')
-            ->whereIn('org_activity_id', OrgActivity::query()->visibleToStudents()->select('id'))
+            ->whereIn('org_activity_id', (clone $studentActivities)->select('id'))
             ->latest()
             ->limit(50)
             ->get();
@@ -495,20 +503,15 @@ class StudentPortalController extends Controller
             ->all();
 
 
-        $upcomingQuery = OrgActivity::query()
-            ->visibleToStudents()
+        $upcomingQuery = (clone $studentActivities)
             ->whereIn('status', ['upcoming', 'ongoing'])
-            ->when($collegeFilter !== '', fn ($q) => $q->where('college', $collegeFilter))
-            ->when($statusFilter !== '', fn ($q) => $q->where('status', $statusFilter))
             ->orderBy('starts_at')
             ->limit(50);
 
         $upcoming = $upcomingQuery->get();
 
-        $recentActivities = OrgActivity::query()
-            ->visibleToStudents()
+        $recentActivities = (clone $studentActivities)
             ->where('status', 'completed')
-            ->when($collegeFilter !== '', fn ($q) => $q->where('college', $collegeFilter))
             ->orderByDesc('starts_at')
             ->limit(50)
             ->get();
@@ -622,19 +625,14 @@ class StudentPortalController extends Controller
             }
         }
 
-        $activities = OrgActivity::query()
-            ->visibleToStudents()
-            ->when($collegeFilter !== '', fn ($q) => $q->where('college', $collegeFilter))
+        $activities = (clone $studentActivities)
             ->orderByDesc('starts_at')
             ->limit(20)
             ->get();
 
-        $sdgHighlights = OrgActivity::query()
-            ->visibleToStudents()
+        $sdgHighlights = (clone $studentActivities)
             ->whereNotNull('sdg_goals')
-            ->when($collegeFilter !== '', fn ($q) => $q->where('college', $collegeFilter))
             ->orderByDesc('starts_at')
-            ->limit(12)
             ->get()
             ->flatMap(fn (OrgActivity $a) => collect($a->sdg_goals ?: [])->map(fn ($sdg) => [
                 'sdg' => $sdg,
@@ -649,17 +647,6 @@ class StudentPortalController extends Controller
             ])
             ->values();
 
-        $colleges = OrgActivity::query()
-            ->visibleToStudents()
-            ->whereNotNull('college')
-            ->where('college', '!=', '')
-            ->distinct()
-            ->orderBy('college')
-            ->pluck('college');
-
-        if ($studentCollege !== '' && ! $colleges->contains($studentCollege)) {
-            $colleges = $colleges->prepend($studentCollege)->unique()->values();
-        }
 
         $announcements = OfficeAnnouncement::query()->published()
             ->latest()->orderByDesc('id')->get()
@@ -717,8 +704,7 @@ class StudentPortalController extends Controller
 
         // Live bulletins feed: office announcements + upcoming activities + open renewal window.
         $feedItems = collect($announcements);
-        $activityItems = OrgActivity::query()
-            ->visibleToStudents()
+        $activityItems = (clone $studentActivities)
             ->whereIn('status', ['upcoming', 'ongoing'])
             ->orderBy('starts_at')
             ->limit(6)
@@ -766,7 +752,7 @@ class StudentPortalController extends Controller
             ->all();
 
         // Real RSVP data: registration counts, my registrations, year-level breakdowns.
-        $allRegs = ActivityRegistration::query()->get();
+        $allRegs = ActivityRegistration::query()->whereIn('org_activity_id', (clone $studentActivities)->select('id'))->get();
         $regCounts = $allRegs->groupBy('org_activity_id')->map(fn ($rows) => $rows->count())->all();
         $myRsvps = $allRegs->where('student_id', $student?->id)->pluck('org_activity_id')->all();
         $regBreakdown = $allRegs->groupBy('org_activity_id')->map(function ($rows) {
@@ -780,8 +766,6 @@ class StudentPortalController extends Controller
             ])->sortByDesc('count')->values()->all();
         })->all();
 
-        // Budget items grouped by org for the activity detail modal.
-        $budgetByOrg = BudgetItem::query()->get()->groupBy(fn ($i) => trim((string) $i->organization_name))->all();
         // Feedback ownership uses the authenticated OrgChain UserAccount ID, including anonymous reports.
         $ownFeedback = $student
             ? StudentFeedback::query()->where('student_id', $student->id)->latest()->get()
@@ -821,19 +805,14 @@ class StudentPortalController extends Controller
             'regCounts' => $regCounts,
             'myRsvps' => $myRsvps,
             'regBreakdown' => $regBreakdown,
-            'budgetByOrg' => $budgetByOrg,
             'publicExpenseItemsByActivity' => $publicExpenseItemsByActivity,
             'myFeedback' => $myFeedback,
             'feedbackNotifications' => $feedbackNotifications,
             'sdgHighlights' => $sdgHighlights,
-            'colleges' => $colleges,
             'feedSort' => $feedSort,
             'communitySearch' => $communitySearch,
             'communityAudience' => $communityAudience,
             'communityPeriod' => $communityPeriod,
-            'selectedCollege' => $collegeFilter,
-            'collegeFilterExplicit' => $request->has('college'),
-            'selectedStatus' => $statusFilter,
             'overview' => [
                 'activities' => $activities->count(),
                 'upcoming' => $upcoming->count(),

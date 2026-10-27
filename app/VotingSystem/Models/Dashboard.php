@@ -374,20 +374,6 @@ class Dashboard extends Model
         return $aliases[$normalized] ?? [$normalized];
     }
 
-    public function recentVotes(int $limit = 8): array
-    {
-        $statement = $this->db()->prepare(
-            'SELECT sr_code, full_name, college, program, voted_at
-             FROM voters
-             WHERE has_voted = 1
-             ORDER BY voted_at DESC
-             LIMIT :limit'
-        );
-        $statement->bindValue('limit', $limit, \PDO::PARAM_INT);
-        $statement->execute();
-
-        return $statement->fetchAll();
-    }
 
     public function recentActivity(int $limit = 6): array
     {

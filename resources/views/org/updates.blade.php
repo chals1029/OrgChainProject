@@ -326,6 +326,7 @@
         .aso-btn-publish:active {
             transform: translateY(0);
         }
+        #publishSubmitBtn:disabled { background: #9ca3af; box-shadow: none; transform: none; cursor: not-allowed; opacity: .75; }
 
         /* Badges & Pills */
         .aso-badge {
@@ -417,6 +418,9 @@
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
         }
+        #templatesSection .aso-section-title-group { flex: 1 1 100%; }
+        #templatesSection .aso-template-controls { max-width: 100%; }
+        #announcementClearAttachment[hidden] { display: none; }
 
         .aso-section-title-group h2 {
             margin: 0;
@@ -1227,6 +1231,7 @@
                         <input type="file" id="postFileInput" name="attachment" style="display: none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" data-org-upload data-max-size="15360" data-min-size="1" data-upload-status-id="announcementAttachmentStatus" aria-describedby="announcementAttachmentStatus">
                         <span style="font-size: 0.78rem; color: var(--aso-ink-muted);">PDF, Word, Excel, or Image (Max 15MB)</span>
                         <span id="announcementAttachmentStatus" class="org-upload-status" aria-live="polite"></span>
+                        <button type="button" id="announcementClearAttachment" class="aso-btn-attach" onclick="removeAttachedFile()" hidden>Clear attachment</button>
                     </div>
 
                     <div style="display: flex; gap: 0.65rem; align-items: center;">
@@ -1468,7 +1473,7 @@
                 <h2><i class="bi bi-file-earmark-ruled-fill" style="color: var(--aso-maroon);"></i> Official Template Documents</h2>
                 <p>Original university-issued files for in-campus and off-campus activities, Top 10 Outstanding Students (TOSA) applications, and semester reports.</p>
             </div>
-            <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            <div class="aso-template-controls" style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
                 <div class="aso-search-box" style="min-width: 190px;">
                     <i class="bi bi-search"></i>
                     <input type="text" id="templateSearchInput" placeholder="Filter templates..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="handleSearchTemplates(this.value)">

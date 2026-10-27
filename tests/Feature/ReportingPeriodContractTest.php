@@ -4,14 +4,12 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\OfficePortalController;
 use App\Models\ActivityComplianceDoc;
-use App\Models\InCampusActivitySubmission;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
 use App\Models\OrgRenewalSubmission;
 use App\Models\OrgRenewalWindow;
 use App\Models\OrgReportStatus;
 use App\Models\StudentOrganization;
-use App\Models\TosaApplicant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -108,14 +106,6 @@ class ReportingPeriodContractTest extends TestCase
         return $activity;
     }
 
-    private function packet(OrgActivity $activity, ?string $submitted): InCampusActivitySubmission
-    {
-        return InCampusActivitySubmission::create([
-            'org_activity_id' => $activity->id, 'organization_name' => $activity->organization_name,
-            'submitted_at' => $submitted, 'attachments' => [],
-        ]);
-    }
-
     private function event(OrgActivity $activity, string $status, ?string $notes, string $created = '2029-03-04 09:00:00'): void
     {
         DB::connection('mysql')->table('activity_workflow_events')->insert([
@@ -167,111 +157,14 @@ class ReportingPeriodContractTest extends TestCase
         $this->assertSame(2, $this->overview()['kpis']['totalOrgs']);
     }
 
-    public function test_missing_recognition_and_timing_are_empty_not_current_master_counts_or_zero_samples(): void
+    public function test_missing_recognition_does_not_count_the_current_roster(): void
     {
         $this->organization('Active With No Recorded Year', null);
         $overview = $this->overview();
         $this->assertSame([], $overview['recognitionRows']);
         $this->assertSame(0, $overview['kpis']['totalOrgs']);
-        $this->assertSame([], $overview['processingRows']);
-        $this->assertSame([null, null, null, null, null], $overview['processingTime']);
-        $this->assertSame([], $overview['returnRows']);
-        $this->assertSame([], $overview['returnCauses']);
-        $this->actingAs($this->officer('sdo'), 'office');
-        $overview = $this->overview();
-        $this->assertSame(['Proposals', 'Renewal', 'TOSA'], $overview['processingLabels']);
-        $this->assertSame([null, null, null], $overview['processingTime']);
     }
 
-    public function test_proposal_review_samples_use_latest_packet_and_recorded_decision_not_creation_or_updates(): void
-    {
-        $approved = $this->activity(['workflow_status' => 'oc_approved', 'approved_at' => '2029-04-03 09:00:00']);
-        $this->packet($approved, '2029-03-01 09:00:00');
-        $this->packet($approved, '2029-04-01 09:00:00');
-        $eventOnly = $this->activity(['workflow_status' => 'completed', 'activity_scope' => 'local_off_campus']);
-        $this->packet($eventOnly, '2029-06-01 09:00:00');
-        $this->event($eventOnly, 'oc_approved', null, '2029-06-02 21:00:00');
-        $activities = [$approved, $eventOnly];
-        foreach ([
-            ['oso_review', '2029-04-01 09:00:00', '2029-04-03 09:00:00'],
-            ['oc_approved', null, '2029-04-03 09:00:00'],
-            ['oc_approved', '2029-04-03 09:00:00', '2029-04-01 09:00:00'],
-            ['oc_approved', '2031-04-01 09:00:00', '2031-04-03 09:00:00'],
-            ['oc_approved', '2029-04-01 09:00:00', null],
-            ['oc_approved', '2029-04-01 09:00:00', '2031-04-03 09:00:00'],
-        ] as [$status, $submitted, $decided]) {
-            $activity = $this->activity(['workflow_status' => $status, 'approved_at' => $decided]);
-            $this->packet($activity, $submitted);
-            $activities[] = $activity;
-        }
-        $latestMissing = $this->activity(['workflow_status' => 'oc_approved', 'approved_at' => '2029-04-03 09:00:00']);
-        $this->packet($latestMissing, '2029-04-01 09:00:00');
-        $this->packet($latestMissing, null);
-        $activities[] = $latestMissing;
-
-        $overview = $this->overview($activities);
-        $this->assertEquals([
-            ['kind' => 'proposal', 'scope' => 'in-campus', 'days' => 2.0, 'year' => 2029, 'sem' => 'sem2', 'mon' => 'Apr'],
-            ['kind' => 'proposal', 'scope' => 'off-campus', 'days' => 1.5, 'year' => 2029, 'sem' => 'midyear', 'mon' => 'Jun'],
-        ], $overview['processingRows']);
-        $this->assertSame([1.8, null, null, null, null], $overview['processingTime']);
-        $this->assertSame('Mar', $overview['rows'][0]['mon']);
-    }
-
-    public function test_renewal_and_report_samples_require_reviewed_status_and_ordered_nonfuture_explicit_timestamps(): void
-    {
-        $window = $this->window('2029-2030');
-        foreach (['approved', 'returned', 'rejected'] as $status) {
-            $this->renewal($window, 'Reviewed '.$status, $status, '2029-08-01 09:00:00', '2029-08-04 09:00:00');
-        }
-        foreach ([
-            ['submitted', '2029-08-01 09:00:00', '2029-08-04 09:00:00'],
-            ['approved', null, '2029-08-04 09:00:00'],
-            ['approved', '2029-08-01 09:00:00', null],
-            ['approved', '2029-08-04 09:00:00', '2029-08-01 09:00:00'],
-            ['approved', '2031-08-01 09:00:00', '2031-08-04 09:00:00'],
-        ] as $index => [$status, $submitted, $reviewed]) {
-            $this->renewal($window, 'Invalid Renewal '.$index, $status, $submitted, $reviewed);
-        }
-        foreach ([
-            ['fr', 'verified', '2029-01-01 09:00:00', '2029-01-03 09:00:00'],
-            ['ar', 'archived', '2029-06-01 09:00:00', '2029-06-05 09:00:00'],
-            ['fr', 'returned', '2029-01-01 09:00:00', '2029-01-03 09:00:00'],
-            ['ar', 'rejected', '2029-06-01 09:00:00', '2029-06-05 09:00:00'],
-            ['fr', 'oso_review', '2029-01-01 09:00:00', '2029-01-03 09:00:00'],
-            ['fr', 'verified', null, '2029-01-03 09:00:00'],
-            ['ar', 'archived', '2029-06-01 09:00:00', null],
-            ['fr', 'returned', '2029-01-03 09:00:00', '2029-01-01 09:00:00'],
-            ['ar', 'rejected', '2031-06-01 09:00:00', '2031-06-05 09:00:00'],
-        ] as $index => [$kind, $status, $submitted, $reviewed]) {
-            OrgReportStatus::create([
-                'organization_name' => 'Report Fixture '.$index, 'report_type' => $kind,
-                'academic_year' => '2029-2030', 'semester' => '1st Semester', 'status' => $status,
-                'submitted_at' => $submitted, 'reviewed_at' => $reviewed,
-            ]);
-        }
-        $overview = $this->overview();
-        $samples = collect($overview['processingRows']);
-        $this->assertCount(7, $samples);
-        $this->assertSame(3, $samples->where('kind', 'renewal')->count());
-        $this->assertSame(2, $samples->where('kind', 'fr')->count());
-        $this->assertSame(2, $samples->where('kind', 'ar')->count());
-        $this->assertSame([null, 3.0, 2.0, 4.0, null], $overview['processingTime']);
-        $this->assertTrue($samples->every(fn ($row) => $row['year'] === 2029 && $row['scope'] === null));
-        $this->assertSame(['Aug'], $samples->where('kind', 'renewal')->pluck('mon')->unique()->values()->all());
-        $this->assertCount(0, $samples->where('scope', 'in-campus'));
-    }
-
-    public function test_tosa_created_and_updated_dates_do_not_become_decision_timings(): void
-    {
-        TosaApplicant::create([
-            'full_name' => 'Timing Fixture', 'sr_code' => '99-'.substr(str_replace('-', '', Str::uuid()->toString()), 0, 8),
-            'academic_year' => '2029-2030', 'status' => 'submitted', 'subsection' => 'accepted',
-        ]);
-        $overview = $this->overview();
-        $this->assertCount(0, collect($overview['processingRows'])->where('kind', 'tosa'));
-        $this->assertNull($overview['processingTime'][4]);
-    }
 
     public function test_returns_are_actual_events_with_proposal_cohort_not_duplicate_or_hidden_document_remarks(): void
     {

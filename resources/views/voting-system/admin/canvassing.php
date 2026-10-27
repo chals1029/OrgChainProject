@@ -86,6 +86,12 @@
     </article>
 </div>
 
+<?php
+    $tallyId = 'canvassing-results';
+    $tallyAction = $tallyPath;
+    require __DIR__ . '/../partials/tally.php';
+?>
+
 <section class="admin-panel college-count-panel program-count-panel program-count-panel--plain">
     <div class="panel-heading">
         <div>
@@ -218,35 +224,3 @@
         </div>
     </section>
 </div>
-
-<section class="dashboard-activity-panel">
-    <div class="panel-heading">
-        <div>
-            <p class="eyebrow">Recent Submissions</p>
-            <h2>Latest Ballots</h2>
-        </div>
-        <span class="dashboard-soft-pill"><?= e(count($recentVotes)) ?> latest</span>
-    </div>
-
-    <div class="activity-list">
-        <?php if (empty($recentVotes)): ?>
-            <article class="activity-item">
-                <span class="activity-dot is-muted"></span>
-                <div>
-                    <strong>No ballots submitted yet</strong>
-                    <small>New voter submissions will appear here.</small>
-                </div>
-            </article>
-        <?php endif; ?>
-
-        <?php foreach ($recentVotes as $voter): ?>
-            <article class="activity-item">
-                <span class="activity-dot"></span>
-                <div>
-                    <strong><?= e($voter['full_name']) ?> submitted a ballot</strong>
-                    <small><?= e(college_abbreviation($voter['college'])) ?> &middot; <?= e($voter['voted_at']) ?></small>
-                </div>
-            </article>
-        <?php endforeach; ?>
-    </div>
-</section>

@@ -15,7 +15,17 @@ function readFunction(file, name) {
     return tail.slice(0, end.index + end[0].length);
 }
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const context = vm.createContext({ monthNames: months, osoLiveMeta: { kpis: {}, typeLabels: [] }, window: { osoLiveRows: [] } });
+const context = vm.createContext({
+    monthNames: months,
+    osoLiveMeta: {
+        kpis: {},
+        typeLabels: ['Activity Proposal', 'Renewal', 'Financial (FR)', 'Accomplishment (AR)', 'TOSA Award'],
+        typeRows: [],
+        recognitionRows: [],
+        returnRows: [],
+    },
+    window: { osoLiveRows: [] },
+});
 for (const name of ['buildTrendAxis', 'aggOsoRows']) vm.runInContext(readFunction('dashboard', name), context);
 for (const name of ['rowMatchesFilters', 'buildMonthAxis', 'buildMonthlySeries']) vm.runInContext(readFunction('analytics', name), context);
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -34,6 +44,34 @@ test('all-years dashboard counts every year instead of the last rolling window',
     const trend = plain(context.aggOsoRows(rows, false, 'all').trend);
     assert.deepEqual(trend.labels, months);
     assert.deepEqual(trend.data, [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+});
+
+test('dashboard recognition deduplicates organizations and revision rate uses selected return events', () => {
+    const reporting = vm.createContext({
+        ...context,
+        osoLiveMeta: {
+            ...context.osoLiveMeta,
+            recognitionRows: [
+                { organization_key: ' Org A ', academic_year: '2026-2027' },
+                { organization_key: 'org a', academic_year: '2026-2027' },
+                { organization_key: 'Org B', academic_year: '2025-2026' },
+            ],
+            returnRows: [
+                { year: 2026, activity_id: 1, reason: 'Missing documents' },
+                { year: 2026, activity_id: 1, reason: 'Missing documents' },
+                { year: 2026, activity_id: 99, reason: 'Outside selection' },
+                { year: 2025, activity_id: 2, reason: 'Earlier year' },
+            ],
+        },
+    });
+    for (const name of ['buildTrendAxis', 'aggOsoRows']) vm.runInContext(readFunction('dashboard', name), reporting);
+    const rows = [
+        { id: 1, ym: '2026-01', bucket: 'revision', college: 'CICS', scope: 'in-campus' },
+        { id: 2, ym: '2026-01', bucket: 'approved', college: 'CICS', scope: 'in-campus' },
+    ];
+    const result = plain(reporting.aggOsoRows(rows, false, '2026'));
+    assert.equal(result.totalOrgs, 1);
+    assert.equal(result.revisionRate, '50.0%');
 });
 
 test('analytics uses calendar year, preserves zero months and rolls cumulative totals in chronological order', () => {

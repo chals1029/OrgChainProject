@@ -13,7 +13,7 @@
 .archive-org-icon { display:grid; place-items:center; width:34px; height:34px; flex-shrink:0; border-radius:9px; background:#fdf0f2; }
 .archive-org-card h3 { margin:0; font-size:.94rem; line-height:1.45; color:#30272a; overflow-wrap:anywhere; }
 .archive-org-meta { display:flex; flex-wrap:wrap; gap:.45rem .8rem; color:#786f73; font-size:.76rem; }
-.archive-org-card .org-btn { align-self:flex-end; margin-top:auto; }
+.archive-org-card .app-view-action { align-self:flex-end; margin-top:auto; }
 .archive-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; border-top:1px solid #f0e6e8; margin-top:1.2rem; padding-top:1rem; color:#786f73; font-size:.78rem; }
 .archive-pagination nav { display:flex; gap:.35rem; flex-wrap:wrap; }
 .archive-page { display:inline-flex; align-items:center; justify-content:center; min-width:32px; padding:.35rem .6rem; border:1px solid #eadfe2; border-radius:8px; color:#8b1828; text-decoration:none; }
@@ -37,8 +37,7 @@
 .archive-file-name strong { display:block; color:#30272a; font-size:.82rem; overflow-wrap:anywhere; }
 .archive-file-name small { display:block; color:#786f73; font-size:.72rem; margin-top:.25rem; overflow-wrap:anywhere; }
 .archive-file-row .org-btn { flex-shrink:0; }
-.archive-legacy > summary { padding:1rem; margin-bottom:1rem; border:1px solid #eadfe2; border-radius:12px; background:#fff; color:#8b1828; font-weight:700; cursor:pointer; }
-.archive-filters :focus-visible,.archive-group > summary:focus-visible,.archive-legacy > summary:focus-visible,.archive-page:focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
+.archive-filters :focus-visible,.archive-group > summary:focus-visible,.archive-page:focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
 .archive-org-dialog { box-sizing:border-box; width:min(1080px,calc(100vw - 2rem)); max-width:none; max-height:calc(100dvh - 2rem); margin:auto; padding:0; border:1px solid #eadfe2; border-radius:20px; background:#fff; color:#30272a; box-shadow:0 24px 80px rgba(30,15,20,.24); overflow:auto; animation:none !important; transform:none; }
 .archive-org-dialog::backdrop { background:rgba(25,15,20,.5); backdrop-filter:blur(3px); }
 .archive-org-dialog .archive-detail-header { position:sticky; top:0; z-index:1; margin:0; padding:1.15rem 1.4rem; background:#fff; }

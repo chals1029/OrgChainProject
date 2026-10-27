@@ -1806,10 +1806,7 @@
         .oso-rank-item[href]:hover .oso-rank-name { color: #8b1828; text-decoration: underline; }
         .oso-rank-item[href]:focus-visible { outline: 2px solid #8b1828; outline-offset: 5px; }
         .oso-rank-item[hidden] { display: none; }
-        .oso-cause-left { overflow-wrap: anywhere; white-space: pre-line; }
         .oso-report-note { margin: 0.6rem 0 0; color: #706569; font-size: 0.78rem; line-height: 1.5; }
-        .oso-timing-list { margin: 0.75rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
-        .oso-timing-list li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 0.7rem; font-size: 0.8rem; padding: 0.45rem 0; border-bottom: 1px solid #f0e6e8; }
 
         .oso-rank-header {
             display: flex;
@@ -1849,47 +1846,6 @@
             height: 100%;
             border-radius: 9999px;
             transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        /* Incomplete & Revision Causes List */
-        .oso-causes-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            margin-top: 0.85rem;
-        }
-
-        .oso-cause-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.65rem 0.85rem;
-            border-radius: 12px;
-            background: #fdfafb;
-            border: 1px solid #f6eaec;
-            font-size: 0.82rem;
-        }
-
-        .oso-cause-left {
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-            font-weight: 600;
-            color: #332d30;
-            min-width: 0;
-        }
-
-        .oso-cause-pct {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #8b1828;
-            background: #fdf0f2;
-            padding: 0.2rem 0.5rem;
-            border-radius: 6px;
-            border: 1px solid #fae0e5;
-            flex-shrink: 0;
-            white-space: nowrap;
         }
 
         /* Recent Transactions Table */
@@ -2223,7 +2179,7 @@
                         <label for="osoYearSelect" class="oso-filter-label"><i class="bi bi-calendar2-range"></i> Year</label>
                         <div class="oso-select-wrapper">
                             <select id="osoYearSelect" class="oso-filter-select" onchange="applyOsoFilters()">
-                                @foreach (collect($osoOverview['rows'] ?? [])->pluck('year')->merge(collect($osoOverview['recognitionRows'] ?? [])->map(fn ($row) => (int) substr($row['academic_year'], 0, 4)))->merge(collect($osoOverview['processingRows'] ?? [])->pluck('year'))->merge(collect($osoOverview['returnRows'] ?? [])->pluck('year'))->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
+                                @foreach (collect($osoOverview['rows'] ?? [])->pluck('year')->merge(collect($osoOverview['recognitionRows'] ?? [])->map(fn ($row) => (int) substr($row['academic_year'], 0, 4)))->merge(collect($osoOverview['returnRows'] ?? [])->pluck('year'))->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
                                     <option value="{{ $calendarYear }}" @selected((int) $calendarYear === now()->year)>{{ $calendarYear }} · Jan–Dec{{ (int) $calendarYear === now()->year ? ' (Current)' : '' }}</option>
                                 @endforeach
                                 <option value="all">All Calendar Years</option>
@@ -2508,42 +2464,6 @@
 
             </div>
 
-            {{-- 4. MIDDLE ROW 3: Incomplete/Revision Rate (Donut/Bar) & Processing Time --}}
-            <div class="oso-analytics-2col">
-
-                {{-- Card E: Recorded workflow return events --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-shield-exclamation" style="color: #8b1828;"></i> Recorded Return / Revision Analysis</h3>
-                            <p id="osoReturnSummary" role="status" aria-live="polite">Loading recorded return events for the selected submission cohort.</p>
-                        </div>
-                        <span class="oso-stat-badge is-neutral">Workflow history</span>
-                    </div>
-
-                    <div class="oso-causes-list" id="osoReturnReasons" aria-label="Recorded return reasons"></div>
-                    <p class="oso-report-note">Reasons are recorded workflow notes, not inferred causes. An activity may have multiple return events. Period follows the proposal's creation date; missing historical events do not prove an activity was never returned.</p>
-                </section>
-
-                {{-- Card F: Processing Time Turnaround --}}
-                <section class="oso-analytics-card">
-                    <div class="oso-card-head">
-                        <div class="oso-card-title-group">
-                            <h3><i class="bi bi-clock-history" style="color: #8b1828;"></i> Average Processing Time (Days)</h3>
-                            <p>Elapsed calendar days from submission to a recorded review decision, not daily transaction volume.</p>
-                        </div>
-                        <span class="oso-stat-badge is-neutral" id="osoTimingCount">Loading timing samples</span>
-                    </div>
-
-                    <div class="oso-canvas-wrap">
-                        <canvas id="osoProcessingTimeChart" role="img" aria-label="Average elapsed review days by transaction type" aria-describedby="osoTimingSummary"></canvas>
-                    </div>
-                    <ul class="oso-timing-list" id="osoTimingSummary" aria-label="Average review days and sample counts"></ul>
-                    <p class="oso-report-note">Filtered by actual submission date and activity scope. Only reliable completed review timestamps are included. Missing legacy timing and unavailable TOSA timing are not zero-day reviews.</p>
-                </section>
-
-            </div>
-
             {{-- 5. BOTTOM SECTION: Recent Transactions Table (Required Table Item 8 - Table, not chart) --}}
             <section class="oso-transactions-table-card">
                 <div class="org-dash-card-header" style="padding: 1.25rem 1.65rem 1rem; border-bottom: 1px solid #f6eff0; margin-bottom: 0;">
@@ -2590,9 +2510,7 @@
                                     <td><span style="font-size: 0.82rem; color: #554d50;">{{ $trx['date'] }}</span></td>
                                     <td><span class="oso-sla-pill {{ $trx['sla']['class'] }}"><i class="bi {{ $trx['sla']['icon'] }}"></i> {{ $trx['sla']['text'] }}</span></td>
                                     <td>
-                                        <span class="org-status-pill {{ $trx['bucket'] === 'revision' ? 'org-status-red' : 'org-status-yellow' }}">
-                                            <span class="org-status-dot"></span> {{ $trx['statusLabel'] }}
-                                        </span>
+                                        @include('org.partials.workflow-status', ['status' => $trx['status'], 'label' => $trx['statusLabel']])
                                     </td>
                                     <td style="text-align: right;">
                                         <a href="{{ $trx['url'] }}" class="app-view-action" aria-label="View transaction details">
@@ -3459,8 +3377,7 @@
             window.osoCharts = {
                 donut: null,
                 trend: null,
-                type: null,
-                time: null
+                type: null
             };
 
             // Live proposal rows and recorded reporting samples share the filter engine below.
@@ -3471,9 +3388,7 @@
                         'typeBreakdown' => $osoOverview['typeBreakdown'] ?? [0, 0, 0, 0, 0],
                         'typeLabels' => $osoOverview['typeLabels'] ?? ['Activity Proposal', 'Renewal', 'Financial (FR)', 'Accomplishment (AR)', 'TOSA Award'],
                         'typeRows' => $osoOverview['typeRows'] ?? [],
-                        'processingLabels' => $osoOverview['processingLabels'] ?? ['Proposals', 'Renewal', 'Financial (FR)', 'Accomp. (AR)', 'TOSA'],
                         'recognitionRows' => $osoOverview['recognitionRows'] ?? [],
-                        'processingRows' => $osoOverview['processingRows'] ?? [],
                         'returnRows' => $osoOverview['returnRows'] ?? [],
                 ];
             @endphp
@@ -3548,28 +3463,10 @@
                     .filter(row => selectedYear === 'all' || row.academic_year === academicYear)
                     .map(row => String(row.organization_key || '').trim().toLowerCase())
                     .filter(Boolean));
-                const processingKinds = osoLiveMeta.processingLabels.length === 3
-                    ? ['proposal', 'renewal', 'tosa']
-                    : ['proposal', 'renewal', 'fr', 'ar', 'tosa'];
-                const processingSamples = osoLiveMeta.processingRows.filter(row =>
-                    matchesPeriod(row) && typeof row.days === 'number' && Number.isFinite(row.days) && row.days >= 0);
-                const processing = processingKinds.map((kind, index) => {
-                    const samples = processingSamples.filter(row => row.kind === kind);
-                    return {
-                        label: osoLiveMeta.processingLabels[index],
-                        count: samples.length,
-                        days: samples.length ? samples.reduce((sum, row) => sum + row.days, 0) / samples.length : null,
-                    };
-                });
                 const activityIds = new Set(rows.map(row => String(row.id)));
                 const returnEvents = osoLiveMeta.returnRows.filter(row =>
                     matchesPeriod(row) && activityIds.has(String(row.activity_id)));
                 const returnedActivities = new Set(returnEvents.map(row => row.activity_id)).size;
-                const reasons = new Map();
-                returnEvents.forEach(row => {
-                    const reason = String(row.reason || '').trim() || 'No reason recorded';
-                    reasons.set(reason, (reasons.get(reason) || 0) + 1);
-                });
                 return {
                     totalOrgs: recognitionKeys.size,
                     orgSub: selectedYear === 'all'
@@ -3585,11 +3482,6 @@
                     submissionsSub: unfiltered ? 'Across all student org portfolios' : 'Filtered selection',
                     revisionRate: total ? ((returnedActivities / total) * 100).toFixed(1) + '%' : '0%',
                     revisionSub: `${returnedActivities} of ${total} activities have recorded return events`,
-                    returnedActivities,
-                    returnEventCount: returnEvents.length,
-                    returnReasons: Array.from(reasons, ([reason, count]) => ({ reason, count }))
-                        .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)),
-                    processing,
                     approvalDonut: [approved, pending, revision],
                     scope: {
                         inCampus: rows.filter(r => r.scope === 'in-campus').length,
@@ -3745,48 +3637,6 @@
                         delete window.osoCharts.type.options.scales.y.max;
                     }
                     window.osoCharts.type.update();
-                }
-
-                // Recorded review samples and workflow returns use the same period/scope selection.
-                if (window.osoCharts.time) {
-                    window.osoCharts.time.data.datasets[0].data = data.processing.map(row => row.days);
-                    window.osoCharts.time.update();
-                }
-                const timingSummary = document.getElementById('osoTimingSummary');
-                if (timingSummary) {
-                    timingSummary.replaceChildren(...data.processing.map(row => {
-                        const item = document.createElement('li');
-                        const label = document.createElement('strong');
-                        label.textContent = row.label;
-                        const value = document.createElement('span');
-                        value.textContent = row.days === null
-                            ? 'No timing data · 0 samples'
-                            : `${row.days.toFixed(2)} days · ${row.count} sample${row.count === 1 ? '' : 's'}`;
-                        item.append(label, value);
-                        return item;
-                    }));
-                }
-                const timingCount = data.processing.reduce((sum, row) => sum + row.count, 0);
-                const timingBadge = document.getElementById('osoTimingCount');
-                if (timingBadge) timingBadge.textContent = timingCount ? `${timingCount} reviewed samples` : 'No timing data';
-                const returnSummary = document.getElementById('osoReturnSummary');
-                if (returnSummary) returnSummary.textContent = data.returnEventCount
-                    ? `${data.returnedActivities} distinct returned activities / ${data.totalSubmissions} submissions (${data.revisionRate}); ${data.returnEventCount} recorded return events.`
-                    : 'No recorded return events in the selected submission cohort.';
-                const returnReasons = document.getElementById('osoReturnReasons');
-                if (returnReasons) {
-                    returnReasons.replaceChildren(...data.returnReasons.map(row => {
-                        const item = document.createElement('div');
-                        item.className = 'oso-cause-item';
-                        const reason = document.createElement('span');
-                        reason.className = 'oso-cause-left';
-                        reason.textContent = row.reason;
-                        const count = document.createElement('span');
-                        count.className = 'oso-cause-pct';
-                        count.textContent = `${row.count} event${row.count === 1 ? '' : 's'}`;
-                        item.append(reason, count);
-                        return item;
-                    }));
                 }
 
                 const pipelineUrl = (college = '') => {
@@ -4083,66 +3933,6 @@
                                     grace: '10%',
                                     grid: { color: '#f5eaec' },
                                     ticks: { stepSize: 5, font: { size: 11 } }
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // 4. Average elapsed review days; nulls deliberately leave unavailable kinds unplotted.
-                const timeCanvas = document.getElementById('osoProcessingTimeChart');
-                if (timeCanvas) {
-                    window.osoCharts.time = new Chart(timeCanvas.getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: osoLiveMeta.processingLabels,
-                            datasets: [
-                                {
-                                    type: 'bar',
-                                    label: 'Average elapsed review days',
-                                    data: initialOsoData.processing.map(row => row.days),
-                                    spanGaps: false,
-                                    backgroundColor: [
-                                        '#10b981',
-                                        '#f59e0b',
-                                        '#10b981',
-                                        '#10b981',
-                                        '#10b981'
-                                    ].slice(0, osoLiveMeta.processingLabels.length),
-                                    borderRadius: 8,
-                                    maxBarThickness: 34
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { 
-                                    display: true, 
-                                    position: 'top', 
-                                    align: 'end',
-                                    labels: { boxWidth: 12, boxHeight: 12, font: { size: 11, weight: '600' } } 
-                                },
-                                tooltip: {
-                                    backgroundColor: '#1a1618',
-                                    padding: 10,
-                                    cornerRadius: 8
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { font: { size: 11, weight: '600' } }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grace: '10%',
-                                    grid: { color: '#f5eaec' },
-                                    ticks: {
-                                        stepSize: 1,
-                                        callback: (val) => `${val}d`
-                                    }
                                 }
                             }
                         }

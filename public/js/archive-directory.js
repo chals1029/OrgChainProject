@@ -6,7 +6,7 @@
         var card = document.getElementById(window.location.hash.slice(1));
         if (card && card.classList.contains('archive-org-card')) {
             var link = card.querySelector('a');
-            if (link) link.focus({ preventScroll: true });
+            if (link) window.addEventListener('pageshow', function () { link.focus({ preventScroll: true }); }, { once: true });
         }
         return;
     }

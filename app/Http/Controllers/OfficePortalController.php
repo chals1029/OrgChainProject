@@ -1045,7 +1045,6 @@ class OfficePortalController extends Controller
                 'remaining' => max(0, $allocated - $utilized),
                 'burn_rate' => $allocated > 0 ? round(($utilized / $allocated) * 100, 1) : 0,
                 'status' => $workflow->label($a->workflow_status ?: 'created'),
-                'status_style' => $a->workflow_status === 'oc_approved' ? 'green' : 'blue',
                 'status_key' => $a->workflow_status ?: 'created',
                 'month' => $startsAt?->format('M') ?? 'N/A',
                 'month_number' => $monthNumber,
@@ -1056,12 +1055,6 @@ class OfficePortalController extends Controller
             ];
         })->values()->all();
 
-        if ($activityFinancials === [] && $organization === '') {
-            $activityFinancials = [
-                ['id' => 'demo-1', 'name' => 'Innovation Fair Booth Series', 'scope' => 'in_campus', 'scope_label' => 'In-Campus', 'college' => 'CICS', 'organization' => null, 'allocated' => 15000, 'utilized' => 15000, 'remaining' => 0, 'burn_rate' => 100, 'status' => 'OC Approved', 'status_style' => 'green', 'status_key' => 'oc_approved', 'month' => 'Jul', 'month_number' => 7, 'year' => 2026, 'date_key' => '2026-07-05', 'academic_year' => '2025-2026', 'semester' => 'midyear'],
-                ['id' => 'demo-2', 'name' => 'Leadership Summit 2026', 'scope' => 'local_off_campus', 'scope_label' => 'Off-Campus', 'college' => 'CAS', 'organization' => null, 'allocated' => 75000, 'utilized' => 42750, 'remaining' => 32250, 'burn_rate' => 57, 'status' => 'OSO Review', 'status_style' => 'blue', 'status_key' => 'oso_review', 'month' => 'Sep', 'month_number' => 9, 'year' => 2026, 'date_key' => '2026-09-20', 'academic_year' => '2026-2027', 'semester' => 'sem1'],
-            ];
-        }
 
         $inCampus = collect($activityFinancials)->where('scope', 'in_campus');
         $offCampus = collect($activityFinancials)->where('scope', 'local_off_campus');
@@ -2525,7 +2518,15 @@ class OfficePortalController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:64'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'template_file' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
+            'template_file' => [
+                'bail', 'required', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
 
         $file = $request->file('template_file');
@@ -3109,7 +3110,15 @@ class OfficePortalController extends Controller
             'code' => ['required', 'string', 'max:80'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
+            'document' => [
+                'bail', 'required', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
         $storedPath = null;
         try {
@@ -3195,7 +3204,15 @@ class OfficePortalController extends Controller
         $validated = $request->validate([
             'window_id' => ['required', 'integer'],
             'doc_key' => ['required', 'string', 'max:80'],
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480'],
+            'document' => [
+                'bail', 'required', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
         $storedPath = null;
         try {
@@ -3974,7 +3991,15 @@ class OfficePortalController extends Controller
         $validated = $request->validate([
             'archive_folder_id' => ['required', 'integer'],
             'name' => ['nullable', 'string', 'max:255'],
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
+            'document' => [
+                'bail', 'required', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
         $folder = $this->accessibleArchiveFolders($organization)->firstWhere('id', (int) $validated['archive_folder_id']);
         abort_unless($folder instanceof ArchiveFolder, 404);
@@ -4492,7 +4517,7 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * Demo workflow rows matching the Student Org module screens.
+     * Persisted workflow rows visible to the current office and organization.
      *
      * @return list<array<string, mixed>>
      */
@@ -4538,73 +4563,7 @@ class OfficePortalController extends Controller
                 ->all();
         }
 
-        $demo = [
-            [
-                'title' => 'Innovation Fair Booth Series',
-                'status' => 'OC Approved',
-                'status_key' => 'oc_approved',
-                'stage' => 7,
-                'stages' => 7,
-                'date' => 'Jul 4, 2026',
-                'budget' => 15000,
-                'location' => 'Gymnasium',
-                'upcoming_at' => '2026-07-04 09:00:00',
-                'activity_scope' => 'in_campus',
-                'docs' => ['Activity Proposal.pdf', 'Budget Breakdown.xlsx'],
-                'note' => 'Booth setup open for student orientation.',
-            ],
-            [
-                'title' => 'Leadership Summit 2026',
-                'status' => 'OSO Review',
-                'status_key' => 'oso_review',
-                'stage' => 3,
-                'stages' => 7,
-                'date' => 'Sep 20, 2026',
-                'budget' => 75000,
-                'location' => 'Taal Building',
-                'upcoming_at' => '2026-09-20 06:00:00',
-                'activity_scope' => 'local_off_campus',
-                'docs' => ['Concept Note.pdf'],
-                'note' => null,
-            ],
-            [
-                'title' => 'Campus Wellness Week',
-                'status' => 'SDO Review',
-                'status_key' => 'sdo_review',
-                'stage' => 4,
-                'stages' => 7,
-                'date' => 'Sep 8, 2026',
-                'budget' => 42500,
-                'location' => 'Gymnasium',
-                'upcoming_at' => '2026-09-08 10:00:00',
-                'activity_scope' => 'in_campus',
-                'docs' => ['Wellness Plan.pdf'],
-                'note' => null,
-            ],
-            [
-                'title' => 'Student Media Workshop',
-                'status' => 'Returned for Revision',
-                'status_key' => 'returned',
-                'stage' => 1,
-                'stages' => 7,
-                'date' => 'Oct 3, 2026',
-                'budget' => 9800,
-                'location' => 'Taal Building',
-                'upcoming_at' => '2026-10-03 13:00:00',
-                'activity_scope' => 'local_off_campus',
-                'docs' => ['Workshop Outline.pdf'],
-                'note' => 'Returned to so for revision.',
-                'returned_to' => 'so',
-            ],
-        ];
-
-        return collect($demo)
-            ->filter(fn (array $activity): bool => $workflow->canViewActivityDetails(
-                $officeRole,
-                (string) ($activity['status_key'] ?? 'created'),
-            ))
-            ->values()
-            ->all();
+        return [];
     }
 
     private function activityAcademicYearOptions(?string $organization = null): array
@@ -5019,7 +4978,15 @@ class OfficePortalController extends Controller
             'semester' => ['required', Rule::in(['1st Semester', '2nd Semester', 'Midyear'])],
             'academic_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
             'name' => ['nullable', 'string', 'max:255'],
-            'document' => ['required', 'file', $reportType === 'ar' ? 'mimes:pdf,doc,docx' : 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480'],
+            'document' => [
+                'bail', 'required', 'file',
+                function ($attribute, $file, $fail): void {
+                    if ($file->getSize() === 0) {
+                        $fail('This document is empty. Select a completed document.');
+                    }
+                },
+                $reportType === 'ar' ? 'mimes:pdf,doc,docx' : 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,png,jpg,jpeg', 'max:20480',
+            ],
         ]);
         $this->assertOfficeOrganizationName($validated['organization_name']);
 
@@ -5548,65 +5515,10 @@ class OfficePortalController extends Controller
             $typeRows->push(array_merge(['kind' => 'tosa', 'scope' => null], $period));
         }
 
-        // A processing sample requires an explicit submission and a recorded
-        // decision. Mutable updated_at and record creation are not review clocks.
-        $processingRows = collect();
-        $asDate = static function ($value): ?Carbon {
-            try {
-                return $value ? Carbon::parse($value) : null;
-            } catch (\Throwable) {
-                return null;
-            }
-        };
-        $sampleNow = now();
-        $addSample = function (string $kind, $submitted, $decided, ?string $scope = null) use ($processingRows, $asDate, $sampleNow): void {
-            $from = $asDate($submitted);
-            $to = $asDate($decided);
-            if (! $from || ! $to || $from->gt($to) || $from->gt($sampleNow) || $to->gt($sampleNow)) {
-                return;
-            }
-            $processingRows->push(array_merge([
-                'kind' => $kind,
-                'scope' => $scope,
-                'days' => $from->diffInSeconds($to, false) / 86400,
-            ], $this->reportingPeriod($from)));
-        };
         $activityIds = $dbActivities->modelKeys();
-        $packets = InCampusActivitySubmission::query()->whereIn('org_activity_id', $activityIds)
-            ->latest('id')->get()->unique('org_activity_id')->keyBy('org_activity_id');
         $events = DB::connection('mysql')->table('activity_workflow_events')
-            ->whereIn('org_activity_id', $activityIds)->orderBy('id')->get()->groupBy('org_activity_id');
-        foreach ($dbActivities as $activity) {
-            $status = $activity->workflow_status;
-            if (! in_array($status, ['oc_approved', 'completed', 'returned', 'rejected'], true)) {
-                continue;
-            }
-            $submitted = $packets->get($activity->id)?->submitted_at;
-            $decisionStatus = $status === 'completed' ? 'oc_approved' : $status;
-            $decision = $events->get($activity->id, collect())->last(fn ($event): bool => $event->to_status === $decisionStatus);
-            $decided = in_array($status, ['oc_approved', 'completed'], true)
-                ? ($activity->approved_at ?? $decision?->created_at)
-                : $decision?->created_at;
-            $scope = str_contains(strtolower((string) $activity->activity_scope), 'off') ? 'off-campus' : 'in-campus';
-            $addSample('proposal', $submitted, $decided, $scope);
-        }
-        foreach ($renewalRows->whereIn('status', ['approved', 'returned', 'rejected']) as $row) {
-            $addSample('renewal', $row->submitted_at, $row->reviewed_at);
-        }
-        foreach ($reportRows->whereIn('status', ['verified', 'archived', 'returned', 'rejected']) as $row) {
-            $addSample($row->report_type, $row->submitted_at, $row->reviewed_at);
-        }
-        // TOSA has no immutable submitted/decision pair; its duration is unknown.
-        $averageDays = static function (string $kind) use ($processingRows): ?float {
-            $samples = $processingRows->where('kind', $kind);
-
-            return $samples->isNotEmpty() ? round($samples->avg('days'), 1) : null;
-        };
-        $proposalAvg = $averageDays('proposal');
-        $renewalAvg = $averageDays('renewal');
-        $financialAvg = $averageDays('fr');
-        $accomplishmentAvg = $averageDays('ar');
-        $tosaAvg = null;
+            ->whereIn('org_activity_id', $activityIds)->where('to_status', 'returned')
+            ->orderBy('id')->get()->groupBy('org_activity_id');
 
         $returnRows = collect();
         foreach ($rows as $row) {
@@ -5621,11 +5533,6 @@ class OfficePortalController extends Controller
                 ]);
             }
         }
-        $returnCauses = $returnRows->groupBy('reason')->map(fn ($items, $reason): array => [
-            'label' => $reason,
-            'count' => $items->count(),
-            'pct' => round($items->count() / $returnRows->count() * 100).'% of recorded events',
-        ])->sortByDesc('count')->values()->all();
 
         $recognitionRows = collect();
         $addRecognition = static function (?string $name, ?string $academicYear) use ($recognitionRows): void {
@@ -5662,12 +5569,6 @@ class OfficePortalController extends Controller
         $typeBreakdown = $hideSemesterReportMetrics
             ? [$allTypeCounts['proposal'], $allTypeCounts['renewal'], $allTypeCounts['tosa']]
             : [$allTypeCounts['proposal'], $allTypeCounts['renewal'], $allTypeCounts['fr'], $allTypeCounts['ar'], $allTypeCounts['tosa']];
-        $processingLabels = $hideSemesterReportMetrics
-            ? ['Proposals', 'Renewal', 'TOSA']
-            : ['Proposals', 'Renewal', 'Financial (FR)', 'Accomp. (AR)', 'TOSA'];
-        $processingTime = $hideSemesterReportMetrics
-            ? [$proposalAvg, $renewalAvg, $tosaAvg]
-            : [$proposalAvg, $renewalAvg, $financialAvg, $accomplishmentAvg, $tosaAvg];
 
         return [
             'rows' => $rows->values()->all(),
@@ -5690,11 +5591,7 @@ class OfficePortalController extends Controller
             'typeLabels' => $typeLabels,
             'typeBreakdown' => $typeBreakdown,
             'typeRows' => $typeRows->values()->all(),
-            'processingLabels' => $processingLabels,
-            'processingTime' => $processingTime,
-            'processingRows' => $processingRows->all(),
             'returnRows' => $returnRows->all(),
-            'returnCauses' => $returnCauses,
         ];
     }
 
@@ -5907,9 +5804,16 @@ class OfficePortalController extends Controller
         $status = trim((string) $request->query('status', ''));
         $college = trim((string) $request->query('college', ''));
         $topic = trim((string) $request->query('topic', ''));
+        $search = trim((string) $request->query('q', ''));
 
         $base = StudentFeedback::query();
         $reports = (clone $base)
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
+                $query->where('author_name', 'like', '%'.$search.'%')
+                    ->orWhere('body', 'like', '%'.$search.'%')
+                    ->orWhere('topic', 'like', '%'.$search.'%')
+                    ->orWhere('program', 'like', '%'.$search.'%');
+            }))
             ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->when($college !== '', fn ($q) => $q->where('college', $college))
             ->when($topic !== '', fn ($q) => $q->where('topic', $topic))
@@ -5932,7 +5836,7 @@ class OfficePortalController extends Controller
             'topics' => StudentFeedback::query()
                 ->whereNotNull('topic')->where('topic', '!=', '')
                 ->distinct()->orderBy('topic')->pluck('topic'),
-            'filters' => ['status' => $status, 'college' => $college, 'topic' => $topic],
+            'filters' => ['q' => $search, 'status' => $status, 'college' => $college, 'topic' => $topic],
         ]));
     }
 

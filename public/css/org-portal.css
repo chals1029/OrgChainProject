@@ -4072,3 +4072,32 @@ body.org-no-scroll {
 .org-welcome {
     overflow-wrap: anywhere;
 }
+
+/* The workflow authority, rather than a generic pending bucket, owns each color. */
+.org-workflow-status {
+    --workflow-ink: #475569;
+    --workflow-surface: #f1f5f9;
+    --workflow-border: #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .3rem .7rem;
+    border: 1px solid var(--workflow-border);
+    border-radius: 999px;
+    background: var(--workflow-surface);
+    color: var(--workflow-ink);
+    font-size: .75rem;
+    font-weight: 750;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+.org-workflow-status-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; }
+.org-workflow-status[data-workflow-status="oso_review"] { --workflow-ink:#8b1828; --workflow-surface:#fdf0f2; --workflow-border:#f2cdd4; }
+.org-workflow-status[data-workflow-status="sdo_review"] { --workflow-ink:#166534; --workflow-surface:#f0fdf4; --workflow-border:#bbf7d0; }
+.org-workflow-status[data-workflow-status="ovcaa_review"] { --workflow-ink:#6b21a8; --workflow-surface:#faf5ff; --workflow-border:#e9d5ff; }
+.org-workflow-status[data-workflow-status="oc_review"] { --workflow-ink:#1e40af; --workflow-surface:#eff6ff; --workflow-border:#bfdbfe; }
+.org-workflow-status[data-workflow-status="oc_approved"] { --workflow-ink:#065f46; --workflow-surface:#ecfdf5; --workflow-border:#a7f3d0; }
+.org-workflow-status[data-workflow-status="returned"] { --workflow-ink:#92400e; --workflow-surface:#fffbeb; --workflow-border:#fde68a; }
+.org-workflow-status[data-workflow-status="rejected"] { --workflow-ink:#991b1b; --workflow-surface:#fef2f2; --workflow-border:#fecaca; }
+.org-workflow-status[data-workflow-status="completed"] { --workflow-ink:#115e59; --workflow-surface:#f0fdfa; --workflow-border:#99f6e4; }
+.org-workflow-status[data-workflow-status="college_review"] { --workflow-ink:#9a3412; --workflow-surface:#fff7ed; --workflow-border:#fed7aa; }

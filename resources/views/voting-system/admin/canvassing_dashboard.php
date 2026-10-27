@@ -23,33 +23,6 @@
             ?: strcmp((string) $left['college'], (string) $right['college']);
     });
 
-    $leadingPositions = array_slice(array_map(static function (array $position): array {
-        if (!empty($position['abstain_leads'])) {
-            return [
-                'title' => display_position_title($position['title'] ?? 'Position'),
-                'leader' => 'No elected - Abstain leads',
-                'party' => '',
-                'votes' => (int) ($position['abstain_count'] ?? 0),
-            ];
-        }
-
-        $candidates = array_values(array_filter($position['candidates'] ?? [], static function (array $candidate): bool {
-            return empty($candidate['is_abstain']);
-        }));
-        usort($candidates, static function (array $left, array $right): int {
-            return ((int) ($right['vote_count'] ?? 0) <=> (int) ($left['vote_count'] ?? 0))
-                ?: strcmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
-        });
-
-        $leader = $candidates[0] ?? null;
-
-        return [
-            'title' => display_position_title($position['title'] ?? 'Position'),
-            'leader' => $leader['name'] ?? 'No votes yet',
-            'party' => (string) ($leader['party'] ?? ''),
-            'votes' => (int) ($leader['vote_count'] ?? 0),
-        ];
-    }, $results), 0, 5);
 ?>
 
 <div class="main-header-area canvassing-dashboard-hero">
@@ -98,10 +71,6 @@
             <a href="<?= e(voting_url($reportsPath)) ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span>Prepare printable election summary</span>
-            </a>
-            <a href="#latest-submissions">
-                <i class="bi bi-clock-history"></i>
-                <span>Check latest ballot submissions</span>
             </a>
         </div>
     </section>
@@ -196,6 +165,12 @@
         <?php endforeach; ?>
     </div>
 </section>
+
+<?php
+    $tallyId = 'canvassing-results';
+    $tallyAction = null;
+    require __DIR__ . '/../partials/tally.php';
+?>
 
 <section class="admin-panel college-count-panel program-count-panel program-count-panel--plain">
     <div class="panel-heading">
@@ -301,38 +276,6 @@
                 </div>
                 <div class="college-row-progress">
                     <div class="progress-fill" style="width: <?= e($row['turnout_rate']) ?>%"></div>
-                </div>
-            </article>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<section class="dashboard-activity-panel" id="latest-submissions">
-    <div class="panel-heading">
-        <div>
-            <p class="eyebrow">Latest Submissions</p>
-            <h2>Recent Ballot Receipts</h2>
-        </div>
-        <span class="dashboard-soft-pill"><?= e(count($recentVotes)) ?> latest</span>
-    </div>
-
-    <div class="activity-list">
-        <?php if (empty($recentVotes)): ?>
-            <article class="activity-item">
-                <span class="activity-dot is-muted"></span>
-                <div>
-                    <strong>No ballots submitted yet</strong>
-                    <small>Recent voter submissions will appear here.</small>
-                </div>
-            </article>
-        <?php endif; ?>
-
-        <?php foreach ($recentVotes as $voter): ?>
-            <article class="activity-item">
-                <span class="activity-dot"></span>
-                <div>
-                    <strong><?= e($voter['full_name']) ?> submitted a ballot</strong>
-                    <small><?= e(college_abbreviation($voter['college'])) ?> &middot; <?= e($voter['voted_at']) ?></small>
                 </div>
             </article>
         <?php endforeach; ?>

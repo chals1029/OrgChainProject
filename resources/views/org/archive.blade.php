@@ -3,7 +3,7 @@
 @php
     $canCreateSubfolder = $currentFolder && !($currentFolder->is_activity ?? false);
     $hasUploadFolders = $allSavedFolders->isNotEmpty();
-    $showOrganizationArchives = !$currentFolder && $assignedArchiveOrganization === null;
+    $showOrganizationArchives = $assignedArchiveOrganization === null;
     $archiveQuery = [
         'year' => $archiveFilters['year'],
         'scope' => $archiveFilters['scope'],
@@ -26,6 +26,7 @@
 @endsection
 
 @section('actions')
+    @if ($assignedArchiveOrganization !== null)
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="openNewFolderModal()">
             <i class="bi bi-folder-plus"></i> {{ $canCreateSubfolder ? 'New Subfolder' : 'New Folder' }}
@@ -34,6 +35,7 @@
             <i class="bi bi-cloud-upload-fill"></i> Upload Document
         </button>
     </div>
+    @endif
 @endsection
 
 @section('content')
@@ -910,11 +912,7 @@
 
     @include('org.partials.archive-organizations')
 
-    @if (!$selectedArchiveOrganization)
-        @if ($showOrganizationArchives)
-            <details class="archive-legacy">
-                <summary><i class="bi bi-folder"></i> Folders &amp; preserved files</summary>
-        @endif
+    @if ($assignedArchiveOrganization !== null && !$selectedArchiveOrganization)
 
     {{-- 2. Google Drive Breadcrumbs & Controls Toolbar --}}
     <div class="gdrive-nav-panel">
@@ -1183,9 +1181,6 @@
             </div>
         @endif
     </main>
-        @if ($showOrganizationArchives)
-            </details>
-        @endif
     @endif
 
     {{-- Modal 1: Create New Folder / Subfolder --}}

@@ -1280,9 +1280,7 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="org-status-pill org-status-{{ $row['status_style'] }}">
-                                    <span class="org-status-dot"></span> {{ $row['status'] }}
-                                </span>
+                                @include('org.partials.workflow-status', ['status' => $row['status_key'], 'label' => $row['status']])
                             </td>
                         </tr>
                     @endforeach
