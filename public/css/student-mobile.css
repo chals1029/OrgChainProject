@@ -1,0 +1,477 @@
+/* Student portal phone and tablet layout. Desktop keeps the main application styles. */
+.sp-sidebar-close {
+    display: none;
+}
+
+@media (max-width: 992px) {
+    .portal-body .sp-shell {
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        min-width: 0;
+        gap: 0;
+        padding: 0.65rem;
+    }
+
+    .portal-body .sp-main,
+    .portal-body .sp-content,
+    .portal-body .portal-panel {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .portal-body .sp-main {
+        padding: 0;
+        overflow: visible;
+    }
+
+    .portal-body .sp-content {
+        overflow: visible;
+        padding: 0 0 1.5rem;
+    }
+
+    .portal-body .portal-panel.is-active {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .portal-body .sp-sidebar {
+        box-sizing: border-box;
+        width: min(19rem, calc(100vw - 2.5rem));
+        max-width: none;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .portal-body .sp-brand-text {
+        flex: 1 1 auto;
+    }
+
+    .portal-body .sp-sidebar-close {
+        display: grid;
+        flex: 0 0 40px;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid rgba(155, 27, 48, 0.14);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--color-bsu-red);
+        cursor: pointer;
+    }
+
+    .portal-body .sp-sidebar-close:focus-visible {
+        outline: 2px solid var(--color-bsu-red);
+        outline-offset: 2px;
+    }
+
+    .portal-body .sp-nav {
+        flex: 0 0 auto;
+        overflow: visible;
+    }
+
+    .portal-body .sp-nav-link {
+        min-height: 44px;
+    }
+
+    .portal-body .sp-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 45;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) repeat(3, 44px);
+        align-items: center;
+        gap: 0.25rem;
+        margin: -0.65rem -0.65rem 0.8rem;
+        padding: max(0.5rem, env(safe-area-inset-top)) 0.65rem 0.5rem;
+        border-bottom: 1px solid rgba(155, 27, 48, 0.1);
+        background: rgba(250, 246, 247, 0.97);
+    }
+
+    .portal-body .sp-menu-toggle {
+        grid-column: 1;
+        grid-row: 1;
+        width: 44px;
+        height: 44px;
+    }
+
+    .portal-body .sp-topbar-title {
+        grid-column: 2;
+        grid-row: 1;
+        display: block;
+        min-width: 0;
+        padding-left: 0.15rem;
+    }
+
+    .portal-body .sp-page-title {
+        overflow: visible;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        font-size: 1.2rem;
+        line-height: 1.15;
+    }
+
+    .portal-body .sp-module-kicker {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.55rem;
+        line-height: 1.25;
+    }
+
+    .portal-body .sp-module-kicker::before {
+        display: none;
+    }
+
+    .portal-body .sp-top-actions {
+        display: contents;
+    }
+
+    .portal-body .sp-top-menu-wrap:nth-of-type(1) {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    .portal-body .sp-top-menu-wrap:nth-of-type(2) {
+        grid-column: 4;
+        grid-row: 1;
+    }
+
+    .portal-body .sp-user-menu-wrap {
+        grid-column: 5;
+        grid-row: 1;
+    }
+
+    .portal-body .sp-settings-btn,
+    .portal-body .sp-bell-btn,
+    .portal-body .sp-user-pill {
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+    }
+
+    .portal-body .sp-user-name,
+    .portal-body .sp-user-pill i.bi-chevron-down {
+        display: none;
+    }
+
+    .portal-body[data-portal-tab="community"] #spTopSearchBox {
+        display: flex !important;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        margin: 0.2rem 0 0;
+    }
+
+    .portal-body #spTopSearchBox input {
+        flex: 1 1 auto;
+        width: 0;
+        min-width: 0;
+        font-size: 1rem;
+    }
+
+    .portal-body .sp-top-dropdown {
+        position: fixed;
+        top: calc(max(0.5rem, env(safe-area-inset-top)) + 3.5rem);
+        right: 0.65rem;
+        left: 0.65rem;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .portal-body .sp-user-dropdown {
+        max-width: calc(100vw - 1.3rem);
+    }
+
+    .portal-body .sp-announcements-nav-bar,
+    .portal-body .sp-announcements-table-card,
+    .portal-body .sp-announcements-filter-bar,
+    .portal-body .sp-ann-filter-group,
+    .portal-body .sp-table-responsive {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .portal-body .sp-announcements-nav-bar {
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    .portal-body .sp-announcements-tabs {
+        flex: 0 0 auto;
+        gap: 1rem;
+    }
+
+    .portal-body .sp-announcements-tab-btn {
+        min-height: 44px;
+    }
+
+    .portal-body .sp-ann-search-wrap,
+    .portal-body .sp-ann-select,
+    .portal-body .sp-ann-search-wrap input {
+        box-sizing: border-box;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .portal-body .sp-ann-search-wrap input,
+    .portal-body .sp-ann-select {
+        min-height: 44px;
+        font-size: 1rem;
+    }
+
+    .portal-body .sp-modal-box,
+    .portal-body .sp-modal-content {
+        max-width: calc(100vw - 1.5rem);
+        max-height: calc(100dvh - 1.5rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+@media (max-width: 640px) {
+    .portal-body .sp-hero {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .portal-body .sp-hero h2 {
+        overflow-wrap: anywhere;
+    }
+
+    .portal-body input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    .portal-body select,
+    .portal-body textarea,
+    .portal-body .sv-form select,
+    .portal-body .sv-form textarea {
+        font-size: 1rem;
+    }
+
+    .portal-body[data-portal-tab="tosa"] .sp-content {
+        padding: 0 0 1.5rem;
+    }
+
+    .portal-body [data-panel="tosa"] .sp-tosa-section-summary {
+        min-height: 52px;
+    }
+
+    .portal-body [data-panel="tosa"] .sp-tosa-control {
+        min-height: 42px;
+    }
+
+    .portal-body [data-panel="tosa"] .sp-tosa-selection {
+        box-sizing: border-box;
+        max-width: 100%;
+    }
+
+    .portal-body .sp-hero-side {
+        justify-items: center;
+    }
+
+    .portal-body .sp-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+    }
+
+    .portal-body .sp-stat-card {
+        min-width: 0;
+        padding: 0.85rem;
+        border-radius: 16px;
+    }
+
+    .portal-body .sp-stat-card strong,
+    .portal-body .sp-stat-card span,
+    .portal-body .sp-stat-card small {
+        overflow-wrap: anywhere;
+    }
+
+    .portal-body .sp-section-head,
+    .portal-body .sp-chart-card-head {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .portal-body .sp-gauge-vert-item {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .portal-body .sp-act-list-view {
+        min-width: 0;
+        padding: 0.85rem;
+    }
+
+    .portal-body .sp-act-list-view .sp-table-responsive {
+        overflow-x: visible;
+    }
+
+    .portal-body .sp-act-full-table,
+    .portal-body .sp-act-full-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .portal-body .sp-act-full-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .portal-body .sp-act-full-table tr[data-act-item] {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "info info" "date status" "location location" "participants budget" "action action";
+        gap: 0.6rem;
+        padding: 0.9rem;
+        border: 1px solid rgba(155, 27, 48, 0.12);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .portal-body .sp-act-full-table tr[data-act-item] + tr[data-act-item] {
+        margin-top: 0.65rem;
+    }
+
+    .portal-body .sp-act-full-table tr[data-act-item] td {
+        display: block;
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .portal-body .sp-act-full-table .sp-col-info { grid-area: info; }
+    .portal-body .sp-act-full-table .sp-col-date { grid-area: date; }
+    .portal-body .sp-act-full-table .sp-col-status { grid-area: status; }
+    .portal-body .sp-act-full-table .sp-col-loc { grid-area: location; }
+    .portal-body .sp-act-full-table .sp-col-part { grid-area: participants; }
+    .portal-body .sp-act-full-table .sp-col-budget { grid-area: budget; }
+    .portal-body .sp-act-full-table .sp-col-action { grid-area: action; text-align: right; }
+
+    .portal-body .sp-act-list-action-btn {
+        min-height: 40px;
+    }
+
+    .portal-body .sp-announcements-table-card {
+        gap: 0.8rem;
+    }
+
+    .portal-body .sp-announcements-filter-bar,
+    .portal-body .sp-ann-filter-group {
+        flex-wrap: nowrap;
+    }
+
+    .portal-body .sp-ann-filter-group {
+        flex: 0 0 auto;
+    }
+
+    .portal-body .sp-ann-search-wrap,
+    .portal-body .sp-ann-select {
+        flex: none;
+        width: 100%;
+    }
+
+    .portal-body .sp-announcements-table,
+    .portal-body .sp-announcements-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .portal-body .sp-announcements-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .portal-body .sp-announcements-table .sp-announce-tbl-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "category category" "content content" "date author" "priority action";
+        gap: 0.55rem 0.75rem;
+        margin-bottom: 0.65rem;
+        padding: 0.9rem;
+        border: 1px solid rgba(155, 27, 48, 0.12);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .portal-body .sp-announcements-table .sp-announce-tbl-row td {
+        display: block;
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .portal-body .sp-announce-tbl-row .sp-col-category { grid-area: category; }
+    .portal-body .sp-announce-tbl-row .sp-col-priority { grid-area: priority; }
+    .portal-body .sp-announce-tbl-row .sp-col-content { grid-area: content; }
+    .portal-body .sp-announce-tbl-row .sp-col-date { grid-area: date; }
+    .portal-body .sp-announce-tbl-row .sp-col-author { grid-area: author; }
+    .portal-body .sp-announce-tbl-row .sp-col-action { grid-area: action; text-align: right; }
+
+    .portal-body .sp-announce-tbl-row .sp-see-details-btn {
+        min-height: 40px;
+    }
+
+    .portal-body .sp-composer-actions,
+    .portal-body .sp-post-stats,
+    .portal-body .sp-post-actions {
+        flex-wrap: wrap;
+    }
+
+    .portal-body .sp-post-meta,
+    .portal-body .sp-post-linked-activity,
+    .portal-body .sp-feed-title-wrap {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 380px) {
+    .portal-body .sp-topbar {
+        grid-template-columns: 40px minmax(0, 1fr) repeat(3, 40px);
+        column-gap: 0;
+    }
+
+    .portal-body .sp-menu-toggle,
+    .portal-body .sp-settings-btn,
+    .portal-body .sp-bell-btn,
+    .portal-body .sp-user-pill {
+        width: 40px;
+    }
+
+    .portal-body .sp-module-kicker {
+        display: none;
+    }
+
+    .portal-body .sp-page-title {
+        font-size: 0.95rem;
+        overflow-wrap: normal;
+    }
+}

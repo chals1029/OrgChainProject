@@ -19,6 +19,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
     <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/student-mobile.css') }}?v={{ filemtime(public_path('css/student-mobile.css')) }}">
     <style>.sp-sidebar .sp-nav-link span { font-weight:800; } .sp-sidebar .sp-brand-text span { white-space:normal; line-height:1.4; }</style>
     <script src="{{ asset('js/sdg-highlights.js') }}?v={{ filemtime(public_path('js/sdg-highlights.js')) }}" defer></script>
 </head>
@@ -38,6 +39,9 @@
                     <strong>OrgChain</strong>
                     <span>BatStateU Student Portal</span>
                 </div>
+                <button type="button" class="sp-sidebar-close" id="spSidebarClose" aria-label="Close menu">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
             </div>
 
             <div class="sp-profile">
@@ -256,41 +260,71 @@
             const sidebar = document.getElementById('spSidebar');
             const overlay = document.getElementById('spOverlay');
             const menuToggle = document.getElementById('spMenuToggle');
+            const sidebarClose = document.getElementById('spSidebarClose');
+            const spDesktopQuery = window.matchMedia('(min-width: 993px)');
 
-            const closeSidebar = () => {
+            const closeSidebar = (restoreFocus = false) => {
                 if (!sidebar) return;
+                const wasOpen = sidebar.classList.contains('is-open');
+                if (wasOpen && !spDesktopQuery.matches && (restoreFocus || sidebar.contains(document.activeElement))) {
+                    menuToggle?.focus({ preventScroll: true });
+                }
                 sidebar.classList.remove('is-open');
-                if (overlay) overlay.setAttribute('hidden', '');
-                if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+                if (overlay) overlay.hidden = true;
+                if (menuToggle) {
+                    menuToggle.setAttribute('aria-expanded', 'false');
+                    menuToggle.setAttribute('aria-label', 'Open menu');
+                }
+                sidebar.toggleAttribute('inert', !spDesktopQuery.matches);
+                if (spDesktopQuery.matches) sidebar.removeAttribute('aria-hidden');
+                else sidebar.setAttribute('aria-hidden', 'true');
                 document.body.classList.remove('sp-no-scroll');
             };
 
             const openSidebar = () => {
-                if (!sidebar) return;
+                if (!sidebar || spDesktopQuery.matches) return;
+                sidebar.removeAttribute('inert');
+                sidebar.removeAttribute('aria-hidden');
                 sidebar.classList.add('is-open');
-                if (overlay) overlay.removeAttribute('hidden');
-                if (menuToggle) menuToggle.setAttribute('aria-expanded', 'true');
+                if (overlay) overlay.hidden = false;
+                if (menuToggle) {
+                    menuToggle.setAttribute('aria-expanded', 'true');
+                    menuToggle.setAttribute('aria-label', 'Close menu');
+                }
                 document.body.classList.add('sp-no-scroll');
+                sidebarClose?.focus({ preventScroll: true });
             };
 
             menuToggle?.addEventListener('click', () => {
-                if (sidebar?.classList.contains('is-open')) closeSidebar();
+                if (sidebar?.classList.contains('is-open')) closeSidebar(true);
                 else openSidebar();
             });
+            sidebarClose?.addEventListener('click', () => closeSidebar(true));
+            overlay?.addEventListener('click', () => closeSidebar(true));
 
-            overlay?.addEventListener('click', closeSidebar);
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Tab' || !sidebar?.classList.contains('is-open')) return;
+                const focusable = Array.from(sidebar.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+                    .filter((element) => element.getClientRects().length > 0);
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
 
-            /* Same viewport-growth cleanup as the office desk: never leave
-               the mobile drawer open/locked when resizing back to desktop. */
-            const spDesktopQuery = window.matchMedia('(min-width: 901px)');
-            const syncSpSidebarToViewport = (e) => {
-                if (e.matches) closeSidebar();
-            };
+            const syncSpSidebarToViewport = () => closeSidebar();
             if (typeof spDesktopQuery.addEventListener === 'function') {
                 spDesktopQuery.addEventListener('change', syncSpSidebarToViewport);
             } else if (typeof spDesktopQuery.addListener === 'function') {
                 spDesktopQuery.addListener(syncSpSidebarToViewport);
             }
+            syncSpSidebarToViewport();
 
             const switchTab = (tab, push = true) => {
                 if (!['home', 'community', 'activities', 'announcements', 'tosa'].includes(tab)) return;
@@ -1233,7 +1267,7 @@
                     } else if (actModalEl?.classList.contains('is-open')) {
                         closeActModal();
                     } else if (sidebar?.classList.contains('is-open')) {
-                        closeSidebar();
+                        closeSidebar(true);
                     }
                 }
             });
