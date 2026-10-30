@@ -26,7 +26,7 @@ Related: [[Eloquent and Core Models Reference]] Â· [[Database Schema and ERD]] Â
 | `ovcaa` | OVCAA |
 | `oc` | **Office of the Chancellor (OC)**, including final proposal review |
 
-Roles are authorization values on one model, not separate account tables. TOSA clearance is separate: OSO receives level 3; OVCAA defaults to level 1 and is capped at level 2 even if a master label was stored; other roles, including OC, receive no TOSA clearance from `tosaClearanceLevel()`. Scoring additionally requires an active OSO/OVCAA evaluator account. Proposal-review authority does not automatically grant TOSA evaluation authority.
+Roles are authorization values on one model, not separate account tables. OSO verifies TOSA documents; OVCAA may have read-only access. Legacy OVCAA evaluator labels no longer grant editing. Other roles have no TOSA access.
 
 ### Credential revocation and session binding
 

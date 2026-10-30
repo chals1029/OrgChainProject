@@ -254,8 +254,13 @@
                 </div>
                 <div class="ap-rule">
                     <i class="bi bi-info-circle"></i>
-                    <span><strong>Submission rule:</strong> Upload all documents in the selected checklist before submitting. No additional documents are required.</span>
+                    <span><strong>Submission rule:</strong> Complete and upload every required document. Unchanged templates and known unfinished Word placeholders are not accepted; OSO will review the contents and signatures.</span>
                 </div>
+                <label class="ap-rule">
+                    <input type="checkbox" name="documents_complete" value="1" required data-label="Confirm completed documents" @checked(old('documents_complete'))>
+                    <span>I have completed the required documents and checked that they are ready for review.</span>
+                </label>
+                @error('documents_complete') <p class="ap-upload-notice is-error" role="alert">{{ $message }}</p> @enderror
                 <div id="activityUploadNotice" class="ap-upload-notice" role="status" aria-live="polite" hidden></div>
                 @foreach ($requirementSets as $typeKey => $requirements)
                     <div class="ap-requirement-panel" data-requirement-type="{{ $typeKey }}" @if ($currentType !== $typeKey) hidden @endif>

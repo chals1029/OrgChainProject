@@ -6,6 +6,9 @@ use App\Models\OfficeAnnouncement;
 use App\Models\OfficeAnnouncementAcknowledgment;
 use App\Models\OfficeUser;
 use App\Models\StudentFeedback;
+use App\Models\TosaApplicant;
+use App\Models\TosaHistoryEvent;
+use App\Models\TosaShortlist;
 use App\Models\UserAccount;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -338,5 +341,59 @@ class AnnouncementFeedbackTest extends TestCase
         $this->actingAs($this->officer(), 'office')->get(route('office.updates.announcements.attachment', $notice))->assertNotFound();
         Storage::disk('public')->put($notice->attachment_path, '');
         $this->get(route('office.updates.announcements.attachment', ['announcement' => $notice, 'preview' => 1]))->assertNotFound();
+    }
+
+    public function test_tosa_call_from_the_desk_is_published_and_recorded(): void
+    {
+        $office = $this->officer();
+        $body = 'Synthetic TOSA filing instructions.';
+        $this->actingAs($office, 'office')->post(route('office.updates.announcements.store'), [
+            'type' => 'Call for TOSA', 'body' => $body, 'priority' => 'normal',
+            'expires_at' => '2030-05-02T10:00', 'return_to' => 'tosa',
+        ])->assertRedirect(route('office.tosa', ['tab' => 'documents']));
+        $call = OfficeAnnouncement::query()->where('body', $body)->firstOrFail();
+        $this->assertDatabaseHas('tosa_history_events', [
+            'action' => 'call_published', 'actor_id' => $office->id,
+        ], 'mysql');
+        $this->assertSame('tosa', $call->studentPublication()['category']);
+    }
+
+    public function test_students_see_the_top_ten_only_after_publication(): void
+    {
+        $shortlist = TosaShortlist::query()->findOrFail(1);
+        $shortlist->forceFill(['draft_ids' => [9876], 'published_entries' => null, 'published_at' => null])->save();
+        $student = $this->student();
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()->assertDontSee('Published Top 10');
+        $entries = collect(range(1, 10))->map(fn (int $number): array => [
+            'name' => 'Synthetic Top Student '.$number, 'program' => 'Test Program',
+        ])->all();
+        $shortlist->forceFill(['published_entries' => $entries, 'published_at' => now()])->save();
+        $response = $this->get(route('portal.home'))->assertOk()->assertSee('Published Top 10');
+        foreach ($entries as $entry) {
+            $response->assertSee($entry['name']);
+        }
+        $shortlist->forceFill(['published_entries' => null, 'published_at' => null])->save();
+        $this->get(route('portal.home'))->assertOk()->assertDontSee('Published Top 10');
+    }
+
+    public function test_correction_reason_is_visible_only_to_the_owner_while_the_packet_is_returned(): void
+    {
+        $student = $this->student();
+        $other = $this->student();
+        $applicant = TosaApplicant::query()->create([
+            'sr_code' => $student->sr_code, 'full_name' => $student->full_name, 'email' => $student->email,
+            'college' => $student->college, 'program' => $student->program, 'year_level' => $student->year_level,
+            'status' => 'submitted', 'subsection' => 'returned', 'requirements' => [],
+        ]);
+        $reason = 'Add the <candidate> signature & acknowledgment.';
+        TosaHistoryEvent::record('returned', 'office', 1, 'Synthetic OSO', (int) $applicant->id, [
+            'document_key' => 'application_form', 'reason' => $reason,
+        ]);
+
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()
+            ->assertSee('Completed TOSA Application Form')->assertSee($reason)->assertDontSee($reason, false);
+        $this->actingAs($other, 'student')->get(route('portal.home'))->assertOk()->assertDontSee($reason);
+        $applicant->update(['subsection' => 'screening']);
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()->assertDontSee($reason);
     }
 }

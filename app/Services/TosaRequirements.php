@@ -81,9 +81,9 @@ final class TosaRequirements
         'application_form' => [
             'code' => 'B',
             'title' => 'Completed TOSA Application Form',
-            'description' => 'Download TOSA Application Form 2025.docx from the official references, fill it out with the candidate photo and acknowledgement, and obtain the candidate, chairperson and dean signatures. The guide calls this same document the Nomination Application Form. Upload the completed DOCX or signed PDF, not the blank template.',
-            'extensions' => ['pdf', 'docx'],
-            'format' => 'PDF or DOCX',
+            'description' => 'Download TOSA Application Form 2025.docx from the official references, fill it out with the candidate photo and acknowledgement, and obtain the candidate, chairperson and dean signatures. The guide calls this same document the Nomination Application Form. Upload the completed DOCX, not the blank template.',
+            'extensions' => ['docx'],
+            'format' => 'DOCX',
             'icon' => 'file-earmark-word',
             'color' => 'violet',
         ],

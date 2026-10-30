@@ -32,6 +32,8 @@ class TosaApplicant extends Model
         return [
             'requirements' => 'array',
             'score_evaluation' => 'array',
+            'document_review' => 'array',
+            'committee_members' => 'array',
             'gwa' => 'float',
             'gwa_verified' => 'boolean',
         ];
@@ -90,28 +92,4 @@ class TosaApplicant extends Model
         return $file && TosaRequirements::validSubmissionFile($key, $file) ? $file : null;
     }
 
-    public function displayGwa(): string
-    {
-        return $this->gwa !== null ? number_format((float) $this->gwa, 2) : '—';
-    }
-
-    public function honorStanding(): string
-    {
-        if ($this->gwa === null) {
-            return 'Pending Verification';
-        }
-
-        $val = (float) $this->gwa;
-        if ($val <= 1.20) {
-            return "President's Lister · Highest Honors";
-        }
-        if ($val <= 1.45) {
-            return "Dean's Lister · High Honors";
-        }
-        if ($val <= 1.75) {
-            return "Academic Honors · With Honors";
-        }
-
-        return 'Good Academic Standing';
-    }
 }

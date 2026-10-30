@@ -47,7 +47,13 @@ class OfficeUser extends Authenticatable
     protected static function booted(): void
     {
         static::updating(function (OfficeUser $user): void {
-            if ($user->isDirty(['password', 'email', 'is_active']) && ! $user->isDirty('auth_version')) {
+            $clearanceChanged = false;
+            if ($user->office_role === 'ovcaa' && $user->isDirty('tosa_clearance')) {
+                $previous = clone $user;
+                $previous->tosa_clearance = $user->getRawOriginal('tosa_clearance');
+                $clearanceChanged = $previous->tosaClearanceLevel() !== $user->tosaClearanceLevel();
+            }
+            if (($user->isDirty(['password', 'email', 'is_active']) || $clearanceChanged) && ! $user->isDirty('auth_version')) {
                 $user->revokeCredentials();
             }
         });
@@ -119,22 +125,16 @@ class OfficeUser extends Authenticatable
             return 0;
         }
 
-        $level = match ($this->tosa_clearance) {
-            null, '' => 1,
-            'Level 1 Read-only' => 1,
-            'Level 2 Evaluator' => 2,
-            'Level 3 Master' => 3,
+        return match ($this->tosa_clearance) {
+            null, '', 'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master' => 1,
             default => 0,
         };
-
-        return min($level, 2);
     }
 
     public function effectiveTosaClearance(): string
     {
         return match ($this->tosaClearanceLevel()) {
             1 => 'Level 1 Read-only',
-            2 => 'Level 2 Evaluator',
             3 => 'Level 3 Master',
             default => 'No Access',
         };

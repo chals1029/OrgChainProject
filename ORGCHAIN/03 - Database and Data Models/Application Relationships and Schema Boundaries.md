@@ -66,16 +66,16 @@ Feedback author/college fields and registration SR-code/name/year fields are sto
 
 ```mermaid
 flowchart LR
-    USER[orgchain.user_accounts.sr_code] -.->|logical: trimmed SR-code lookup| APP[votingsystem.tosa_applicants.sr_code]
+    USER[orgchain.user_accounts.sr_code] -.->|logical: trimmed SR-code lookup| APP[orgchain.tosa_applicants.sr_code]
 ```
 
 - `StudentPortalController::myTosaApplication()` trims the authenticated student's SR code and selects the **first** matching `TosaApplicant` by `sr_code`.
 - Whole-packet submission re-fetches/locks the `UserAccount` on `orgchain`, then finds/locks the applicant by SR code on `mysql`. It creates an applicant with identity snapshot fields if no applicant exists.
 - There is no `student_id` relationship on `TosaApplicant`, no declared FK for SR code and no unique SR-code index in the exported local `tosa_applicants` definition. This lookup is **not a database-guaranteed one-to-one relationship**, and it is not a per-academic-year join just because applicants store an academic year.
 - Identity fields such as name/email/college are copied on applicant creation, not proof of additional joins.
-- Requirements and evaluator scoring are stored JSON/application state, not additional relationship tables. The local export lacks the newer `score_evaluation` column used by source. See [[Eloquent and Core Models Reference#TOSA stores a packet and evaluator state|packet, revision and scoring semantics]].
+- Requirements and manual document attestations are stored JSON/application state. `tosa_history_events` records new activity and `tosa_shortlists` holds the private draft and published snapshot; the older local schema export predates these additions. Older score metadata may remain stored but is not used for current review.
 
-Evidence: `app/Models/TosaApplicant.php`, `app/Http/Controllers/StudentPortalController.php` (`myTosaApplication`, packet submission), `app/Services/TosaScoringService.php`; exported `tosa_applicants` indexes/columns.
+Evidence: `app/Models/TosaApplicant.php`, `app/Http/Controllers/StudentPortalController.php` (`myTosaApplication`, packet submission), `app/Services/TosaWorkflowService.php`; exported `tosa_applicants` indexes/columns.
 
 ## Activity accomplishments and semester packets
 

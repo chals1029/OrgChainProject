@@ -80,7 +80,7 @@
             <div class="sp-section-head">
                 <div>
                     <h2><i class="bi bi-wallet2"></i> Budget Utilization</h2>
-                    <p>Transparent org funds for FY {{ $budgetItems->first()->fiscal_year ?? '2026' }} — sealed on OrgChain’s 3-node budget ledger.</p>
+                    <p>Approved activity allocations and spending across your college. Organization cash is shown separately below.</p>
                 </div>
             </div>
 
@@ -185,6 +185,30 @@
                         @endforelse
                     </div>
                 </div>
+            </div>
+
+            <div class="sp-budget-chart-card liquid-glass" style="margin-top:1rem;">
+                <div class="sp-chart-card-head">
+                    <h3><i class="bi bi-wallet2"></i> Organization Cash</h3>
+                    <span class="sp-chart-count">A.Y. {{ $organizationCashYear }}</span>
+                </div>
+                <p style="margin:0 0 1rem;font-size:.82rem;color:#6b6468;">The same recorded cash shown to each active organization in your college. Cash includes funds not yet allocated to activities.</p>
+                @forelse ($organizationCash as $cash)
+                    <article style="padding:.8rem 0;border-top:1px solid #f0e6e8;">
+                        <strong style="display:block;overflow-wrap:anywhere;">{{ $cash['name'] }}</strong>
+                        @if ($cash['has_account'])
+                            <dl style="display:flex;flex-wrap:wrap;gap:.8rem;margin:.7rem 0 0;">
+                                <div style="flex:1 1 8rem;min-width:0;"><dt>Total funds</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['total'], 2) }}</dd></div>
+                                <div style="flex:1 1 8rem;min-width:0;"><dt>Utilized ({{ $cash['percent'] }}%)</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['spent'], 2) }}</dd></div>
+                                <div style="flex:1 1 8rem;min-width:0;"><dt>Recorded cash ({{ $cash['cash_percent'] }}%)</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['cash'], 2) }}</dd></div>
+                            </dl>
+                        @else
+                            <p class="sp-empty-sm">No cash account recorded for this academic year.</p>
+                        @endif
+                    </article>
+                @empty
+                    <p class="sp-empty-sm">No active organization cash accounts are available for your college.</p>
+                @endforelse
             </div>
 
             @php
@@ -1139,6 +1163,35 @@
                 </div>
             @endif
 
+            @unless ($tosaLocked)
+                <div class="sp-tosa-card" role="status">
+                    @if ($tosaRevision)
+                        OSO requested a revision. You may resubmit even if the call has closed.
+                    @elseif ($tosaCall)
+                        The Call for TOSA is open. <a href="{{ $tosaCall['url'] }}">View the call and requirements</a>.
+                    @else
+                        New applications open when OSO publishes a Call for TOSA. You may prepare your files in the meantime.
+                    @endif
+                </div>
+            @endunless
+
+            @if (is_array($tosaPublished) && count($tosaPublished) === 10)
+                <details class="sp-tosa-card sp-tosa-accordion" open aria-labelledby="tosaPublishedHeading">
+                    <summary class="sp-tosa-section-summary">
+                        <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
+                        <span class="sp-tosa-section-copy"><strong id="tosaPublishedHeading" class="sp-tosa-section-heading">Published Top 10</strong></span>
+                        <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
+                    </summary>
+                    <div class="sp-tosa-section-body">
+                        <ul>
+                            @foreach ($tosaPublished as $entry)
+                                <li><strong>{{ $entry['name'] }}</strong>@if (!empty($entry['program'])) · {{ $entry['program'] }}@endif</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </details>
+            @endif
+
             @php
                 $tosaMasterForm = collect($tosaReferences)->firstWhere('key', 'application_form');
                 $tosaOtherReferences = collect($tosaReferences)->reject(fn ($reference) => $reference['key'] === 'application_form');
@@ -1187,19 +1240,17 @@
                 <summary class="sp-tosa-section-summary">
                     <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
                     <span class="sp-tosa-section-copy">
-                        <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'Revision' : ($tosaApplicant ? ucfirst($tosaApplicant->status) : 'Not started') }}</span></span>
-                        <small>{{ $tosaApplicant ? 'Review stage: '.($tosaApplicant->subsection === 'returned' ? 'Revision' : ucfirst($tosaApplicant->subsection)).'.' : 'Choose your completed files to start your application.' }}</small>
+                        <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'For correction' : ($tosaVerified ? 'Verified' : ($tosaApplicant?->status === 'submitted' ? 'Submitted' : 'Not submitted')) }}</span></span>
+                        <small>{{ $tosaRevision ? 'Correct and resubmit your documents.' : ($tosaVerified ? 'OSO has checked your documents.' : ($tosaApplicant?->status === 'submitted' ? 'Waiting for OSO to check your documents.' : 'Upload the required documents.')) }}</small>
                     </span>
                     <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
                 </summary>
                 <div class="sp-tosa-section-body">
-                @if ($tosaApplicant)
-                    <p>Review stage: {{ $tosaApplicant->subsection === 'returned' ? 'Revision' : ucfirst($tosaApplicant->subsection) }}.</p>
-                    @if ($tosaApplicant->remarks)
-                        <p>Reviewer remarks: {{ $tosaApplicant->remarks }}</p>
-                    @endif
-                @endif
                 <p>{{ $tosaLocked ? 'Only an OSO Revision request allows changes.' : ($tosaRevision ? 'Update the requested files, then Resubmit for Review.' : 'Choose files, then Submit for Review. Files are saved together.') }}</p>
+                @if ($tosaRevision && is_array($tosaCorrection) && !empty($tosaCorrection['reason']))
+                    <p><strong>Document:</strong> {{ \App\Services\TosaRequirements::SUBMISSIONS[$tosaCorrection['document_key'] ?? '']['title'] ?? 'TOSA document' }}</p>
+                    <p><strong>OSO's reason:</strong> {{ $tosaCorrection['reason'] }}</p>
+                @endif
                 </div>
             </details>
 
@@ -1208,8 +1259,8 @@
                 <summary class="sp-tosa-section-summary">
                     <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-book"></i></span>
                     <span class="sp-tosa-section-copy">
-                        <span class="sp-tosa-section-heading"><strong id="tosaReferencesTitle">Preparation guides &amp; workbook</strong><span class="sp-tosa-section-badge">{{ $tosaOtherReferences->count() }} references</span></span>
-                        <small>Official guides and the reference workbook—not required uploads.</small>
+                        <span class="sp-tosa-section-heading"><strong id="tosaReferencesTitle">TOSA guides</strong><span class="sp-tosa-section-badge">{{ $tosaOtherReferences->count() }} references</span></span>
+                        <small>Official guides and forms.</small>
                     </span>
                     <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
                 </summary>
@@ -1223,9 +1274,7 @@
                             </div>
                             <div class="sp-tosa-document-links">
                                 @if ($reference['available'])
-                                    @if ($reference['key'] === 'computation')
-                                        <a href="{{ route('portal.tosa.workbook.reference') }}" class="sp-tosa-control app-view-action" target="_blank" rel="noopener" aria-label="View computation reference workbook"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
-                                    @elseif ($reference['can_preview'])
+                                    @if ($reference['can_preview'])
                                         <a href="{{ $reference['preview_url'] }}" class="sp-tosa-control app-view-action" aria-label="View {{ $reference['name'] }}" data-document-preview
                                            data-document-preview-url="{{ $reference['preview_url'] }}" data-document-preview-title="{{ $reference['name'] }}"
                                            data-document-preview-type="{{ strtolower($reference['preview_format']) }}" data-document-preview-download="{{ $reference['download_url'] }}">
@@ -1328,16 +1377,16 @@
             @else
             <div class="sp-tosa-card sp-tosa-submit-banner">
                 <div>
-                    <strong id="tosaSubmitStatus">{{ $tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit') }}</strong>
-                    <p id="tosaSubmitHelp" aria-live="polite">Submit the complete packet for OSO review. Your application locks after submission.</p>
+                    <strong id="tosaSubmitStatus">{{ ! $tosaSubmissionOpen ? 'Waiting for a Call for TOSA' : ($tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit')) }}</strong>
+                    <p id="tosaSubmitHelp" aria-live="polite">{{ $tosaSubmissionOpen ? 'Submit the complete packet for OSO review. Your application locks after submission.' : 'New applications open when OSO publishes a Call for TOSA.' }}</p>
                 </div>
-                    <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-confirm="manual" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}" data-confirm-message="Submit your complete A–G packet for OSO review? All files will be saved together and locked. Changes are allowed only if OSO requests Revision.">
+                    <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-confirm="manual" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}" data-tosa-open="{{ $tosaSubmissionOpen ? '1' : '0' }}" data-confirm-message="Submit your complete A–G packet for OSO review? All files will be saved together and locked. Changes are allowed only if OSO requests Revision.">
                         @csrf
-                        <span data-tosa-submit-wrapper tabindex="{{ $tosaComplete ? '-1' : '0' }}" aria-label="Submission requirements" aria-describedby="tosaSubmitTooltip">
-                        <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete)>
+                        <span data-tosa-submit-wrapper tabindex="{{ $tosaComplete && $tosaSubmissionOpen ? '-1' : '0' }}" aria-label="Submission requirements" aria-describedby="tosaSubmitTooltip">
+                        <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete || !$tosaSubmissionOpen)>
                             <i class="bi bi-send-check" aria-hidden="true"></i> {{ $tosaRevision ? 'Resubmit for Review' : 'Submit for Review' }}
                         </button>
-                        <span id="tosaSubmitTooltip" class="sp-tosa-submit-tooltip" role="tooltip" @if ($tosaComplete) hidden @endif>Complete the required A–G files before submitting.</span>
+                        <span id="tosaSubmitTooltip" class="sp-tosa-submit-tooltip" role="tooltip" @if ($tosaComplete && $tosaSubmissionOpen) hidden @endif>{{ $tosaSubmissionOpen ? 'Complete the required A–G files before submitting.' : 'New applications open when OSO publishes a Call for TOSA.' }}</span>
                         </span>
                     </form>
             </div>

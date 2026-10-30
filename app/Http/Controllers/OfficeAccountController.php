@@ -121,7 +121,7 @@ class OfficeAccountController extends Controller
             'student_organization_id' => [Rule::requiredIf($request->input('office_role') === 'so'), 'nullable', 'integer', Rule::exists('student_organizations', 'id')],
             'tosa_clearance' => ['required', Rule::in(self::CLEARANCES)],
         ], function (array $data): JsonResponse {
-            $maximum = match ($data['office_role']) { 'oso' => 3, 'ovcaa' => 2, default => 0 };
+            $maximum = match ($data['office_role']) { 'oso' => 3, 'ovcaa' => 1, default => 0 };
             if (array_search($data['tosa_clearance'], self::CLEARANCES, true) > $maximum) {
                 throw ValidationException::withMessages(['tosa_clearance' => 'Select a clearance supported by this office role.']);
             }
@@ -140,9 +140,12 @@ class OfficeAccountController extends Controller
     {
         return $this->perform($request, $this->identityRules($user) + [
             'office_role' => ['prohibited'], 'student_organization_id' => ['prohibited'],
-            'password' => ['prohibited'], 'tosa_clearance' => ['prohibited'],
+            'password' => ['prohibited'], 'tosa_clearance' => ['sometimes', Rule::in(['No Access', 'Level 1 Read-only'])],
         ], function (array $data, OfficeUser $actor) use ($user): JsonResponse {
             $target = $this->target($user, $actor);
+            if (array_key_exists('tosa_clearance', $data) && $target->office_role !== 'ovcaa') {
+                throw ValidationException::withMessages(['tosa_clearance' => 'Only OVCAA accounts can change TOSA clearance.']);
+            }
             $target->update($data);
 
             return response()->json(['ok' => true, 'message' => 'Account details saved.', 'user' => $target->accountMetadata()]);

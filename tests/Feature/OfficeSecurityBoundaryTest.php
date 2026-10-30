@@ -352,7 +352,7 @@ class OfficeSecurityBoundaryTest extends TestCase
             $this->get($url)->assertNotFound();
             $this->get($url.'?download=1')->assertNotFound();
             $this->postJson(route('office.tosa.subsection', $applicant), [
-                'subsection' => 'accepted', 'gwa' => 1.00, 'gwa_verified' => true,
+                'subsection' => 'returned',
             ])->assertNotFound();
             $this->assertSame($status, $applicant->refresh()->status);
             $this->assertSame('pending', $applicant->subsection);
@@ -373,11 +373,14 @@ class OfficeSecurityBoundaryTest extends TestCase
         $ovcaa = $this->officer('ovcaa');
         foreach (['Level 1 Read-only', 'Level 2 Evaluator'] as $clearance) {
             $ovcaa->update(['tosa_clearance' => $clearance]);
-            $response = $this->actingAs($ovcaa, 'office')->get($url)->assertOk();
+            $session = ['office_auth_state' => ['id' => $ovcaa->id, 'version' => (int) $ovcaa->auth_version]];
+            $response = $this->actingAs($ovcaa, 'office')->withSession($session)->get($url)->assertOk();
             $this->assertSame($bytes, file_get_contents($response->baseResponse->getFile()->getPathname()));
         }
         $ovcaa->update(['tosa_clearance' => 'No Access']);
-        $this->get($url)->assertForbidden();
+        $this->get($url)->assertRedirect(route('office.login'));
+        $session = ['office_auth_state' => ['id' => $ovcaa->id, 'version' => (int) $ovcaa->auth_version]];
+        $this->actingAs($ovcaa, 'office')->withSession($session)->get($url)->assertForbidden();
         foreach (['so', 'sdo', 'oc'] as $role) {
             $organization = $role === 'so' ? $this->organization() : null;
             $this->actingAs($this->officer($role, $organization), 'office')->get($url)->assertForbidden();

@@ -121,6 +121,74 @@ class ActivityChecklistSubmissionTest extends TestCase
         $this->assertSame('sdo_review', $activity->refresh()->workflow_status);
     }
 
+    public function test_blank_or_partially_completed_word_templates_cannot_be_submitted(): void
+    {
+        $title = 'Completed Documents '.Str::uuid();
+        $payload = $this->payload('in_campus', $title);
+        $files = $this->checklistFiles(array_keys(self::documentChecklists()['in-campus'][1]));
+        $this->actingAs($this->offices['so'], 'office');
+
+        $withoutConfirmation = $payload;
+        unset($withoutConfirmation['documents_complete']);
+        $this->post(route('office.activities.store'), $withoutConfirmation + ['attachments' => $files])
+            ->assertSessionHasErrors('documents_complete');
+        $this->assertNothingSaved($title);
+
+        $template = base_path('In Campus/3. Project Proposal.docx');
+        $files['project_proposal'] = UploadedFile::fake()->createWithContent('proposal.docx', file_get_contents($template));
+        $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+            ->assertSessionHasErrors('attachments.project_proposal');
+        $this->assertNothingSaved($title);
+
+        $temp = tempnam(sys_get_temp_dir(), 'activity-docx-');
+        try {
+            copy($template, $temp);
+            $zip = new \ZipArchive();
+            $this->assertTrue($zip->open($temp) === true);
+            $xml = $zip->getFromName('word/document.xml');
+            $zip->addFromString('word/document.xml', preg_replace('/(<w:t(?:\s[^>]*)?>).*?(<\/w:t>)/s', '$1$2', $xml));
+            $media = [];
+            for ($index = 0; $index < $zip->numFiles; $index++) {
+                $name = $zip->getNameIndex($index);
+                if (str_starts_with($name, 'word/media/')) $media[] = $name;
+            }
+            foreach ($media as $name) $zip->deleteName($name);
+            $zip->close();
+            $files['project_proposal'] = UploadedFile::fake()->createWithContent('empty.docx', file_get_contents($temp));
+            $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+                ->assertSessionHasErrors(['attachments.project_proposal' => 'This Word document is empty. Upload a completed document.']);
+            $this->assertNothingSaved($title);
+
+            copy($template, $temp);
+            $this->assertTrue($zip->open($temp) === true);
+            $xml = $zip->getFromName('word/document.xml');
+            $this->assertIsString($xml);
+            $zip->addFromString('word/document.xml', preg_replace('/Insert Text Here/', 'Completed section', $xml, 1));
+            $zip->close();
+            $files['project_proposal'] = UploadedFile::fake()->createWithContent('partly-completed.docx', file_get_contents($temp));
+            $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+                ->assertSessionHasErrors('attachments.project_proposal');
+            $this->assertNothingSaved($title);
+            $files['project_proposal'] = UploadedFile::fake()->createWithContent('partly-completed.pdf', file_get_contents($temp));
+            $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+                ->assertSessionHasErrors('attachments.project_proposal');
+            $this->assertNothingSaved($title);
+
+            $this->assertTrue($zip->open($temp) === true);
+            $xml = $zip->getFromName('word/document.xml');
+            $zip->addFromString('word/document.xml', str_replace('Insert Text Here', 'Completed section', $xml));
+            $zip->close();
+            $files['project_proposal'] = UploadedFile::fake()->createWithContent('completed-proposal.docx', file_get_contents($temp));
+            $this->post(route('office.activities.store'), $payload + ['attachments' => $files])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertSame('oso_review', OrgActivity::where('title', $title)->sole()->workflow_status);
+        } finally {
+            if (is_file($temp)) {
+                unlink($temp);
+            }
+        }
+    }
+
     #[DataProvider('documentChecklists')]
     public function test_draft_or_missing_submission_intent_is_rejected_without_writes(string $type, array $documents): void
     {
@@ -384,6 +452,7 @@ class ActivityChecklistSubmissionTest extends TestCase
         $this->planFiles = Storage::disk('local')->allFiles();
         return [
             'submission_action' => 'submit',
+            'documents_complete' => '1',
             'activity_type' => $type,
             'plan_activity_key' => $plan['options'][0]['key'],
             'location' => 'Campus',

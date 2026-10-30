@@ -53,7 +53,7 @@
     </style>
 
     <div class="office-review-kpis" aria-label="Student feedback totals">
-        @foreach ([['total', 'Total reports', 'chat-square-text', 'All submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['dismissed', 'Dismissed', 'archive', 'Dismissed by OSO']] as [$key, $label, $icon, $hint])
+        @foreach ([['total', 'Total reports', 'chat-square-text', 'Matching submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['dismissed', 'Dismissed', 'archive', 'Dismissed by OSO']] as [$key, $label, $icon, $hint])
             <article class="office-review-kpi"><span class="office-review-kpi-icon"><i class="bi bi-{{ $icon }}" aria-hidden="true"></i></span><strong class="office-review-kpi-value">{{ $stats[$key] ?? 0 }}</strong><span class="office-review-kpi-label">{{ $label }}</span><p class="office-review-kpi-hint">{{ $hint }}</p></article>
         @endforeach
     </div>
@@ -80,7 +80,7 @@
                         data-report-status="{{ $report->status }}" data-report-note="{{ $report->review_note ?: '' }}"
                         data-report-reviewed="{{ $report->status === 'verified' ? 'Acknowledged'.($report->verified_at ? ' · '.$report->verified_at->format('M j, Y · g:i A') : ' · Review time not recorded') : ($report->status === 'dismissed' ? 'Dismissed' : 'Awaiting an OSO decision') }}"
                         data-review-url="{{ route('office.student-reports.review', $report) }}" onclick="openStudentReportDetails(this)">
-                        <div><strong>{{ $report->is_anonymous ? 'Anonymous' : ($report->author_name ?: 'Student') }}</strong><small>{{ $report->college ?: 'Unassigned college' }} · {{ ucfirst($report->topic) }}</small></div>
+                        <div><strong>{{ $report->is_anonymous ? 'Anonymous' : ($report->author_name ?: 'Student') }}</strong><small>Report #{{ $report->id }} · {{ $report->college ?: 'Unassigned college' }} · {{ ucfirst($report->topic) }}</small></div>
                         <span class="sr-pill {{ $report->status }}">{{ $report->status === 'verified' ? 'Acknowledged' : ucfirst($report->status) }}</span>
                         <p class="sr-queue-snippet">{{ \Illuminate\Support\Str::limit($report->body, 130) }}</p>
                         <div class="sr-queue-tail"><small>{{ $report->created_at?->format('M j, Y · g:i A') }}</small><span class="app-view-action"><i class="bi bi-eye" aria-hidden="true"></i> View</span></div>

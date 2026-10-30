@@ -20,7 +20,6 @@
     const extensions = new Set(fileInput.accept.split(',').map(value => value.trim().toLowerCase()));
     const maxBytes = Number(fileInput.dataset.maxSize) * 1024;
     let expiryTimer;
-    let attachmentError = '';
 
     function refresh() {
         clearTimeout(expiryTimer);
@@ -35,31 +34,31 @@
 
         let file = fileInput.files[0];
         if (file) {
-            attachmentError = file.size === 0
-                ? 'The attachment is empty and was removed. Choose a non-empty file or clear the attachment.'
+            const error = file.size === 0
+                ? 'The attachment is empty and cannot be uploaded. Choose a non-empty file.'
                 : file.size > maxBytes
-                    ? 'The attachment exceeds 15 MB and was removed. Choose a smaller file or clear the attachment.'
+                    ? 'The attachment exceeds the 15 MB limit and cannot be uploaded. Choose a smaller file.'
                     : !extensions.has(`.${file.name.split('.').pop().toLowerCase()}`)
-                        ? 'Unsupported attachment removed. Choose a PDF, Word, Excel or supported image file.' : '';
-            if (attachmentError) {
+                        ? 'This file type cannot be uploaded. Choose a PDF, Word, Excel or supported image file.' : '';
+            if (error) {
                 fileInput.value = '';
                 file = null;
+                window.alert(error);
             }
         }
         document.getElementById('attachedFileName').textContent = file?.name || '';
         document.getElementById('attachedFileSize').textContent = file ? `(${window.formatBytes(file.size)})` : '';
         document.getElementById('attachedFileContainer').style.display = file ? 'block' : 'none';
         document.getElementById('attachButtonLabel').textContent = file ? 'Replace File' : 'Attach Supporting File';
-        fileInput.setCustomValidity(attachmentError);
-        fileInput.dataset.uploadInvalid = attachmentError ? 'true' : 'false';
-        fileStatus.textContent = attachmentError || (file ? 'Attachment selected. It will upload only when published.' : 'Optional attachment.');
-        fileStatus.classList.toggle('is-error', Boolean(attachmentError));
+        fileInput.setCustomValidity('');
+        fileInput.dataset.uploadInvalid = 'false';
+        fileStatus.textContent = file ? 'Attachment selected. It will upload only when published.' : 'Optional attachment.';
+        fileStatus.classList.remove('is-error');
         fileStatus.classList.toggle('is-selected', Boolean(file));
-        document.getElementById('announcementClearAttachment').hidden = !attachmentError;
 
         const valid = type.value !== '' && priority.value !== '' && body.value.trim().length > 0
             && body.value.length <= 10000 && Number.isFinite(expiresAt) && expiresAt > now
-            && !attachmentError && form.checkValidity();
+            && form.checkValidity();
         button.disabled = !valid || form.dataset.orgUploadSubmitting === 'true';
         if (Number.isFinite(expiresAt) && expiresAt > now) {
             expiryTimer = setTimeout(refresh, Math.min(expiresAt - now + 10, 2147483647));
@@ -68,12 +67,10 @@
     }
 
     window.removeAttachedFile = () => {
-        attachmentError = '';
         fileInput.value = '';
         fileInput.dispatchEvent(new Event('change', { bubbles: true }));
     };
     window.resetComposerForm = () => {
-        attachmentError = '';
         form.reset();
         type.value = 'General Announcement';
         priority.value = 'normal';
@@ -91,7 +88,6 @@
         if (form.contains(event.target)) refresh();
     });
     form.addEventListener('reset', () => {
-        attachmentError = '';
         queueMicrotask(refresh);
     });
     form.addEventListener('submit', event => {

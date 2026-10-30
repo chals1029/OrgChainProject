@@ -457,10 +457,9 @@
                                 <div class="org-settings-perm-card">
                                     <strong>TOSA Clearance</strong>
                                     <ul>
-                                        <li><i class="bi bi-eye"></i> Level 1: read-only TOSA access</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Level 2: applicant evaluation</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Level 3: OSO evaluation and template management</li>
-                                        <li><i class="bi bi-info-circle"></i> OVCAA supports levels 1–2; SO, SDO, and OC have no TOSA access</li>
+                                        <li><i class="bi bi-eye"></i> OVCAA: read-only TOSA access when enabled</li>
+                                        <li><i class="bi bi-check-circle-fill text-success"></i> OSO: document verification and template management</li>
+                                        <li><i class="bi bi-info-circle"></i> SO, SDO, and OC have no TOSA access</li>
                                         <li><i class="bi bi-info-circle"></i> SO officers access only their assigned student organization. Turnover preserves its records and the outgoing officer's identity.</li>
                                     </ul>
                                 </div>
@@ -643,10 +642,9 @@
                 <select id="newOfficerTosaClearance" class="org-settings-select">
                     <option value="No Access">No Access</option>
                     <option value="Level 1 Read-only">Level 1 Read-only</option>
-                    <option value="Level 2 Evaluator">Level 2 Evaluator</option>
                     <option value="Level 3 Master">Level 3 Master</option>
                 </select>
-                <small class="org-settings-help">OSO automatically receives Level 3 Master access. OVCAA may receive read-only or evaluator access; other offices have no TOSA access. No invitation email is sent.</small>
+                <small class="org-settings-help">OSO verifies documents. OVCAA may receive read-only access; other offices have no TOSA access. No invitation email is sent.</small>
             </div>
             <div class="org-settings-dialog-actions">
                 <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAddUserModal').close()">Cancel</button>
@@ -687,6 +685,14 @@
             <div class="org-settings-field" data-account-profile-field>
                 <label for="accountOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
                 <input type="text" id="accountOfficerEmployeeId" class="org-settings-input" maxlength="255">
+            </div>
+            <div id="accountTosaClearanceField" class="org-settings-field" hidden>
+                <label for="accountTosaClearance" class="org-settings-label">TOSA access</label>
+                <select id="accountTosaClearance" class="org-settings-select" disabled>
+                    <option value="No Access">No Access</option>
+                    <option value="Level 1 Read-only">Level 1 Read-only</option>
+                </select>
+                <small class="org-settings-help">TOSA access allows viewing dossiers. Changing access signs this officer out.</small>
             </div>
             <div class="org-settings-field" data-account-password-field>
                 <label for="accountOfficerPassword" class="org-settings-label">Temporary Password</label>
@@ -2137,6 +2143,11 @@
         document.getElementById('settingsAccountAssignment').textContent = `${user.role}${user.organization_name ? ' · ' + user.organization_name : ''}`;
         document.getElementById('settingsAccountImmutable').hidden = isReset;
         document.getElementById('settingsTurnoverEmailHelp').hidden = action !== 'turnover';
+        const clearanceField = document.getElementById('accountTosaClearanceField');
+        const clearanceInput = document.getElementById('accountTosaClearance');
+        clearanceField.hidden = !isEdit || user.office_role !== 'ovcaa';
+        clearanceInput.disabled = clearanceField.hidden;
+        clearanceInput.value = user.tosa_clearance || 'No Access';
         dialog.querySelectorAll('[data-account-profile-field]').forEach(field => {
             field.hidden = isReset;
             field.querySelector('input').disabled = isReset;
@@ -2198,6 +2209,9 @@
             values.email = settingsInputValue('accountOfficerEmail');
             values.office_title = settingsInputValue('accountOfficerTitle');
             values.employee_id = settingsInputValue('accountOfficerEmployeeId');
+            if (action === 'edit' && settingsAccounts.get(Number(id))?.office_role === 'ovcaa') {
+                values.tosa_clearance = settingsInputValue('accountTosaClearance');
+            }
         }
         if (action !== 'edit') {
             values.password = settingsInputValue('accountOfficerPassword');

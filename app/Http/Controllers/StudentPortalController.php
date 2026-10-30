@@ -8,12 +8,20 @@ use App\Models\CommunityPost;
 use App\Models\ExpenseReceiptReview;
 use App\Models\OfficeAnnouncement;
 use App\Models\OrgActivity;
+use App\Models\OrgFundAccount;
 use App\Models\StudentFeedback;
+use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
+use App\Models\TosaHistoryEvent;
+use App\Models\TosaShortlist;
 use App\Models\UserAccount;
 use App\Services\BudgetChainService;
+use App\Services\ActivityBudgetService;
+use App\Services\DocumentCompletion;
+use App\Services\OrganizationCashLedger;
 use App\Services\OfficeDocumentConverter;
 use App\Services\TosaRequirements;
+use App\Services\TosaWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -272,6 +280,10 @@ class StudentPortalController extends Controller
                 $definition = TosaRequirements::SUBMISSIONS[$key] ?? null;
                 if (! $definition || ! TosaRequirements::validSubmissionFile($key, $file->getPathname(), $file->getClientOriginalName())) {
                     $fail('Choose a valid '.($definition['format'] ?? 'requirement').' file for this packet section.');
+                    return;
+                }
+                if ($key === 'application_form' && ($issue = $this->tosaApplicationIssue($file->getPathname(), $file->getClientOriginalName()))) {
+                    $fail($issue);
                 }
             }],
         ]);
@@ -297,12 +309,21 @@ class StudentPortalController extends Controller
                 if ($applicant?->studentSubmissionLocked()) {
                     throw ValidationException::withMessages(['tosa' => 'Your submitted application is locked. Only OSO returning it for revision allows changes or resubmission.']);
                 }
+                $revision = $applicant && $applicant->status === 'submitted' && $applicant->subsection === 'returned';
+                if (! $revision && OfficeAnnouncement::activeTosaCall() === null) {
+                    throw ValidationException::withMessages(['tosa' => 'New applications open when OSO publishes a Call for TOSA.']);
+                }
                 foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
-                    $available = isset($documents[$key])
-                        ? TosaRequirements::validSubmissionFile($key, $documents[$key]->getPathname(), $documents[$key]->getClientOriginalName())
-                        : $applicant?->requirementFile($key) !== null;
+                    $file = $documents[$key] ?? null;
+                    $savedPath = $file ? null : $applicant?->requirementFile($key);
+                    $available = $file
+                        ? TosaRequirements::validSubmissionFile($key, $file->getPathname(), $file->getClientOriginalName())
+                        : $savedPath !== null;
                     if (! $available) {
                         throw ValidationException::withMessages(['tosa' => 'Choose every required packet section or keep its available saved original before submitting.']);
+                    }
+                    if ($key === 'application_form' && ! $file && ($issue = $this->tosaApplicationIssue($savedPath, basename($savedPath)))) {
+                        throw ValidationException::withMessages(['tosa' => $issue]);
                     }
                 }
 
@@ -356,15 +377,16 @@ class StudentPortalController extends Controller
                 }
                 $candidate->status = 'submitted';
                 $candidate->subsection = 'screening';
-                if ($documents !== []) {
-                    $candidate->gwa = null;
-                    $candidate->gwa_verified = false;
-                    $candidate->remarks = null;
-                    $candidate->score_evaluation = null;
+                if ($documents !== [] || $revision) {
+                    $candidate->document_review = null;
                 }
                 if (! $candidate->save()) {
                     throw new \RuntimeException('The selected packet could not be committed.');
                 }
+                TosaHistoryEvent::record(
+                    $revision ? 'resubmitted' : 'submitted', 'student', (int) $ownerStudent->getKey(),
+                    $ownerStudent->name, (int) $candidate->getKey(),
+                );
 
                 // An old path still referenced by any retained historical or
                 // active metadata must not be deleted after replacement.
@@ -392,6 +414,24 @@ class StudentPortalController extends Controller
         $this->deleteOwnedTosaFiles($srCode, $replacedPaths);
 
         return $this->tosaRedirect()->with('status', 'TOSA application submitted for OSO evaluation.');
+    }
+
+    private function tosaApplicationIssue(string $path, string $name): ?string
+    {
+        $current = TosaRequirements::resolveTemplate('application_form');
+        $bundled = TosaRequirements::bundledTemplate('application_form');
+        $templates = array_unique(array_filter([$current['path'] ?? null, $bundled['path'] ?? null]));
+        if ($templates === []) {
+            return 'The official TOSA application form is unavailable. Contact OSO before submitting.';
+        }
+        $completion = app(DocumentCompletion::class);
+        foreach ($templates as $template) {
+            if ($issue = $completion->issueAgainstTemplate($path, $name, $template, compareText: true)) {
+                return $issue;
+            }
+        }
+
+        return null;
     }
 
     private function deleteOwnedTosaFiles(string $srCode, array $paths): void
@@ -466,6 +506,36 @@ class StudentPortalController extends Controller
             ->map(fn (array $row) => new BudgetItem($row + ['title' => $row['category']]));
         $totalAllocated = (float) $budgetActivities->sum('approved_budget');
         $totalUtilized = (float) $budgetActivities->sum('implemented_budget');
+
+        // The college-wide activity allocation is not the same as an individual
+        // organization's annual cash. Show each recorded cash account separately.
+        $department = strtoupper(\college_abbreviation($studentCollege));
+        $cashYear = app(ActivityBudgetService::class)->period()['academic_year'];
+        $organizations = $student && \college_sort_rank($department) !== 999
+            ? StudentOrganization::query()->active()->whereNotNull('college')->get(['name', 'college'])
+                ->filter(fn (StudentOrganization $organization): bool => strtoupper(\college_abbreviation($organization->college)) === $department)
+                ->sortBy('name')->values()
+            : collect();
+        $accounts = OrgFundAccount::query()->where('fiscal_year', $cashYear)
+            ->whereIn('organization_name', $organizations->pluck('name'))->get()->groupBy('organization_name');
+        $ledger = app(OrganizationCashLedger::class);
+        $organizationCash = $organizations->map(function (StudentOrganization $organization) use ($accounts, $ledger): array {
+            $owned = $accounts->get($organization->name, collect());
+            $balances = $owned->map(fn (OrgFundAccount $account): array => $ledger->balance($account));
+            $total = round((float) $balances->sum('total'), 2);
+            $spent = round((float) $balances->sum('spent'), 2);
+            $cash = round((float) $balances->sum('cash'), 2);
+
+            return [
+                'name' => $organization->name,
+                'has_account' => $owned->isNotEmpty(),
+                'total' => $total,
+                'spent' => $spent,
+                'cash' => $cash,
+                'percent' => $total > 0 ? (int) round($spent / $total * 100) : 0,
+                'cash_percent' => $total > 0 ? (int) round($cash / $total * 100) : 0,
+            ];
+        });
 
         $publicExpenses = ExpenseReceiptReview::query()
             ->whereIn('verification_status', ['approved', 'verified'])
@@ -646,6 +716,15 @@ class StudentPortalController extends Controller
         $tosaRequirements = is_array($tosaApplicant?->requirements) ? $tosaApplicant->requirements : [];
         $tosaLocked = (bool) $tosaApplicant?->studentSubmissionLocked();
         $tosaRevision = (bool) ($tosaApplicant && $tosaApplicant->status === 'submitted' && $tosaApplicant->subsection === 'returned');
+        $tosaCorrection = $tosaRevision
+            ? TosaHistoryEvent::query()->where('applicant_id', $tosaApplicant->id)
+                ->where('action', 'returned')->orderByDesc('id')->first()?->details
+            : null;
+        $tosaVerified = $tosaApplicant ? app(TosaWorkflowService::class)->isVerified($tosaApplicant) : false;
+        $tosaCall = collect($announcements)->firstWhere('category', 'tosa');
+        $tosaSubmissionOpen = $tosaRevision || $tosaCall !== null;
+        $tosaShortlist = TosaShortlist::query()->findOrFail(1);
+        $tosaPublished = $tosaShortlist->published_at ? $tosaShortlist->published_entries : null;
 
         $tosaDocs = collect(TosaRequirements::SUBMISSIONS)->map(function (array $document, string $key) use ($tosaApplicant, $tosaRequirements): array {
             $path = $tosaApplicant?->requirementFile($key);
@@ -779,6 +858,8 @@ class StudentPortalController extends Controller
             'budgetCategoryBreakdown' => $budgetCategoryBreakdown,
             'totalAllocated' => $totalAllocated,
             'totalUtilized' => $totalUtilized,
+            'organizationCash' => $organizationCash,
+            'organizationCashYear' => $cashYear,
             'upcoming' => $upcoming,
             'recentActivities' => $recentActivities,
             'posts' => $posts,
@@ -790,6 +871,11 @@ class StudentPortalController extends Controller
             'tosaComplete' => $tosaComplete,
             'tosaLocked' => $tosaLocked,
             'tosaRevision' => $tosaRevision,
+            'tosaCorrection' => $tosaCorrection,
+            'tosaVerified' => $tosaVerified,
+            'tosaCall' => $tosaCall,
+            'tosaSubmissionOpen' => $tosaSubmissionOpen,
+            'tosaPublished' => $tosaPublished,
             'bulletins' => $bulletins,
             'regCounts' => $regCounts,
             'myRsvps' => $myRsvps,

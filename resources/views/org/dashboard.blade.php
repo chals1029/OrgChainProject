@@ -40,9 +40,11 @@
             <i class="bi bi-plus-lg"></i> Create Activity / Event
         </a>
     @endif
-    <a href="{{ route('office.calendar') }}" class="org-btn org-btn-outline">
-        <i class="bi bi-calendar3"></i> Open Calendar
-    </a>
+    @unless ($isSo)
+        <a href="{{ route('office.calendar') }}" class="org-btn org-btn-outline">
+            <i class="bi bi-calendar3"></i> Open Calendar
+        </a>
+    @endunless
 @endsection
 
 @section('content')
@@ -736,17 +738,6 @@
             color: #786f73;
         }
 
-        .org-upcoming-calendar-banner {
-            margin-top: auto;
-            padding: 0.85rem 1.1rem;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #fdf0f2 0%, #fff7ed 100%);
-            border: 1px solid #f9d8dd;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-        }
 
         .org-recent-updates-grid {
             display: grid;
@@ -2505,7 +2496,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse (($osoOverview['transactions'] ?? []) as $trx)
+                            @foreach (($osoOverview['transactions'] ?? []) as $trx)
                                 <tr class="oso-trx-row" data-year="{{ $trx['year'] }}" data-sem="{{ $trx['sem'] }}" data-month="{{ $trx['mon'] }}" data-scope="{{ $trx['scope'] }}">
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.15rem;">
@@ -2534,22 +2525,14 @@
                                         </a>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" style="text-align: center; padding: 2rem 1rem; color: #786f73;">
-                                        <i class="bi bi-check2-circle" style="font-size: 1.5rem; color: #16a34a; display: block; margin-bottom: 0.5rem;"></i>
-                                        <strong style="font-size: 0.9rem; color: #1a1618;">Review queue is clear</strong>
-                                        <p style="font-size: 0.78rem; margin: 0.25rem 0 0;">No proposals are waiting for OSO action right now.</p>
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
 
                             {{-- Empty State Row --}}
-                            <tr id="osoNoTransactionsRow" style="display: none;">
+                            <tr id="osoNoTransactionsRow" @if (count($osoOverview['transactions'] ?? []) > 0) style="display: none;" @endif>
                                 <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #786f73;">
                                     <i class="bi bi-inbox" style="font-size: 1.75rem; color: #8b1828; display: block; margin-bottom: 0.5rem;"></i>
-                                    <strong style="font-size: 0.95rem; color: #1a1618;">No transactions found for this period</strong>
-                                    <p style="font-size: 0.78rem; margin: 0.25rem 0 0;">Try adjusting your Academic Year, Semester, Month, or Scope filters above.</p>
+                                    <strong id="osoNoTransactionsTitle" style="font-size: 0.95rem; color: #1a1618;">{{ count($osoOverview['transactions'] ?? []) ? 'No transactions found for this period' : 'Review queue is clear' }}</strong>
+                                    <p id="osoNoTransactionsMessage" style="font-size: 0.78rem; margin: 0.25rem 0 0;">{{ count($osoOverview['transactions'] ?? []) ? 'Try adjusting your Academic Year, Semester, Month, or Scope filters above.' : 'No proposals are waiting for OSO action right now.' }}</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -2986,17 +2969,6 @@
                                 </div>
                             @endforelse
                         </div>
-
-                        <div class="org-upcoming-calendar-banner">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0;">
-                                <i class="bi bi-calendar-event" style="font-size: 1.35rem; color: #8b1828; flex-shrink: 0;"></i>
-                                <div style="min-width: 0;">
-                                    <strong style="display: block; font-size: 0.82rem; color: #1a1618;">University Activity Calendar</strong>
-                                    <small style="color: #786f73; font-size: 0.72rem; display: block; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Browse semester dates, venues, and clearance deadlines</small>
-                                </div>
-                            </div>
-                            <a href="{{ route('office.calendar') }}" class="ovcaa-btn-decide" style="font-size: 0.72rem; padding: 0.35rem 0.75rem; flex-shrink: 0;">Open Calendar</a>
-                        </div>
                     </section>
                 </div>
 
@@ -3423,6 +3395,8 @@
                 const noRowsEl = document.getElementById('osoNoTransactionsRow');
                 if (noRowsEl) {
                     noRowsEl.style.display = (visibleCount === 0) ? '' : 'none';
+                    document.getElementById('osoNoTransactionsTitle').textContent = rows.length ? 'No transactions found for this period' : 'Review queue is clear';
+                    document.getElementById('osoNoTransactionsMessage').textContent = rows.length ? 'Try adjusting your Academic Year, Semester, Month, or Scope filters above.' : 'No proposals are waiting for OSO action right now.';
                 }
 
                 // 9. Update Approval Card Period Badge

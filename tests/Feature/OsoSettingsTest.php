@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\OfficeAnnouncement;
 use App\Models\OfficeSetting;
 use App\Models\OfficeTemplate;
 use App\Models\OfficeUser;
@@ -267,17 +268,17 @@ class OsoSettingsTest extends TestCase
         $invalid['email'] = 'settings@example.com';
         $this->postJson('/office-desk/settings/users', $invalid)
             ->assertUnprocessable()->assertJsonValidationErrors('email');
-        foreach ([['sdo', 'Level 1 Read-only'], ['oc', 'Level 3 Master'], ['ovcaa', 'Level 3 Master']] as [$role, $clearance]) {
+        foreach ([['sdo', 'Level 1 Read-only'], ['oc', 'Level 3 Master'], ['ovcaa', 'Level 2 Evaluator'], ['ovcaa', 'Level 3 Master']] as [$role, $clearance]) {
             $this->postJson('/office-desk/settings/users', $this->userPayload($role, $clearance))
                 ->assertUnprocessable()->assertJsonValidationErrors('tosa_clearance');
         }
         $this->assertSame($before, OfficeUser::count());
-        $payload = $this->userPayload('ovcaa', 'Level 2 Evaluator');
+        $payload = $this->userPayload('ovcaa', 'Level 1 Read-only');
         $response = $this->postJson('/office-desk/settings/users', $payload)
             ->assertCreated()->assertJsonPath('user.office_role', 'ovcaa');
         $created = OfficeUser::findOrFail($response->json('user.id'));
         $this->assertTrue(Hash::check($payload['password'], $created->password));
-        $this->assertSame(2, $created->tosaClearanceLevel());
+        $this->assertSame(1, $created->tosaClearanceLevel());
         $this->post('/office/logout')->assertRedirect('/');
         $this->post(route('office.login'), ['email' => $created->email, 'password' => $payload['password']])
             ->assertRedirect(route('office.password.change'));
@@ -331,11 +332,10 @@ class OsoSettingsTest extends TestCase
         Storage::disk('public')->assertMissing($replacement);
     }
 
-    public function test_drafts_and_legacy_unsubmitted_rows_are_absent_from_office_lists_counts_and_manifest(): void
+    public function test_drafts_and_legacy_unsubmitted_rows_are_absent_from_office_lists_and_manifest(): void
     {
         $submitted = $this->applicant();
         $this->actingAs($this->officer('oso'), 'office');
-        $before = $this->get('/office-desk/tosa')->assertOk()->viewData('subsectionCounts')->all();
         $hidden = [];
         foreach (['draft', 'pending'] as $status) {
             $applicant = $this->applicant();
@@ -345,7 +345,6 @@ class OsoSettingsTest extends TestCase
 
         $response = $this->get('/office-desk/tosa')->assertOk()
             ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $submitted->id));
-        $this->assertSame($before, $response->viewData('subsectionCounts')->all());
         $manifest = $this->get('/office-desk/settings/exports/tosa-manifest')->assertOk()->streamedContent();
         $this->assertStringContainsString($submitted->full_name, $manifest);
         foreach ($hidden as $applicant) {
@@ -358,11 +357,19 @@ class OsoSettingsTest extends TestCase
     public function test_complete_student_submission_is_visible_to_oso_even_after_document_loss(): void
     {
         Storage::fake('local');
+        OfficeAnnouncement::query()->create([
+            'title' => 'TOSA test call', 'type' => 'Call for TOSA', 'body' => 'Submit the required packet.',
+            'priority' => 'normal', 'expires_at' => now()->addDay(),
+        ]);
         $applicant = $this->applicant();
         $requirements = [];
         foreach (TosaRequirements::SUBMISSIONS as $key => $document) {
-            $path = 'tosa/'.$applicant->sr_code.'/'.$key.'.pdf';
-            Storage::disk('local')->put($path, file_get_contents(base_path('TOSA/Guidelines TOSA 2025.pdf')));
+            $format = $key === 'application_form' ? 'docx' : 'pdf';
+            $path = 'tosa/'.$applicant->sr_code.'/'.$key.'.'.$format;
+            $bytes = $format === 'docx'
+                ? (new \App\Services\DocxBuilder)->p('Synthetic completed application')->build()
+                : file_get_contents(base_path('TOSA/Guidelines TOSA 2025.pdf'));
+            Storage::disk('local')->put($path, $bytes);
             $requirements[$key] = ['path' => $path];
         }
         $applicant->update(['status' => 'draft', 'requirements' => $requirements]);
@@ -378,17 +385,15 @@ class OsoSettingsTest extends TestCase
         $this->get($url)->assertOk();
         Storage::disk('local')->delete($applicant->requirementPath('academic'));
         $this->get('/office-desk/tosa')->assertOk()
-            ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id))
-            ->assertViewHas('subsectionCounts', fn ($counts) => $counts->get('screening') >= 1);
+            ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id));
         $this->get($url)->assertNotFound();
         $manifest = $this->get('/office-desk/settings/exports/tosa-manifest')->assertOk()->streamedContent();
         $this->assertStringContainsString($applicant->full_name, $manifest);
-        $this->postJson(route('office.tosa.subsection', $applicant), ['subsection' => 'accepted',
-            'gwa' => 1.25, 'gwa_verified' => true])->assertOk();
+        $this->postJson(route('office.tosa.top10.add', $applicant), [])->assertUnprocessable();
         $this->assertSame('submitted', $applicant->refresh()->status);
-        $this->assertSame('accepted', $applicant->subsection);
-        $this->assertSame(1.25, $applicant->gwa);
-        $this->assertTrue($applicant->gwa_verified);
+        $this->assertSame('screening', $applicant->subsection);
+        $this->assertNull($applicant->gwa);
+        $this->assertFalse($applicant->gwa_verified);
     }
 
     public function test_oso_legacy_no_access_opens_and_reviews_applicants_automatically(): void
@@ -399,21 +404,16 @@ class OsoSettingsTest extends TestCase
         $this->assertSame(3, $officer->tosaClearanceLevel());
         $this->assertSame('Level 3 Master', $officer->accountMetadata()['tosa_clearance']);
         $this->actingAs($officer, 'office')->get('/office-desk/tosa')->assertOk()
-            ->assertViewHas('tosaClearanceLevel', 3)
-            ->assertViewHas('tosaCanReview', true)
             ->assertViewHas('tosaCanManageTemplates', true)
             ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id))
-            ->assertViewHas('subsectionCounts', fn ($counts) => $counts->get('pending') >= 1)
             ->assertSee($applicant->full_name);
-        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'screening'])
-            ->assertOk();
-        $this->assertSame('screening', $applicant->refresh()->subsection);
-        $this->get('/office-desk/tosa?subsection=screening')->assertOk()
-            ->assertViewHas('selectedSubsection', 'screening')
-            ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id));
-        $this->get('/office-desk/tosa?subsection=pending')->assertOk()
-            ->assertViewHas('selectedSubsection', 'pending')
-            ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id));
+        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', [
+            'subsection' => 'returned', 'document_key' => 'application_form', 'reason' => 'Please complete the form.',
+        ])->assertOk();
+        $this->assertSame('returned', $applicant->refresh()->subsection);
+        $this->get('/office-desk/tosa')->assertOk()
+            ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id))
+            ->assertSee('For correction');
         $this->assertSame('submitted', $applicant->refresh()->status);
         foreach ([null, '', 'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master'] as $clearance) {
             $officer->forceFill(['tosa_clearance' => $clearance]);
@@ -425,20 +425,20 @@ class OsoSettingsTest extends TestCase
     {
         $applicant = $this->applicant();
         $this->get('/office-desk/tosa')->assertRedirect(route('office.login'));
-        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
             ->assertUnauthorized();
         $officer = $this->officer('oso');
         $officer->update(['is_active' => false]);
         $this->actingAs($officer, 'office')->get('/office-desk/tosa')
             ->assertRedirect(route('office.login'));
         $this->actingAs($officer, 'office')
-            ->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+            ->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
             ->assertUnauthorized();
         $officer = $this->officer('oso');
         $officer->update(['must_change_password' => true]);
         $this->actingAs($officer, 'office')->get('/office-desk/tosa')
             ->assertRedirect(route('office.password.change'));
-        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
             ->assertStatus(423);
         $this->postJson('/office-desk/tosa/references/template', [])->assertStatus(423);
         $officer = $this->officer('oso');
@@ -448,7 +448,7 @@ class OsoSettingsTest extends TestCase
         $this->actingAs($stale, 'office')->withSession($state)->get('/office-desk/tosa')
             ->assertRedirect(route('office.login'));
         $this->actingAs($stale, 'office')->withSession($state)
-            ->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+            ->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
             ->assertUnauthorized();
         $this->assertSame('pending', $applicant->refresh()->subsection);
     }
@@ -460,40 +460,32 @@ class OsoSettingsTest extends TestCase
             $officer = $this->officer($role);
             $officer->update(['tosa_clearance' => 'Level 3 Master']);
             $this->actingAs($officer, 'office')->get('/office-desk/tosa')->assertForbidden();
-            $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+            $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
                 ->assertForbidden();
             $this->postJson('/office-desk/tosa/references/template', [])->assertForbidden();
         }
         $ovcaa = $this->officer('ovcaa');
         $ovcaa->forceFill(['tosa_clearance' => null]);
         $this->assertSame('Level 1 Read-only', $ovcaa->effectiveTosaClearance());
-        foreach (['', 'Level 1 Read-only'] as $clearance) {
+        foreach (['', 'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master'] as $clearance) {
             $ovcaa->update(['tosa_clearance' => $clearance]);
             $this->assertSame('Level 1 Read-only', $ovcaa->effectiveTosaClearance());
-            $this->actingAs($ovcaa, 'office')->get('/office-desk/tosa')->assertOk()
-                ->assertViewHas('tosaCanReview', false)
-                ->assertViewHas('tosaCanManageTemplates', false)
+            $session = ['office_auth_state' => ['id' => $ovcaa->id, 'version' => (int) $ovcaa->auth_version]];
+            $this->actingAs($ovcaa, 'office')->withSession($session)->get('/office-desk/tosa')->assertOk()
+                ->assertDontSee('Add to Top 10')
+                ->assertDontSee('Return for correction')
                 ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id));
-            $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+            $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
                 ->assertForbidden();
-            $this->postJson('/office-desk/tosa/references/template', [])->assertForbidden();
-        }
-        $this->assertSame('pending', $applicant->refresh()->subsection);
-        foreach (['Level 2 Evaluator', 'Level 3 Master'] as $clearance) {
-            $ovcaa->update(['tosa_clearance' => $clearance]);
-            $this->assertSame(2, $ovcaa->tosaClearanceLevel());
-            $this->actingAs($ovcaa, 'office')->get('/office-desk/tosa')->assertOk()
-                ->assertViewHas('tosaCanReview', true)
-                ->assertViewHas('tosaCanManageTemplates', false);
-            $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'screening'])
-                ->assertOk();
             $this->postJson('/office-desk/tosa/references/template', [])->assertForbidden();
             $this->postJson('/office-desk/updates/templates', ['category' => 'TOSA'])->assertForbidden();
         }
-        $this->assertSame('screening', $applicant->refresh()->subsection);
+        $this->assertSame('pending', $applicant->refresh()->subsection);
         $ovcaa->update(['tosa_clearance' => 'No Access']);
-        $this->get('/office-desk/tosa')->assertForbidden();
-        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'accepted'])
+        $this->get('/office-desk/tosa')->assertRedirect(route('office.login'));
+        $session = ['office_auth_state' => ['id' => $ovcaa->id, 'version' => (int) $ovcaa->auth_version]];
+        $this->actingAs($ovcaa, 'office')->withSession($session)->get('/office-desk/tosa')->assertForbidden();
+        $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
             ->assertForbidden();
     }
 
@@ -545,7 +537,7 @@ class OsoSettingsTest extends TestCase
     {
         OfficeTemplate::query()->where('category', 'TOSA')->delete();
         $this->actingAs($this->officer('oso'), 'office');
-        $templates = collect($this->get(route('office.tosa'))->assertOk()->viewData('tosaTemplates'));
+        $templates = collect($this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->viewData('tosaTemplates'));
         $this->assertCount(5, $templates);
         foreach (TosaRequirements::REFERENCES as $key => $document) {
             $filename = $document['filename'];
@@ -557,12 +549,12 @@ class OsoSettingsTest extends TestCase
             $this->assertSame(hash_file('sha256', base_path('TOSA/'.$filename)),
                 hash_file('sha256', $download->baseResponse->getFile()->getPathname()));
         }
-        $guidelines = $templates->firstWhere('id', 'source-tosa-guidelines');
+        $guidelines = $templates->get('Guidelines TOSA 2025');
         $this->get($guidelines['preview_url'])->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('Content-Disposition', 'inline; filename="Guidelines TOSA 2025.pdf"');
         $this->actingAs($this->officer('ovcaa'), 'office')->get(route('office.tosa'))->assertOk();
-        $this->get($templates->firstWhere('id', 'source-tosa-application')['url'])->assertOk();
+        $this->get($templates->get('TOSA Application Form 2025')['url'])->assertOk();
     }
 
     public function test_uploaded_native_template_is_shared_by_office_and_student_and_does_not_change_bundle(): void
@@ -581,8 +573,8 @@ class OsoSettingsTest extends TestCase
             $this->actingAs($officer, 'office')->post(route('office.tosa.references.store'), [
                 'reference_key' => 'application_form',
                 'template_file' => UploadedFile::fake()->createWithContent($filename, $bytes),
-            ])->assertRedirect(route('office.tosa'))->assertSessionHasNoErrors();
-            $active = $this->get(route('office.tosa'))->assertOk()->viewData('tosaTemplates')[$title];
+            ])->assertRedirect(route('office.tosa', ['tab' => 'documents']))->assertSessionHasNoErrors();
+            $active = $this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->viewData('tosaTemplates')[$title];
             $this->assertNull($active['preview_url']);
             $download = $this->get($active['url'])->assertOk()->assertDownload($filename);
             $this->assertSame($bytes, file_get_contents($download->baseResponse->getFile()->getPathname()));
@@ -612,7 +604,7 @@ class OsoSettingsTest extends TestCase
         $firstBytes = file_get_contents(base_path('TOSA/Guidelines TOSA 2025.pdf'));
         $replacementBytes = $firstBytes."\n% replacement";
         $payload['template_file'] = UploadedFile::fake()->createWithContent('sample.pdf', $firstBytes);
-        $this->post('/office-desk/tosa/references/template', $payload)->assertRedirect(route('office.tosa'));
+        $this->post('/office-desk/tosa/references/template', $payload)->assertRedirect(route('office.tosa', ['tab' => 'documents']));
         $template = OfficeTemplate::where('category', 'TOSA')->where('name', $title)->firstOrFail();
         $oldPath = $template->file_path;
         $this->assertSame($firstBytes, Storage::disk('public')->get($oldPath));
@@ -620,7 +612,7 @@ class OsoSettingsTest extends TestCase
             ->assertOk()->assertDownload('sample.pdf')->assertHeader('Content-Type', 'application/pdf');
         $this->assertSame($firstBytes, file_get_contents($download->baseResponse->getFile()->getPathname()));
         $payload['template_file'] = UploadedFile::fake()->createWithContent('replacement.pdf', $replacementBytes);
-        $this->post('/office-desk/tosa/references/template', $payload)->assertRedirect(route('office.tosa'));
+        $this->post('/office-desk/tosa/references/template', $payload)->assertRedirect(route('office.tosa', ['tab' => 'documents']));
         $template->refresh();
         Storage::disk('public')->assertMissing($oldPath);
         $this->assertSame($replacementBytes, Storage::disk('public')->get($template->file_path));
@@ -663,15 +655,10 @@ class OsoSettingsTest extends TestCase
         $legacy = OfficeTemplate::query()->create(['category' => 'TOSA', 'name' => 'Curriculum Vitae',
             'original_name' => 'old.pdf', 'format' => 'PDF']);
         $this->actingAs($this->officer('oso'), 'office');
-        $templates = $this->get(route('office.tosa'))->assertOk()->viewData('tosaTemplates');
+        $templates = $this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->viewData('tosaTemplates');
         $this->assertCount(5, $templates);
         $this->assertArrayNotHasKey('Curriculum Vitae', $templates);
         $this->assertTrue(OfficeTemplate::query()->whereKey($legacy->id)->exists());
-        foreach ($templates as $template) {
-            if ($template['format'] !== 'PDF') {
-                $this->assertNull($template['preview_url']);
-            }
-        }
     }
 
 
@@ -705,7 +692,7 @@ class OsoSettingsTest extends TestCase
         $source = $this->get(route('office.updates.templates.document', 'source-tosa-front-page'))
             ->assertOk()->assertDownload('Front Page.doc');
         $this->assertSame($originalBytes, file_get_contents($source->baseResponse->getFile()->getPathname()));
-        $package = $this->get(route('office.tosa'))->assertOk()->viewData('tosaTemplates');
+        $package = $this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->viewData('tosaTemplates');
         $this->assertCount(5, $package);
         $active = $this->get($package['Front Page']['url'])->assertOk()->assertDownload('latest.doc');
         $this->assertSame($updatedBytes, file_get_contents($active->baseResponse->getFile()->getPathname()));

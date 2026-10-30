@@ -53,14 +53,17 @@ sequenceDiagram
     App->>App: Recheck identity, stage and every required original
     App->>Files: Store the submitted original bytes
     App->>DB: Save one submitted application in Screening
-    OSO->>App: Request Revision with review remarks
-    App->>DB: Persist returned review stage
-    Student->>UI: Refresh, replace requested files, confirm resubmission
-    UI->>App: Corrected files with valid saved originals carried over
-    App->>DB: Return to Screening and lock again
+    OSO->>App: Check the documents manually
+    App->>DB: Save document verification
+    opt Correction needed
+        OSO->>App: Return packet
+        Student->>UI: Replace files and confirm resubmission
+        UI->>App: Corrected packet with unchanged originals
+        App->>DB: Clear old checks and lock the packet again
+    end
 ```
 
-See [[TOSA Application and Review Workflow]]. Evaluator scoring is separate from packet submission, signatures and final award decisions.
+See [[TOSA Application and Review Workflow]]. OSO checks the uploaded documents manually; OrgChain does not calculate scores or rankings.
 
 ## Financial evidence and voting proofs
 

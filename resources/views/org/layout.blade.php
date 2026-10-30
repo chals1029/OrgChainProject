@@ -137,6 +137,8 @@
                             <em class="org-badge-count" style="background:#fefce8;color:#b45309;border:1px solid #fde68a;">{{ $navBadges['reports_pending'] }}</em>
                         @endif
                     </a>
+                @endif
+                @if (($office?->tosaClearanceLevel() ?? 0) >= 1)
                     <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
                         <i class="bi bi-award-fill is-ico-maroon"></i>
                         <span>TOSA</span>

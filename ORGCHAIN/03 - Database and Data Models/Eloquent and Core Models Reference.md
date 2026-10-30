@@ -17,7 +17,7 @@ OrgChain has two model layers: Laravel Eloquent models under `app/Models/` for t
 Related: [[Database Schema and ERD]] · [[Application Relationships and Schema Boundaries]]
 
 > [!important] Source and schema are different evidence
-> This reference describes current checked-in source. The linked local ERD is a **2026-10-15 structure-only snapshot**, not production schema. It lacks `office_announcement_acknowledgments` and the `tosa_applicants.score_evaluation` column used by current source. No model cast or migration file proves that a particular database has been migrated.
+> This reference describes current source. The linked local ERD is a structure-only snapshot, not production schema. No model cast or migration file proves that a particular database has been migrated.
 
 ## Identity, connections and office roles
 
@@ -39,11 +39,11 @@ Related: [[Database Schema and ERD]] · [[Application Relationships and Schema B
 TOSA clearance is a separate rule in `OfficeUser::tosaClearanceLevel()`:
 
 - OSO receives level 3 (master).
-- OVCAA receives level 1 by default; evaluator clearance is level 2, and a stored master label is capped at level 2.
-- SO, SDO and OC receive no TOSA clearance from this method.
-- Scoring writes additionally require an active OSO/OVCAA account with clearance at least 2. Do not equate being a proposal reviewer with being a TOSA evaluator.
+- OVCAA receives read-only access when enabled; legacy evaluator labels do not grant editing.
+- SO, SDO and OC receive no TOSA clearance.
+- Only OSO may verify documents or return a packet for correction.
 
-Evidence: `config/auth.php`; `app/Models/UserAccount.php`, `Student.php`, `OfficeUser.php`; `app/Http/Controllers/TosaScoringController.php`.
+Evidence: `config/auth.php`; `app/Models/UserAccount.php`, `Student.php`, `OfficeUser.php`; `app/Http/Controllers/TosaShortlistController.php`.
 
 ## Core model directory
 
@@ -60,7 +60,7 @@ The older linked model notes remain available by their existing names. For curre
 | Renewal | Eloquent `OrgRenewalWindow`, `OrgRenewalSubmission`, `OrgRenewalDocument`, `StudentOrganization` | [[Model - OrgRenewalWindow Submission Document]] |
 | Community | Eloquent `CommunityPost`, `CommunityComment`, `CommunityLike`, `CommunityCommentLike`, all explicitly on `orgchain` | [[Model - CommunityPost Comment Like]]; [[Application Relationships and Schema Boundaries#Community is not the legacy students graph|current community relationships]] |
 | Reports and accomplishments | Eloquent `OrgReportStatus`, `OrgReportDocument`, `OrgReportSubmissionWindow`, `OrgActivityAccomplishment` | [[Application Relationships and Schema Boundaries#Activity accomplishments and semester packets|report associations]] |
-| TOSA | Eloquent `TosaApplicant`; behavior in `TosaRequirements`, `TosaScoringService`, `TosaWorkbookService` | See packet/scoring section below; services are not extra models |
+| TOSA | Eloquent `TosaApplicant`, `TosaHistoryEvent`, `TosaShortlist`; behavior in `TosaRequirements`, `TosaWorkflowService` | See packet, manual verification and publication below |
 | Feedback and notices | Eloquent `StudentFeedback`, `OfficeAnnouncement`, `OfficeAnnouncementAcknowledgment` | [[Application Relationships and Schema Boundaries#Feedback and activity registration use current student identity|feedback identity]]; acknowledgment table absent from local export |
 | Archive | Eloquent `ArchiveFolder`, `ArchiveDocument` | [[Model - ArchiveFolder and ArchiveDocument]] |
 | Configuration | Eloquent `OfficeSetting`, `OfficeTemplate` | [[Database Schema and ERD#Isolated tables are not automatically missing relationships|standalone configuration tables]] |
@@ -82,33 +82,13 @@ Paths, filenames, sizes, hashes, MIME types and JSON attachment entries describe
 
 Evidence: `app/Http/Controllers/OfficePortalController.php` (activity attachments, renewal submission, archive upload/view and report upload), `CommunityFeedController::store/image`, `AccomplishmentReportController::evidence`; `app/Models/TosaApplicant.php`, `OrgRenewalDocument.php`, `OrgReportDocument.php`; `app/Services/AccomplishmentReportService.php`.
 
-## TOSA stores a packet and evaluator state
+## TOSA stores a packet and manual review
 
-### Ownership, revision and resubmission
+`TosaApplicant` uses `mysql`; the authenticated student's trimmed SR code identifies the packet. Requirements and manual review are stored as JSON. Older score and committee metadata are retained but not used.
 
-`TosaApplicant` explicitly uses `mysql` and casts `requirements` and `score_evaluation` to arrays, GWA to float and `gwa_verified` to boolean. The applicant is looked up using the authenticated `UserAccount`'s **trimmed SR code**, not an inferred `student_id` FK. The local export has neither an SR-code FK nor a unique applicant SR-code index; see [[Application Relationships and Schema Boundaries#TOSA uses an SR-code lookup, not a student-id relationship|lookup limitations]].
+- A submitted packet contains all seven readable private originals and stays locked until OSO returns it for correction.
+- Resubmission preserves unchanged files and clears previous document verification.
+- OSO manually reviews each current document and confirms once when adding the applicant to the draft; verification does not certify its contents. The system does not input GWA, calculate scores or rank applicants.
+- `TosaHistoryEvent` records actual new TOSA actions, and `TosaShortlist` stores a private draft separately from the explicitly published names/programs. Neither fabricates earlier activity.
 
-- Initial submission saves the **whole required packet**. Each required section must either be supplied or have a readable, valid saved private original.
-- `studentSubmissionLocked()` locks an accepted status/subsection and any submitted packet whose subsection is not `returned`. A returned submitted packet is the revision path; it is not a free-edit state for every submitted application.
-- Resubmission writes `status = submitted` and `subsection = screening`, restoring the lock.
-- If files are replaced, the submission controller clears GWA, its verification flag, remarks and the stored score evaluation before saving. It retains supported saved requirement metadata where appropriate; it does not create a separate revision model/table.
-- OSO review changes to GWA/verification, or a return/rejection, invalidate the evaluation: the service retains valid input as a recomputed **draft**, clears final verifier metadata and records an invalidation reason; malformed evaluation input is discarded. This is stored-state invalidation, not merely hiding a score in the UI.
-
-Evidence: `TosaApplicant::studentSubmissionLocked/requirementPath/ownedRequirementFile/requirementFile`; `StudentPortalController::myTosaApplication` and whole-packet submission; `OfficePortalController` TOSA review transaction; `TosaScoringService::invalidate`.
-
-### Evaluator scoring and ranking
-
-`TosaScoringController` persists `score_evaluation` JSON on the applicant, not on a new score model. The packet includes the rubric version, draft/finalized state, validated evaluator input, calculated breakdown/entries, verifier metadata and timestamps. Finalization requires an active submitted packet in an allowed review subsection, verified eligibility, verified GWA from 1.00 to 3.00, a consecutive academic year and available original files for every required section.
-
-`TosaScoringService`:
-
-- Calculates server-side integer **milli-points** (1,000 units per point), using a 40-point academic / 30-point leadership / 30-point social maximum with category caps. Seminar scoring uses attended days, capped at five; local leadership is independent of social scoring.
-- Recognizes only structurally valid packets for the current rubric and recomputes the stored breakdown/entries rather than trusting supplied totals.
-- Ranks only submitted applicants in the accepted subsection with valid finalized evaluations, verified matching GWA and a valid academic-year cohort.
-- Preserves equal-score ties with competition ranks; a tie crossing tenth place can include more than ten applicants. IDs stabilize display order and do not break merit ties.
-
-The student-facing score/calculation section was removed, **not** evaluator persistence, scoring, ranking or workbook endpoints. `TosaWorkbookController`/`TosaWorkbookService` remain the workbook path. Do not describe the portal display change as deleting backend scoring.
-
-**Local-schema caveat:** the model casts and current migration describe `score_evaluation`, but the attached local table lacks that column. This reference makes no claim that scoring can persist against the exported local structure without the appropriate schema addition; no migration is run by this documentation update.
-
-Evidence: `app/Http/Controllers/TosaScoringController.php`; `app/Services/TosaScoringService.php`; migration `database/migrations/2026_10_11_000001_add_score_evaluation_to_tosa_applicants.php`; repository `CHANGELOG.md` student-TOSA display change.
+Evidence: `TosaApplicant::studentSubmissionLocked/requirementPath/ownedRequirementFile/requirementFile`; `StudentPortalController::submitTosaApplication`; `TosaShortlistController`; `TosaWorkflowService`; `TosaHistoryEvent`; `TosaShortlist`.

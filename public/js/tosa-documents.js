@@ -15,6 +15,7 @@
     var maxBytes = 25 * 1024 * 1024;
     var submitting = false;
     var revision = submitForm.dataset.tosaRevision === '1';
+    var callOpen = submitForm.dataset.tosaOpen === '1';
 
     function validationMessage(entry) {
         var file = entry.input.files[0];
@@ -36,13 +37,16 @@
             return validationMessage(entry) !== '';
         });
         var remaining = incomplete.length;
-        submitButton.disabled = submitting || remaining > 0;
+        submitButton.disabled = submitting || !callOpen || remaining > 0;
         entries.forEach(function (entry) {
             entry.cancel.disabled = submitting;
         });
         if (submitting) {
             submitStatus.textContent = 'Submitting packet for review';
             submitHelp.textContent = 'Saving files and sending your packet to OSO. Please wait.';
+        } else if (!callOpen) {
+            submitStatus.textContent = 'Waiting for a Call for TOSA';
+            submitHelp.textContent = 'New applications open when OSO publishes a Call for TOSA.';
         } else if (remaining) {
             submitStatus.textContent = 'Complete your packet before submitting';
             var missing = incomplete.filter(function (entry) { return !entry.input.files[0]; });
@@ -147,6 +151,11 @@
     submitForm.addEventListener('submit', function (event) {
         if (submitting) {
             event.preventDefault();
+            return;
+        }
+        if (!callOpen) {
+            event.preventDefault();
+            updateSubmission();
             return;
         }
         var firstInvalid = null;

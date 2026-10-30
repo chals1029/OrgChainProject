@@ -15,7 +15,7 @@ Security depends on server-side identity, authorization, validated input, privat
 - Student identity uses `UserAccount` on the `orgchain` connection; inactive accounts cannot use the student portal.
 - Office accounts use a separate guard. Active SO accounts require an active assigned organization. Roles and workflow stages constrain reads and writes.
 - Office credential/account changes revoke stale sessions through the current `auth_version` state. Temporary credentials must be replaced before normal access.
-- TOSA has no PIN gateway. Active OSO receives role-authorized access; OVCAA clearance determines read-only/evaluator access. Submitted packets lock unless returned for Revision.
+- TOSA has no PIN gateway. Active OSO can verify documents; authorized OVCAA access is read-only. Submitted packets lock unless returned for correction.
 - Student feedback is OSO-reviewed; acknowledgment notifications/history are scoped to the owner, including anonymous submissions.
 - Community visibility and photo access enforce the selected public-campus, college or organization audience. Direct community-storage paths are denied.
 

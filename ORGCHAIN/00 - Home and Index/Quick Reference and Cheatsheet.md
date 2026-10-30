@@ -18,7 +18,7 @@ Start at [[Current System Guide]]. This is not a password/account list. Test/dem
 | Office roles and access | [[Multi-Tier Office Roles SO OSO SDO OVCAA]] |
 | Exact current routes | [[Web and Portal Route Map]] |
 | Local ERD files and disconnected tables | [[Database Schema and ERD]] |
-| TOSA packet, Revision or evaluation | [[TOSA Application and Review Workflow]] |
+| TOSA packet, correction or verification | [[TOSA Application and Review Workflow]] |
 | Local prerequisites and database safety | [[Local Development Setup Laragon PHP 8.3]] |
 | Test isolation and mailbox-based OTP smoke | [[Testing and Quality Assurance Guide]] |
 | Recorded live deployment and health signals | [[VPS Pilot Deployment and Status]] |

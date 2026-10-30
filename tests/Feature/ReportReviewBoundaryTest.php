@@ -6,10 +6,12 @@ use App\Models\ArchiveDocument;
 use App\Models\OfficeTemplate;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
+use App\Models\OrgFundAccount;
 use App\Models\OrgReportDocument;
 use App\Models\StudentFeedback;
 use App\Models\StudentOrganization;
 use App\Models\UserAccount;
+use App\Services\ActivityBudgetService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -109,7 +111,9 @@ class ReportReviewBoundaryTest extends TestCase
             ], $different));
         }
         $filters = ['q' => $needle, 'college' => 'CICS', 'topic' => 'campus', 'status' => 'pending'];
-        $first = $this->actingAs($office, 'office')->get(route('office.student-reports', $filters))->assertOk()->viewData('reports');
+        $response = $this->actingAs($office, 'office')->get(route('office.student-reports', $filters))->assertOk();
+        $this->assertSame(['total' => 16, 'pending' => 16, 'verified' => 0, 'dismissed' => 0], $response->viewData('stats'));
+        $first = $response->viewData('reports');
         $second = $this->get(route('office.student-reports', $filters + ['page' => 2]))->assertOk()->viewData('reports');
         $actual = $first->getCollection()->pluck('id')->merge($second->getCollection()->pluck('id'))->sort()->values()->all();
         sort($matching);
@@ -165,6 +169,48 @@ class ReportReviewBoundaryTest extends TestCase
         $this->assertSame(0.0, $empty->viewData('totalAllocated'));
         $this->assertSame(0.0, $empty->viewData('totalUtilized'));
         $this->assertTrue($empty->viewData('upcoming')->isEmpty());
+    }
+
+    public function test_students_see_the_same_organization_cash_as_their_college_office_only(): void
+    {
+        $office = $this->officer('so');
+        $organization = $office->studentOrganization;
+        $year = app(ActivityBudgetService::class)->period()['academic_year'];
+        OrgFundAccount::create([
+            'organization_name' => $organization->name, 'college' => 'CICS',
+            'fiscal_year' => $year, 'cash_opening_balance' => '7000000.00',
+        ]);
+        $excluded = [];
+        foreach ([['CAS', true], ['CICS', false]] as [$college, $active]) {
+            $other = StudentOrganization::create([
+                'name' => 'Other cash boundary '.Str::uuid(), 'college' => $college, 'is_active' => $active,
+            ]);
+            OrgFundAccount::create([
+                'organization_name' => $other->name, 'college' => $college,
+                'fiscal_year' => $year, 'cash_opening_balance' => '5000.00',
+            ]);
+            $excluded[] = $other->name;
+        }
+        $officeCash = $this->actingAs($office, 'office')->get(route('office.home'))->assertOk()->viewData('transparency');
+        $student = new UserAccount([
+            'user_id' => (int) UserAccount::max('user_id') + 1,
+            'sr_code' => '99-'.Str::lower(Str::random(8)), 'full_name' => 'Cash boundary student',
+            'email' => Str::uuid().'@example.test', 'college' => 'CICS',
+            'role' => 'student', 'account_status' => 'active',
+        ]);
+        $student->incrementing = false;
+        $student->save();
+        $studentCash = $this->actingAs($student, 'student')->get(route('portal.home', ['college' => 'CAS']))
+            ->assertOk()->viewData('organizationCash');
+        $entry = $studentCash->firstWhere('name', $organization->name);
+        $this->assertNotNull($entry);
+        $this->assertSame($officeCash['total_funds'], $entry['total']);
+        $this->assertSame($officeCash['utilized'], $entry['spent']);
+        $this->assertSame($officeCash['remaining'], $entry['cash']);
+        $this->assertSame($officeCash['remaining_percent'], $entry['cash_percent']);
+        foreach ($excluded as $name) {
+            $this->assertNull($studentCash->firstWhere('name', $name));
+        }
     }
 
     public function test_empty_analytics_does_not_fabricate_approved_activities_or_budgets(): void

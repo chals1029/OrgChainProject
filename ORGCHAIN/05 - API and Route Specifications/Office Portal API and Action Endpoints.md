@@ -74,16 +74,15 @@ See [[Transparency and Budget Visibility]] and [[Multi-Tier Office Roles SO OSO 
 
 | Method | Route | Boundary / behavior |
 | --- | --- | --- |
-| GET | `/office-desk/tosa` | Clearance 1+; submitted applicants, requirements and Top10 |
+| GET | `/office-desk/tosa` | Submitted applicants, references/calls, manual Top 10 and history |
 | GET | `/office-desk/tosa/{applicant}/documents/{key}` | Authorized submitted applicant's original |
-| POST | `/office-desk/tosa/{applicant}/subsection` | Clearance 2+ stage/GWA/remarks review |
-| POST | `/office-desk/tosa/{applicant}/scoring` | Active OSO/OVCAA evaluator clearance 2+ |
+| POST | `/office-desk/tosa/{applicant}/subsection` | OSO returns a selected document with a reason; email failure is reported |
+| POST | `/office-desk/tosa/{applicant}/top-ten` | OSO confirms all seven current files and adds the applicant to the private draft |
+| GET | `/office-desk/tosa/{applicant}/package` | OSO-only private ZIP; unavailable legacy originals are listed |
+| POST | `/office-desk/tosa/top-ten` | OSO saves, publishes or unpublishes an unranked list of ten reviewed applicants |
 | POST | `/office-desk/tosa/references/template` | OSO Master-only explicit reference replacement |
-| GET | `/office-desk/tosa/workbook/reference` | Authorized reference workbook |
-| GET | `/office-desk/tosa/{applicant}/workbook` | Authorized applicant workbook preview |
-| GET | `/office-desk/tosa/{applicant}/workbook/download` | Authorized applicant XLSX download |
 
-No PIN is required; role/clearance checks remain. SO/SDO/OC have no TOSA access. Five official reference files are not the seven A–G credentials. Student selection is local until one whole-packet `POST /portal/tosa/submit`; no per-file upload/delete route exists. Submitted packets unlock only at **Revision / `returned`**, and resubmission relocks them. Scoring is evaluator-entered/verified, not DOCX auto-scoring; the student score panel was removed. See [[TOSA Application and Review Workflow]].
+No PIN is required; role/clearance checks remain. OSO verifies documents and explicitly publishes the manually chosen list; authorized OVCAA access is read-only. Submitted packets unlock only when returned for correction. There is no evaluator assignment, GWA input or automatic ranking. History records events only from this update onward. See [[TOSA Application and Review Workflow]].
 
 ## Renewal and Archive
 

@@ -17,7 +17,7 @@ OrgChain manages student-organization activity approvals, budgets, renewal, repo
 | Understand the current system and documentation scope | [[Current System Guide]] |
 | Find a subsystem or detailed reference | [[System Map MOC]] |
 | Open the local ERD and understand missing connections | [[Database Schema and ERD]] |
-| Follow TOSA submission, Revision and scoring | [[TOSA Application and Review Workflow]] |
+| Follow TOSA submission, correction and manual verification | [[TOSA Application and Review Workflow]] |
 | Review the recorded VPS pilot and public status boundaries | [[VPS Pilot Deployment and Status]] |
 | Find safe local commands | [[Quick Reference and Cheatsheet]] |
 

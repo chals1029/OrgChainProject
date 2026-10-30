@@ -156,6 +156,33 @@ class OfficeAccountManagementTest extends TestCase
         $this->actingAs($user, 'office')->withSession(['office_auth_state' => $oldState])->getJson('/office-desk/analytics')->assertUnauthorized();
     }
 
+    public function test_oso_can_grant_and_revoke_existing_ovcaa_tosa_access_without_escalation(): void
+    {
+        $manager = $this->officer();
+        $target = $this->officer('ovcaa');
+        $identity = ['name' => $target->name, 'email' => $target->email];
+        $oldState = ['id' => $target->id, 'version' => (int) $target->auth_version];
+        $this->actingAs($manager, 'office')->patchJson(route('office.settings.users.update', $target),
+            $identity + ['tosa_clearance' => 'Level 1 Read-only'])
+            ->assertOk()->assertJsonPath('user.tosa_clearance', 'Level 1 Read-only');
+        $target->refresh();
+        $this->assertSame($oldState['version'] + 1, $target->auth_version);
+        $this->actingAs($target, 'office')->withSession(['office_auth_state' => $oldState])
+            ->getJson(route('office.tosa'))->assertUnauthorized();
+        $this->actingAs($target, 'office')->get(route('office.tosa'))->assertOk()->assertSee(route('office.tosa'));
+        $this->actingAs($manager, 'office')->patchJson(route('office.settings.users.update', $target),
+            $identity + ['tosa_clearance' => 'Level 2 Evaluator'])->assertUnprocessable();
+        $this->patchJson(route('office.settings.users.update', $target),
+            $identity + ['tosa_clearance' => 'Level 3 Master'])->assertUnprocessable();
+        $state = ['id' => $target->id, 'version' => (int) $target->auth_version];
+        $this->patchJson(route('office.settings.users.update', $target), $identity + ['tosa_clearance' => 'No Access'])
+            ->assertOk()->assertJsonPath('user.tosa_clearance', 'No Access');
+        $target->refresh();
+        $this->actingAs($target, 'office')->withSession(['office_auth_state' => $state])
+            ->getJson(route('office.tosa'))->assertUnauthorized();
+        $this->actingAs($target, 'office')->get(route('office.tosa'))->assertForbidden();
+    }
+
     public function test_reset_invalidates_stale_guard_password_and_legacy_session_and_new_login_is_gated(): void
     {
         $user = $this->officer('so', $this->organization());

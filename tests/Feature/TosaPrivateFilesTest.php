@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\OfficeAnnouncement;
 use App\Models\OfficeTemplate;
 use App\Models\TosaApplicant;
 use App\Models\UserAccount;
@@ -21,6 +22,7 @@ use Tests\TestCase;
 class TosaPrivateFilesTest extends TestCase
 {
     private const SECTIONS = ['table_of_contents', 'application_form', 'cv', 'good_moral', 'academic', 'leadership', 'social_responsibility'];
+    private ?string $filledDocx = null;
 
     protected function setUp(): void
     {
@@ -46,8 +48,21 @@ class TosaPrivateFilesTest extends TestCase
             $table->decimal('gwa', 4, 2)->nullable();
             $table->boolean('gwa_verified')->default(false);
             $table->json('score_evaluation')->nullable();
+            $table->json('document_review')->nullable();
+            $table->json('committee_members')->nullable();
             $table->timestamps();
         });
+        Schema::connection('mysql')->create('office_announcements', function (Blueprint $table): void {
+            $table->id();
+            $table->string('title');
+            $table->string('type');
+            $table->text('body');
+            $table->string('priority')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+        OfficeAnnouncement::query()->create(['title' => 'TOSA call', 'type' => 'Call for TOSA',
+            'body' => 'Submit the required documents.', 'priority' => 'normal', 'expires_at' => now()->addDay()]);
         Schema::connection('mysql')->create('office_templates', function (Blueprint $table): void {
             $table->id();
             foreach (['name', 'category', 'format', 'size', 'description', 'file_path', 'original_name'] as $column) {
@@ -56,6 +71,7 @@ class TosaPrivateFilesTest extends TestCase
             $table->integer('downloads')->default(0);
             $table->timestamps();
         });
+        (require database_path('migrations/2026_10_31_000001_create_tosa_workspace_tables.php'))->up();
     }
 
     protected function tearDown(): void
@@ -76,7 +92,26 @@ class TosaPrivateFilesTest extends TestCase
 
     private function evidenceBytes(string $format = 'pdf'): string
     {
-        return $this->referenceBytes($format === 'docx' ? 'application_form' : 'guidelines');
+        if ($format !== 'docx') {
+            return $this->referenceBytes('guidelines');
+        }
+        if ($this->filledDocx !== null) {
+            return $this->filledDocx;
+        }
+        $temp = tempnam(sys_get_temp_dir(), 'tosa-fixture-');
+        try {
+            file_put_contents($temp, $this->referenceBytes('application_form'));
+            $zip = new \ZipArchive;
+            if ($zip->open($temp) !== true) {
+                throw new RuntimeException('Could not prepare the synthetic DOCX fixture.');
+            }
+            $xml = $zip->getFromName('word/document.xml');
+            $zip->addFromString('word/document.xml', str_replace('</w:body>', '<w:p><w:r><w:t>TEST synthetic candidate details</w:t></w:r></w:p></w:body>', $xml));
+            $zip->close();
+            return $this->filledDocx = file_get_contents($temp);
+        } finally {
+            @unlink($temp);
+        }
     }
 
     private function evidenceUpload(string $key, string $format = 'pdf'): UploadedFile
@@ -84,7 +119,7 @@ class TosaPrivateFilesTest extends TestCase
         return UploadedFile::fake()->createWithContent('candidate-'.$key.'.'.$format, $this->evidenceBytes($format));
     }
 
-    private function packet(string $applicationFormat = 'pdf'): array
+    private function packet(string $applicationFormat = 'docx'): array
     {
         $documents = [];
         foreach (self::SECTIONS as $key) {
@@ -98,9 +133,10 @@ class TosaPrivateFilesTest extends TestCase
     {
         $requirements = [];
         foreach (self::SECTIONS as $key) {
-            $path = 'tosa/fixture-owner/'.$key.'.pdf';
-            Storage::disk('local')->put($path, $this->evidenceBytes());
-            $requirements[$key] = ['path' => $path, 'name' => 'candidate-'.$key.'.pdf'];
+            $format = $key === 'application_form' ? 'docx' : 'pdf';
+            $path = 'tosa/fixture-owner/'.$key.'.'.$format;
+            Storage::disk('local')->put($path, $this->evidenceBytes($format));
+            $requirements[$key] = ['path' => $path, 'name' => 'candidate-'.$key.'.'.$format];
         }
 
         return TosaApplicant::query()->create(['sr_code' => 'fixture-owner', 'status' => 'draft',
@@ -140,6 +176,47 @@ class TosaPrivateFilesTest extends TestCase
         return $files;
     }
 
+    public function test_new_packet_requires_an_active_tosa_call_not_a_general_notice(): void
+    {
+        OfficeAnnouncement::query()->update(['type' => 'General Announcement']);
+        $this->actingAs($this->student(), 'student')->post(route('portal.tosa.submit'), ['documents' => $this->packet()])
+            ->assertRedirect()->assertSessionHasErrors('tosa');
+        $this->assertSame(0, TosaApplicant::query()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_returned_packet_can_be_resubmitted_after_call_expires_and_requires_new_review(): void
+    {
+        $call = OfficeAnnouncement::query()->firstOrFail();
+        $this->assertSame('tosa', $call->studentPublication()['category']);
+        $this->actingAs($this->student(), 'student')->post(route('portal.tosa.submit'), ['documents' => $this->packet()])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $applicant = TosaApplicant::query()->sole();
+        $this->assertDatabaseHas('tosa_history_events', [
+            'action' => 'submitted', 'actor_type' => 'student', 'applicant_id' => $applicant->id,
+        ], 'mysql');
+        $files = $this->savedBytes($applicant);
+        $applicant->forceFill([
+            'subsection' => 'returned', 'gwa' => 1.25, 'gwa_verified' => true,
+            'document_review' => ['documents' => ['academic' => ['verified_by' => 1]]],
+            'committee_members' => ['members' => [5], 'assigned_by' => 1, 'assigned_at' => now()->toIso8601String()],
+            'score_evaluation' => ['status' => 'finalized'],
+        ])->save();
+        $call->update(['expires_at' => now()->subMinute()]);
+        $this->post(route('portal.tosa.submit'))->assertRedirect()->assertSessionHasNoErrors();
+        $applicant->refresh();
+        $this->assertDatabaseHas('tosa_history_events', [
+            'action' => 'resubmitted', 'actor_type' => 'student', 'applicant_id' => $applicant->id,
+        ], 'mysql');
+        $this->assertSame('screening', $applicant->subsection);
+        $this->assertNull($applicant->document_review);
+        $this->assertSame(['status' => 'finalized'], $applicant->score_evaluation);
+        $this->assertSame(1.25, $applicant->gwa);
+        $this->assertTrue($applicant->gwa_verified);
+        $this->assertSame([5], $applicant->committee_members['members']);
+        $this->assertSame($files, $this->savedBytes($applicant));
+    }
+
     public function test_one_submit_saves_all_seven_private_originals_and_publishes_one_screening_row(): void
     {
         $this->actingAs($this->student(), 'student');
@@ -150,16 +227,18 @@ class TosaPrivateFilesTest extends TestCase
         $this->assertCount(7, Storage::disk('local')->allFiles('tosa/fixture-owner'));
         foreach (self::SECTIONS as $key) {
             $path = $applicant->requirementPath($key);
-            $this->assertSame($this->evidenceBytes(), Storage::disk('local')->get($path));
+            $format = $key === 'application_form' ? 'docx' : 'pdf';
+            $mime = $format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+            $this->assertSame($this->evidenceBytes($format), Storage::disk('local')->get($path));
             Storage::disk('public')->assertMissing($path);
             $preview = $this->get(route('portal.tosa.documents.show', ['key' => $key]))->assertOk()
-                ->assertHeader('Content-Type', 'application/pdf')->assertHeader('X-Content-Type-Options', 'nosniff');
-            $this->assertStringStartsWith('inline;', $preview->headers->get('Content-Disposition'));
+                ->assertHeader('Content-Type', $mime)->assertHeader('X-Content-Type-Options', 'nosniff');
+            $this->assertStringStartsWith($format === 'docx' ? 'attachment;' : 'inline;', $preview->headers->get('Content-Disposition'));
             $this->assertTrue($preview->headers->hasCacheControlDirective('private'));
             $this->assertTrue($preview->headers->hasCacheControlDirective('no-store'));
             $download = $this->get(route('portal.tosa.documents.show', ['key' => $key, 'download' => 1]))
-                ->assertOk()->assertDownload('candidate-'.$key.'.pdf');
-            $this->assertSame($this->evidenceBytes(), file_get_contents($download->baseResponse->getFile()->getPathname()));
+                ->assertOk()->assertDownload('candidate-'.$key.'.'.$format);
+            $this->assertSame($this->evidenceBytes($format), file_get_contents($download->baseResponse->getFile()->getPathname()));
         }
         $before = $applicant->fresh()->getRawOriginal();
         $files = $this->savedBytes($applicant);
@@ -181,6 +260,38 @@ class TosaPrivateFilesTest extends TestCase
             $this->assertSame($this->evidenceBytes('docx'), file_get_contents($response->baseResponse->getFile()->getPathname()));
         }
         $this->assertSame('screening', TosaApplicant::query()->sole()->subsection);
+    }
+
+    public function test_pdf_and_untouched_application_templates_cannot_be_submitted(): void
+    {
+        $this->actingAs($this->student(), 'student');
+        $blank = $this->referenceBytes('application_form');
+        $temp = tempnam(sys_get_temp_dir(), 'tosa-blank-');
+        try {
+            file_put_contents($temp, $blank);
+            $zip = new \ZipArchive;
+            $this->assertTrue($zip->open($temp) === true);
+            $zip->addFromString('docProps/test-fixture.txt', 'Repacked without completing the form');
+            $zip->close();
+            $repacked = file_get_contents($temp);
+        } finally {
+            @unlink($temp);
+        }
+        foreach ([$blank, $repacked] as $bytes) {
+            $documents = $this->packet();
+            $documents['application_form'] = UploadedFile::fake()->createWithContent('blank.docx', $bytes);
+            $this->post(route('portal.tosa.submit'), ['documents' => $documents])
+                ->assertRedirect()->assertSessionHasErrors('documents.application_form');
+        }
+        $documents = $this->packet('pdf');
+        $this->post(route('portal.tosa.submit'), ['documents' => $documents])
+            ->assertRedirect()->assertSessionHasErrors('documents.application_form');
+        $this->assertSame(0, TosaApplicant::query()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+
+        $applicant = $this->completeApplication();
+        Storage::disk('local')->put($applicant->requirementPath('application_form'), $blank);
+        $this->assertSubmissionRejected($applicant);
     }
 
     public function test_incomplete_first_packet_creates_no_row_or_partial_files(): void
@@ -242,31 +353,21 @@ class TosaPrivateFilesTest extends TestCase
         $requirements = $applicant->requirements;
         $requirements['scholastic'] = ['path' => $legacyPath];
         $applicant->update(['requirements' => $requirements]);
-        $scoring = app(\App\Services\TosaScoringService::class);
-        $input = [
-            'gwa' => 1.25, 'gwa_verified' => true, 'eligible_verified' => true,
-            'academic_awards' => [], 'leadership_seminars' => [],
-            'leadership_positions' => [['label' => 'Local organization officer', 'evidence' => 'F page 3', 'level' => 'local', 'role' => 'other']],
-            'leadership_awards' => [], 'social_activities' => [],
-        ];
         $applicant->status = 'submitted';
         $applicant->subsection = 'returned';
-        $applicant->score_evaluation = [
-            'rubric_version' => \App\Services\TosaScoringService::RUBRIC_VERSION, 'status' => 'draft',
-            'input' => $input, ...$scoring->calculate(1.25, $input),
-            'verified_at' => null, 'verified_by' => null, 'updated_at' => now()->toIso8601String(),
-        ];
+        $applicant->score_evaluation = ['status' => 'historical'];
+        $applicant->document_review = ['documents' => ['application_form' => ['path' => $oldForm]]];
         $applicant->save();
-        $this->assertSame(27125, $scoring->evaluation($applicant)['breakdown']['total_milli']);
         $this->post(route('portal.tosa.submit'), ['documents' => ['application_form' => $this->evidenceUpload('application_form', 'docx')]])
             ->assertRedirect()->assertSessionHasNoErrors();
         $applicant->refresh();
         $this->assertSame('submitted', $applicant->status);
         $this->assertSame('screening', $applicant->subsection);
-        $this->assertNull($applicant->gwa);
-        $this->assertFalse($applicant->gwa_verified);
-        $this->assertNull($applicant->remarks);
-        $this->assertNull($applicant->score_evaluation);
+        $this->assertSame(1.25, $applicant->gwa);
+        $this->assertTrue($applicant->gwa_verified);
+        $this->assertSame('Prior manual review', $applicant->remarks);
+        $this->assertSame(['status' => 'historical'], $applicant->score_evaluation);
+        $this->assertNull($applicant->document_review);
         Storage::disk('local')->assertMissing($oldForm);
         Storage::disk('local')->assertExists($cv);
         Storage::disk('local')->assertExists($legacyPath);
@@ -378,14 +479,14 @@ class TosaPrivateFilesTest extends TestCase
             $applicant->update(['requirements' => $complete]);
             $path = $applicant->requirementPath($key);
             Storage::disk('local')->delete($path);
-            Storage::disk('public')->put($path, $this->evidenceBytes());
+            Storage::disk('public')->put($path, $this->evidenceBytes($key === 'application_form' ? 'docx' : 'pdf'));
             $this->assertSubmissionRejected($applicant);
             foreach (['', 'not a PDF', $this->referenceBytes('front_page')] as $invalid) {
                 Storage::disk('local')->put($path, $invalid);
                 $this->assertSubmissionRejected($applicant);
                 $this->get(route('portal.tosa.documents.show', ['key' => $key]))->assertNotFound();
             }
-            Storage::disk('local')->put($path, $this->evidenceBytes());
+            Storage::disk('local')->put($path, $this->evidenceBytes($key === 'application_form' ? 'docx' : 'pdf'));
         }
     }
 
@@ -475,9 +576,9 @@ class TosaPrivateFilesTest extends TestCase
         $applicant->refresh();
         $this->assertSame('submitted', $applicant->status);
         $this->assertSame('screening', $applicant->subsection);
-        $this->assertNull($applicant->gwa);
-        $this->assertFalse($applicant->gwa_verified);
-        $this->assertNull($applicant->remarks);
+        $this->assertSame(1.25, $applicant->gwa);
+        $this->assertTrue($applicant->gwa_verified);
+        $this->assertSame('Correct the nomination.', $applicant->remarks);
         Storage::disk('local')->assertMissing($oldForm);
         $this->get(route('portal.tosa.documents.show', ['key' => 'application_form']))
             ->assertOk()->assertDownload('candidate-application_form.docx');

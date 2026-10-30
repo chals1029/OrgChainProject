@@ -71,20 +71,16 @@ Routes below are a focused map of current `routes/web.php`, not a claim that mid
 | `GET` | `/portal/tosa/templates/{key}` | `student.auth` | `StudentPortalController@downloadTosaTemplate` | `portal.tosa.templates.show` |
 | `GET` | `/portal/tosa/documents/{key}` | `student.auth` + own packet | `StudentPortalController@downloadTosaDocument` | `portal.tosa.documents.show` |
 | `POST` | `/portal/tosa/submit` | `student.auth` + ownership/lock/completeness | `StudentPortalController@submitTosaApplication` | `portal.tosa.submit` |
-| `GET` | `/portal/tosa/workbook/reference` | `student.auth` | `TosaWorkbookController@reference` | `portal.tosa.workbook.reference` |
-| `GET` | `/portal/tosa/workbook` | `student.auth` + own packet | `TosaWorkbookController@student` | `portal.tosa.workbook.show` |
-| `GET` | `/portal/tosa/workbook/download` | `student.auth` + own packet | `TosaWorkbookController@studentDownload` | `portal.tosa.workbook.download` |
 | `POST` | `/portal/activities/{activity}/rsvp` | `student.auth` | `StudentPortalController@toggleRsvp` | `portal.activities.rsvp` |
 | `GET` | `/office-desk/student-reports` | `office.auth` + OSO only | `OfficePortalController@studentReports` | `office.student-reports` |
 | `POST` | `/office-desk/student-reports/{report}/review` | `office.auth` + OSO only | `OfficePortalController@reviewStudentReport` (acknowledge/dismiss) | `office.student-reports.review` |
 | `GET` | `/office-desk/tosa` | `office.auth` + TOSA clearance 1+ | `OfficePortalController@tosa` | `office.tosa` |
 | `GET` | `/office-desk/tosa/{applicant}/documents/{key}` | `office.auth` + TOSA clearance/submitted dossier | `OfficePortalController@downloadTosaDocument` | `office.tosa.documents.download` |
-| `POST` | `/office-desk/tosa/{applicant}/subsection` | `office.auth` + clearance 2+ | `OfficePortalController@updateTosaSubsection` | `office.tosa.subsection` |
-| `POST` | `/office-desk/tosa/{applicant}/scoring` | `office.auth` + OSO/OVCAA evaluator 2+ | `TosaScoringController@save` | `office.tosa.scoring.save` |
+| `POST` | `/office-desk/tosa/{applicant}/subsection` | `office.auth` + OSO | `OfficePortalController@updateTosaSubsection` | `office.tosa.subsection` |
+| `POST` | `/office-desk/tosa/{applicant}/top-ten` | `office.auth` + OSO | `TosaShortlistController@add` | `office.tosa.top10.add` |
+| `GET` | `/office-desk/tosa/{applicant}/package` | `office.auth` + OSO | `TosaPackageController@__invoke` | `office.tosa.package.download` |
+| `POST` | `/office-desk/tosa/top-ten` | `office.auth` + OSO | `TosaShortlistController@save` | `office.tosa.top10.save` |
 | `POST` | `/office-desk/tosa/references/template` | `office.auth` + OSO Master | `OfficePortalController@storeTosaReferenceTemplate` | `office.tosa.references.store` |
-| `GET` | `/office-desk/tosa/workbook/reference` | `office.auth` + TOSA clearance | `TosaWorkbookController@officeReference` | `office.tosa.workbook.reference` |
-| `GET` | `/office-desk/tosa/{applicant}/workbook` | `office.auth` + TOSA clearance/submitted dossier | `TosaWorkbookController@office` | `office.tosa.workbook.show` |
-| `GET` | `/office-desk/tosa/{applicant}/workbook/download` | `office.auth` + TOSA clearance/submitted dossier | `TosaWorkbookController@officeDownload` | `office.tosa.workbook.download` |
 | `GET` | `/office-desk/archive` | `office.auth` | `OfficePortalController@archive` | `office.archive` |
 | `POST` | `/office-desk/archive/folders` | `office.auth` + SO/OSO, organization-scoped | `OfficePortalController@storeArchiveFolder` | `office.archive.folders.store` |
 | `POST` | `/office-desk/archive/documents` | `office.auth` + SO/OSO, folder-scoped | `OfficePortalController@storeArchiveDocument` | `office.archive.documents.store` |
@@ -104,7 +100,7 @@ Routes below are a focused map of current `routes/web.php`, not a claim that mid
 - Feedback review uses `decision=acknowledged|dismissed`; acknowledged feedback retains historical `verified` fields internally. Only the submitting student sees its history/acknowledgment notification at `/portal#feedback-{id}`. Receipt/report verification is unchanged.
 - Community photos require an active student and the post's audience on every response; new uploads are private, existing photos use the same authorized route, and direct community-storage URLs are denied. Search/counts/seven reactions: [[Community Feed Posts and Likes]].
 - AR and FR submit/review independently through `{reportType}=ar|fr`, not obsolete `/reports/semester/...` pair routes. Dedicated lock dialog, confirmed reopen, file gates and review permissions: [[Semester AR and FR Submission Workflow]].
-- Student TOSA opens at `/portal#tosa`. There are no per-file `POST /portal/tosa/documents` or `DELETE /portal/tosa/documents/{key}` routes. Choose/preview/Replace/Cancel is local until one whole-packet submission; Revision alone unlocks a submitted packet and resubmission relocks. Scoring is evaluator-verified; no student score panel. See [[TOSA Application and Review Workflow]].
+- Student TOSA opens at `/portal#tosa`. Files are submitted together; OSO can review them or return the packet for correction. A manually chosen Top 10 stays private until OSO publishes it; the system does not score or rank applicants. See [[TOSA Application and Review Workflow]].
 - Business mutations require shared confirmation without duplicating dedicated dialogs. Read-only actions and local file selection/cancellation do not prompt; logo/template choices require explicit confirmed upload/save. See [[Office Portal API and Action Endpoints]].
 
 Source: `routes/web.php`, current README/CHANGELOG and the controller/service evidence linked from each workflow. Role matrix: [[Multi-Tier Office Roles SO OSO SDO OVCAA]]. Archive: [[Document Archive and Compliance Repository]].

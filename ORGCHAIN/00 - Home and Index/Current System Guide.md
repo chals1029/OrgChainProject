@@ -19,7 +19,7 @@ This note separates current implementation, local schema snapshots and deploymen
 | Budgets | Approved activities determine allocations; actual expenses and preserved earlier spending are not replaced by template/example numbers. | [[Budget Utilization and OCR Receipts]] |
 | Community | Actual counts, seven persisted reactions, audience-scoped posts/photos, server-side search and expiring success messages. | [[Community Feed Posts and Likes]] |
 | Announcements and feedback | Published notices feed the student surfaces; office notice acknowledgment is persisted, while OSO feedback acknowledgment notifies only its submitting student. | [[Student Profile and Authentication]], [[Office Portal API and Action Endpoints]] |
-| TOSA | Seven A–G evidence sections, five reference files, one whole-packet submit; only Revision permits submitted-packet changes. Scoring is evaluator-verified, not automatic DOCX interpretation. | [[TOSA Application and Review Workflow]] |
+| TOSA | OSO announces, reviews seven-document applications and manually publishes an unranked Top 10; the desk records new activity in History. Returned packets can be corrected. | [[TOSA Application and Review Workflow]] |
 | AR / FR | Separate report submissions, review decisions and filing locks. | [[Semester AR and FR Submission Workflow]] |
 | Documents | Private originals and authorized view/download routes; reference files are not submitted evidence. | [[Document Archive and Compliance Repository]] |
 
@@ -27,7 +27,7 @@ This note separates current implementation, local schema snapshots and deploymen
 
 The local physical export contains 64 tables, 668 columns and 47 declared foreign-key constraints across `votingsystem` and `orgchain`. Read the export header for its extraction timestamp. Application relationships may exist without SQL constraints, especially across schemas.
 
-The office announcement acknowledgment migration was applied in the last recorded VPS release but its table is absent from that local snapshot. The snapshot also lacks `tosa_applicants.score_evaluation`, which current evaluator-scoring code uses. Do not add fictional columns/tables to the physical export or run migrations merely to make a diagram appear connected. See [[Database Schema and ERD]] and [[Application Relationships and Schema Boundaries]] for physical versus logical relationships and known source/snapshot differences.
+The office announcement acknowledgment migration was applied in the last recorded VPS release but its table is absent from that local snapshot. Newer TOSA review columns may also differ. Do not add fictional columns or tables to the physical export. See [[Database Schema and ERD]] and [[Application Relationships and Schema Boundaries]].
 
 ## Deployment scope
 

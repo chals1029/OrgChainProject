@@ -98,7 +98,7 @@ class ActivityBudgetLifecycleTest extends TestCase
             }
         }
         return array_merge([
-            'submission_action' => 'submit', 'activity_type' => 'in_campus',
+            'submission_action' => 'submit', 'documents_complete' => '1', 'activity_type' => 'in_campus',
             'plan_activity_key' => app(ApprovedPlanOfActivitiesService::class)->options($this->organization->name)[0]['key'],
             'organization_name' => $this->organization->name,
             'location' => 'Campus', 'approved_budget' => '5000.00',

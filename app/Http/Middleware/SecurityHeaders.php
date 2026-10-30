@@ -22,6 +22,15 @@ class SecurityHeaders
         // Even login pages carry session-bound CSRF tokens and must not be edge-cached.
         $response->headers->set('Cache-Control', 'private, no-store');
 
+        // Only the independent status page may read these public, credential-free checks.
+        if (($request->isMethod('GET') || $request->isMethod('HEAD'))
+            && ($request->is('/') || $request->is('up') || $request->is('health/services'))) {
+            $response->setVary('Origin', false);
+            if ($request->headers->get('Origin') === 'https://status.orgchain.tech') {
+                $response->headers->set('Access-Control-Allow-Origin', 'https://status.orgchain.tech');
+            }
+        }
+
         return $response;
     }
 }

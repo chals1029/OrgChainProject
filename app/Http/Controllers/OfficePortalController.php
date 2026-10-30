@@ -25,6 +25,9 @@ use App\Models\OfficeUser;
 use App\Models\StudentFeedback;
 use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
+use App\Models\TosaHistoryEvent;
+use App\Models\TosaShortlist;
+use App\Models\UserAccount;
 use App\Services\ApprovedPlanOfActivitiesService;
 use App\Services\BudgetChainService;
 use App\Services\FinancialReportPreviewGate;
@@ -33,7 +36,7 @@ use App\Services\OrgWorkflowService;
 use App\Services\OrgTimeService;
 use App\Services\SemesterReportService;
 use App\Services\TosaRequirements;
-use App\Services\TosaScoringService;
+use App\Services\TosaWorkflowService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +47,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -2414,7 +2419,7 @@ class OfficePortalController extends Controller
      */
     public function storeAnnouncement(Request $request): RedirectResponse
     {
-        $this->osoOfficer();
+        $office = $this->osoOfficer();
         $validated = $request->validate([
             'type' => ['required', Rule::in(OfficeAnnouncement::PUBLICATION_TYPES)],
             'body' => ['required', 'string', 'max:10000'],
@@ -2453,7 +2458,13 @@ class OfficePortalController extends Controller
         }
 
         try {
-            OfficeAnnouncement::query()->create($data);
+            DB::connection('mysql')->transaction(function () use ($data, $office): void {
+                $announcement = OfficeAnnouncement::query()->create($data);
+                if ($data['type'] === 'Call for TOSA') {
+                    TosaHistoryEvent::record('call_published', 'office', (int) $office->id, $office->name,
+                        null, ['announcement_id' => (int) $announcement->id]);
+                }
+            }, 3);
         } catch (\Throwable $error) {
             if (isset($data['attachment_path'])) {
                 Storage::disk('public')->delete($data['attachment_path']);
@@ -2461,7 +2472,9 @@ class OfficePortalController extends Controller
             throw $error;
         }
 
-        return redirect()->route('office.updates')->with('success', 'Announcement published.');
+        return $request->input('return_to') === 'tosa' && $validated['type'] === 'Call for TOSA'
+            ? redirect()->route('office.tosa', ['tab' => 'documents'])->with('success', 'TOSA announcement published.')
+            : redirect()->route('office.updates')->with('success', 'Announcement published.');
     }
 
     public function acknowledgeAnnouncement(Request $request, OfficeAnnouncement $announcement): JsonResponse
@@ -3834,50 +3847,70 @@ class OfficePortalController extends Controller
     public function tosa(): View
     {
         $office = $this->tosaOfficer();
-        $subsection = request('subsection', 'all');
-        $applicants = TosaApplicant::query()
-            ->where('status', 'submitted')
-            ->orderByRaw('CASE WHEN gwa IS NULL THEN 1 ELSE 0 END, gwa ASC, full_name ASC')
-            ->get();
-        $tosaTemplates = [];
-        foreach (TosaRequirements::REFERENCES as $key => $document) {
-            $template = TosaRequirements::resolveTemplate($key);
-            $id = ($template['source'] ?? null) === 'uploaded' ? 'db-'.$template['id'] : $document['source_id'];
-            $url = route('office.updates.templates.document', ['id' => $id]);
-            $tosaTemplates[$document['title']] = [
-                'id' => $template['id'] ?? $document['source_id'],
-                'name' => $template['name'] ?? $document['filename'],
-                'url' => $template ? $url : null,
-                'preview_url' => $template && $document['format'] === 'PDF' ? $url.'?preview=1' : null,
-                'format' => $document['format'],
-                'size' => $template ? ($template['size'] ?? $this->formatFileSize((int) filesize($template['path']))) : null,
-                'source' => $template['source'] ?? 'bundled',
-            ];
+        $tab = request('tab', 'submissions');
+        $tab = in_array($tab, ['submissions', 'documents', 'top10', 'history'], true) ? $tab : 'submissions';
+        $search = mb_substr(trim((string) request('search', '')), 0, 100);
+        $applicants = null;
+        $reviewApplicants = collect();
+        $templates = [];
+        $calls = null;
+        $shortlist = null;
+        $candidates = collect();
+        $events = null;
+
+        if ($tab === 'submissions') {
+            $shortlist = TosaShortlist::query()->findOrFail(1);
+            $applicants = TosaApplicant::query()->where('status', 'submitted')
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
+                    $query->where('full_name', 'like', '%'.$search.'%')
+                        ->orWhere('sr_code', 'like', '%'.$search.'%')
+                        ->orWhere('program', 'like', '%'.$search.'%');
+                }))
+                ->select('tosa_applicants.*')
+                ->addSelect(['latest_submission_at' => TosaHistoryEvent::query()->select('created_at')
+                    ->whereColumn('applicant_id', 'tosa_applicants.id')
+                    ->whereIn('action', ['submitted', 'resubmitted'])->orderByDesc('id')->limit(1)])
+                ->latest()->orderByDesc('id')->paginate(10)->withQueryString();
+            $reviewApplicants = $applicants->getCollection()->values();
+        } elseif ($tab === 'documents') {
+            foreach (TosaRequirements::REFERENCES as $key => $document) {
+                $template = TosaRequirements::resolveTemplate($key);
+                $id = ($template['source'] ?? null) === 'uploaded' ? 'db-'.$template['id'] : $document['source_id'];
+                $url = route('office.updates.templates.document', ['id' => $id]);
+                $templates[$document['title']] = [
+                    'name' => $template['name'] ?? $document['filename'],
+                    'url' => $template ? $url : null,
+                    'preview_url' => $template && $document['format'] === 'PDF' ? $url.'?preview=1' : null,
+                ];
+            }
+            $calls = OfficeAnnouncement::query()->whereIn('type', ['TOSA', 'Call for TOSA'])
+                ->latest()->orderByDesc('id')->paginate(10, ['*'], 'call_page')->withQueryString();
+        } elseif ($tab === 'top10') {
+            $shortlist = TosaShortlist::query()->findOrFail(1);
+            $workflow = app(TosaWorkflowService::class);
+            $candidates = TosaApplicant::query()->where('status', 'submitted')->orderBy('full_name')->orderBy('id')->get()
+                ->map(fn (TosaApplicant $applicant): array => [
+                    'applicant' => $applicant,
+                    'verified' => $workflow->isVerified($applicant),
+                ]);
+        } else {
+            $events = TosaHistoryEvent::query()->with('applicant:id,full_name')
+                ->orderByDesc('id')->paginate(20)->withQueryString();
         }
 
         return view('org.tosa', array_merge($this->deskContext(), [
             'activeNav' => 'tosa',
-            'tosaClearanceLevel' => $office->tosaClearanceLevel(),
-            'tosaCanReview' => $office->tosaClearanceLevel() >= 2,
-            'tosaCanManageTemplates' => $office->office_role === 'oso' && $office->tosaClearanceLevel() >= 3,
+            'tosaTab' => $tab,
+            'tosaSearch' => $search,
+            'tosaCanManageTemplates' => $office->office_role === 'oso',
+            'tosaCanManageWorkflow' => $office->office_role === 'oso',
             'tosaApplicants' => $applicants,
-            'tosaTemplates' => $tosaTemplates,
-            'tosaScoringRanking' => app(TosaScoringService::class)->ranking($applicants),
-            'tosaSubsections' => [
-                'all' => 'All',
-                'pending' => 'Pending',
-                'screening' => 'Screening',
-                'interview' => 'Interview',
-                'accepted' => 'Accepted',
-                'rejected' => 'Rejected',
-                'returned' => 'Revision',
-            ],
-            'selectedSubsection' => $subsection,
-            'subsectionCounts' => TosaApplicant::query()
-                ->where('status', 'submitted')
-                ->selectRaw('subsection, COUNT(*) as total')
-                ->groupBy('subsection')
-                ->pluck('total', 'subsection'),
+            'tosaReviewApplicants' => $reviewApplicants,
+            'tosaTemplates' => $templates,
+            'tosaCalls' => $calls,
+            'tosaShortlist' => $shortlist,
+            'tosaCandidates' => $candidates,
+            'tosaEvents' => $events,
         ]));
     }
 
@@ -3940,7 +3973,7 @@ class OfficePortalController extends Controller
             }
         }
 
-        return redirect()->route('office.tosa')->with('success', 'Official template uploaded for '.$definition['title'].'.');
+        return redirect()->route('office.tosa', ['tab' => 'documents'])->with('success', 'Official template uploaded for '.$definition['title'].'.');
     }
 
     public function storeArchiveFolder(Request $request): RedirectResponse
@@ -4255,6 +4288,7 @@ class OfficePortalController extends Controller
         $validated = $request->validate([
             'activity_type' => ['required', 'in:in_campus,local_off_campus'],
             'submission_action' => ['required', 'in:submit'],
+            'documents_complete' => ['accepted'],
             'organization_name' => ['nullable', 'string', 'max:255'],
             'plan_activity_key' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
@@ -4281,6 +4315,7 @@ class OfficePortalController extends Controller
         ], [
             'approved_budget.required' => 'Set the allocated budget before submitting the activity.',
             'approved_budget.min' => 'The allocated budget cannot be negative. Enter 0 for an activity with no allocated budget.',
+            'documents_complete.accepted' => 'Confirm that all required documents are completed before submitting.',
         ]);
         $assignedOrganization = $this->assignedOrganizationName();
         if ($assignedOrganization !== null) {
@@ -4319,6 +4354,20 @@ class OfficePortalController extends Controller
                 }
                 if ($missing) {
                     throw ValidationException::withMessages(['attachments' => 'Upload the required checklist items: '.implode(', ', $missing).'.']);
+                }
+                $completion = app(\App\Services\DocumentCompletion::class);
+                foreach ($requirementSet as $requirement) {
+                    $key = $requirement['key'];
+                    $file = $files[$key] ?? null;
+                    $savedPath = $attachments[$key]['path'] ?? null;
+                    if (! $file && ! filled($savedPath)) {
+                        continue;
+                    }
+                    $path = $file ? $file->getRealPath() : $disk->path($savedPath);
+                    $name = $file ? $file->getClientOriginalName() : ($attachments[$key]['name'] ?? basename($savedPath));
+                    if ($issue = $completion->issue($path, $name, $requirement, $activityType)) {
+                        throw ValidationException::withMessages(['attachments.'.$key => $issue]);
+                    }
                 }
                 $from = $activity->workflow_status ?: 'created';
                 $orgName = $validated['organization_name'];
@@ -5301,44 +5350,68 @@ class OfficePortalController extends Controller
 
     public function updateTosaSubsection(Request $request, TosaApplicant $applicant): RedirectResponse|JsonResponse
     {
-        $this->tosaOfficer(2);
+        $office = $this->osoOfficer();
         abort_unless($applicant->status === 'submitted', 404);
-        $validated = $request->validate([
-            'subsection' => ['required', 'in:pending,screening,interview,accepted,rejected,returned'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
-            'gwa' => ['nullable', 'numeric', 'between:1.00,5.00', 'decimal:0,2'],
-            'gwa_verified' => ['nullable', 'boolean'],
-        ]);
-        if ($request->has('gwa_verified')) {
-            $validated['gwa_verified'] = $request->boolean('gwa_verified');
+        if (array_diff(array_keys($request->except('_token')), ['subsection', 'document_key', 'reason']) !== []) {
+            throw ValidationException::withMessages(['subsection' => 'Only a correction request is supported.']);
         }
+        $data = $request->validate([
+            'subsection' => ['required', 'in:returned'],
+            'document_key' => ['required', 'string', Rule::in(array_keys(TosaRequirements::SUBMISSIONS))],
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
 
-        $applicant = DB::connection('mysql')->transaction(function () use ($applicant, $validated): TosaApplicant {
+        $applicant = DB::connection('mysql')->transaction(function () use ($applicant, $office, $data): TosaApplicant {
             $locked = TosaApplicant::query()->whereKey($applicant->id)->lockForUpdate()->firstOrFail();
+            $reviewer = OfficeUser::query()->whereKey($office->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->status === 'submitted', 404);
-            $locked->fill($validated);
-            if ($locked->isDirty(['gwa', 'gwa_verified']) || in_array($locked->subsection, ['returned', 'rejected'], true)) {
-                app(TosaScoringService::class)->invalidate($locked, 'Grades, verification or review status changed; the evaluation needs to be verified again.');
+            abort_unless($reviewer->is_active && $reviewer->office_role === 'oso'
+                && (int) $reviewer->auth_version === (int) $office->auth_version, 403);
+            if ($locked->subsection === 'returned') {
+                throw ValidationException::withMessages(['subsection' => 'This application is already awaiting correction.']);
             }
+            $locked->subsection = 'returned';
             $locked->save();
+            TosaHistoryEvent::record('returned', 'office', (int) $reviewer->id, $reviewer->name, (int) $locked->id, [
+                'document_key' => $data['document_key'],
+                'reason' => $data['reason'],
+            ]);
 
             return $locked;
-        });
+        }, 3);
+
+        $emailSent = false;
+        try {
+            $srCode = trim((string) $applicant->sr_code);
+            $accounts = $srCode === '' ? collect() : UserAccount::query()->where('sr_code', $srCode)
+                ->where('account_status', 'active')->limit(2)->get();
+            $email = $accounts->count() === 1 ? trim((string) $accounts->first()->email) : '';
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $document = TosaRequirements::SUBMISSIONS[$data['document_key']]['title'];
+                $body = "OSO returned your TOSA application for correction.\n\n"
+                    ."Document: {$document}\nReason: {$data['reason']}\n\n"
+                    .'Update the document and resubmit at '.route('portal.home')."#tosa\n\n"
+                    .'— Office of Student Organizations';
+                $emailSent = Mail::raw($body, fn ($message) => $message->to($email)
+                    ->subject('OrgChain TOSA: document correction requested')) !== null;
+            }
+        } catch (\Throwable $error) {
+            Log::warning('TOSA correction email failed.', ['exception' => $error::class]);
+        }
+        $message = $emailSent
+            ? 'Application returned for correction. Email sent to the student.'
+            : 'Application returned, but the email could not be sent. Check the student account and mail settings.';
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'ok' => true,
                 'subsection' => $applicant->subsection,
-                'gwa' => $applicant->gwa,
-                'gwaVerified' => (bool) $applicant->gwa_verified,
-                'remarks' => $applicant->remarks,
-                'evaluation' => app(TosaScoringService::class)->evaluation($applicant),
-                'ranking' => app(TosaScoringService::class)->ranking(TosaApplicant::query()->where('status', 'submitted')->get()),
-                'academicYear' => $applicant->academic_year,
+                'email_sent' => $emailSent,
+                'message' => $message,
             ]);
         }
 
-        return back()->with('success', 'Applicant moved to '.$validated['subsection'].'.');
+        return redirect()->route('office.tosa')->with($emailSent ? 'success' : 'warning', $message);
     }
 
     private function reportingPeriod(?Carbon $date): array
@@ -5803,8 +5876,7 @@ class OfficePortalController extends Controller
         $topic = trim((string) $request->query('topic', ''));
         $search = trim((string) $request->query('q', ''));
 
-        $base = StudentFeedback::query();
-        $reports = (clone $base)
+        $base = StudentFeedback::query()
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
                 $query->where('author_name', 'like', '%'.$search.'%')
                     ->orWhere('body', 'like', '%'.$search.'%')
@@ -5813,7 +5885,8 @@ class OfficePortalController extends Controller
             }))
             ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->when($college !== '', fn ($q) => $q->where('college', $college))
-            ->when($topic !== '', fn ($q) => $q->where('topic', $topic))
+            ->when($topic !== '', fn ($q) => $q->where('topic', $topic));
+        $reports = (clone $base)
             ->latest()
             ->paginate(15)
             ->withQueryString();

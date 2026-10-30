@@ -9,7 +9,7 @@ class OfficeAnnouncement extends Model
 {
     protected $connection = 'mysql';
 
-    public const PUBLICATION_TYPES = ['General Announcement', 'Deadline', 'Guideline', 'Reminder'];
+    public const PUBLICATION_TYPES = ['General Announcement', 'Deadline', 'Guideline', 'Reminder', 'Call for TOSA'];
 
     protected $fillable = [
         'title',
@@ -32,6 +32,11 @@ class OfficeAnnouncement extends Model
         $now = now();
 
         return $query->where(fn (Builder $expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', $now));
+    }
+
+    public static function activeTosaCall(): ?self
+    {
+        return static::query()->published()->whereIn('type', ['TOSA', 'Call for TOSA'])->latest()->first();
     }
 
     /**

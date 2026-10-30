@@ -13,8 +13,8 @@ use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentPortalController;
 use App\Http\Controllers\SystemAdminAuthController;
 use App\Http\Controllers\SystemAdminController;
-use App\Http\Controllers\TosaScoringController;
-use App\Http\Controllers\TosaWorkbookController;
+use App\Http\Controllers\TosaPackageController;
+use App\Http\Controllers\TosaShortlistController;
 use App\VotingSystem\Kernel as VotingKernel;
 use Illuminate\Support\Facades\Route;
 
@@ -73,9 +73,6 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::get('/tosa/templates/{key}', [StudentPortalController::class, 'downloadTosaTemplate'])->name('tosa.templates.show');
     Route::get('/tosa/documents/{key}', [StudentPortalController::class, 'downloadTosaDocument'])->name('tosa.documents.show');
     Route::post('/tosa/submit', [StudentPortalController::class, 'submitTosaApplication'])->name('tosa.submit');
-    Route::get('/tosa/workbook/reference', [TosaWorkbookController::class, 'reference'])->name('tosa.workbook.reference');
-    Route::get('/tosa/workbook', [TosaWorkbookController::class, 'student'])->name('tosa.workbook.show');
-    Route::get('/tosa/workbook/download', [TosaWorkbookController::class, 'studentDownload'])->name('tosa.workbook.download');
 });
 
 Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(function () {
@@ -130,6 +127,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/financial-report/reports/{document}/submit', [SoFinancialReportController::class, 'submit'])->name('financial.reports.submit');
     Route::get('/accomplishment-report', [OfficePortalController::class, 'accomplishment'])->name('accomplishment');
     Route::get('/tosa/{applicant}/documents/{key}', [OfficePortalController::class, 'downloadTosaDocument'])->name('tosa.documents.download');
+    Route::get('/tosa/{applicant}/package', TosaPackageController::class)->name('tosa.package.download');
     Route::get('/updates', [OfficePortalController::class, 'updates'])->name('updates');
     Route::post('/updates/announcements', [OfficePortalController::class, 'storeAnnouncement'])->name('updates.announcements.store');
     Route::post('/updates/announcements/{announcement}/acknowledge', [OfficePortalController::class, 'acknowledgeAnnouncement'])->name('updates.announcements.acknowledge');
@@ -164,12 +162,10 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/renewal/documents/{document}/file', [OfficePortalController::class, 'renewalDocumentFile'])->name('renewal.documents.file');
     Route::post('/renewal/organizations/{organization}/status', [OfficePortalController::class, 'updateOrganizationQualification'])->name('renewal.organization.status');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
-    Route::get('/tosa/workbook/reference', [TosaWorkbookController::class, 'officeReference'])->name('tosa.workbook.reference');
     Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
+    Route::post('/tosa/top-ten', [TosaShortlistController::class, 'save'])->name('tosa.top10.save');
     Route::post('/tosa/{applicant}/subsection', [OfficePortalController::class, 'updateTosaSubsection'])->name('tosa.subsection');
-    Route::post('/tosa/{applicant}/scoring', [TosaScoringController::class, 'save'])->name('tosa.scoring.save');
-    Route::get('/tosa/{applicant}/workbook', [TosaWorkbookController::class, 'office'])->name('tosa.workbook.show');
-    Route::get('/tosa/{applicant}/workbook/download', [TosaWorkbookController::class, 'officeDownload'])->name('tosa.workbook.download');
+    Route::post('/tosa/{applicant}/top-ten', [TosaShortlistController::class, 'add'])->name('tosa.top10.add');
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');
     Route::post('/archive/documents', [OfficePortalController::class, 'storeArchiveDocument'])->name('archive.documents.store');

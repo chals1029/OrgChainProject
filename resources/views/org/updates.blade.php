@@ -1188,6 +1188,7 @@
                         <label for="postTypeSelect">Announcement Type *</label>
                         <select id="postTypeSelect" name="type" class="aso-select" required onchange="updateComposerTypePreview(this.value)">
                             <option value="General Announcement" @selected(old('type', 'General Announcement') === 'General Announcement')>General Announcement</option>
+                            <option value="Call for TOSA" @selected(old('type') === 'Call for TOSA')>Call for TOSA</option>
                             <option value="Deadline" @selected(old('type') === 'Deadline')>Deadline Notice</option>
                             <option value="Guideline" @selected(old('type') === 'Guideline')>Policy &amp; Guideline</option>
                             <option value="Reminder" @selected(old('type') === 'Reminder')>Compliance Reminder</option>
@@ -1211,6 +1212,7 @@
                 <div class="aso-input-group">
                     <label for="postBody">Official Announcement Details &amp; Directives *</label>
                     <textarea id="postBody" name="body" class="aso-textarea" placeholder="Write the complete details, guidelines, requirements, schedule breakdown, or instructions for student leaders..." required maxlength="10000">{{ old('body') }}</textarea>
+                    <small id="tosaCallHelp" @if (old('type') !== 'Call for TOSA') hidden @endif>Include the requirements and instructions. New TOSA submissions are open while this call is published; returned applications may still be revised afterward.</small>
                 </div>
 
                 {{-- Attached File Preview Chip --}}
@@ -1231,7 +1233,6 @@
                         <input type="file" id="postFileInput" name="attachment" style="display: none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" data-org-upload data-max-size="15360" data-min-size="1" data-upload-status-id="announcementAttachmentStatus" aria-describedby="announcementAttachmentStatus">
                         <span style="font-size: 0.78rem; color: var(--aso-ink-muted);">PDF, Word, Excel, or Image (Max 15MB)</span>
                         <span id="announcementAttachmentStatus" class="org-upload-status" aria-live="polite"></span>
-                        <button type="button" id="announcementClearAttachment" class="aso-btn-attach" onclick="removeAttachedFile()" hidden>Clear attachment</button>
                     </div>
 
                     <div style="display: flex; gap: 0.65rem; align-items: center;">
@@ -1839,6 +1840,8 @@
         }
 
         function updateComposerTypePreview(type) {
+            const callHelp = document.getElementById('tosaCallHelp');
+            if (callHelp) callHelp.hidden = type !== 'Call for TOSA';
             const badge = document.getElementById('composerTypeBadgePreview');
             if (!badge) return;
             badge.textContent = type;

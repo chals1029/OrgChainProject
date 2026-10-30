@@ -410,7 +410,7 @@
     .portal-body .sp-announcements-table .sp-announce-tbl-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-areas: "category category" "content content" "date author" "priority action";
+        grid-template-areas: "category category" "content content" "date date" "author author" "priority action";
         gap: 0.55rem 0.75rem;
         margin-bottom: 0.65rem;
         padding: 0.9rem;
@@ -434,6 +434,23 @@
     .portal-body .sp-announce-tbl-row .sp-col-date { grid-area: date; }
     .portal-body .sp-announce-tbl-row .sp-col-author { grid-area: author; }
     .portal-body .sp-announce-tbl-row .sp-col-action { grid-area: action; text-align: right; }
+
+    .portal-body .sp-announcements-table .sp-announce-tbl-row .sp-col-date {
+        white-space: nowrap;
+        overflow-wrap: normal;
+    }
+
+    .portal-body .sp-announce-tbl-row .sp-ann-author-badge {
+        max-width: 100%;
+        min-width: 0;
+        align-items: flex-start;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .portal-body .sp-announce-tbl-row .sp-ann-author-badge i {
+        flex: 0 0 auto;
+    }
 
     .portal-body .sp-announce-tbl-row .sp-see-details-btn {
         min-height: 40px;
