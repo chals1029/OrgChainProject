@@ -281,13 +281,13 @@
             </div>
 
             <h1>Chain Desk Sign In</h1>
-            <p class="office-login-lead">Sign in with your official BatStateU office email.</p>
+            <p class="office-login-lead">Sign in with your registered office or organization email.</p>
 
             <form class="login-form" method="POST" action="{{ url('/'.trim(config('orgchain.office_login_path'), '/')) }}">
                 @csrf
 
                 <div class="form-field">
-                    <label for="email">BatStateU Email</label>
+                    <label for="email">Email address</label>
                     <div class="input-wrap">
                         <i class="bi bi-envelope-fill input-ico"></i>
                         <input
@@ -301,7 +301,7 @@
                             autofocus
                         >
                     </div>
-                    <span class="field-hint">Use the institutional email assigned to your office</span>
+                    <span class="field-hint">Offices use BatStateU email. Organizations may use their registered BatStateU or Gmail address.</span>
                 </div>
 
                 <div class="form-field">

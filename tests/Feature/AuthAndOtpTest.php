@@ -39,7 +39,7 @@ class AuthAndOtpTest extends TestCase
         });
         Schema::connection('mysql')->create('office_users', function (Blueprint $table) {
             $table->id();
-            foreach (['name', 'email', 'username', 'password', 'office_role', 'office_title', 'remember_token'] as $column) {
+            foreach (['name', 'email', 'username', 'password', 'office_role', 'office_title', 'employee_id', 'tosa_clearance', 'remember_token'] as $column) {
                 $table->string($column)->nullable();
             }
             $table->unsignedBigInteger('student_organization_id')->nullable();
@@ -82,6 +82,92 @@ class AuthAndOtpTest extends TestCase
     {
         $this->post(route('office.login'), ['email' => 'someone@example.invalid', 'password' => 'FixtureOfficeOnly@2026!'])->assertSessionHasErrors('email');
         $this->assertGuest('office');
+    }
+
+    public function test_registered_organization_can_login_with_gmail(): void
+    {
+        $this->officer->update(['email' => 'organization.fixture@gmail.com']);
+
+        $this->post(route('office.login'), ['email' => $this->officer->email, 'password' => 'FixtureOfficeOnly@2026!'])
+            ->assertRedirect(route('office.home'));
+        $this->assertAuthenticatedAs($this->officer, 'office');
+    }
+
+    public function test_gmail_login_cannot_authenticate_an_office_or_unassigned_organization(): void
+    {
+        foreach (['oso', 'so'] as $role) {
+            $this->officer->update([
+                'email' => 'organization.fixture@gmail.com',
+                'office_role' => $role,
+                'student_organization_id' => null,
+            ]);
+
+            $this->post(route('office.login'), ['email' => $this->officer->email, 'password' => 'FixtureOfficeOnly@2026!'])
+                ->assertSessionHasErrors('email');
+            $this->assertGuest('office');
+        }
+    }
+
+    public function test_oso_can_create_and_edit_organization_gmail_accounts_but_not_office_gmail_accounts(): void
+    {
+        $organizationId = $this->officer->student_organization_id;
+        $this->officer->update(['office_role' => 'oso', 'student_organization_id' => null]);
+        $this->actingAs($this->officer, 'office');
+        $payload = [
+            'name' => 'Organization Fixture',
+            'email' => 'new.organization@gmail.com',
+            'office_role' => 'so',
+            'student_organization_id' => $organizationId,
+            'tosa_clearance' => 'No Access',
+            'password' => 'TemporaryFixture@2026!',
+            'password_confirmation' => 'TemporaryFixture@2026!',
+        ];
+
+        $response = $this->postJson(route('office.settings.users.store'), $payload)
+            ->assertCreated()->assertJsonPath('user.email', $payload['email']);
+        $user = OfficeUser::findOrFail($response->json('user.id'));
+        $this->patchJson(route('office.settings.users.update', $user), [
+            'name' => 'Updated Organization',
+            'email' => $user->email,
+        ])->assertOk();
+
+        $payload['email'] = 'other.office@gmail.com';
+        $payload['office_role'] = 'sdo';
+        $payload['student_organization_id'] = null;
+        $this->postJson(route('office.settings.users.store'), $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('email');
+    }
+
+    public function test_organization_with_gmail_can_save_its_own_profile(): void
+    {
+        $this->officer->update(['email' => 'organization.fixture@gmail.com', 'office_title' => 'Organization Officer']);
+
+        $this->actingAs($this->officer, 'office')
+            ->postJson(route('office.settings.account'), [
+                'name' => 'Updated Officer',
+                'email' => $this->officer->email,
+                'office_title' => 'Organization Officer',
+            ])->assertOk()->assertJsonPath('user.email', 'organization.fixture@gmail.com');
+    }
+
+    public function test_organization_turnover_accepts_gmail_for_the_incoming_officer(): void
+    {
+        $organizationId = $this->officer->student_organization_id;
+        $manager = OfficeUser::create([
+            'name' => 'OSO Fixture', 'email' => 'oso.fixture@g.batstate-u.edu.ph',
+            'password' => 'FixtureOfficeOnly@2026!', 'office_role' => 'oso', 'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($manager, 'office')
+            ->postJson(route('office.settings.users.turnover', $this->officer), [
+                'name' => 'Incoming Organization Officer',
+                'email' => 'incoming.organization@gmail.com',
+                'password' => 'IncomingFixture@2026!',
+                'password_confirmation' => 'IncomingFixture@2026!',
+            ])->assertCreated()->assertJsonPath('user.student_organization_id', $organizationId);
+
+        $this->assertSame('so', OfficeUser::findOrFail($response->json('user.id'))->office_role);
+        $this->assertFalse($this->officer->fresh()->is_active);
     }
 
     public function test_office_login_rejects_bad_password(): void

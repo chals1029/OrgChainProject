@@ -28,23 +28,25 @@ class OfficeAccountController extends Controller
         return $office;
     }
 
-    private function emailRules(?OfficeUser $user = null): array
+    private function emailRules(?OfficeUser $user = null, string $role = ''): array
     {
         return [
             'required', 'email', 'max:255', Rule::unique('office_users', 'email')->ignore($user?->id),
-            function (string $attribute, mixed $value, \Closure $fail): void {
-                if (! in_array(Str::afterLast(strtolower((string) $value), '@'), ['g.batstate-u.edu.ph', 'batstate-u.edu.ph'], true)) {
-                    $fail('Use your official BatStateU email address.');
+            function (string $attribute, mixed $value, \Closure $fail) use ($role): void {
+                if (! OfficeUser::allowsEmailForRole((string) $value, $role)) {
+                    $fail($role === 'so'
+                        ? 'Use a BatStateU email or an organization Gmail address.'
+                        : 'Use your official BatStateU email address.');
                 }
             },
         ];
     }
 
-    private function identityRules(?OfficeUser $user = null): array
+    private function identityRules(?OfficeUser $user = null, ?string $role = null): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => $this->emailRules($user),
+            'email' => $this->emailRules($user, $role ?? $user?->office_role ?? ''),
             'office_title' => ['nullable', 'string', 'max:160'],
             'employee_id' => ['nullable', 'string', 'max:80'],
         ];
@@ -115,7 +117,7 @@ class OfficeAccountController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        return $this->perform($request, $this->identityRules() + [
+        return $this->perform($request, $this->identityRules(null, (string) $request->input('office_role', '')) + [
             'office_role' => ['required', Rule::in(self::ROLES)],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'student_organization_id' => [Rule::requiredIf($request->input('office_role') === 'so'), 'nullable', 'integer', Rule::exists('student_organizations', 'id')],
@@ -183,7 +185,7 @@ class OfficeAccountController extends Controller
 
     public function turnover(Request $request, OfficeUser $user): JsonResponse
     {
-        return $this->perform($request, $this->identityRules() + [
+        return $this->perform($request, $this->identityRules(null, 'so') + [
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'office_role' => ['prohibited'], 'student_organization_id' => ['prohibited'], 'tosa_clearance' => ['prohibited'],
         ], function (array $data, OfficeUser $actor) use ($user): JsonResponse {

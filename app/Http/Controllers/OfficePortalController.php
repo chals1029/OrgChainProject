@@ -65,15 +65,13 @@ class OfficePortalController extends Controller
     /**
      * Shared desk payload for every Student Org page.
      *
-     * @return array{office: mixed, brand: array{title: string, role: string}, navBadges: array{fr_attachments: int, ar_attachments: int}}
+     * @return array<string, mixed>
      */
     private function deskContext(): array
     {
         $office = Auth::guard('office')->user();
         $this->assignedOrganizationName($office);
         $isOso = ($office?->office_role ?? '') === 'oso';
-        $canAccessSemesterReports = $office instanceof OfficeUser
-            && in_array($office->office_role, ['so', 'oso'], true);
         $officeSettings = OfficeSetting::valuesFor('oso');
         $brand = $this->brandFor($office->office_role);
         if (($office->office_role ?? '') === 'so') {
@@ -102,14 +100,6 @@ class OfficePortalController extends Controller
             'accountOrganizations' => $isOso
                 ? StudentOrganization::query()->orderBy('name')->get(['id', 'name', 'short_name'])
                 : collect(),
-            'navBadges' => [
-                'fr_attachments' => $canAccessSemesterReports ? count($this->frAttachmentList()) : 0,
-                'ar_attachments' => $canAccessSemesterReports ? count($this->arAttachmentList()) : 0,
-                'reports_pending' => StudentFeedback::query()->where('status', 'pending')->count(),
-                'activities' => $visibleActivities->count(),
-                'upcoming' => $visibleActivities->filter(fn (OrgActivity $activity): bool => $activity->starts_at?->isFuture() ?? false)->count(),
-                'announcements' => OfficeAnnouncement::query()->published()->count(),
-            ],
         ];
     }
 
@@ -2609,15 +2599,17 @@ class OfficePortalController extends Controller
         return $office;
     }
 
-    private function officialOfficeEmailRules(?OfficeUser $office = null): array
+    private function officeEmailRules(?OfficeUser $office = null): array
     {
         return [
             'required', 'email', 'max:255',
             Rule::unique('office_users', 'email')->ignore($office?->id),
-            function (string $attribute, mixed $value, \Closure $fail): void {
-                $domain = Str::afterLast(strtolower((string) $value), '@');
-                if (! in_array($domain, ['g.batstate-u.edu.ph', 'batstate-u.edu.ph'], true)) {
-                    $fail('Use your official BatStateU email address.');
+            function (string $attribute, mixed $value, \Closure $fail) use ($office): void {
+                $role = (string) ($office?->office_role ?? '');
+                if (! OfficeUser::allowsEmailForRole((string) $value, $role)) {
+                    $fail($role === 'so'
+                        ? 'Use a BatStateU email or an organization Gmail address.'
+                        : 'Use your official BatStateU email address.');
                 }
             },
         ];
@@ -2706,7 +2698,7 @@ class OfficePortalController extends Controller
         $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
         $validated = $this->validateOsoJson($request, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => $this->officialOfficeEmailRules($office),
+            'email' => $this->officeEmailRules($office),
             'office_title' => ['required', 'string', 'max:160'],
             'employee_id' => ['nullable', 'string', 'max:80'],
         ]);
@@ -5862,6 +5854,38 @@ class OfficePortalController extends Controller
 
         return redirect()->route('office.renewal')
             ->with('success', "{$organization->name} status updated: {$statusLabel} ({$activeLabel}).");
+    }
+
+    /**
+     * OSO-only office accounts, roles, and new student organization registration desk.
+     */
+    public function accounts(): View
+    {
+        $this->osoOfficer();
+
+        $defaultColleges = [
+            'College of Accountancy, Business, Economics, and International Hospitality Management',
+            'College of Arts and Sciences',
+            'College of Criminal Justice Education',
+            'College of Health Sciences',
+            'College of Informatics and Computing Sciences',
+            'College of Teacher Education',
+            'Laboratory School',
+            'Campus Wide',
+        ];
+        $colleges = collect($defaultColleges)
+            ->merge(collect(config('student_orgs.organizations', []))->pluck('college'))
+            ->merge(StudentOrganization::query()->whereNotNull('college')->pluck('college'))
+            ->map(fn ($college): string => trim((string) $college))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return view('org.accounts', array_merge($this->deskContext(), [
+            'activeNav' => 'accounts',
+            'accountColleges' => $colleges,
+        ]));
     }
 
     /**

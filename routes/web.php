@@ -4,6 +4,7 @@ use App\Http\Controllers\CommunityFeedController;
 use App\Http\Controllers\AccomplishmentReportController;
 use App\Http\Controllers\OfficeAuthController;
 use App\Http\Controllers\OfficeAccountController;
+use App\Http\Controllers\OfficeOrganizationAccountController;
 use App\Http\Controllers\OfficePortalController;
 use App\Http\Controllers\OrgRenewalInformationController;
 use App\Http\Controllers\OfficeDocumentPreviewController;
@@ -145,6 +146,9 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/settings/users/{user}/reset-password', [OfficeAccountController::class, 'resetPassword'])->name('settings.users.password');
     Route::post('/settings/users/{user}/turnover', [OfficeAccountController::class, 'turnover'])->name('settings.users.turnover');
     Route::patch('/settings/users/{user}/status', [OfficeAccountController::class, 'status'])->name('settings.users.status');
+    Route::get('/accounts', [OfficePortalController::class, 'accounts'])->name('accounts');
+    Route::post('/organizations/accounts', [OfficeOrganizationAccountController::class, 'store'])->name('organizations.accounts.store');
+    Route::post('/organizations/accounts/{user}/retry-email', [OfficeOrganizationAccountController::class, 'retryEmail'])->whereNumber('user')->name('organizations.accounts.retry');
     Route::get('/settings/snapshot', [OfficePortalController::class, 'downloadOsoSnapshot'])->name('settings.snapshot');
     Route::get('/settings/exports/{type}', [OfficePortalController::class, 'downloadOsoDataPackage'])->name('settings.exports');
     Route::get('/renewal', [OfficePortalController::class, 'renewal'])->name('renewal');

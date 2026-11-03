@@ -220,7 +220,8 @@ class OfficeAccountManagementTest extends TestCase
             ['POST', 'office.settings.users.turnover', $user, $this->payload()],
         ];
         foreach (['so', 'sdo', 'ovcaa', 'oc'] as $role) {
-            $this->actingAs($this->officer($role), 'office');
+            $this->actingAs($this->officer($role, $role === 'so' ? $this->organization() : null), 'office');
+            $this->get(route('office.accounts'))->assertForbidden();
             foreach ($actions as [$method, $route, $target, $payload]) {
                 $this->json($method, route($route, $target ? [$target] : []), $payload)->assertForbidden();
             }
@@ -387,9 +388,19 @@ class OfficeAccountManagementTest extends TestCase
         $user = $this->officer('so', $organization);
         $user->update(['is_active' => false]);
         $this->actingAs($this->officer(), 'office')->get('/office-desk/activities')->assertOk()
+            ->assertSee(route('office.accounts'), false)
+            ->assertDontSee('id="setNavBtn-users"', false)
+            ->assertDontSee('id="setPanel-users"', false)
             ->assertViewHas('officeUsers', fn ($users) => $users->contains('id', $user->id)
                 && $users->firstWhere('id', $user->id)->relationLoaded('studentOrganization'))
             ->assertViewHas('accountOrganizations', fn ($organizations) => $organizations->contains('id', $organization->id));
+        $this->get(route('office.accounts'))->assertOk()
+            ->assertViewHas('activeNav', 'accounts')
+            ->assertSee('id="setPanel-users"', false)
+            ->assertSee('id="newOrganizationAccountForm"', false)
+            ->assertSee(route('office.organizations.accounts.store'), false)
+            ->assertSee('How to use')
+            ->assertSee('Authorized Office Accounts');
         $snapshot = $this->get(route('office.settings.snapshot'))->assertOk();
         $data = json_decode($snapshot->streamedContent(), true, 512, JSON_THROW_ON_ERROR);
         $exported = collect($data['office_users'])->firstWhere('id', $user->id);
@@ -398,6 +409,7 @@ class OfficeAccountManagementTest extends TestCase
         $this->assertArrayNotHasKey('password', $exported);
         $this->assertArrayNotHasKey('remember_token', $exported);
         $this->actingAs($this->officer('so', $organization), 'office')->get('/office-desk/activities')->assertOk()
+            ->assertDontSee(route('office.accounts'), false)
             ->assertViewHas('officeUsers', fn ($users) => $users->isEmpty())
             ->assertViewHas('accountOrganizations', fn ($organizations) => $organizations->isEmpty());
     }

@@ -70,17 +70,11 @@
                         <i class="bi bi-lightning-charge-fill is-ico-gold"></i>
                         <span>Activities</span>
                     @endif
-                    @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count" title="Activity packages visible to this desk">{{ $navBadges['activities'] }}</em>
-                    @endif
                 </a>
 
                 <a href="{{ route('office.calendar') }}" class="org-nav-link {{ ($activeNav ?? '') === 'calendar' ? 'is-active' : '' }}">
                     <i class="bi bi-calendar3 is-ico-blue"></i>
                     <span>Calendar</span>
-                    @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count" title="Future activities visible to this desk">{{ $navBadges['upcoming'] }}</em>
-                    @endif
                 </a>
 
                 {{-- Budget Utilization is limited to SO/OSO/SDO desks; approval desks do not configure funds. --}}
@@ -101,21 +95,16 @@
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
                     <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
                     <span>Financial Report</span>
-                    <em class="org-badge-count">{{ $navBadges['fr_attachments'] }}</em>
                 </a>
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
                     <i class="bi bi-trophy is-ico-gold"></i>
                     <span>Accomplishment Report</span>
-                    <em class="org-badge-count">{{ $navBadges['ar_attachments'] }}</em>
                 </a>
                 @endif
 
                 <a href="{{ route('office.updates') }}" class="org-nav-link {{ ($activeNav ?? '') === 'updates' ? 'is-active' : '' }}">
                     <i class="bi bi-megaphone-fill is-ico-red"></i>
                     <span>Updates</span>
-                    @if (!$isStudentOrgDesk)
-                        <em class="org-badge-count" title="Published announcements">{{ $navBadges['announcements'] }}</em>
-                    @endif
                 </a>
                 @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                     <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
@@ -133,9 +122,10 @@
                     <a href="{{ route('office.student-reports') }}" class="org-nav-link {{ ($activeNav ?? '') === 'reports' ? 'is-active' : '' }}">
                         <i class="bi bi-chat-square-text-fill is-ico-maroon"></i>
                         <span>Student Reports</span>
-                        @if (($navBadges['reports_pending'] ?? 0) > 0)
-                            <em class="org-badge-count" style="background:#fefce8;color:#b45309;border:1px solid #fde68a;">{{ $navBadges['reports_pending'] }}</em>
-                        @endif
+                    </a>
+                    <a href="{{ route('office.accounts') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accounts' ? 'is-active' : '' }}">
+                        <i class="bi bi-people-fill is-ico-maroon"></i>
+                        <span>Users &amp; Roles</span>
                     </a>
                 @endif
                 @if (($office?->tosaClearanceLevel() ?? 0) >= 1)

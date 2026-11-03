@@ -135,18 +135,6 @@ class LiveOfficeDashboardTest extends TestCase
         $this->assertStringNotContainsString('Queue fixture 09', $queue);
     }
 
-    public function test_sidebar_counts_visible_packages_and_only_future_calendar_entries(): void
-    {
-        $this->activity('Early hidden package', 'oso_review');
-        $this->activity('Future visible package', 'sdo_review');
-        $this->activity('Past visible package', 'oc_approved', '2030-10-10 09:00:00');
-
-        $response = $this->actingAs($this->ensureOfficeUser('sdo'), 'office')->get('/office-desk')->assertOk();
-        $badges = $response->viewData('navBadges');
-        $this->assertSame(2, $badges['activities']);
-        $this->assertSame(1, $badges['upcoming']);
-    }
-
     public function test_empty_review_desks_do_not_show_fabricated_percentages_or_actions(): void
     {
         foreach (['sdo', 'ovcaa', 'oc'] as $role) {

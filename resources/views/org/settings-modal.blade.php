@@ -2,7 +2,6 @@
     $isOso = ($office->office_role ?? '') === 'oso';
     $settings = $officeSettings ?? [];
     $general = $settings['general'] ?? [];
-    $settingsUsers = $officeUsers ?? collect();
     $settingsLogoUrl = !empty($general['logo_path'])
         ? asset('storage/'.$general['logo_path'])
         : asset('Orgchain logo.png');
@@ -23,7 +22,7 @@
                     <div class="org-settings-title-line">
                         <h2 class="org-settings-title" id="settingsModalTitle">{{ $isOso ? 'System & Office Settings' : 'My Office Settings' }}</h2>
                     </div>
-                    <p class="org-settings-subtitle">{{ $isOso ? 'Manage office accounts, institutional details, TOSA access, and data exports.' : 'Manage your office profile and account password.' }}</p>
+                    <p class="org-settings-subtitle">{{ $isOso ? 'Manage institutional details, office profile, and data exports.' : 'Manage your office profile and account password.' }}</p>
                 </div>
             </div>
             <div class="org-settings-header-right">
@@ -60,14 +59,6 @@
                 </button>
 
                 <div class="org-settings-nav-group-label" style="margin-top: 0.85rem;">MANAGEMENT</div>
-                <button type="button" class="org-settings-nav-item" id="setNavBtn-users" onclick="switchSettingsTab('users')">
-                    <div class="org-settings-nav-icon"><i class="bi bi-people-fill"></i></div>
-                    <div class="org-settings-nav-text">
-                        <strong>Users &amp; Roles</strong>
-                        <small>Accounts, Permissions, TOSA</small>
-                    </div>
-                </button>
-
                 <button type="button" class="org-settings-nav-item" id="setNavBtn-records" onclick="switchSettingsTab('records')">
                     <div class="org-settings-nav-icon"><i class="bi bi-database-fill-gear"></i></div>
                     <div class="org-settings-nav-text">
@@ -327,149 +318,6 @@
                 </section>
 
                 {{-- =============================================================
-                     TAB 5: USERS & ROLES
-                     ============================================================= --}}
-                @if ($isOso)
-                <section class="org-settings-panel" id="setPanel-users">
-                    <div class="org-settings-panel-header">
-                        <div>
-                            <h3 class="org-settings-panel-title">Users &amp; Role Permissions</h3>
-                            <p class="org-settings-panel-desc">Manage office and student organization accounts, credentials, and secure officer turnover.</p>
-                        </div>
-                        <button type="button" class="org-settings-save-btn" onclick="openAddUserModal()">
-                            <i class="bi bi-person-plus-fill"></i> Add Officer Account
-                        </button>
-                    </div>
-
-                    {{-- User Accounts Table --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-person-lines-fill"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Authorized Office Accounts</h4>
-                                <p class="org-settings-card-desc">Disabled accounts remain visible. Use My Account for your own profile and password.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body" style="padding: 0;">
-                            <div style="padding: 1rem;">
-                                <label for="settingsAccountSearch" class="org-settings-label">Search accounts</label>
-                                <input type="search" id="settingsAccountSearch" class="org-settings-input" placeholder="Name, university email, organization, or role" autocomplete="off" oninput="filterSettingsAccounts(this.value)">
-                                <p id="settingsAccountSearchEmpty" class="org-settings-help" role="status" hidden>No accounts match your search.</p>
-                            </div>
-                            <div class="org-settings-table-wrap">
-                                <table class="org-settings-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Officer Name</th>
-                                            <th>Role / Office</th>
-                                            <th>TOSA Clearance</th>
-                                            <th>Account Status</th>
-                                            <th>Last Updated</th>
-                                            <th style="text-align: center;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="settingsUserListTbody">
-                                        @forelse ($settingsUsers as $user)
-                                            @php
-                                                $userData = [
-                                                    'id' => $user->id,
-                                                    'name' => $user->name,
-                                                    'email' => $user->email,
-                                                    'office_role' => $user->office_role,
-                                                    'role' => $user->roleLabel(),
-                                                    'office_title' => $user->office_title,
-                                                    'employee_id' => $user->employee_id,
-                                                    'student_organization_id' => $user->student_organization_id,
-                                                    'organization_name' => $user->studentOrganization?->name,
-                                                    'initials' => $user->initials(),
-                                                    'updated_at' => $user->updated_at?->toIso8601String(),
-                                                    'tosa_clearance' => $user->effectiveTosaClearance(),
-                                                    'is_active' => (bool) $user->is_active,
-                                                    'must_change_password' => (bool) $user->must_change_password,
-                                                ];
-                                                $isCurrentAccount = (int) $user->id === (int) $office->id;
-                                            @endphp
-                                            <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}">
-                                                <td>
-                                                    <div class="org-settings-user-identity">
-                                                        <div class="org-settings-avatar-sm">{{ $userData['initials'] }}</div>
-                                                        <div>
-                                                            <strong data-user-name>{{ $user->name }}</strong>
-                                                            <small data-user-email>{{ $user->email }}</small>
-                                                            <small data-user-title>{{ $user->office_title }}</small>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span class="org-settings-role-badge">{{ $userData['role'] }}</span>
-                                                    <small data-user-organization>{{ $userData['organization_name'] ?? ($user->office_role === 'so' ? 'No organization assigned' : '') }}</small>
-                                                </td>
-                                                <td><span data-user-clearance class="{{ $userData['tosa_clearance'] === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green' }}">{{ $userData['tosa_clearance'] }}</span></td>
-                                                <td>
-                                                    <span data-user-status class="{{ $user->is_active ? 'org-settings-status-active' : 'org-settings-pill-gray' }}">{{ $user->is_active ? 'Enabled' : 'Disabled' }}</span>
-                                                    <small data-user-password-state>{{ $userData['must_change_password'] ? 'Password change required' : '' }}</small>
-                                                </td>
-                                                <td data-user-updated>{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
-                                                <td>
-                                                    <div class="org-settings-user-actions">
-                                                        @if ($isCurrentAccount)
-                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="own">My Account</button>
-                                                        @else
-                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="edit">Edit profile</button>
-                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="reset">Reset temporary password</button>
-                                                            @if ($user->office_role === 'so')
-                                                                <button type="button" class="org-settings-btn-subtle" data-account-action="turnover" @disabled(!$user->is_active || !$user->student_organization_id) title="{{ !$user->is_active || !$user->student_organization_id ? 'Turnover requires an enabled account with an assigned organization' : 'Replace this officer with a separate account' }}">Turn over SO officer</button>
-                                                            @endif
-                                                            <button type="button" class="org-settings-btn-subtle" data-account-action="status">{{ $user->is_active ? 'Disable' : 'Enable' }}</button>
-                                                        @endif
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" style="padding: 1.5rem; text-align: center; color: #64748b;">No office accounts have been configured yet.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Roles & Permissions Matrix & TOSA Authorized Users --}}
-                    <div class="org-settings-card">
-                        <div class="org-settings-card-header">
-                            <div class="org-settings-card-icon"><i class="bi bi-shield-shaded"></i></div>
-                            <div>
-                                <h4 class="org-settings-card-title">Role &amp; TOSA Access Guide</h4>
-                                <p class="org-settings-card-desc">Account roles determine office access. TOSA clearance does not grant additional proposal or budget permissions.</p>
-                            </div>
-                        </div>
-                        <div class="org-settings-card-body">
-                            <div class="org-settings-perm-grid">
-                                <div class="org-settings-perm-card">
-                                    <strong>OSO Office Accounts</strong>
-                                    <ul>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Office settings and account management</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> Automatic Level 3 Master TOSA access for active OSO accounts</li>
-                                    </ul>
-                                </div>
-                                <div class="org-settings-perm-card">
-                                    <strong>TOSA Clearance</strong>
-                                    <ul>
-                                        <li><i class="bi bi-eye"></i> OVCAA: read-only TOSA access when enabled</li>
-                                        <li><i class="bi bi-check-circle-fill text-success"></i> OSO: document verification and template management</li>
-                                        <li><i class="bi bi-info-circle"></i> SO, SDO, and OC have no TOSA access</li>
-                                        <li><i class="bi bi-info-circle"></i> SO officers access only their assigned student organization. Turnover preserves its records and the outgoing officer's identity.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                @endif
-
-                {{-- =============================================================
                      TAB 7: DATA & RECORDS
                      ============================================================= --}}
                 @if ($isOso)
@@ -564,7 +412,7 @@
         <div class="org-settings-footer">
             <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #64748b;">
                 <i class="bi bi-info-circle"></i>
-                <span>{{ $isOso ? 'Save All saves General and Profile only. Passwords, logos, and user actions save separately.' : 'Profile changes and passwords use their own save buttons.' }}</span>
+                <span>{{ $isOso ? 'Save All saves General and Profile only. Passwords and logos save separately.' : 'Profile changes and passwords use their own save buttons.' }}</span>
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <button type="button" class="org-settings-btn-subtle" onclick="closeSettingsModal()">Close</button>
@@ -577,139 +425,6 @@
         </div>
     </div>
 </div>
-
-{{-- Add User Sub-Modal --}}
-<dialog id="settingsAddUserModal" class="org-settings-submodal" aria-labelledby="settingsAddUserTitle" style="max-width: 480px;">
-    <div style="padding: 1.5rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: 1.1rem;">
-                    <i class="bi bi-person-plus-fill"></i>
-                </div>
-                <h4 id="settingsAddUserTitle" style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1a1618;">Create Officer Account</h4>
-            </div>
-            <button type="button" aria-label="Close account form" onclick="document.getElementById('settingsAddUserModal').close()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
-        </div>
-        <form id="settingsAddUserForm" method="post" data-confirm="manual" onsubmit="handleAddUserSubmit(event)" class="org-settings-account-form" autocomplete="off">
-            <p id="settingsAddUserError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
-            <p class="org-settings-help">Choose a temporary password and share it securely with the officer. No invitation email is sent. The officer must change it on first login before accessing any system actions.</p>
-            <div class="org-settings-field">
-                <label for="newOfficerName" class="org-settings-label">Officer Full Name</label>
-                <input type="text" id="newOfficerName" class="org-settings-input" required maxlength="255" autocomplete="name" placeholder="Officer's full name">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerEmail" class="org-settings-label">Official University Email</label>
-                <input type="email" id="newOfficerEmail" class="org-settings-input" required maxlength="255" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. juan.delacruz@g.batstate-u.edu.ph">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerPassword" class="org-settings-label">Temporary Password</label>
-                <input type="password" id="newOfficerPassword" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="At least 8 characters">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerPasswordConfirmation" class="org-settings-label">Confirm Temporary Password</label>
-                <input type="password" id="newOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="Repeat the temporary password">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerRole" class="org-settings-label">Assigned Desk / Role</label>
-                <select id="newOfficerRole" class="org-settings-select" onchange="updateNewOfficerClearance()">
-                    <option value="so">SO Student Organization Officer</option>
-                    <option value="oso">OSO Review Officer (Triage)</option>
-                    <option value="sdo">SDO Document Reviewer</option>
-                    <option value="ovcaa">OVCAA Final Endorser</option>
-                    <option value="oc">OC Final Approval Officer</option>
-                </select>
-            </div>
-            <div id="newOfficerOrganizationField" class="org-settings-field" hidden>
-                <label for="newOfficerOrganization" class="org-settings-label">Registered Student Organization</label>
-                <select id="newOfficerOrganization" class="org-settings-select" disabled>
-                    <option value="">Select an organization</option>
-                    @foreach (($accountOrganizations ?? collect()) as $organization)
-                        <option value="{{ $organization->id }}">{{ $organization->name }}{{ $organization->short_name ? ' ('.$organization->short_name.')' : '' }}</option>
-                    @endforeach
-                </select>
-                <small class="org-settings-help">Required for SO officers. This account receives access only to this organization, with no TOSA access.</small>
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerTitle" class="org-settings-label">Office / Officer Title (optional)</label>
-                <input type="text" id="newOfficerTitle" class="org-settings-input" maxlength="255">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
-                <input type="text" id="newOfficerEmployeeId" class="org-settings-input" maxlength="255">
-            </div>
-            <div id="newOfficerClearanceField" class="org-settings-field">
-                <label for="newOfficerTosaClearance" class="org-settings-label">TOSA Module Clearance</label>
-                <select id="newOfficerTosaClearance" class="org-settings-select">
-                    <option value="No Access">No Access</option>
-                    <option value="Level 1 Read-only">Level 1 Read-only</option>
-                    <option value="Level 3 Master">Level 3 Master</option>
-                </select>
-                <small class="org-settings-help">OSO verifies documents. OVCAA may receive read-only access; other offices have no TOSA access. No invitation email is sent.</small>
-            </div>
-            <div class="org-settings-dialog-actions">
-                <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAddUserModal').close()">Cancel</button>
-                <button type="submit" class="org-settings-save-btn">Create Officer Account</button>
-            </div>
-        </form>
-    </div>
-</dialog>
-
-<dialog id="settingsAccountModal" class="org-settings-submodal" aria-labelledby="settingsAccountTitle" aria-describedby="settingsAccountDescription" style="max-width: 480px;">
-    <div style="padding: 1.5rem;">
-        <div class="org-settings-submodal-header">
-            <h4 id="settingsAccountTitle">Manage Officer Account</h4>
-            <button type="button" class="org-settings-btn-subtle" aria-label="Close account form" onclick="document.getElementById('settingsAccountModal').close()">&times;</button>
-        </div>
-        <p id="settingsAccountSubject" class="org-settings-account-subject"></p>
-        <p id="settingsAccountDescription" class="org-settings-help"></p>
-        <form id="settingsAccountForm" method="post" data-confirm="manual" class="org-settings-account-form" autocomplete="off" onsubmit="handleAccountManagementSubmit(event)">
-            <p id="settingsAccountError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
-            <div id="settingsAccountImmutable" class="org-settings-field">
-                <strong class="org-settings-label">Assigned role and organization</strong>
-                <p id="settingsAccountAssignment" class="org-settings-help"></p>
-                <small class="org-settings-help">Role and organization cannot be changed. Turnover creates a separate incoming account linked to the same organization.</small>
-            </div>
-            <div class="org-settings-field" data-account-profile-field>
-                <label for="accountOfficerName" class="org-settings-label">Officer Full Name</label>
-                <input type="text" id="accountOfficerName" class="org-settings-input" maxlength="255" required autocomplete="name">
-            </div>
-            <div class="org-settings-field" data-account-profile-field>
-                <label for="accountOfficerEmail" class="org-settings-label">Official University Email</label>
-                <input type="email" id="accountOfficerEmail" class="org-settings-input" maxlength="255" required autocomplete="off" autocapitalize="none" spellcheck="false">
-                <small id="settingsTurnoverEmailHelp" class="org-settings-help" hidden>Use the incoming officer's own institutional email. It must be distinct from the outgoing account and not already registered.</small>
-            </div>
-            <div class="org-settings-field" data-account-profile-field>
-                <label for="accountOfficerTitle" class="org-settings-label">Office / Officer Title (optional)</label>
-                <input type="text" id="accountOfficerTitle" class="org-settings-input" maxlength="255">
-            </div>
-            <div class="org-settings-field" data-account-profile-field>
-                <label for="accountOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
-                <input type="text" id="accountOfficerEmployeeId" class="org-settings-input" maxlength="255">
-            </div>
-            <div id="accountTosaClearanceField" class="org-settings-field" hidden>
-                <label for="accountTosaClearance" class="org-settings-label">TOSA access</label>
-                <select id="accountTosaClearance" class="org-settings-select" disabled>
-                    <option value="No Access">No Access</option>
-                    <option value="Level 1 Read-only">Level 1 Read-only</option>
-                </select>
-                <small class="org-settings-help">TOSA access allows viewing dossiers. Changing access signs this officer out.</small>
-            </div>
-            <div class="org-settings-field" data-account-password-field>
-                <label for="accountOfficerPassword" class="org-settings-label">Temporary Password</label>
-                <input type="password" id="accountOfficerPassword" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false">
-            </div>
-            <div class="org-settings-field" data-account-password-field>
-                <label for="accountOfficerPasswordConfirmation" class="org-settings-label">Confirm Temporary Password</label>
-                <input type="password" id="accountOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false">
-                <small class="org-settings-help">Share this temporary password securely. The officer must choose a different password at first login. No invitation email is sent.</small>
-            </div>
-            <div class="org-settings-dialog-actions">
-                <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAccountModal').close()">Cancel</button>
-                <button type="submit" id="settingsAccountSubmit" class="org-settings-save-btn">Save</button>
-            </div>
-        </form>
-    </div>
-</dialog>
 
 {{-- Settings Toast Notification Container --}}
 <div id="settingsToastContainer" class="org-settings-toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -1559,10 +1274,11 @@
 .org-settings-submodal-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
 .org-settings-submodal-header h4 { margin: 0; font-size: 1.05rem; color: #1a1618; }
 .org-settings-account-subject { font-weight: 700; overflow-wrap: anywhere; }
-.org-settings-dialog-actions, .org-settings-user-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.org-settings-dialog-actions { justify-content: flex-end; margin-top: 0.5rem; }
-.org-settings-user-actions { min-width: 190px; max-width: 260px; }
-.org-settings-user-actions button { font-size: 0.72rem; padding: 0.45rem 0.6rem; }
+.org-settings-dialog-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem; }
+.org-settings-user-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; width: 160px; }
+.org-settings-user-actions button { justify-content: center; min-height: 36px; padding: 0.4rem 0.35rem; border-radius: 8px; font-size: 0.72rem; text-align: center; line-height: 1.2; }
+.org-settings-user-actions button[data-account-action="status"] { color: #8b1828; border-color: #e7c6cc; }
+.org-settings-user-actions button:disabled { cursor: not-allowed; opacity: 0.5; }
 .org-settings-user-identity { display: flex; align-items: center; gap: 0.6rem; }
 .org-settings-user-identity .org-settings-avatar-sm { flex-shrink: 0; }
 .org-settings-user-identity strong { display: block; font-size: 0.85rem; color: #1a1618; }
@@ -1631,6 +1347,38 @@
     .org-settings-search-wrap {
         flex: 1;
     }
+    #setPanel-users .org-settings-table,
+    #setPanel-users .org-settings-table tbody { display: block; width: 100%; }
+    #setPanel-users .org-settings-table thead { display: none; }
+    #setPanel-users .org-settings-table tr[data-settings-user-id] {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem 1rem;
+        padding: 1rem;
+        border-bottom: 1px solid #f0e6e8;
+    }
+    #setPanel-users .org-settings-table tr[hidden] { display: none !important; }
+    #setPanel-users .org-settings-table tr[data-settings-user-id] td {
+        display: block;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+    }
+    #setPanel-users .org-settings-table tr[data-settings-user-id] td:first-child,
+    #setPanel-users .org-settings-table tr[data-settings-user-id] td:last-child { grid-column: 1 / -1; }
+    #setPanel-users .org-settings-table tr[data-settings-user-id] td:not(:first-child)::before {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: #64748b;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    #setPanel-users .org-settings-table td:nth-child(2)::before { content: 'Role / Office'; }
+    #setPanel-users .org-settings-table td:nth-child(3)::before { content: 'TOSA Clearance'; }
+    #setPanel-users .org-settings-table td:nth-child(4)::before { content: 'Account Status'; }
+    #setPanel-users .org-settings-table td:nth-child(5)::before { content: 'Last Updated'; }
+    #setPanel-users .org-settings-table td:nth-child(6)::before { content: 'Actions'; }
+    #setPanel-users .org-settings-user-actions { width: 100%; }
 }
 </style>
 
@@ -1640,16 +1388,12 @@
 <script>
     const settingsIsOso = @json($isOso);
     const settingsOfficerId = @json($office->id);
-    const settingsAccounts = new Map();
-    let settingsAccountAction = null;
-    let settingsAccountTargetId = null;
-    let settingsAccountReturnFocus = null;
     let settingsReturnFocus = null;
     let settingsBodyOverflow = '';
     let settingsMutationPending = false;
 
     function availableSettingsTabs() {
-        return settingsIsOso ? ['general', 'account', 'users', 'records'] : ['account'];
+        return settingsIsOso ? ['general', 'account', 'records'] : ['account'];
     }
 
     function switchSettingsTab(tabKey, keepSearch = false) {
@@ -1736,8 +1480,6 @@
         password: @json(route('office.settings.password')),
         logo: @json(route('office.settings.logo')),
         logoReset: @json(route('office.settings.logo.reset')),
-        users: @json(route('office.settings.users.store')),
-        userStatusBase: @json(url('/office-desk/settings/users')),
         snapshot: @json(route('office.settings.snapshot')),
         exportsBase: @json(url('/office-desk/settings/exports')),
     };
@@ -1783,14 +1525,14 @@
         }
         if (!window.OrgActionConfirmations.confirm(confirmationMessage)) return;
         settingsMutationPending = true;
-        const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #settingsLogoUploadButton, #orgSettingsModal [data-account-action], #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
+        const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #settingsLogoUploadButton, [data-account-action], #setPanel-users button[type="submit"], #newOrgRetryBtn, #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
             .filter(button => !button.disabled);
         controls.forEach(button => button.disabled = true);
         try {
             return await action();
         } catch (error) {
             const dialog = document.querySelector('.org-settings-submodal[open]');
-            if (dialog) showSettingsAccountError(dialog, error.message || 'The settings request could not be completed.');
+            if (dialog && typeof showSettingsAccountError === 'function') showSettingsAccountError(dialog, error.message || 'The settings request could not be completed.');
             showSettingsToast(error.message || 'The settings request could not be completed.', 'error');
         } finally {
             settingsMutationPending = false;
@@ -1861,7 +1603,7 @@
             document.querySelectorAll('#settingsProfileName, .org-settings-nav-footer > div:nth-child(2), .org-user-pill-name, .org-dropdown-name').forEach(element => element.textContent = user.name);
             document.querySelectorAll('#settingsProfileInitials, .org-user-avatar span, .org-dropdown-avatar span').forEach(element => element.textContent = user.initials);
             document.querySelectorAll('.org-dropdown-email').forEach(element => element.textContent = user.email);
-            if (settingsAccounts.has(Number(settingsOfficerId))) {
+            if (typeof upsertOsoUser === 'function' && typeof settingsAccounts !== 'undefined' && settingsAccounts.has(Number(settingsOfficerId))) {
                 upsertOsoUser({ ...settingsAccounts.get(Number(settingsOfficerId)), ...user });
             }
         }
@@ -1998,254 +1740,6 @@
         }, 'Reset the OSO logo to the default OrgChain emblem?');
     }
 
-    // Account metadata is shared by server-rendered rows and confirmed API responses.
-    function filterSettingsAccounts(query = settingsInputValue('settingsAccountSearch')) {
-        const q = query.trim().toLowerCase();
-        let matches = 0;
-        document.querySelectorAll('[data-settings-user-id]').forEach(row => {
-            const user = settingsAccounts.get(Number(row.dataset.settingsUserId));
-            if (!user) return;
-            const text = [user.name, user.email, user.organization_name, user.role, user.office_role, user.office_title].join(' ').toLowerCase();
-            row.hidden = Boolean(q) && !text.includes(q);
-            if (!row.hidden) matches++;
-        });
-        const empty = document.getElementById('settingsAccountSearchEmpty');
-        if (empty) empty.hidden = !q || matches > 0;
-    }
-
-    function updateNewOfficerClearance() {
-        const role = settingsInputValue('newOfficerRole');
-        const isSo = role === 'so';
-        const organization = document.getElementById('newOfficerOrganization');
-        organization.required = isSo;
-        organization.disabled = !isSo;
-        document.getElementById('newOfficerOrganizationField').hidden = !isSo;
-        const select = document.getElementById('newOfficerTosaClearance');
-        [...select.options].forEach(option => {
-            option.disabled = role === 'oso'
-                ? option.value !== 'Level 3 Master'
-                : role === 'ovcaa'
-                    ? option.value === 'Level 3 Master'
-                    : option.value !== 'No Access';
-            option.hidden = option.disabled;
-        });
-        if (role === 'oso') select.value = 'Level 3 Master';
-        else if (role !== 'ovcaa' || select.selectedOptions[0]?.disabled) select.value = 'No Access';
-        select.disabled = role !== 'ovcaa';
-        document.getElementById('newOfficerClearanceField').hidden = isSo;
-    }
-
-    function showSettingsAccountError(dialog, message = '') {
-        const error = dialog.querySelector('[role="alert"]');
-        error.textContent = message;
-        error.hidden = !message;
-        if (message) error.focus();
-    }
-
-    function openSettingsAccountDialog(dialog, focusId) {
-        if (!settingsIsOso || settingsMutationPending) return;
-        settingsAccountReturnFocus = document.activeElement;
-        showSettingsAccountError(dialog);
-        dialog.appendChild(document.getElementById('settingsToastContainer'));
-        if (!dialog.open) dialog.showModal();
-        document.getElementById(focusId).focus();
-    }
-
-    function openAddUserModal() {
-        updateNewOfficerClearance();
-        openSettingsAccountDialog(document.getElementById('settingsAddUserModal'), 'newOfficerName');
-    }
-
-    function upsertOsoUser(user) {
-        const tbody = document.getElementById('settingsUserListTbody');
-        if (!tbody) return;
-        const id = Number(user.id);
-        settingsAccounts.set(id, user);
-        tbody.querySelector('td[colspan]')?.closest('tr').remove();
-        let row = tbody.querySelector(`[data-settings-user-id="${id}"]`);
-        if (!row) {
-            row = document.createElement('tr');
-            row.dataset.settingsUserId = id;
-            tbody.appendChild(row);
-        }
-        row.dataset.settingsUser = JSON.stringify(user);
-        // Only fixed markup is parsed; every account-provided value uses textContent.
-        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name></strong><small data-user-email></small><small data-user-title></small></div></div></td><td><span class="org-settings-role-badge"></span><small data-user-organization></small></td><td><span data-user-clearance></span></td><td><span data-user-status></span><small data-user-password-state></small></td><td data-user-updated></td><td><div class="org-settings-user-actions"></div></td>';
-        row.querySelector('[data-user-name]').textContent = user.name;
-        row.querySelector('[data-user-email]').textContent = user.email;
-        row.querySelector('[data-user-title]').textContent = user.office_title || '';
-        row.querySelector('.org-settings-avatar-sm').textContent = user.initials;
-        const role = row.querySelector('.org-settings-role-badge');
-        role.textContent = user.role;
-        const roleClass = { so: 'is-so', oso: 'is-admin', sdo: 'is-sdo', oc: 'is-oc', ovcaa: 'is-ovcaa' }[user.office_role];
-        if (roleClass) role.classList.add(roleClass);
-        row.querySelector('[data-user-organization]').textContent = user.organization_name || (user.office_role === 'so' ? 'No organization assigned' : '');
-        const clearance = row.querySelector('[data-user-clearance]');
-        clearance.textContent = user.tosa_clearance;
-        clearance.className = user.tosa_clearance === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green';
-        const status = row.querySelector('[data-user-status]');
-        status.textContent = user.is_active ? 'Enabled' : 'Disabled';
-        status.className = user.is_active ? 'org-settings-status-active' : 'org-settings-pill-gray';
-        row.querySelector('[data-user-password-state]').textContent = user.must_change_password ? 'Password change required' : '';
-        const updatedAt = user.updated_at ? new Date(user.updated_at) : null;
-        row.querySelector('[data-user-updated]').textContent = updatedAt && !Number.isNaN(updatedAt.getTime()) ? updatedAt.toLocaleString() : 'Not recorded';
-        const actions = row.querySelector('.org-settings-user-actions');
-        const addAction = (action, label, disabled = false) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'org-settings-btn-subtle';
-            button.dataset.accountAction = action;
-            button.textContent = label;
-            button.disabled = disabled;
-            button.setAttribute('aria-label', `${label}: ${user.name}`);
-            if (disabled) button.title = 'Turnover requires an enabled account with an assigned organization.';
-            actions.appendChild(button);
-        };
-        if (id === Number(settingsOfficerId)) {
-            addAction('own', 'My Account');
-        } else {
-            addAction('edit', 'Edit profile');
-            addAction('reset', 'Reset temporary password');
-            if (user.office_role === 'so') addAction('turnover', 'Turn over SO officer', !user.is_active || !user.student_organization_id);
-            addAction('status', user.is_active ? 'Disable' : 'Enable');
-        }
-        filterSettingsAccounts();
-    }
-
-    function openAccountManagement(id, action) {
-        const user = settingsAccounts.get(Number(id));
-        if (!user || !settingsIsOso || settingsMutationPending) return;
-        if (Number(id) === Number(settingsOfficerId)) {
-            switchSettingsTab('account');
-            document.getElementById('setOfficerName')?.focus();
-            return;
-        }
-        if (!['edit', 'reset', 'turnover'].includes(action)) return;
-        if (action === 'turnover' && (user.office_role !== 'so' || !user.is_active || !user.student_organization_id)) {
-            showSettingsToast('Turnover requires an enabled SO account with an assigned organization.', 'error');
-            return;
-        }
-        const dialog = document.getElementById('settingsAccountModal');
-        dialog.querySelector('form').reset();
-        settingsAccountAction = action;
-        settingsAccountTargetId = Number(id);
-        const isEdit = action === 'edit';
-        const isReset = action === 'reset';
-        const labels = { edit: 'Edit Officer Profile', reset: 'Reset Temporary Password', turnover: 'Turn Over SO Officer' };
-        document.getElementById('settingsAccountTitle').textContent = labels[action];
-        document.getElementById('settingsAccountSubmit').textContent = { edit: 'Save Profile', reset: 'Reset Password', turnover: 'Confirm Secure Turnover' }[action];
-        document.getElementById('settingsAccountSubject').textContent = `${user.name} · ${user.organization_name || user.role}`;
-        document.getElementById('settingsAccountDescription').textContent = isEdit
-            ? 'Update this officer’s profile. Changing their email revokes their existing sessions and remembered login.'
-            : isReset
-                ? 'The old password, existing sessions, and remembered login will be revoked. A disabled account stays disabled.'
-                : 'Create a separate incoming officer account for the same organization. The outgoing account will be disabled and all its sessions and remembered login revoked. Its identity, activities, ledger, AR/FR, and archive history are retained. This cannot be repeated for the disabled outgoing account.';
-        document.getElementById('settingsAccountAssignment').textContent = `${user.role}${user.organization_name ? ' · ' + user.organization_name : ''}`;
-        document.getElementById('settingsAccountImmutable').hidden = isReset;
-        document.getElementById('settingsTurnoverEmailHelp').hidden = action !== 'turnover';
-        const clearanceField = document.getElementById('accountTosaClearanceField');
-        const clearanceInput = document.getElementById('accountTosaClearance');
-        clearanceField.hidden = !isEdit || user.office_role !== 'ovcaa';
-        clearanceInput.disabled = clearanceField.hidden;
-        clearanceInput.value = user.tosa_clearance || 'No Access';
-        dialog.querySelectorAll('[data-account-profile-field]').forEach(field => {
-            field.hidden = isReset;
-            field.querySelector('input').disabled = isReset;
-        });
-        dialog.querySelectorAll('[data-account-password-field]').forEach(field => {
-            field.hidden = isEdit;
-            field.querySelector('input').disabled = isEdit;
-        });
-        if (isEdit) {
-            document.getElementById('accountOfficerName').value = user.name;
-            document.getElementById('accountOfficerEmail').value = user.email;
-            document.getElementById('accountOfficerTitle').value = user.office_title || '';
-            document.getElementById('accountOfficerEmployeeId').value = user.employee_id || '';
-        }
-        openSettingsAccountDialog(dialog, isReset ? 'accountOfficerPassword' : 'accountOfficerName');
-    }
-
-    function handleAddUserSubmit(event) {
-        event.preventDefault();
-        const dialog = document.getElementById('settingsAddUserModal');
-        showSettingsAccountError(dialog);
-        if (settingsInputValue('newOfficerPassword') !== settingsInputValue('newOfficerPasswordConfirmation')) {
-            showSettingsAccountError(dialog, 'The temporary password and confirmation must match.');
-            return;
-        }
-        const role = settingsInputValue('newOfficerRole');
-        const values = {
-            name: settingsInputValue('newOfficerName'),
-            email: settingsInputValue('newOfficerEmail'),
-            office_role: role,
-            office_title: settingsInputValue('newOfficerTitle'),
-            employee_id: settingsInputValue('newOfficerEmployeeId'),
-            password: settingsInputValue('newOfficerPassword'),
-            password_confirmation: settingsInputValue('newOfficerPasswordConfirmation'),
-            tosa_clearance: role === 'oso' ? 'Level 3 Master' : role === 'ovcaa' ? settingsInputValue('newOfficerTosaClearance') : 'No Access',
-        };
-        if (role === 'so') values.student_organization_id = settingsInputValue('newOfficerOrganization');
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(osoSettingsRoutes.users, values);
-            upsertOsoUser(data.user);
-            dialog.querySelector('form').reset();
-            updateNewOfficerClearance();
-            dialog.close();
-            showSettingsToast(data.message || 'Officer account created.', 'success');
-            filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
-        }, 'Create this officer account?');
-    }
-
-    function handleAccountManagementSubmit(event) {
-        event.preventDefault();
-        const action = settingsAccountAction;
-        const id = settingsAccountTargetId;
-        if (!id || !['edit', 'reset', 'turnover'].includes(action)) return;
-        const dialog = document.getElementById('settingsAccountModal');
-        showSettingsAccountError(dialog);
-        const values = {};
-        if (action !== 'reset') {
-            values.name = settingsInputValue('accountOfficerName');
-            values.email = settingsInputValue('accountOfficerEmail');
-            values.office_title = settingsInputValue('accountOfficerTitle');
-            values.employee_id = settingsInputValue('accountOfficerEmployeeId');
-            if (action === 'edit' && settingsAccounts.get(Number(id))?.office_role === 'ovcaa') {
-                values.tosa_clearance = settingsInputValue('accountTosaClearance');
-            }
-        }
-        if (action !== 'edit') {
-            values.password = settingsInputValue('accountOfficerPassword');
-            values.password_confirmation = settingsInputValue('accountOfficerPasswordConfirmation');
-            if (values.password !== values.password_confirmation) {
-                showSettingsAccountError(dialog, 'The temporary password and confirmation must match.');
-                return;
-            }
-        }
-        const suffix = { edit: '', reset: '/reset-password', turnover: '/turnover' }[action];
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(`${osoSettingsRoutes.userStatusBase}/${id}${suffix}`, values, action === 'edit' ? 'PATCH' : 'POST');
-            if (action === 'turnover') upsertOsoUser(data.previous_user);
-            upsertOsoUser(data.user);
-            dialog.close();
-            showSettingsToast(data.message || 'Officer account updated.', 'success');
-            filterSettingsSearch(settingsInputValue('settingsGlobalSearch'));
-        }, { edit: 'Save these officer account changes?', reset: 'Reset this officer password?', turnover: 'Turn over this officer account? Existing sessions will be revoked.' }[action]);
-    }
-
-    function toggleOsoUserStatus(id, isActive) {
-        if (Number(id) === Number(settingsOfficerId)) {
-            showSettingsToast('Use My Account to manage your own profile and password. You cannot change your own account status.', 'error');
-            return;
-        }
-        const user = settingsAccounts.get(Number(id));
-        if (!user || settingsMutationPending) return;
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(`${osoSettingsRoutes.userStatusBase}/${id}/status`, { is_active: isActive }, 'PATCH');
-            upsertOsoUser(data.user);
-            showSettingsToast(data.message || 'Officer account status updated.', 'success');
-        }, isActive ? `Enable ${user.name}?` : `Disable ${user.name}? Existing sessions will be revoked.`);
-    }
-
     async function downloadSettingsFile(url, label) {
         showSettingsToast(`Preparing ${label} for download…`, 'info');
         try {
@@ -2319,47 +1813,6 @@
     document.querySelectorAll('#orgSettingsModal .org-settings-pw-toggle').forEach(button => {
         button.setAttribute('aria-label', 'Show password');
         button.setAttribute('aria-pressed', 'false');
-    });
-
-    document.querySelectorAll('[data-settings-user]').forEach(row => {
-        upsertOsoUser(JSON.parse(row.dataset.settingsUser));
-    });
-    updateNewOfficerClearance();
-
-    document.getElementById('settingsUserListTbody')?.addEventListener('click', event => {
-        const button = event.target.closest('[data-account-action]');
-        if (!button || button.disabled || settingsMutationPending) return;
-        const id = Number(button.closest('[data-settings-user-id]').dataset.settingsUserId);
-        const action = button.dataset.accountAction;
-        if (action === 'status') {
-            toggleOsoUserStatus(id, !settingsAccounts.get(id).is_active);
-        } else {
-            openAccountManagement(id, action);
-        }
-    });
-
-    document.querySelectorAll('.org-settings-submodal').forEach(dialog => {
-        dialog.addEventListener('cancel', event => {
-            if (settingsMutationPending) {
-                event.preventDefault();
-                showSettingsToast('Please wait for the current account change to finish.', 'info');
-            }
-        });
-        dialog.addEventListener('close', () => {
-            const targetId = settingsAccountTargetId;
-            dialog.querySelectorAll('input[type="password"]').forEach(input => input.value = '');
-            document.body.appendChild(document.getElementById('settingsToastContainer'));
-            showSettingsAccountError(dialog);
-            settingsAccountAction = null;
-            settingsAccountTargetId = null;
-            if (document.getElementById('orgSettingsModal').getAttribute('aria-hidden') === 'false') {
-                const fallback = targetId ? document.querySelector(`[data-settings-user-id="${targetId}"] button:not(:disabled)`) : null;
-                const focus = settingsAccountReturnFocus?.isConnected ? settingsAccountReturnFocus : fallback;
-                if (focus && !focus.disabled) focus.focus();
-                else document.querySelector('#orgSettingsModal .org-settings-dialog').focus();
-            }
-            settingsAccountReturnFocus = null;
-        });
     });
 
     document.getElementById('orgSettingsModal').addEventListener('click', event => {

@@ -25,25 +25,20 @@ class OfficeAuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $allowedDomains = ['g.batstate-u.edu.ph', 'batstate-u.edu.ph'];
-
         $validated = $request->validate([
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                function (string $attribute, mixed $value, \Closure $fail) use ($allowedDomains) {
-                    $domain = strtolower((string) strrchr((string) $value, '@'));
-                    $domain = ltrim($domain, '@');
-
-                    if (! in_array($domain, $allowedDomains, true)) {
-                        $fail('Use your official BatStateU email address.');
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! OfficeUser::allowsEmailForRole((string) $value, 'so')) {
+                        $fail('Use a BatStateU email or a registered organization Gmail address.');
                     }
                 },
             ],
             'password' => ['required', 'string', 'min:6'],
         ], [
-            'email.required' => 'Please enter your BatStateU email.',
+            'email.required' => 'Please enter your account email.',
             'email.email' => 'Enter a valid email address.',
             'password.required' => 'Please enter your password.',
         ]);
@@ -52,7 +47,10 @@ class OfficeAuthController extends Controller
 
         $user = DB::transaction(function () use ($request, $validated, $email): ?OfficeUser {
             $user = OfficeUser::query()->where('email', $email)->where('is_active', true)->lockForUpdate()->first();
-            if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            if (! $user
+                || ! OfficeUser::allowsEmailForRole($email, (string) $user->office_role)
+                || (str_ends_with($email, '@gmail.com') && ! $user->student_organization_id)
+                || ! Hash::check($validated['password'], $user->password)) {
                 return null;
             }
             Auth::guard('office')->login($user, $request->boolean('remember'));

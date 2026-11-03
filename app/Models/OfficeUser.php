@@ -115,6 +115,14 @@ class OfficeUser extends Authenticatable
         return self::roleLabels()[$this->office_role] ?? strtoupper($this->office_role);
     }
 
+    public static function allowsEmailForRole(string $email, string $role): bool
+    {
+        $domain = Str::afterLast(strtolower(trim($email)), '@');
+
+        return in_array($domain, ['g.batstate-u.edu.ph', 'batstate-u.edu.ph'], true)
+            || ($role === 'so' && $domain === 'gmail.com');
+    }
+
     public function tosaClearanceLevel(): int
     {
         if ($this->office_role === 'oso') {
