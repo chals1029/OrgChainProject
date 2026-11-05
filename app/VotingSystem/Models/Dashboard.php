@@ -374,18 +374,4 @@ class Dashboard extends Model
         return $aliases[$normalized] ?? [$normalized];
     }
 
-
-    public function recentActivity(int $limit = 6): array
-    {
-        $statement = $this->db()->prepare(
-            'SELECT actor_name, action, details, created_at
-             FROM audit_logs
-             ORDER BY created_at DESC
-             LIMIT :limit'
-        );
-        $statement->bindValue('limit', $limit, \PDO::PARAM_INT);
-        $statement->execute();
-
-        return $statement->fetchAll();
-    }
 }

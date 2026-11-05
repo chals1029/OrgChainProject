@@ -7,24 +7,12 @@
     <title><?= e(($title ?? 'Staff Login') . ' | OrgChain Voting') ?></title>
     <link rel="icon" type="image/png" sizes="256x256" href="<?= e(voting_asset('img/ssc-favicon.png')) ?>">
     <link rel="apple-touch-icon" href="<?= e(voting_asset('img/ssc-favicon.png')) ?>">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800,900" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..900&family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= e(voting_asset('css/staff-login.css')) ?>" rel="stylesheet">
-    <style>
-        /* Hard lock: never inherit warm/cream/orange theme from elsewhere */
-        html.staff-login-html,
-        html.staff-login-html body {
-            margin: 0 !important;
-            padding: 0 !important;
-            min-height: 100% !important;
-            background: #eef1f3 !important;
-            background-image: none !important;
-            color: #1f1817 !important;
-            font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif !important;
-        }
-    </style>
 </head>
 <body class="staff-login-body">
     <?= $content ?>

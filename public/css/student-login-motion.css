@@ -1,0 +1,90 @@
+.modal-header .student-login-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+#loginModal [hidden] {
+    display: none !important;
+}
+
+
+.student-login-illustration {
+    position: relative;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(155, 27, 48, 0.14);
+    border-radius: 14px;
+    color: #9b1b30;
+    background: #fdf1f3;
+}
+
+.student-login-illustration::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border: 2px solid rgba(155, 27, 48, 0.3);
+    border-radius: 18px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.student-login-art {
+    width: 32px;
+    height: 32px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .student-login-illustration,
+    .student-login-illustration.login-step-enter {
+        animation: student-login-arrive 750ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .student-login-illustration.login-step-enter::after {
+        animation: student-login-ring 850ms ease-out both;
+    }
+
+    .student-login-art:not([hidden]) .student-login-art-detail {
+        stroke-dasharray: 42;
+        animation: student-login-draw 950ms 120ms ease-out both;
+    }
+
+    .login-modal .login-form,
+    .login-modal .login-form.login-step-enter {
+        animation: student-login-step 600ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .login-modal .btn-login-submit:active {
+        transform: scale(.98);
+    }
+}
+
+@keyframes student-login-arrive {
+    from { transform: translateY(12px) scale(.7) rotate(-14deg); opacity: 0; }
+    to { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes student-login-draw {
+    from { stroke-dashoffset: 42; }
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes student-login-ring {
+    0% { opacity: .7; transform: scale(.8); }
+    100% { opacity: 0; transform: scale(1.35); }
+}
+
+@keyframes student-login-step {
+    from { transform: translateY(14px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #loginModal.modal-overlay,
+    #loginModal .login-modal {
+        animation: none;
+    }
+}

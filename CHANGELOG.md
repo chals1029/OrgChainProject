@@ -2,7 +2,23 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
-- Simplified TOSA review to one confirmation when OSO adds an applicant to the private Top 10 draft. All seven originals must be available; publication remains separate and limited to ten. Retained file-type, preview, download and reference-replacement icons.
+- Display private personalized TOSA result notices on publication, with optional OSO-entered event, contact and signatory details; pending applicants receive no notice.
+- Restyled the TOSA submissions filter as a responsive dashboard-style bar with search, result selection, reset, Apply, and the filtered applicant count.
+- Added searchable TOSA submissions filters for published Qualified and Not Qualified results, excluding pending or stale reviews and retaining filters across pages.
+- Reopen the TOSA applicant dialog after adding to the Top 10 draft and show a disabled Added to Top 10 button, with immediate submission feedback.
+- Publish TOSA qualification decisions with the Top 10: selected applicants become Qualified, other reviewed applicants become Not Qualified, and pending applications remain undecided. Draft changes do not alter published decisions; changed reviews require republication. Apply the additive `2026_11_05_000001_add_tosa_published_decisions.php` migration.
+- Separated TOSA document review from Top 10 selection: OSO must explicitly mark the current packet reviewed before adding it to the private draft; publication remains a separate action. Existing drafts and published lists are preserved.
+- Documented PHP web-runtime OPcache setup and isolated load evidence: one 100-user stress retest averaged 2.935 seconds with zero errors, while earlier runs exceeded 3 seconds and profiling showed saturated host CPU.
+- Aligned office and student announcement filters with the five published announcement types; removed duplicated activity bulletins and the misleading organization-only broadcast label, retaining renewal-date and legacy notices.
+- Replaced approximate SDG symbols with official UN goal icons and attribution, and aligned report-period filter colors with the analytics page.
+- Reorganized OSO Users & Roles account actions into a compact, labeled grid and responsive phone cards; existing account permissions and confirmation flows are unchanged.
+- Moved Partial Voting Turnout above Candidate Vote Counts on both the voting admin dashboard and canvassing tally; preserved tally filters and turnout printing.
+- Removed Share and Copy link actions from student Community posts; reactions and comments remain available.
+- Removed voting admin Chain Verify navigation, route and reference lookup screen; retained public verification APIs and all ballot, receipt, ledger and historical audit records.
+- Placed the admin and canvassing turnout charts before the per-program counts with consistent panel spacing, and kept turnout printing functional after moving the admin chart.
+- Restored the reference cream/teal/sage/orange admin and canvassing sign-in theme, photo/seal composition and Public Sans/Outfit typography while retaining OrgChain branding and credential/number-verification controls. Moved turnout charts/college ranking ahead of per-program counts on all three staff dashboards; removed the admin Monitoring Feed and its exclusive query, scripts and styles without deleting audit logs. Bounded chart height and corrected inherited mobile staff title/menu layout conflicts.
+- Allowed registered organization-linked SO accounts to sign in and manage their profile with Gmail or BatStateU email; other office roles remain restricted to BatStateU domains.
+- Replaced the TOSA Top 10 checklist with the current draft and accessible remove icons. Removal preserves applications and published results; publication checks that the draft has not changed.
 - Bounded the TOSA submissions list in a scrollable, keyboard-accessible box while retaining pagination. Require an edited DOCX application form and reject unchanged official templates; OSO still checks the actual answers and signatures.
 - Centered the TOSA file-review dialog and clarified missing legacy originals. OSO can return a specific document with a reason sent to the linked student by email and shown in the student's portal; missing recipients and mail failures are reported without inventing documents.
 - Added a responsive four-tab TOSA workspace for private applicant file review/ZIP downloads, official documents and calls, a manually selected unranked Top 10 with explicit student publication, and an event history recorded from this release onward. Missing legacy originals are reported in ZIPs; existing applications remain untouched.

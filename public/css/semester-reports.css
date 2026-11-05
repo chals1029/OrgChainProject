@@ -32,6 +32,9 @@
 .sr-directory td > strong { font-size:.78rem; }
 .sr-directory .sr-status { padding:.2rem .5rem; font-size:.66rem; font-weight:600; }
 .sr-period-card .sr-filters { margin:.85rem 0 0; }
+.sr-period-card .sr-filters label { color:#706569; }
+.sr-period-card .sr-filters select { min-height:38px; border:1.5px solid #f0e0e3; border-radius:9px; background:#fdfafb; color:#2b2427; font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.02); cursor:pointer; }
+.sr-period-card .sr-filters select:hover { background:#fff; }
 .sr-submission-card { background:#f3f4f7; border-color:#e9eaef; }
 .sr-submission-controls { display:grid; gap:.7rem; margin-top:.85rem; }
 .sr-submission-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.9rem 1rem; border:1px solid #e7e9ee; border-radius:12px; background:#fff; box-shadow:0 3px 10px rgba(30,40,60,.04); }

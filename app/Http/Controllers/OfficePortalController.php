@@ -3842,6 +3842,8 @@ class OfficePortalController extends Controller
         $tab = request('tab', 'submissions');
         $tab = in_array($tab, ['submissions', 'documents', 'top10', 'history'], true) ? $tab : 'submissions';
         $search = mb_substr(trim((string) request('search', '')), 0, 100);
+        $resultFilter = request('result', 'all');
+        $resultFilter = in_array($resultFilter, ['all', 'qualified', 'not_qualified'], true) ? $resultFilter : 'all';
         $applicants = null;
         $reviewApplicants = collect();
         $templates = [];
@@ -3852,7 +3854,9 @@ class OfficePortalController extends Controller
 
         if ($tab === 'submissions') {
             $shortlist = TosaShortlist::query()->findOrFail(1);
+            $decisionIds = $resultFilter === 'all' ? null : $shortlist->applicantIdsForDecision($resultFilter);
             $applicants = TosaApplicant::query()->where('status', 'submitted')
+                ->when($decisionIds !== null, fn ($query) => $query->whereIn('id', $decisionIds))
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
                     $query->where('full_name', 'like', '%'.$search.'%')
                         ->orWhere('sr_code', 'like', '%'.$search.'%')
@@ -3880,11 +3884,13 @@ class OfficePortalController extends Controller
         } elseif ($tab === 'top10') {
             $shortlist = TosaShortlist::query()->findOrFail(1);
             $workflow = app(TosaWorkflowService::class);
-            $candidates = TosaApplicant::query()->where('status', 'submitted')->orderBy('full_name')->orderBy('id')->get()
-                ->map(fn (TosaApplicant $applicant): array => [
-                    'applicant' => $applicant,
-                    'verified' => $workflow->isVerified($applicant),
-                ]);
+            $draftIds = array_map('intval', $shortlist->draft_ids ?? []);
+            $byId = TosaApplicant::query()->whereKey($draftIds)->get()->keyBy('id');
+            $candidates = collect($draftIds)->map(function (int $id) use ($byId, $workflow): array {
+                $applicant = $byId->get($id);
+
+                return ['id' => $id, 'applicant' => $applicant, 'verified' => $applicant !== null && $workflow->isVerified($applicant)];
+            });
         } else {
             $events = TosaHistoryEvent::query()->with('applicant:id,full_name')
                 ->orderByDesc('id')->paginate(20)->withQueryString();
@@ -3894,6 +3900,7 @@ class OfficePortalController extends Controller
             'activeNav' => 'tosa',
             'tosaTab' => $tab,
             'tosaSearch' => $search,
+            'tosaResultFilter' => $resultFilter,
             'tosaCanManageTemplates' => $office->office_role === 'oso',
             'tosaCanManageWorkflow' => $office->office_role === 'oso',
             'tosaApplicants' => $applicants,
@@ -5606,9 +5613,6 @@ class OfficePortalController extends Controller
             }
             $recognitionRows->push(['organization_key' => $key, 'academic_year' => $academicYear]);
         };
-        foreach (StudentOrganization::active()->get(['name', 'academic_year']) as $organization) {
-            $addRecognition($organization->name, $organization->academic_year);
-        }
         foreach ($renewalRows->where('status', 'approved') as $renewal) {
             $addRecognition($renewal->organization_name, $renewal->window?->academic_year);
         }
@@ -5647,7 +5651,6 @@ class OfficePortalController extends Controller
                 'totalSubmissions' => $total,
                 'revisionRate' => $total > 0 ? round(($returnRows->unique('activity_id')->count() / $total) * 100, 1).'%' : '0%',
             ],
-            'orgSub' => 'Recognized orgs · A.Y. '.$selectedRosterYear.' (calendar year '.now()->year.' → A.Y. '.$selectedRosterYear.')',
             'currentAcademicYear' => $currentAcademicYear,
             'recognitionRows' => $recognitionRows->all(),
             'typeLabels' => $typeLabels,

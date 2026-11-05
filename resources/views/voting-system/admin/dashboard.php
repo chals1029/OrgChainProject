@@ -64,7 +64,7 @@
         <div class="progress-box">
             <span><i class="bi bi-broadcast-pin"></i> Live Status</span>
             <div class="progress-bar-small">
-                <div class="progress-bar-fill-small" style="width: <?= e($summary['turnout_rate']) ?>%; background-color: #8b1828;"></div>
+                <div class="progress-bar-fill-small" style="width: <?= e($summary['turnout_rate']) ?>%; background-color: #22c55e;"></div>
             </div>
             <span><?= e($summary['turnout_rate']) ?>% Turnout</span>
         </div>
@@ -159,12 +159,41 @@
     </div>
 </section>
 
+
+    <section class="admin-panel dashboard-chart-panel turnout-report-panel turnout-print-area" id="partialVotingTurnoutReport">
+        <div class="turnout-report-toolbar no-print">
+            <button class="btn btn-outline-brown turnout-print-button" type="button" data-print-section="#partialVotingTurnoutReport">
+                <i class="bi bi-printer"></i> Print
+            </button>
+        </div>
+        <div class="turnout-report-heading">
+            <p class="eyebrow"><span class="pulse-dot"></span> Turnout by College</p>
+            <h2>Partial Voting Turnout</h2>
+            <span>As of <?= e($turnoutAsOf) ?></span>
+        </div>
+
+        <div class="turnout-report-grid">
+            <div class="chart-frame turnout-donut-frame">
+                <canvas
+                    id="turnoutChart"
+                    data-labels="<?= e(json_encode(array_map(static fn (array $row): string => college_abbreviation($row['college'] ?? ''), $turnoutByCollege))) ?>"
+                    data-votes="<?= e(json_encode(array_column($turnoutByCollege, 'votes_cast'))) ?>"
+                    data-totals="<?= e(json_encode(array_column($turnoutByCollege, 'total_voters'))) ?>"></canvas>
+            </div>
+
+            <div class="turnout-report-side">
+                <div class="turnout-total-block">
+                    <strong class="turnout-total-number"><?= e(number_format((int) ($summary['votes_cast'] ?? 0))) ?></strong>
+                    <span class="turnout-total-label">Partial Total Number of Votes</span>
+                </div>
+            </div>
+        </div>
+    </section>
 <?php
     $tallyId = 'live-tally';
     $tallyAction = $dashboardPath;
     require __DIR__ . '/../partials/tally.php';
 ?>
-
 <section class="admin-panel college-count-panel program-count-panel program-count-panel--plain">
     <div class="panel-heading">
         <div>
@@ -242,55 +271,3 @@
 </section>
 
 
-<div class="dashboard-main-grid">
-    <section class="admin-panel dashboard-chart-panel turnout-report-panel turnout-print-area" id="partialVotingTurnoutReport">
-        <div class="turnout-report-toolbar no-print">
-            <button class="btn btn-outline-brown turnout-print-button" type="button" data-print-section="#partialVotingTurnoutReport">
-                <i class="bi bi-printer"></i> Print
-            </button>
-        </div>
-        <div class="turnout-report-heading">
-            <p class="eyebrow"><span class="pulse-dot"></span> Turnout by College</p>
-            <h2>Partial Voting Turnout</h2>
-            <span>As of <?= e($turnoutAsOf) ?></span>
-        </div>
-
-        <div class="turnout-report-grid">
-            <div class="chart-frame turnout-donut-frame">
-                <canvas
-                    id="turnoutChart"
-                    data-labels="<?= e(json_encode(array_map(static fn (array $row): string => college_abbreviation($row['college'] ?? ''), $turnoutByCollege))) ?>"
-                    data-votes="<?= e(json_encode(array_column($turnoutByCollege, 'votes_cast'))) ?>"
-                    data-totals="<?= e(json_encode(array_column($turnoutByCollege, 'total_voters'))) ?>"></canvas>
-            </div>
-
-            <div class="turnout-report-side">
-                <div class="turnout-total-block">
-                    <strong class="turnout-total-number"><?= e(number_format((int) ($summary['votes_cast'] ?? 0))) ?></strong>
-                    <span class="turnout-total-label">Partial Total Number of Votes</span>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section class="dashboard-activity-panel">
-        <div class="panel-heading">
-            <div>
-                <p class="eyebrow">Recent Activity</p>
-                <h2>Monitoring Feed</h2>
-            </div>
-        </div>
-
-        <div class="activity-list" id="activityListContent">
-
-            <?php foreach ($recentActivity as $activity): ?>
-                <article class="activity-item">
-                    <span class="activity-dot is-muted"></span>
-                    <div>
-                        <strong><?= e($activity['actor_name']) ?> · <?= e(str_replace('_', ' ', $activity['action'])) ?></strong>
-                        <small><?= e($activity['details'] ?: 'System activity') ?> · <?= e($activity['created_at']) ?></small>
-                    </div>
-                </article>
-            <?php endforeach; ?>
-        </div>
-    </section>
-</div>

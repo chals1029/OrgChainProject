@@ -80,6 +80,7 @@ Routes below are a focused map of current `routes/web.php`, not a claim that mid
 | `POST` | `/office-desk/tosa/{applicant}/top-ten` | `office.auth` + OSO | `TosaShortlistController@add` | `office.tosa.top10.add` |
 | `GET` | `/office-desk/tosa/{applicant}/package` | `office.auth` + OSO | `TosaPackageController@__invoke` | `office.tosa.package.download` |
 | `POST` | `/office-desk/tosa/top-ten` | `office.auth` + OSO | `TosaShortlistController@save` | `office.tosa.top10.save` |
+| `POST` | `/office-desk/tosa/top-ten/{applicantId}/remove` | `office.auth` + OSO | `TosaShortlistController@remove` | `office.tosa.top10.remove` |
 | `POST` | `/office-desk/tosa/references/template` | `office.auth` + OSO Master | `OfficePortalController@storeTosaReferenceTemplate` | `office.tosa.references.store` |
 | `GET` | `/office-desk/archive` | `office.auth` | `OfficePortalController@archive` | `office.archive` |
 | `POST` | `/office-desk/archive/folders` | `office.auth` + SO/OSO, organization-scoped | `OfficePortalController@storeArchiveFolder` | `office.archive.folders.store` |

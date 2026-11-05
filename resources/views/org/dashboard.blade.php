@@ -2268,8 +2268,6 @@
                         <div class="org-kpi-num" id="kpiTotalOrgsNum">{{ $osoKpis['totalOrgs'] ?? 0 }}</div>
                     </div>
                     <h3 class="org-kpi-title">Recognized Organizations</h3>
-                    <p class="org-kpi-sub" id="kpiTotalOrgsSub">{{ $osoOverview['orgSub'] ?? 'Recognized organizations' }}</p>
-                    <p class="org-kpi-sub" data-organization-registry-total="{{ $organizationRegistry['registered'] }}">Registry: {{ $organizationRegistry['registered'] }} total · {{ $organizationRegistry['enabled'] }} operationally enabled. Recognition above is year-scoped.</p>
                 </article>
 
                 {{-- Card 2: Pending Transactions --}}
@@ -3158,9 +3156,6 @@
                 const returnedActivities = new Set(returnEvents.map(row => row.activity_id)).size;
                 return {
                     totalOrgs: recognitionKeys.size,
-                    orgSub: selectedYear === 'all'
-                        ? 'Distinct organizations across recorded academic-year rosters; independent of semester, month and scope.'
-                        : `Year ${selectedYear} maps to AY ${academicYear} roster; independent of semester, month and scope.`,
                     pendingTrx: (unfiltered && rows.length === ((window.osoLiveRows || []).length))
                         ? ((osoLiveMeta.kpis && osoLiveMeta.kpis.pendingTrx) || 0)
                         : (pending + revision),
@@ -3216,9 +3211,7 @@
 
                 // 2. Update KPI Cards
                 const kpiTotalOrgs = document.getElementById('kpiTotalOrgsNum');
-                const kpiTotalOrgsSub = document.getElementById('kpiTotalOrgsSub');
                 if (kpiTotalOrgs) kpiTotalOrgs.textContent = data.totalOrgs;
-                if (kpiTotalOrgsSub) kpiTotalOrgsSub.textContent = data.orgSub;
 
                 const kpiPending = document.getElementById('kpiPendingTrxNum');
                 const kpiPendingSub = document.getElementById('kpiPendingTrxSub');

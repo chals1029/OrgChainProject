@@ -65,7 +65,7 @@ Upon successful ballot sealing, the voter receives a cryptographic receipt conta
 - **Sealed Block Hash**: 64-character hexadecimal SHA-256 fingerprint
 - **Ballot Root**: Merkle root of their validated choices
 - **Nodes Confirmed**: Confirmation count across the 3 independent ledgers (`3/3 Nodes Verified`)
-- **QR Code & Verification URL**: Link to verify receipt integrity at `/voting-system/admin/chain-verify`
+- **Verification API**: Receipt integrity can be checked through `/voting-system/api/blockchain/verify?reference=...`; the admin Chain Verify page has been removed.
 
 ```text
 =====================================================

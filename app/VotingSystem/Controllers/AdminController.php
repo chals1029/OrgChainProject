@@ -4,7 +4,6 @@ namespace App\VotingSystem\Controllers;
 
 use App\VotingSystem\Core\Controller;
 use App\VotingSystem\Core\Mailer;
-use App\VotingSystem\Core\VoteBlockchain;
 use App\VotingSystem\Models\AdminUser;
 use App\VotingSystem\Models\AuditLog;
 use App\VotingSystem\Models\Candidate;
@@ -41,7 +40,6 @@ class AdminController extends Controller
             'programFilterOptions' => $dashboard->programOptionsByCollege(),
             'positionOptions' => (new Position())->forElection((int) $election['id']),
             'results' => $dashboard->results((int) $election['id'], $college, $position, $yearLevel, $program),
-            'recentActivity' => $dashboard->recentActivity(),
             'filterCollege' => $college,
             'filterProgram' => $program,
             'filterPosition' => $position,
@@ -756,28 +754,6 @@ class AdminController extends Controller
             'globalWindow' => (int) voting_config('security.global_rate_window', 60),
             'sensitiveLimit' => (int) voting_config('security.sensitive_rate_limit', 35),
             'sensitiveWindow' => (int) voting_config('security.sensitive_rate_window', 300),
-        ], 'admin');
-    }
-
-    public function chainVerify(): void
-    {
-        $this->requireAuth(['admin']);
-
-        $reference = trim((string) ($_GET['reference'] ?? $_POST['reference'] ?? ''));
-        $result = null;
-
-        if ($reference !== '') {
-            $result = (new VoteBlockchain())->verify($reference);
-            (new AuditLog())->record(
-                'chain_verify',
-                'Chain verify for '.$reference.': '.(($result['ok'] ?? false) ? 'pass' : 'fail')
-            );
-        }
-
-        $this->view('admin/chain_verify', [
-            'title' => 'Chain Integrity',
-            'reference' => $reference,
-            'result' => $result,
         ], 'admin');
     }
 

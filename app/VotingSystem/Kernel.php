@@ -100,8 +100,6 @@ class Kernel
         $router->get($canvassingReportsPath, [AdminController::class, 'canvassingReportsGate']);
         $router->post($canvassingReportsPath, [AdminController::class, 'canvassingReportsVerifyPin']);
         $router->get('/admin/security', [AdminController::class, 'security']);
-        $router->get('/admin/chain-verify', [AdminController::class, 'chainVerify']);
-        $router->post('/admin/chain-verify', [AdminController::class, 'chainVerify']);
 
         $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', voting_current_path());
 

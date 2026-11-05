@@ -1,4 +1,4 @@
-﻿<?php
+<?php
     $pendingAdminOtp = $_SESSION['pending_admin_otp'] ?? null;
     $pendingEmail = (string) ($pendingAdminOtp['email'] ?? '');
     $pendingEmailLabel = $pendingEmail;
@@ -26,10 +26,15 @@
 
     <main class="login-split-layout">
         <section class="login-info-panel">
-            <div class="info-content animate-login-entry">
-                <div class="login-kicker"><i class="bi bi-shield-lock"></i> Staff Access Portal</div>
-
-                <h1>Secure Election Management</h1>
+            <div class="info-content">
+                <div class="login-hero-lockup">
+                    <div class="login-hero-copy">
+                        <h1>Secure Election Management</h1>
+                    </div>
+                    <figure class="login-hero-seal" aria-label="SSC official seal">
+                        <img src="<?= e(voting_asset('img/ssc-logo-circle.png')) ?>" alt="SSC Official Logo">
+                    </figure>
+                </div>
 
                 <p class="lead">Welcome to the OrgChain Official Voting Control Center. Manage candidates, monitor real-time participation, and ensure the integrity of the student voice.</p>
 
@@ -59,10 +64,9 @@
         </section>
 
         <section class="login-form-panel">
-            <div class="form-container animate-login-entry delay-200">
-                <div class="login-glass-card">
-                    <?php require base_path('resources/views/voting-system/partials/flash.php'); ?>
-
+            <div class="form-container">
+                <?php require base_path('resources/views/voting-system/partials/flash.php'); ?>
+                <div class="login-form-card">
                     <div class="login-card-header">
                         <p class="eyebrow">Administrator Access</p>
                         <h2><?= $pendingAdminOtp ? 'Verify Number' : 'Sign In' ?></h2>
@@ -127,7 +131,7 @@
                                     <span class="login-input-icon"><i class="bi bi-key"></i></span>
                                     <input id="password" class="form-control" type="password" name="password" required
                                            placeholder="••••••••" autocomplete="current-password">
-                                    <button type="button" class="login-toggle-pw" onclick="togglePasswordVisibility()">
+                                    <button type="button" class="login-toggle-pw" aria-label="Toggle password visibility" onclick="togglePasswordVisibility()">
                                         <i class="bi bi-eye" id="toggleIcon"></i> <span id="toggleText">Show</span>
                                     </button>
                                 </div>

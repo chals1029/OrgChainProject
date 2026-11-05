@@ -523,6 +523,48 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertTrue($this->window->fresh()->is_open);
     }
 
+    public function test_tracking_lists_each_registered_organization_with_its_current_window_decision(): void
+    {
+        $expected = [$this->organization->name => ['none', 'Not Renewed']];
+        foreach (['submitted' => 'Pending Review', 'approved' => 'Renewed', 'returned' => 'Returned for Revision', 'rejected' => 'Rejected'] as $status => $label) {
+            $organization = StudentOrganization::query()->create([
+                'name' => 'Tracking '.$status.' '.$this->suffix,
+                'college' => 'Fixture College',
+                'is_active' => true,
+            ]);
+            OrgRenewalSubmission::query()->create([
+                'renewal_window_id' => $this->window->id,
+                'organization_name' => $organization->name,
+                'college' => $organization->college,
+                'submitted_by' => $this->so->id,
+                'adviser_name' => 'Fixture Adviser',
+                'dean_name' => 'Fixture Dean',
+                'status' => $status,
+                'submitted_at' => now(),
+            ]);
+            $expected[$organization->name] = [$status, $label];
+        }
+
+        $response = $this->actingAs($this->oso, 'office')->get(route('office.renewal', ['tab' => 'tracking']))->assertOk();
+        $document = new \DOMDocument();
+        @$document->loadHTML($response->getContent());
+        $rows = (new \DOMXPath($document))->query('//tr[@data-tracking-row]');
+        $seen = [];
+        foreach ($rows as $row) {
+            foreach ($expected as $name => [$status, $label]) {
+                if (str_contains($row->textContent, $name)) {
+                    $this->assertSame($status, $row->getAttribute('data-status'));
+                    $this->assertStringContainsString($label, $row->textContent);
+                    $seen[] = $name;
+                }
+            }
+        }
+        $this->assertEqualsCanonicalizing(array_keys($expected), $seen);
+
+        $this->actingAs($this->so, 'office')->get(route('office.renewal', ['tab' => 'tracking']))
+            ->assertOk()->assertDontSee('Tracking approved '.$this->suffix);
+    }
+
     public function test_oso_roster_standing_uses_current_window_approval_separately_from_admin_flags(): void
     {
         $prior = $this->submission('approved');

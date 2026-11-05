@@ -41,8 +41,7 @@
                 $activityTitles = collect($sdg['activities'])->values();
             @endphp
             <article class="sp-sdg-card" data-sdg-card data-sdg-goal="{{ $sdg['sdg'] }}" data-sdg-name="{{ $goalName }}" data-sdg-activities="{{ json_encode($activityTitles, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) }}">
-                <span class="sp-sdg-badge" style="--sdg-color: {{ $goalColor }}" aria-hidden="true">
-                    <span class="sp-sdg-badge-heading"><strong>{{ $number ?: 'SDG' }}</strong><span>{{ $goalName }}</span></span>
+                <span class="sp-sdg-badge" style="--sdg-color: {{ $goalColor }}; padding: 0; overflow: hidden" aria-hidden="true">
                     @include('org.partials.sdg-symbol', ['number' => $number, 'goalIcon' => $goalIcon])
                 </span>
                 <div class="sp-sdg-card-copy">
@@ -55,6 +54,7 @@
         @endforeach
     </div>
     <p class="sp-sdg-empty" data-sdg-empty @if ($highlights->isNotEmpty()) hidden @endif>No SDG-tagged activities yet.</p>
+    <p class="sp-sdg-source"><a href="https://www.un.org/sustainabledevelopment/" target="_blank" rel="noopener noreferrer">United Nations Sustainable Development Goals</a>. The content of this publication has not been approved by the United Nations and does not reflect the views of the United Nations or its officials or Member States.</p>
     <dialog class="sp-sdg-dialog" data-sdg-dialog aria-labelledby="sdgRelatedTitle">
         <header><div><h2 id="sdgRelatedTitle" data-sdg-dialog-title>Related activities</h2><p data-sdg-dialog-summary></p></div><button type="button" class="app-view-action" data-sdg-close aria-label="Close related activities"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button></header>
         <ul data-sdg-dialog-activities></ul>

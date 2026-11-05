@@ -24,7 +24,6 @@ created: 2026-08-20
 | `GET /ssc-access-...` | `AdminAuthController@login` | Staff / Admin credential login |
 | `GET /admin/dashboard` | `AdminController@dashboard` | Election administration hub |
 | `GET /admin/candidates` | `AdminController@candidates` | Candidate & party registration |
-| `GET /admin/chain-verify` | `AdminController@chainVerify` | Multi-node blockchain verification tool |
 | `GET /ssc-canvassing-dashboard-...` | `AdminController@canvassingDashboard` | Real-time voter turnout & summary |
 | `GET /ssc-canvassing-tally-...` | `AdminController@canvassingTally` | Live vote tally per candidate |
 | `GET /ssc-canvassing-reports-...` | `AdminController@canvassingReports` | Certified printable reports |

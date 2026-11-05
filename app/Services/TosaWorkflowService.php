@@ -45,7 +45,7 @@ final class TosaWorkflowService
         foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
             $path = $applicant->requirementPath($key);
             if ($path === null || $applicant->requirementFile($key) === null) {
-                throw ValidationException::withMessages(['documents' => 'The original '.$definition['title'].' must be available before adding this applicant.']);
+                throw ValidationException::withMessages(['documents' => 'The original '.$definition['title'].' must be available before marking this applicant reviewed.']);
             }
             $prior = $previous[$key] ?? null;
             $documents[$key] = is_array($prior) && ($prior['path'] ?? null) === $path

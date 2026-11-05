@@ -595,8 +595,8 @@
     display: grid;
     place-items: center;
     flex: 0 0 auto;
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 2.25rem;
+    height: 2.25rem;
     border-radius: 4px;
     background: var(--sdg-color, var(--ap-maroon));
     color: #fff;

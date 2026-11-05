@@ -26,6 +26,7 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
+    <link rel="stylesheet" href="{{ asset('css/student-login-motion.css') }}?v={{ filemtime(public_path('css/student-login-motion.css')) }}">
 </head>
 <body class="landing-body">
     {{-- Decorative ambient layers --}}
@@ -457,7 +458,19 @@
                         Student Portal
                     </div>
                 </div>
-                <h2 id="loginTitle">Student Login</h2>
+                <h2 id="loginTitle" class="student-login-heading">
+                    <span>Student Login</span>
+                    <span class="student-login-illustration" aria-hidden="true">
+                        <svg class="student-login-art" id="loginVerifyArt" viewBox="0 0 48 48" fill="none" @if (!session('code_sent')) hidden @endif>
+                            <path class="student-login-art-outline" d="M24 5 38 10v10c0 10-6 17-14 21C16 37 10 30 10 20V10L24 5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path class="student-login-art-detail" d="m17 23 5 5 9-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg class="student-login-art" id="loginSendArt" viewBox="0 0 48 48" fill="none" @if (session('code_sent')) hidden @endif>
+                            <rect class="student-login-art-outline" x="7" y="12" width="34" height="24" rx="5" stroke="currentColor" stroke-width="2"/>
+                            <path class="student-login-art-detail" d="m9 15 15 11 15-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </h2>
                 <p>Sign in with your BatStateU institutional account, or request a verification code with your SR Code.</p>
             </div>
 
@@ -477,8 +490,7 @@
                     <span>or</span>
                 </div>
 
-                @if (session('code_sent'))
-                    <form class="login-form" id="studentVerifyForm" method="POST" action="{{ route('student.code.verify') }}">
+                    <form class="login-form" id="studentVerifyForm" method="POST" action="{{ route('student.code.verify') }}" @if (!session('code_sent')) hidden @endif>
                         @csrf
                         <input type="hidden" name="sr_code" value="{{ session('code_sr', old('sr_code')) }}">
                         <div class="form-field">
@@ -495,14 +507,14 @@
                                     maxlength="6"
                                     pattern="[0-9]{6}"
                                     required
-                                    autofocus
+                                    @if (session('code_sent')) autofocus @endif
                                     value="{{ old('code') }}"
                                 >
                             </div>
-                            <span class="field-hint">Code sent to {{ session('code_email', 'your email') }} · expires in 10 min</span>
+                            <span class="field-hint">If your SR Code belongs to an active account, a code was sent to your institutional email · expires in 10 min</span>
                         </div>
 
-                        @if ($errors->any())
+                        @if (session('code_sent') && $errors->any())
                             <div class="form-alert" role="alert">{{ $errors->first() }}</div>
                         @endif
 
@@ -516,8 +528,7 @@
                             <button type="button" class="link-btn" id="resendCode">Resend code</button>
                         </div>
                     </form>
-                @else
-                    <form class="login-form" id="studentCodeForm" method="POST" action="{{ route('student.code.send') }}">
+                    <form class="login-form" id="studentCodeForm" method="POST" action="{{ route('student.code.send') }}" @if (session('code_sent')) hidden @endif>
                         @csrf
                         <div class="form-field">
                             <label for="sr_code">SR Code</label>
@@ -533,13 +544,13 @@
                                     pattern="[0-9]{2}-[0-9]{5}"
                                     title="Format: YY-XXXXX (e.g. 21-12345)"
                                     value="{{ old('sr_code') }}"
-                                    autofocus
+                                    @if (!session('code_sent')) autofocus @endif
                                 >
                             </div>
                             <span class="field-hint">We'll email a 6-digit code to your registered BatStateU email</span>
                         </div>
 
-                        @if ($errors->any())
+                        @if (!session('code_sent') && $errors->any())
                             <div class="form-alert" role="alert">{{ $errors->first() }}</div>
                         @endif
 
@@ -552,7 +563,7 @@
                             Send Verification Code
                         </button>
                     </form>
-                @endif
+                <div id="studentLoginNotice" class="form-alert" role="status" aria-live="polite" hidden></div>
 
                 <p class="login-google-note">Institutional sign-in uses your @g.batstate-u.edu.ph Google Workspace account.</p>
             </div>
@@ -566,41 +577,87 @@
 
     <script>
 
-        // Login modal — step switching helpers
         document.addEventListener('DOMContentLoaded', function () {
-            // "Use a different SR Code" — reload the page without the code_sent session flag.
-            document.getElementById('backToSrCode')?.addEventListener('click', function () {
-                window.location.href = '{{ url("/?login=1") }}';
-            });
+            const sendForm = document.getElementById('studentCodeForm');
+            const verifyForm = document.getElementById('studentVerifyForm');
+            const srInput = document.getElementById('sr_code');
+            const codeInput = document.getElementById('code');
+            const notice = document.getElementById('studentLoginNotice');
+            const resend = document.getElementById('resendCode');
+            const sendButton = sendForm.querySelector('button[type="submit"]');
+            const art = document.querySelector('.student-login-illustration');
+            let pending = false;
 
-            // "Resend code" — re-submit the send-code form for the same SR Code.
-            document.getElementById('resendCode')?.addEventListener('click', function () {
-                const form = document.getElementById('studentVerifyForm');
-                if (!form) return;
-                const sr = form.querySelector('input[name="sr_code"]')?.value;
-                if (!sr) return;
+            function showNotice(message, error = false) {
+                notice.textContent = message;
+                notice.hidden = !message;
+                notice.classList.toggle('form-alert-info', !error);
+                notice.setAttribute('role', error ? 'alert' : 'status');
+            }
 
-                const resendForm = document.createElement('form');
-                resendForm.method = 'POST';
-                resendForm.action = '{{ route("student.code.send") }}';
+            function showStep(verify) {
+                sendForm.hidden = verify;
+                verifyForm.hidden = !verify;
+                document.getElementById('loginSendArt').toggleAttribute('hidden', verify);
+                document.getElementById('loginVerifyArt').toggleAttribute('hidden', !verify);
+                document.querySelectorAll('#studentCodeForm .form-alert, #studentVerifyForm .form-alert').forEach(el => el.hidden = true);
+                const active = verify ? verifyForm : sendForm;
+                [active, art].forEach(el => {
+                    el.classList.remove('login-step-enter');
+                    void el.offsetWidth;
+                    el.classList.add('login-step-enter');
+                });
+                (verify ? codeInput : srInput).focus();
+            }
 
-                const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-                if (csrf) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = '_token';
-                    csrfInput.value = csrf;
-                    resendForm.appendChild(csrfInput);
+            async function requestCode(sr, isResend) {
+                if (pending) return;
+                pending = true;
+                sendButton.disabled = true;
+                resend.disabled = true;
+                showNotice(isResend ? 'Sending another code…' : 'Sending your code…');
+                const data = new FormData(sendForm);
+                data.set('sr_code', sr);
+                try {
+                    const response = await fetch(sendForm.action, {
+                        method: 'POST',
+                        body: data,
+                        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || !result.ok) {
+                        const message = response.status === 429
+                            ? 'Too many requests. Please wait before requesting another code.'
+                            : (result.errors?.sr_code?.[0] || result.message || 'Could not request a code. Please try again.');
+                        showNotice(message, true);
+                        return;
+                    }
+                    verifyForm.querySelector('input[name="sr_code"]').value = sr;
+                    codeInput.value = '';
+                    showStep(true);
+                    showNotice(isResend ? result.message : '');
+                } catch (error) {
+                    showNotice('Could not connect. Check your connection and try again.', true);
+                } finally {
+                    pending = false;
+                    sendButton.disabled = false;
+                    resend.disabled = false;
                 }
+            }
 
-                const srInput = document.createElement('input');
-                srInput.type = 'hidden';
-                srInput.name = 'sr_code';
-                srInput.value = sr;
-                resendForm.appendChild(srInput);
-
-                document.body.appendChild(resendForm);
-                resendForm.submit();
+            sendForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                requestCode(srInput.value.trim(), false);
+            });
+            document.getElementById('backToSrCode').addEventListener('click', function () {
+                if (pending) return;
+                showNotice('');
+                showStep(false);
+            });
+            resend.addEventListener('click', function () {
+                const sr = verifyForm.querySelector('input[name="sr_code"]').value;
+                if (sr) requestCode(sr, true);
             });
         });
     </script>

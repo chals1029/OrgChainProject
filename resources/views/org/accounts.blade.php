@@ -22,6 +22,49 @@
         min-width: 0;
         max-width: 100%;
     }
+    .org-accounts-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        padding: 0.35rem;
+        border: 1px solid #eadde0;
+        border-radius: 14px;
+        background: #fff;
+        width: fit-content;
+        max-width: 100%;
+    }
+    .org-accounts-tab {
+        border: 0;
+        border-radius: 10px;
+        padding: 0.7rem 1rem;
+        background: transparent;
+        color: #5f5559;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .org-accounts-tab[aria-selected="true"] {
+        background: #fbecef;
+        color: #8b1828;
+    }
+    .org-accounts-tab:focus-visible {
+        outline: 2px solid #8b1828;
+        outline-offset: 2px;
+    }
+    .org-accounts-page [hidden] {
+        display: none !important;
+    }
+    #accountsPanel {
+        display: grid;
+        gap: 1.25rem;
+        min-width: 0;
+    }
+    .org-settings-user-identity > div:last-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+
     .org-accounts-header-actions {
         display: flex;
         align-items: center;
@@ -162,11 +205,15 @@
             <button type="button" class="org-settings-btn-outline" id="accountsHowToUseBtn" aria-haspopup="dialog" aria-controls="accountsHowToUseModal" onclick="openAccountsHowToUseModal()">
                 <i class="bi bi-question-circle-fill" aria-hidden="true"></i> How to use
             </button>
-            <button type="button" class="org-settings-save-btn" onclick="openAddUserModal()">
-                <i class="bi bi-person-plus-fill" aria-hidden="true"></i> Add Officer Account
-            </button>
         </div>
     </div>
+
+    <div class="org-accounts-tabs" role="tablist" aria-label="Account type">
+        <button type="button" id="organizationAccountsTab" class="org-accounts-tab" role="tab" aria-selected="true" aria-controls="accountsPanel" data-accounts-tab="organization">Organization Accounts</button>
+        <button type="button" id="officeAccountsTab" class="org-accounts-tab" role="tab" aria-selected="false" aria-controls="accountsPanel" data-accounts-tab="office" tabindex="-1">Office Accounts</button>
+    </div>
+
+    <div id="accountsPanel" role="tabpanel" aria-labelledby="organizationAccountsTab">
 
     {{-- Register New Student Organization & Email Officer Credentials --}}
     <div class="org-settings-card" id="newOrganizationAccountCard">
@@ -174,7 +221,7 @@
             <div class="org-settings-card-icon"><i class="bi bi-building-add" aria-hidden="true"></i></div>
             <div>
                 <h3 class="org-settings-card-title" id="newOrganizationCardTitle">Register New Student Organization</h3>
-                <p class="org-settings-card-desc">Add a new student organization and create its SO officer account. OrgChain generates a temporary password and emails it directly to the officer.</p>
+                <p class="org-settings-card-desc">Add a new organization and its SO officer. A strong temporary password is automatically generated and emailed to the officer.</p>
             </div>
         </div>
         <div class="org-settings-card-body">
@@ -257,22 +304,22 @@
         <div class="org-settings-card-header">
             <div class="org-settings-card-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></div>
             <div>
-                <h3 class="org-settings-card-title">Authorized Office Accounts</h3>
-                <p class="org-settings-card-desc">Disabled accounts remain visible. Use My Account for your own profile and password.</p>
+                <h3 class="org-settings-card-title" id="accountsTableTitle">Organization Accounts</h3>
+                <p class="org-settings-card-desc" id="accountsTableDescription">Officer names and their assigned organizations. Disabled accounts remain visible.</p>
             </div>
         </div>
         <div class="org-settings-card-body" style="padding: 0;">
             <div style="padding: 1rem;">
                 <label for="settingsAccountSearch" class="org-settings-label">Search accounts</label>
                 <input type="search" id="settingsAccountSearch" class="org-settings-input" placeholder="Name, university email, organization, or role" autocomplete="off" oninput="filterSettingsAccounts(this.value)">
-                <p id="settingsAccountSearchEmpty" class="org-settings-help" role="status" hidden>No accounts match your search.</p>
+                <p id="settingsAccountSearchEmpty" class="org-settings-help" role="status" hidden></p>
             </div>
             <div class="org-settings-table-wrap">
                 <table class="org-settings-table">
                     <thead>
                         <tr>
                             <th>Officer Name</th>
-                            <th>Role / Office</th>
+                            <th>Organization / Office</th>
                             <th>TOSA Clearance</th>
                             <th>Account Status</th>
                             <th>Last Updated</th>
@@ -280,7 +327,7 @@
                         </tr>
                     </thead>
                     <tbody id="settingsUserListTbody">
-                        @forelse ($settingsUsers as $user)
+                        @foreach ($settingsUsers as $user)
                             @php
                                 $userData = [
                                     'id' => $user->id,
@@ -300,7 +347,7 @@
                                 ];
                                 $isCurrentAccount = (int) $user->id === (int) $office->id;
                             @endphp
-                            <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}">
+                            <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}" @if ($user->office_role !== 'so') hidden @endif>
                                 <td>
                                     <div class="org-settings-user-identity">
                                         <div class="org-settings-avatar-sm">{{ $userData['initials'] }}</div>
@@ -339,15 +386,12 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" style="padding: 1.5rem; text-align: center; color: #64748b;">No office accounts have been configured yet.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
     </div>
 
     {{-- Roles & Permissions Matrix & TOSA Authorized Users --}}
@@ -415,8 +459,8 @@
             <li class="org-howto-step">
                 <span class="org-howto-step-num" aria-hidden="true">3</span>
                 <div>
-                    <strong>Add or Manage Office Accounts</strong>
-                    <p>Click <strong>Add Officer Account</strong> to create OSO, SDO, OVCAA, OC, or SO accounts for existing organizations with a manual temporary password. Use table actions to <strong>Edit</strong> profiles, reset a <strong>Password</strong>, <strong>Disable / Enable</strong> access, or open <strong>My Account</strong> for your own profile.</p>
+                    <strong>Manage Existing Accounts</strong>
+                    <p>Use table actions to <strong>Edit</strong> profiles, reset a <strong>Password</strong>, <strong>Disable / Enable</strong> access, or open <strong>My Account</strong> for your own profile.</p>
                 </div>
             </li>
             <li class="org-howto-step">
@@ -433,81 +477,6 @@
     </div>
 </dialog>
 
-{{-- Add User Sub-Modal --}}
-<dialog id="settingsAddUserModal" class="org-settings-submodal" aria-labelledby="settingsAddUserTitle" style="max-width: 480px;">
-    <div style="padding: 1.5rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: 1.1rem;">
-                    <i class="bi bi-person-plus-fill"></i>
-                </div>
-                <h4 id="settingsAddUserTitle" style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #1a1618;">Create Officer Account</h4>
-            </div>
-            <button type="button" aria-label="Close account form" onclick="document.getElementById('settingsAddUserModal').close()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">&times;</button>
-        </div>
-        <form id="settingsAddUserForm" method="post" data-confirm="manual" onsubmit="handleAddUserSubmit(event)" class="org-settings-account-form" autocomplete="off">
-            <p id="settingsAddUserError" class="org-settings-form-error" role="alert" tabindex="-1" hidden></p>
-            <p class="org-settings-help">Choose a temporary password and share it securely with the officer. No invitation email is sent. The officer must change it on first login before accessing any system actions.</p>
-            <div class="org-settings-field">
-                <label for="newOfficerName" class="org-settings-label">Officer Full Name</label>
-                <input type="text" id="newOfficerName" class="org-settings-input" required maxlength="255" autocomplete="name" placeholder="Officer's full name">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerEmail" class="org-settings-label">Official University Email</label>
-                <input type="email" id="newOfficerEmail" class="org-settings-input" required maxlength="255" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. juan.delacruz@g.batstate-u.edu.ph">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerPassword" class="org-settings-label">Temporary Password</label>
-                <input type="password" id="newOfficerPassword" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="At least 8 characters">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerPasswordConfirmation" class="org-settings-label">Confirm Temporary Password</label>
-                <input type="password" id="newOfficerPasswordConfirmation" class="org-settings-input" required minlength="8" autocomplete="new-password" autocapitalize="none" spellcheck="false" placeholder="Repeat the temporary password">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerRole" class="org-settings-label">Assigned Desk / Role</label>
-                <select id="newOfficerRole" class="org-settings-select" onchange="updateNewOfficerClearance()">
-                    <option value="so">SO Student Organization Officer</option>
-                    <option value="oso">OSO Review Officer (Triage)</option>
-                    <option value="sdo">SDO Document Reviewer</option>
-                    <option value="ovcaa">OVCAA Final Endorser</option>
-                    <option value="oc">OC Final Approval Officer</option>
-                </select>
-            </div>
-            <div id="newOfficerOrganizationField" class="org-settings-field" hidden>
-                <label for="newOfficerOrganization" class="org-settings-label">Registered Student Organization</label>
-                <select id="newOfficerOrganization" class="org-settings-select" disabled>
-                    <option value="">Select an organization</option>
-                    @foreach (($accountOrganizations ?? collect()) as $organization)
-                        <option value="{{ $organization->id }}">{{ $organization->name }}{{ $organization->short_name ? ' ('.$organization->short_name.')' : '' }}</option>
-                    @endforeach
-                </select>
-                <small class="org-settings-help">Required for SO officers. This account receives access only to this organization, with no TOSA access.</small>
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerTitle" class="org-settings-label">Office / Officer Title (optional)</label>
-                <input type="text" id="newOfficerTitle" class="org-settings-input" maxlength="255">
-            </div>
-            <div class="org-settings-field">
-                <label for="newOfficerEmployeeId" class="org-settings-label">Employee ID (optional)</label>
-                <input type="text" id="newOfficerEmployeeId" class="org-settings-input" maxlength="255">
-            </div>
-            <div id="newOfficerClearanceField" class="org-settings-field">
-                <label for="newOfficerTosaClearance" class="org-settings-label">TOSA Module Clearance</label>
-                <select id="newOfficerTosaClearance" class="org-settings-select">
-                    <option value="No Access">No Access</option>
-                    <option value="Level 1 Read-only">Level 1 Read-only</option>
-                    <option value="Level 3 Master">Level 3 Master</option>
-                </select>
-                <small class="org-settings-help">OSO verifies documents. OVCAA may receive read-only access; other offices have no TOSA access. No invitation email is sent.</small>
-            </div>
-            <div class="org-settings-dialog-actions">
-                <button type="button" class="org-settings-btn-subtle" onclick="document.getElementById('settingsAddUserModal').close()">Cancel</button>
-                <button type="submit" class="org-settings-save-btn">Create Officer Account</button>
-            </div>
-        </form>
-    </div>
-</dialog>
 
 <dialog id="settingsAccountModal" class="org-settings-submodal" aria-labelledby="settingsAccountTitle" aria-describedby="settingsAccountDescription" style="max-width: 480px;">
     <div style="padding: 1.5rem;">
@@ -573,9 +542,9 @@
     let settingsAccountAction = null;
     let settingsAccountTargetId = null;
     let settingsAccountReturnFocus = null;
+    let activeAccountsTab = 'organization';
 
     const osoAccountRoutes = {
-        users: @json(route('office.settings.users.store')),
         userStatusBase: @json(url('/office-desk/settings/users')),
         organizationAccounts: @json(route('office.organizations.accounts.store')),
         organizationRetryBase: @json(url('/office-desk/organizations/accounts')),
@@ -645,30 +614,6 @@
         box.hidden = false;
     }
 
-    function appendAccountOrganizationOption(organization) {
-        if (!organization || !organization.id || !organization.name) return;
-        const select = document.getElementById('newOfficerOrganization');
-        if (!select) return;
-        const value = String(organization.id);
-        let option = [...select.options].find(item => item.value === value);
-        if (!option) {
-            option = document.createElement('option');
-            option.value = value;
-            select.appendChild(option);
-        }
-        option.textContent = organization.short_name
-            ? `${organization.name} (${organization.short_name})`
-            : organization.name;
-
-        if (organization.college) {
-            const datalist = document.getElementById('newOrgCollegeList');
-            if (datalist && ![...datalist.options].some(item => item.value === organization.college)) {
-                const collegeOption = document.createElement('option');
-                collegeOption.value = organization.college;
-                datalist.appendChild(collegeOption);
-            }
-        }
-    }
 
     function handleCreateOrganizationAccount(event) {
         event.preventDefault();
@@ -708,7 +653,6 @@
                 return;
             }
 
-            if (data.organization) appendAccountOrganizationOption(data.organization);
             if (data.user) upsertOsoUser(data.user);
 
             document.getElementById('newOrganizationAccountForm')?.reset();
@@ -815,35 +759,47 @@
             const user = settingsAccounts.get(Number(row.dataset.settingsUserId));
             if (!user) return;
             const text = [user.name, user.email, user.organization_name, user.role, user.office_role, user.office_title].join(' ').toLowerCase();
-            row.hidden = Boolean(q) && !text.includes(q);
+            const inTab = activeAccountsTab === 'organization' ? user.office_role === 'so' : user.office_role !== 'so';
+            row.hidden = !inTab || (Boolean(q) && !text.includes(q));
             if (!row.hidden) matches++;
         });
         const empty = document.getElementById('settingsAccountSearchEmpty');
-        if (empty) empty.hidden = !q || matches > 0;
+        if (empty) {
+            empty.hidden = matches > 0;
+            empty.textContent = q ? 'No accounts match your search.' : `No ${activeAccountsTab} accounts yet.`;
+        }
     }
 
-    function updateNewOfficerClearance() {
-        const role = settingsInputValue('newOfficerRole');
-        const isSo = role === 'so';
-        const organization = document.getElementById('newOfficerOrganization');
-        if (!organization) return;
-        organization.required = isSo;
-        organization.disabled = !isSo;
-        document.getElementById('newOfficerOrganizationField').hidden = !isSo;
-        const select = document.getElementById('newOfficerTosaClearance');
-        [...select.options].forEach(option => {
-            option.disabled = role === 'oso'
-                ? option.value !== 'Level 3 Master'
-                : role === 'ovcaa'
-                    ? option.value === 'Level 3 Master'
-                    : option.value !== 'No Access';
-            option.hidden = option.disabled;
+    function selectAccountsTab(tab) {
+        activeAccountsTab = tab.dataset.accountsTab;
+        document.querySelectorAll('[data-accounts-tab]').forEach(button => {
+            const selected = button === tab;
+            button.setAttribute('aria-selected', String(selected));
+            button.tabIndex = selected ? 0 : -1;
         });
-        if (role === 'oso') select.value = 'Level 3 Master';
-        else if (role !== 'ovcaa' || select.selectedOptions[0]?.disabled) select.value = 'No Access';
-        select.disabled = role !== 'ovcaa';
-        document.getElementById('newOfficerClearanceField').hidden = isSo;
+        document.getElementById('accountsPanel').setAttribute('aria-labelledby', tab.id);
+        document.getElementById('newOrganizationAccountCard').hidden = activeAccountsTab !== 'organization';
+        document.getElementById('accountsTableTitle').textContent = activeAccountsTab === 'organization' ? 'Organization Accounts' : 'Office Accounts';
+        document.getElementById('accountsTableDescription').textContent = activeAccountsTab === 'organization'
+            ? 'Officer names and their assigned organizations. Disabled accounts remain visible.'
+            : 'OSO, SDO, OVCAA, and OC accounts. Disabled accounts remain visible.';
+        filterSettingsAccounts();
     }
+
+    document.querySelectorAll('[data-accounts-tab]').forEach(button => {
+        button.addEventListener('click', () => selectAccountsTab(button));
+        button.addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const tabs = [...document.querySelectorAll('[data-accounts-tab]')];
+            const index = tabs.indexOf(button);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 :
+                (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[next].focus();
+            selectAccountsTab(tabs[next]);
+        });
+    });
+
 
     function showSettingsAccountError(dialog, message = '') {
         const error = dialog?.querySelector('[role="alert"]');
@@ -863,10 +819,6 @@
         document.getElementById(focusId)?.focus();
     }
 
-    function openAddUserModal() {
-        updateNewOfficerClearance();
-        openSettingsAccountDialog(document.getElementById('settingsAddUserModal'), 'newOfficerName');
-    }
 
     function upsertOsoUser(user) {
         const tbody = document.getElementById('settingsUserListTbody');
@@ -984,35 +936,6 @@
         openSettingsAccountDialog(dialog, isReset ? 'accountOfficerPassword' : 'accountOfficerName');
     }
 
-    function handleAddUserSubmit(event) {
-        event.preventDefault();
-        const dialog = document.getElementById('settingsAddUserModal');
-        showSettingsAccountError(dialog);
-        if (settingsInputValue('newOfficerPassword') !== settingsInputValue('newOfficerPasswordConfirmation')) {
-            showSettingsAccountError(dialog, 'The temporary password and confirmation must match.');
-            return;
-        }
-        const role = settingsInputValue('newOfficerRole');
-        const values = {
-            name: settingsInputValue('newOfficerName'),
-            email: settingsInputValue('newOfficerEmail'),
-            office_role: role,
-            office_title: settingsInputValue('newOfficerTitle'),
-            employee_id: settingsInputValue('newOfficerEmployeeId'),
-            password: settingsInputValue('newOfficerPassword'),
-            password_confirmation: settingsInputValue('newOfficerPasswordConfirmation'),
-            tosa_clearance: role === 'oso' ? 'Level 3 Master' : role === 'ovcaa' ? settingsInputValue('newOfficerTosaClearance') : 'No Access',
-        };
-        if (role === 'so') values.student_organization_id = settingsInputValue('newOfficerOrganization');
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(osoAccountRoutes.users, values);
-            upsertOsoUser(data.user);
-            dialog.querySelector('form').reset();
-            updateNewOfficerClearance();
-            dialog.close();
-            showSettingsToast(data.message || 'Officer account created.', 'success');
-        }, 'Create this officer account?');
-    }
 
     function handleAccountManagementSubmit(event) {
         event.preventDefault();
@@ -1066,7 +989,7 @@
     document.querySelectorAll('[data-settings-user]').forEach(row => {
         upsertOsoUser(JSON.parse(row.dataset.settingsUser));
     });
-    updateNewOfficerClearance();
+    filterSettingsAccounts();
 
     document.getElementById('settingsUserListTbody')?.addEventListener('click', event => {
         const button = event.target.closest('[data-account-action]');

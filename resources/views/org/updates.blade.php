@@ -1165,7 +1165,6 @@
                     <div class="aso-avatar">{{ $office->initials() }}</div>
                     <div class="aso-composer-info">
                         <strong>{{ $office->name }} <i class="bi bi-patch-check-fill" style="color: #2563eb;" title="Verified University Entity"></i></strong>
-                        <span><i class="bi bi-broadcast"></i> Broadcast to all {{ $organizationRegistry['registered'] }} registered student organizations</span>
                     </div>
                 </div>
                 <div class="aso-composer-pills-live">
@@ -1283,17 +1282,20 @@
                 <button type="button" class="aso-filter-btn" data-filter="high" onclick="filterAnnouncements('high', this)">
                     <i class="bi bi-exclamation-circle-fill" style="color: #ef4444;"></i> High Priority
                 </button>
+                <button type="button" class="aso-filter-btn" data-filter="General" onclick="filterAnnouncements('General', this)">
+                    <i class="bi bi-megaphone-fill" aria-hidden="true"></i> General Announcement
+                </button>
+                <button type="button" class="aso-filter-btn" data-filter="TOSA" onclick="filterAnnouncements('TOSA', this)">
+                    <i class="bi bi-award-fill" aria-hidden="true"></i> Call for TOSA
+                </button>
                 <button type="button" class="aso-filter-btn" data-filter="Deadline" onclick="filterAnnouncements('Deadline', this)">
-                    <i class="bi bi-hourglass-split" aria-hidden="true"></i> Deadlines
+                    <i class="bi bi-hourglass-split" aria-hidden="true"></i> Deadline Notice
                 </button>
                 <button type="button" class="aso-filter-btn" data-filter="Guideline" onclick="filterAnnouncements('Guideline', this)">
-                    <i class="bi bi-journal-text" aria-hidden="true"></i> Guidelines
+                    <i class="bi bi-journal-text" aria-hidden="true"></i> Policy &amp; Guideline
                 </button>
                 <button type="button" class="aso-filter-btn" data-filter="Reminder" onclick="filterAnnouncements('Reminder', this)">
-                    <i class="bi bi-bell-fill" aria-hidden="true"></i> Reminders
-                </button>
-                <button type="button" class="aso-filter-btn" data-filter="General" onclick="filterAnnouncements('General', this)">
-                    <i class="bi bi-megaphone-fill" aria-hidden="true"></i> General
+                    <i class="bi bi-bell-fill" aria-hidden="true"></i> Compliance Reminder
                 </button>
             </div>
         </div>

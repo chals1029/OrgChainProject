@@ -1421,31 +1421,4 @@ document.addEventListener('DOMContentLoaded', () => {
         updateClock();
     }
 
-    window.toggleActivityPanel = function () {
-        const list = document.getElementById('activityListContent');
-        const btn = document.getElementById('activityToggleBtn');
-        const icon = btn.querySelector('i');
-
-        list.classList.toggle('is-collapsed');
-
-        if (list.classList.contains('is-collapsed')) {
-            icon.classList.replace('bi-chevron-up', 'bi-chevron-down');
-        } else {
-            icon.classList.replace('bi-chevron-down', 'bi-chevron-up');
-        }
-    };
-
-    // Auto-scroll logic for Recent Activity
-    const activityList = document.getElementById('activityListContent');
-    if (activityList) {
-        // Initial scroll to top (latest activities)
-        activityList.scrollTop = 0;
-
-        // Watch for new activities being added and scroll to top automatically
-        const activityObserver = new MutationObserver(() => {
-            activityList.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        
-        activityObserver.observe(activityList, { childList: true });
-    }
 });

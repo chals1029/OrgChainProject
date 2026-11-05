@@ -12,6 +12,7 @@
     $uploadedDocs = $my ? $my->storedDocuments() : collect();
     $uploadedKeys = $uploadedDocs->keys()->all();
     $pct = count($docs) ? (int) round(100 * count(array_intersect(array_column($docs, 'key'), $uploadedKeys)) / count($docs)) : 0;
+    $renewalTracking = request()->query('tab') === 'tracking';
 @endphp
 
 @section('title', 'Organization Renewal')
@@ -74,6 +75,10 @@
         .rn-link { display:inline-flex; align-items:center; gap:0.25rem; color:#8b1828; font-size:0.72rem; font-weight:800; text-decoration:none; }
         .rn-link:hover { text-decoration:underline; }
         .rn-status { display:inline-flex; align-items:center; padding:0.12rem 0.5rem; border-radius:999px; font-size:0.66rem; font-weight:800; border:1px solid transparent; }
+        .rn-tabs { display:flex; flex-wrap:wrap; gap:.35rem; width:fit-content; max-width:100%; padding:.35rem; margin-bottom:1rem; background:#fff; border:1px solid #eadde0; border-radius:14px; }
+        .rn-tabs a { padding:.65rem 1rem; border-radius:10px; color:#5f5559; font-size:.84rem; font-weight:700; text-decoration:none; }
+        .rn-tabs a[aria-current="page"] { background:#fbecef; color:#8b1828; }
+        .rn-tabs a:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
         .rn-status.is-verified { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
         .rn-status.is-pending { background:#fffbeb; color:#b45309; border-color:#fde68a; }
         .rn-status.is-returned { background:#fff1f2; color:#be123c; border-color:#fecdd3; }
@@ -168,7 +173,15 @@
     @endif
 
     @if ($isOso)
-        @include('org.partials.oso-renewal-dashboard')
+        <nav class="rn-tabs" aria-label="Renewal sections">
+            <a href="{{ route('office.renewal') }}" @if (! $renewalTracking) aria-current="page" @endif>Renewal Dashboard</a>
+            <a href="{{ route('office.renewal', ['tab' => 'tracking']) }}" @if ($renewalTracking) aria-current="page" @endif>Organization Status</a>
+        </nav>
+        @if ($renewalTracking)
+            @include('org.partials.oso-renewal-tracking')
+        @else
+            @include('org.partials.oso-renewal-dashboard')
+        @endif
     @endif
 
     @if ($isSo)

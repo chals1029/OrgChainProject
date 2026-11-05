@@ -31,7 +31,6 @@
             ['label' => 'Ballot card', 'icon' => 'bi-card-text', 'url' => '/admin/ballot-content', 'roles' => ['admin']],
             ['label' => 'Live Tally', 'icon' => 'bi-bar-chart-line', 'url' => canvassing_path(), 'roles' => ['canvassing', 'view_only']],
             ['label' => 'Reports', 'icon' => 'bi-printer', 'url' => staff_reports_path_for($authUser), 'roles' => ['admin', 'canvassing', 'view_only']],
-            ['label' => 'Chain Verify', 'icon' => 'bi-link-45deg', 'url' => '/admin/chain-verify', 'roles' => ['admin']],
             ['label' => 'Security', 'icon' => 'bi-shield-lock', 'url' => '/admin/security', 'roles' => ['admin']],
         ];
     ?>
@@ -82,7 +81,7 @@
                     <h2><?= e($portalTitle) ?></h2>
                     <p><?= e($portalSubtitle) ?></p>
                 </div>
-                <button class="btn d-lg-none border-0 p-1 no-print" type="button" data-bs-toggle="collapse" data-bs-target="#adminSidebarCollapse" aria-expanded="false" aria-controls="adminSidebarCollapse" style="color: var(--ssc-ink);">
+                <button class="btn d-lg-none border-0 p-1 no-print" type="button" data-bs-toggle="collapse" data-bs-target="#adminSidebarCollapse" aria-expanded="false" aria-controls="adminSidebarCollapse" aria-label="Toggle staff navigation" style="color: var(--ssc-ink);">
                     <i class="bi bi-list fs-2"></i>
                 </button>
             </div>

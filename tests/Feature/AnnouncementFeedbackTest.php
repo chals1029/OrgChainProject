@@ -122,6 +122,11 @@ class AnnouncementFeedbackTest extends TestCase
         foreach ([
             'General Announcement' => 'general',
             'Deadline' => 'deadlines',
+            'Deadline Notice' => 'deadlines',
+            'Guideline' => 'guidelines',
+            'Policy & Guideline' => 'guidelines',
+            'Reminder' => 'reminders',
+            'Compliance Reminder' => 'reminders',
             'Official Notice' => 'oso',
             'Call for TOSA' => 'tosa',
         ] as $type => $category) {

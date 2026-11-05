@@ -86,12 +86,68 @@
     </article>
 </div>
 
+
+<div class="dashboard-main-grid">
+    <section class="admin-panel dashboard-chart-panel turnout-report-panel turnout-print-area" id="canvassingPartialVotingTurnoutReport">
+        <div class="turnout-report-toolbar no-print">
+            <button class="btn btn-outline-brown turnout-print-button" type="button" data-print-section="#canvassingPartialVotingTurnoutReport">
+                <i class="bi bi-printer"></i> Print
+            </button>
+        </div>
+        <div class="turnout-report-heading">
+            <p class="eyebrow"><span class="pulse-dot"></span> Turnout by College</p>
+            <h2>Partial Voting Turnout</h2>
+            <span>As of <?= e($turnoutAsOf) ?></span>
+        </div>
+
+        <div class="turnout-report-grid">
+            <div class="chart-frame turnout-donut-frame">
+                <canvas
+                    id="turnoutChart"
+                    data-labels="<?= e(json_encode(array_map(static fn (array $row): string => college_abbreviation($row['college'] ?? ''), $turnoutByCollege))) ?>"
+                    data-votes="<?= e(json_encode(array_column($turnoutByCollege, 'votes_cast'))) ?>"
+                    data-totals="<?= e(json_encode(array_column($turnoutByCollege, 'total_voters'))) ?>"></canvas>
+            </div>
+
+            <div class="turnout-report-side">
+                <div class="turnout-total-block">
+                    <strong class="turnout-total-number"><?= e(number_format((int) ($summary['votes_cast'] ?? 0))) ?></strong>
+                    <span class="turnout-total-label">Partial Total Number of Votes</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-panel dashboard-mini-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">College-wise Breakdown</p>
+                <h2>Turnout Monitor</h2>
+            </div>
+        </div>
+        <div class="turnout-list">
+            <?php foreach ($turnoutByCollege as $row): ?>
+                <div class="turnout-item">
+                    <div class="turnout-info">
+                        <div class="turnout-meta">
+                            <strong><?= e(college_abbreviation($row['college'])) ?></strong>
+                            <span class="percentage"><?= e($row['turnout_rate']) ?>%</span>
+                        </div>
+                        <div class="turnout-progress">
+                            <div class="progress-fill" style="width: <?= e($row['turnout_rate']) ?>%"></div>
+                        </div>
+                        <small class="voter-count"><?= e($row['votes_cast']) ?> / <?= e($row['total_voters']) ?> students voted</small>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+</div>
 <?php
     $tallyId = 'canvassing-results';
     $tallyAction = $tallyPath;
     require __DIR__ . '/../partials/tally.php';
 ?>
-
 <section class="admin-panel college-count-panel program-count-panel program-count-panel--plain">
     <div class="panel-heading">
         <div>
@@ -168,59 +224,3 @@
     </div>
 </section>
 
-<div class="dashboard-main-grid">
-    <section class="admin-panel dashboard-chart-panel turnout-report-panel turnout-print-area" id="canvassingPartialVotingTurnoutReport">
-        <div class="turnout-report-toolbar no-print">
-            <button class="btn btn-outline-brown turnout-print-button" type="button" data-print-section="#canvassingPartialVotingTurnoutReport">
-                <i class="bi bi-printer"></i> Print
-            </button>
-        </div>
-        <div class="turnout-report-heading">
-            <p class="eyebrow"><span class="pulse-dot"></span> Turnout by College</p>
-            <h2>Partial Voting Turnout</h2>
-            <span>As of <?= e($turnoutAsOf) ?></span>
-        </div>
-
-        <div class="turnout-report-grid">
-            <div class="chart-frame turnout-donut-frame">
-                <canvas
-                    id="turnoutChart"
-                    data-labels="<?= e(json_encode(array_map(static fn (array $row): string => college_abbreviation($row['college'] ?? ''), $turnoutByCollege))) ?>"
-                    data-votes="<?= e(json_encode(array_column($turnoutByCollege, 'votes_cast'))) ?>"
-                    data-totals="<?= e(json_encode(array_column($turnoutByCollege, 'total_voters'))) ?>"></canvas>
-            </div>
-
-            <div class="turnout-report-side">
-                <div class="turnout-total-block">
-                    <strong class="turnout-total-number"><?= e(number_format((int) ($summary['votes_cast'] ?? 0))) ?></strong>
-                    <span class="turnout-total-label">Partial Total Number of Votes</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="admin-panel dashboard-mini-panel">
-        <div class="panel-heading">
-            <div>
-                <p class="eyebrow">College-wise Breakdown</p>
-                <h2>Turnout Monitor</h2>
-            </div>
-        </div>
-        <div class="turnout-list">
-            <?php foreach ($turnoutByCollege as $row): ?>
-                <div class="turnout-item">
-                    <div class="turnout-info">
-                        <div class="turnout-meta">
-                            <strong><?= e(college_abbreviation($row['college'])) ?></strong>
-                            <span class="percentage"><?= e($row['turnout_rate']) ?>%</span>
-                        </div>
-                        <div class="turnout-progress">
-                            <div class="progress-fill" style="width: <?= e($row['turnout_rate']) ?>%"></div>
-                        </div>
-                        <small class="voter-count"><?= e($row['votes_cast']) ?> / <?= e($row['total_voters']) ?> students voted</small>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </section>
-</div>

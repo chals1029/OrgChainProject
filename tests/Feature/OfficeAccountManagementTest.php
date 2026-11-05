@@ -399,8 +399,7 @@ class OfficeAccountManagementTest extends TestCase
             ->assertSee('id="setPanel-users"', false)
             ->assertSee('id="newOrganizationAccountForm"', false)
             ->assertSee(route('office.organizations.accounts.store'), false)
-            ->assertSee('How to use')
-            ->assertSee('Authorized Office Accounts');
+            ->assertSee('How to use');
         $snapshot = $this->get(route('office.settings.snapshot'))->assertOk();
         $data = json_decode($snapshot->streamedContent(), true, 512, JSON_THROW_ON_ERROR);
         $exported = collect($data['office_users'])->firstWhere('id', $user->id);

@@ -172,6 +172,39 @@
     require __DIR__ . '/../partials/tally.php';
 ?>
 
+<section class="admin-panel college-count-panel">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Turnout Watch</p>
+            <h2>College Ranking</h2>
+        </div>
+        <span class="dashboard-soft-pill"><?= e(count($turnoutByCollege)) ?> groups</span>
+    </div>
+    <div class="college-turnout-list college-turnout-list--canvassing-dashboard">
+        <?php if (empty($sortedTurnout)): ?>
+            <div class="college-turnout-empty text-muted small px-2 py-3">No college records yet.</div>
+        <?php endif; ?>
+
+        <?php foreach (array_slice($sortedTurnout, 0, 6) as $row): ?>
+            <article class="college-turnout-row">
+                <div class="college-row-main">
+                    <div class="college-row-details">
+                        <h3 class="college-row-title"><?= e(college_abbreviation($row['college'])) ?></h3>
+                        <div class="college-row-meta">
+                            <span class="ratio-label"><?= e(number_format((int) $row['votes_cast'])) ?> / <?= e(number_format((int) $row['total_voters'])) ?> voters</span>
+                        </div>
+                    </div>
+                    <div class="college-row-right">
+                        <span class="turnout-badge"><?= e($row['turnout_rate']) ?>%</span>
+                    </div>
+                </div>
+                <div class="college-row-progress">
+                    <div class="progress-fill" style="width: <?= e($row['turnout_rate']) ?>%"></div>
+                </div>
+            </article>
+        <?php endforeach; ?>
+    </div>
+</section>
 <section class="admin-panel college-count-panel program-count-panel program-count-panel--plain">
     <div class="panel-heading">
         <div>
@@ -248,36 +281,3 @@
     </div>
 </section>
 
-<section class="admin-panel college-count-panel">
-    <div class="panel-heading">
-        <div>
-            <p class="eyebrow">Turnout Watch</p>
-            <h2>College Ranking</h2>
-        </div>
-        <span class="dashboard-soft-pill"><?= e(count($turnoutByCollege)) ?> groups</span>
-    </div>
-    <div class="college-turnout-list college-turnout-list--canvassing-dashboard">
-        <?php if (empty($sortedTurnout)): ?>
-            <div class="college-turnout-empty text-muted small px-2 py-3">No college records yet.</div>
-        <?php endif; ?>
-
-        <?php foreach (array_slice($sortedTurnout, 0, 6) as $row): ?>
-            <article class="college-turnout-row">
-                <div class="college-row-main">
-                    <div class="college-row-details">
-                        <h3 class="college-row-title"><?= e(college_abbreviation($row['college'])) ?></h3>
-                        <div class="college-row-meta">
-                            <span class="ratio-label"><?= e(number_format((int) $row['votes_cast'])) ?> / <?= e(number_format((int) $row['total_voters'])) ?> voters</span>
-                        </div>
-                    </div>
-                    <div class="college-row-right">
-                        <span class="turnout-badge"><?= e($row['turnout_rate']) ?>%</span>
-                    </div>
-                </div>
-                <div class="college-row-progress">
-                    <div class="progress-fill" style="width: <?= e($row['turnout_rate']) ?>%"></div>
-                </div>
-            </article>
-        <?php endforeach; ?>
-    </div>
-</section>

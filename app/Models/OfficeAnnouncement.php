@@ -50,12 +50,16 @@ class OfficeAnnouncement extends Model
         $category = match ($this->type) {
             'General', 'General Announcement' => 'general',
             'TOSA', 'Call for TOSA' => 'tosa',
-            'Deadline', 'Deadline Notice', 'Reminder', 'Compliance Reminder' => 'deadlines',
+            'Deadline', 'Deadline Notice' => 'deadlines',
+            'Guideline', 'Policy & Guideline' => 'guidelines',
+            'Reminder', 'Compliance Reminder' => 'reminders',
             default => 'oso',
         };
         [$tag, $pill] = match ($category) {
-            'general' => ['General Announcements', 'sp-pill-general'],
-            'deadlines' => ['Deadline Reminders', 'sp-pill-deadlines'],
+            'general' => ['General Announcement', 'sp-pill-general'],
+            'deadlines' => ['Deadline Notice', 'sp-pill-deadlines'],
+            'guidelines' => ['Policy & Guideline', 'sp-pill-oso'],
+            'reminders' => ['Compliance Reminder', 'sp-pill-deadlines'],
             'tosa' => ['Call for TOSA', 'sp-pill-tosa'],
             default => ['OSO Notices', 'sp-pill-oso'],
         };

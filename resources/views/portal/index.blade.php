@@ -914,15 +914,11 @@
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="general">
                     <i class="bi bi-megaphone"></i>
-                    <span>General Announcements</span>
+                    <span>General Announcement</span>
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="tosa">
                     <i class="bi bi-award-fill"></i>
                     <span>Call for TOSA</span>
-                </button>
-                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="activities">
-                    <i class="bi bi-calendar-check-fill"></i>
-                    <span>Activities</span>
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="dates">
                     <i class="bi bi-calendar-event"></i>
@@ -930,7 +926,15 @@
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="deadlines">
                     <i class="bi bi-clock-history"></i>
-                    <span>Deadline Reminders</span>
+                    <span>Deadline Notice</span>
+                </button>
+                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="guidelines">
+                    <i class="bi bi-journal-text"></i>
+                    <span>Policy &amp; Guideline</span>
+                </button>
+                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="reminders">
+                    <i class="bi bi-bell"></i>
+                    <span>Compliance Reminder</span>
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="oso">
                     <i class="bi bi-info-circle"></i>
@@ -1174,6 +1178,25 @@
                     @endif
                 </div>
             @endunless
+            @if ($tosaDecision && is_array($tosaNotice) && !empty($tosaNotice['name']))
+                <section class="sp-tosa-card" aria-labelledby="tosaNoticeHeading">
+                    <h3 id="tosaNoticeHeading">Your TOSA result notice</h3>
+                    <p><strong>{{ $tosaNotice['name'] }}</strong>@if (!empty($tosaNotice['program']))<br>{{ $tosaNotice['program'] }}@endif</p>
+                    <p>Dear {{ $tosaNotice['name'] }},</p>
+                    @if ($tosaDecision === 'qualified')
+                        <p><strong>Warmest congratulations!</strong></p>
+                        <p>Following the review of your application and supporting documents, we are pleased to inform you that you have been selected as one of the Ten Outstanding Students Award recipients.</p>
+                        @if (!empty($tosaNotice['event']))<p>{{ $tosaNotice['event'] }}</p>@endif
+                        <p>Congratulations on your achievement and thank you for your dedication and service.</p>
+                    @else
+                        <p>Following the review of your application and supporting documents, we regret to inform you that you were not selected as one of the Ten Outstanding Students Award recipients.</p>
+                        <p>Thank you for your dedication, contributions, and service to the campus community. We encourage you to continue pursuing excellence in your future endeavors.</p>
+                    @endif
+                    @if (!empty($tosaNotice['contact']))<p>For questions: {{ $tosaNotice['contact'] }}</p>@endif
+                    @if (!empty($tosaNotice['signatory']))<p>{{ $tosaNotice['signatory'] }}</p>@endif
+                </section>
+            @endif
+
 
             @if (is_array($tosaPublished) && count($tosaPublished) === 10)
                 <details class="sp-tosa-card sp-tosa-accordion" open aria-labelledby="tosaPublishedHeading">
@@ -1240,8 +1263,8 @@
                 <summary class="sp-tosa-section-summary">
                     <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
                     <span class="sp-tosa-section-copy">
-                        <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'For correction' : ($tosaVerified ? 'Verified' : ($tosaApplicant?->status === 'submitted' ? 'Submitted' : 'Not submitted')) }}</span></span>
-                        <small>{{ $tosaRevision ? 'Correct and resubmit your documents.' : ($tosaVerified ? 'OSO has checked your documents.' : ($tosaApplicant?->status === 'submitted' ? 'Waiting for OSO to check your documents.' : 'Upload the required documents.')) }}</small>
+                        <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'For correction' : ($tosaDecision === 'qualified' ? 'Qualified' : ($tosaDecision === 'not_qualified' ? 'Not Qualified' : ($tosaVerified ? 'Reviewed' : ($tosaApplicant?->status === 'submitted' ? 'Pending review' : 'Not submitted')))) }}</span></span>
+                        <small>{{ $tosaRevision ? 'Correct and resubmit your documents.' : ($tosaDecision === 'qualified' ? 'OSO published your selection in the Top 10.' : ($tosaDecision === 'not_qualified' ? 'OSO has published the Top 10; your application was not selected.' : ($tosaVerified ? 'OSO has reviewed your documents.' : ($tosaApplicant?->status === 'submitted' ? 'Waiting for OSO to review your documents.' : 'Upload the required documents.')))) }}</small>
                     </span>
                     <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
                 </summary>
@@ -1679,9 +1702,6 @@
                                                 </button>
                                             </form>
                                         @else
-                                            <button type="button" class="sp-post-menu-item" onclick="navigator.clipboard?.writeText(window.location.href); alert('Post link copied!')">
-                                                <i class="bi bi-link-45deg"></i> Copy link
-                                            </button>
                                             <button type="button" class="sp-post-menu-item">
                                                 <i class="bi bi-flag"></i> Report post
                                             </button>
@@ -1718,7 +1738,7 @@
                             </div>
                         </div>
 
-                        {{-- Persisted likes, comments and sharing --}}
+                        {{-- Persisted likes and comments --}}
                         <div class="sp-post-actions">
                             <div class="sp-like-action-wrap">
                                 @php
@@ -1747,10 +1767,6 @@
                             <button type="button" class="sp-post-action sp-btn-comment-focus" onclick="document.getElementById('comment-{{ $post->id }}')?.focus()">
                                 <i class="bi bi-chat"></i>
                                 <span>Comment</span>
-                            </button>
-                            <button type="button" class="sp-post-action sp-btn-share" onclick="if(navigator.share){navigator.share({title:'BatStateU Post', url:window.location.href});}else{navigator.clipboard?.writeText(window.location.href);alert('Post link copied to clipboard!');}">
-                                <i class="bi bi-share"></i>
-                                <span>Share</span>
                             </button>
                         </div>
 

@@ -168,7 +168,9 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
     Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
     Route::post('/tosa/top-ten', [TosaShortlistController::class, 'save'])->name('tosa.top10.save');
+    Route::post('/tosa/top-ten/{applicantId}/remove', [TosaShortlistController::class, 'remove'])->whereNumber('applicantId')->name('tosa.top10.remove');
     Route::post('/tosa/{applicant}/subsection', [OfficePortalController::class, 'updateTosaSubsection'])->name('tosa.subsection');
+    Route::post('/tosa/{applicant}/review', [TosaShortlistController::class, 'review'])->name('tosa.review');
     Route::post('/tosa/{applicant}/top-ten', [TosaShortlistController::class, 'add'])->name('tosa.top10.add');
     Route::get('/archive', [OfficePortalController::class, 'archive'])->name('archive');
     Route::post('/archive/folders', [OfficePortalController::class, 'storeArchiveFolder'])->name('archive.folders.store');

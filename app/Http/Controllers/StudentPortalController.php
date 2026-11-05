@@ -724,6 +724,8 @@ class StudentPortalController extends Controller
         $tosaCall = collect($announcements)->firstWhere('category', 'tosa');
         $tosaSubmissionOpen = $tosaRevision || $tosaCall !== null;
         $tosaShortlist = TosaShortlist::query()->findOrFail(1);
+        $tosaDecision = $tosaApplicant ? $tosaShortlist->decisionFor($tosaApplicant, $tosaVerified) : null;
+        $tosaNotice = $tosaDecision ? ($tosaShortlist->published_decisions[(string) $tosaApplicant->id] ?? null) : null;
         $tosaPublished = $tosaShortlist->published_at ? $tosaShortlist->published_entries : null;
 
         $tosaDocs = collect(TosaRequirements::SUBMISSIONS)->map(function (array $document, string $key) use ($tosaApplicant, $tosaRequirements): array {
@@ -770,31 +772,8 @@ class StudentPortalController extends Controller
 
         $tosaComplete = $tosaApplicant !== null && collect($tosaDocs)->every(fn (array $document): bool => $document['uploaded']);
 
-        // Live bulletins feed: office announcements + upcoming activities + open renewal window.
+        // Live bulletins feed: office announcements and the open renewal window.
         $feedItems = collect($announcements);
-        $activityItems = (clone $studentActivities)
-            ->whereIn('status', ['upcoming', 'ongoing'])
-            ->orderBy('starts_at')
-            ->limit(6)
-            ->get()
-            ->map(function (OrgActivity $a) {
-                $date = $a->starts_at ?? $a->created_at ?? now();
-
-                return [
-                    'id' => 'act'.$a->id,
-                    'category' => 'activities',
-                    'priority' => 'normal',
-                    'title' => $a->title,
-                    'body' => trim(($a->description ? \Illuminate\Support\Str::limit(strip_tags($a->description), 400) : '').($a->location ? ' Venue: '.$a->location : '')),
-                    'author' => $a->organization_name ?: 'Student Organization',
-                    'tag' => 'Activities',
-                    'pill_class' => 'sp-pill-activities',
-                    'day' => $date->format('d M'),
-                    'year' => $date->format('Y'),
-                    'date' => $date->format('M j, Y'),
-                    'sort' => $date->timestamp,
-                ];
-            });
         $renewalWindow = \App\Models\OrgRenewalWindow::query()->latest('id')->first();
         $dateItems = collect();
         if ($renewalWindow && $renewalWindow->isAcceptingSubmissions()) {
@@ -814,7 +793,7 @@ class StudentPortalController extends Controller
                 'sort' => ($closes ?? now())->timestamp,
             ]);
         }
-        $bulletins = $feedItems->concat($activityItems)->concat($dateItems)
+        $bulletins = $feedItems->concat($dateItems)
             ->sortByDesc('sort')->values()
             ->map(fn ($item, $i) => array_merge($item, ['order' => $i + 1]))
             ->all();
@@ -873,6 +852,8 @@ class StudentPortalController extends Controller
             'tosaRevision' => $tosaRevision,
             'tosaCorrection' => $tosaCorrection,
             'tosaVerified' => $tosaVerified,
+            'tosaDecision' => $tosaDecision,
+            'tosaNotice' => $tosaNotice,
             'tosaCall' => $tosaCall,
             'tosaSubmissionOpen' => $tosaSubmissionOpen,
             'tosaPublished' => $tosaPublished,

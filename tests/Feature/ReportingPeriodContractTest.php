@@ -120,7 +120,7 @@ class ReportingPeriodContractTest extends TestCase
             ->invoke(new OfficePortalController(), new Collection($activities));
     }
 
-    public function test_recognition_unions_valid_active_rosters_and_approved_windows_once_per_org_and_year(): void
+    public function test_recognition_counts_only_approved_renewals_once_per_org_and_year(): void
     {
         $this->organization('  Roster Alpha  ');
         $this->organization('Inactive Roster', '2030-2031', false);
@@ -148,18 +148,17 @@ class ReportingPeriodContractTest extends TestCase
             ['organization_key' => 'roster alpha', 'academic_year' => '2030-2031'],
             ['organization_key' => 'renewal only', 'academic_year' => '2030-2031'],
             ['organization_key' => 'roster alpha', 'academic_year' => '2029-2030'],
-            ['organization_key' => 'historic roster', 'academic_year' => '2028-2029'],
         ], $rows->all());
-        $this->assertSame(3, $rows->unique('organization_key')->count());
+        $this->assertSame(2, $rows->unique('organization_key')->count());
         $this->assertSame(0, $rows->where('academic_year', '2027-2028')->count());
         // In January the selector still explicitly maps calendar 2030 to AY 2030-2031.
         Carbon::setTestNow('2030-01-15 12:00:00');
         $this->assertSame(2, $this->overview()['kpis']['totalOrgs']);
     }
 
-    public function test_missing_recognition_does_not_count_the_current_roster(): void
+    public function test_active_registry_alone_does_not_count_as_recognition(): void
     {
-        $this->organization('Active With No Recorded Year', null);
+        $this->organization('Active Without Renewal', '2030-2031');
         $overview = $this->overview();
         $this->assertSame([], $overview['recognitionRows']);
         $this->assertSame(0, $overview['kpis']['totalOrgs']);

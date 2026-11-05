@@ -12,7 +12,7 @@ status: active
 # 🔍 Receipt Verification & Audit
 
 > [!abstract] Proof of Integrity
-> Any student voter or election commissioner can cryptographically audit their ballot receipt using the public/admin verification interface at `/voting-system/admin/chain-verify`.
+> Receipt verification is available through `/voting-system/api/blockchain/verify?reference=...`. The admin Chain Verify interface has been removed; the public API remains available.
 
 ---
 

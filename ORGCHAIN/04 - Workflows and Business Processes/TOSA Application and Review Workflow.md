@@ -61,10 +61,10 @@ Submitted files stay available for private viewing or download. If OSO returns t
 
 - **Submissions:** search submitted applicants in a scrollable box with ten records per page; view their files, add a reviewed applicant to the Top 10 draft, return a selected document with a reason, or download one applicant's originals as a private ZIP. Missing originals cannot be reconstructed and must be uploaded by the student. The ZIP identifies unavailable legacy files in `unavailable-documents.txt`; no ZIP is generated if every original is unavailable.
 - **Documents & Announcements:** file-type, view, download and replace icons provide access to the five references, including `TOSA Application Form 2025.docx`. Replacing a reference still requires choosing a file and explicitly saving it. OSO can also publish a Call for TOSA.
-- **Top 10:** OSO manages up to ten reviewed applicants without grades or scores. Uncheck and save to remove someone. The draft stays private; publishing requires exactly ten and shows students names and programs only. Draft edits do not change a published list until it is published again. OSO can unpublish it.
+- **Top 10:** shows only the applicants in the private draft, without grades, scores or ranking. OSO removes someone with the trash icon; the application remains intact. Publishing requires exactly ten reviewed applicants and shows students names and programs only. Draft edits do not change a published list until it is published again. OSO can unpublish it.
 - **History:** records actual submissions, resubmissions, reviews, returns, calls and Top 10 actions from this update onward. Earlier events and submission dates are not fabricated.
 
-OVCAA remains read-only; OSO alone may download the applicant ZIP, confirm reviews, manage references and calls, or save/publish the Top 10.
+OVCAA remains read-only; OSO alone may download the applicant ZIP, confirm reviews, manage references and calls, or manage/publish the Top 10.
 
 
 ## Current routes
@@ -79,7 +79,8 @@ OVCAA remains read-only; OSO alone may download the applicant ZIP, confirm revie
 | GET | `/office-desk/tosa/{applicant}/documents/{key}` | Authorized submitted dossier original |
 | POST | `/office-desk/tosa/{applicant}/top-ten` | OSO confirms review of all seven current files and adds the applicant to the private draft |
 | GET | `/office-desk/tosa/{applicant}/package` | OSO private ZIP of available originals, with missing-file notice |
-| POST | `/office-desk/tosa/top-ten` | OSO saves, publishes or unpublishes a manual Top 10 |
+| POST | `/office-desk/tosa/top-ten/{applicantId}/remove` | OSO removes one applicant from the private draft without deleting the application |
+| POST | `/office-desk/tosa/top-ten` | OSO publishes the unchanged draft or unpublishes the current list |
 | POST | `/office-desk/tosa/references/template` | OSO reference replacement |
 
 Related: [[Student Profile and Authentication]] · [[Transparency and Budget Visibility]] · [[Multi-Tier Office Roles SO OSO SDO OVCAA]] · [[Web and Portal Route Map]] · [[Office Portal API and Action Endpoints]]

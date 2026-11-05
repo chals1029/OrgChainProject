@@ -16,10 +16,19 @@
         .tosa-card { min-width:0; background:#fff; border:1px solid #eadfe2; border-radius:14px; padding:1rem; }
         .tosa-card h2 { margin:0 0 .35rem; font-size:1rem; }
         .tosa-note { color:#6b6064; font-size:.85rem; margin:.3rem 0; }
-        .tosa-toolbar { display:flex; flex-wrap:wrap; gap:.55rem; align-items:end; margin:.85rem 0; }
-        .tosa-toolbar form { display:flex; flex-wrap:wrap; gap:.5rem; flex:1; }
+        .tosa-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; min-width:0; padding:.75rem 1.15rem; border:1.5px solid #f0e6e8; border-radius:20px; background:#fff; box-shadow:0 4px 16px rgba(90,15,30,.03); }
+        .tosa-toolbar form { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; flex:1; min-width:0; }
+        .tosa-filter-title { display:inline-flex; align-items:center; gap:.35rem; color:#8b1828; font-size:.82rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
+        .tosa-filter-group { display:flex; align-items:center; gap:.35rem; min-width:0; }
+        .tosa-filter-group.is-search { flex:1 1 16rem; }
+        .tosa-filter-label { display:inline-flex; align-items:center; gap:.25rem; color:#706569; font-size:.74rem; font-weight:700; white-space:nowrap; }
+        .tosa-filter-control { min-width:0; max-width:100%; padding:.45rem .8rem; border:1.5px solid #f0e0e3; border-radius:9999px; background:#fdfafb; color:#2b2427; font:inherit; font-size:.78rem; font-weight:700; }
+        .tosa-filter-control:focus-visible, .tosa-filter-reset:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
+        .tosa-filter-group input { flex:1; }
+        .tosa-filter-group select { cursor:pointer; }
+        .tosa-filter-reset { display:inline-flex; justify-content:center; align-items:center; width:34px; height:34px; border:1.5px solid #ebd5d8; border-radius:50%; background:#faf4f5; color:#7a2030; text-decoration:none; flex:none; }
+        .tosa-filter-count { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border:1px solid #bbf7d0; border-radius:9999px; background:#f0fdf4; color:#167b38; font-size:.72rem; font-weight:700; white-space:nowrap; }
         .tosa-input { border:1px solid #d9cdd1; border-radius:8px; padding:.55rem .65rem; font:inherit; min-width:0; max-width:100%; }
-        .tosa-toolbar input { flex:1 1 14rem; }
         .tosa-table-wrap { max-height:min(60dvh, 36rem); overflow:auto; overscroll-behavior:contain; border:1px solid #f1e9eb; border-radius:12px; }
         .tosa-table-wrap:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
         .tosa-table { width:100%; border-collapse:collapse; font-size:.86rem; }
@@ -60,8 +69,11 @@
         .tosa-template-replace label { display:grid; gap:.35rem; font-size:.82rem; }
         .tosa-template-replace input[type=file] { max-width:100%; }
         .tosa-template-replace button { justify-self:start; }
-        .tosa-candidate { display:flex; align-items:flex-start; gap:.55rem; min-width:0; overflow-wrap:anywhere; }
-        .tosa-candidate input { margin-top:.2rem; flex:none; }
+        .tosa-candidate-list { list-style:none; margin:.65rem 0 0; padding:0; }
+        .tosa-candidate { display:flex; align-items:center; gap:.7rem; min-width:0; overflow-wrap:anywhere; }
+        .tosa-candidate-copy { flex:1; min-width:0; }
+        .tosa-candidate form { flex:none; }
+        .tosa-footer button:disabled { opacity:.5; cursor:not-allowed; }
         .tosa-call-form { display:grid; gap:.6rem; max-width:44rem; margin:.8rem 0 1rem; }
         .tosa-call-form label { display:grid; gap:.3rem; }
         .tosa-call-form textarea { min-height:5rem; resize:vertical; }
@@ -71,11 +83,14 @@
         .tosa-correction label { display:grid; gap:.25rem; }
         .tosa-correction textarea { min-height:5rem; resize:vertical; }
         .tosa-correction button { justify-self:start; }
-        .tosa-candidate span { flex:1; }
         .tosa-candidate small { display:block; color:#6b6064; }
         .tosa-event strong, .tosa-event small { display:block; }
         .tosa-event small { color:#6b6064; margin-top:.2rem; }
         @media (max-width:700px) {
+            .tosa-toolbar { padding:.8rem; }
+            .tosa-toolbar form { flex:1 1 100%; width:100%; gap:.6rem; }
+            .tosa-filter-group.is-search { flex:1 1 100%; }
+            .tosa-filter-count { margin-left:auto; }
             .tosa-tabs { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); overflow:visible; }
             .tosa-tabs a { display:flex; align-items:center; justify-content:center; min-width:0; min-height:2.75rem; padding:.55rem .6rem; text-align:center; line-height:1.2; font-size:.82rem; overflow-wrap:anywhere; }
             .tosa-table, .tosa-table tbody, .tosa-table tr, .tosa-table td { display:block; width:100%; }
@@ -88,6 +103,7 @@
             .tosa-file-info { gap:.5rem; }
             .tosa-file-actions { gap:.2rem; }
             .tosa-icon-button { width:2.35rem; height:2.5rem; }
+            .tosa-candidate .tosa-icon-button { width:2.75rem; height:2.75rem; }
             .tosa-template-row.has-replace .tosa-file-actions { padding-right:2.55rem; }
         }
     </style>
@@ -103,29 +119,43 @@
         @if ($errors->any()) <div class="tosa-feedback" role="alert">{{ $errors->first() }}</div> @endif
 
         @if ($tosaTab === 'submissions')
+            <div class="tosa-toolbar" role="search" aria-label="Filter TOSA applications">
+                <form method="get" action="{{ route('office.tosa') }}">
+                    <input type="hidden" name="tab" value="submissions">
+                    <span class="tosa-filter-title"><i class="bi bi-funnel-fill" aria-hidden="true"></i> Filters:</span>
+                    <div class="tosa-filter-group is-search">
+                        <label class="tosa-filter-label" for="tosa-search"><i class="bi bi-search" aria-hidden="true"></i> Search</label>
+                        <input id="tosa-search" class="tosa-filter-control" type="search" name="search" value="{{ $tosaSearch }}" maxlength="100" placeholder="Name, student ID or program">
+                    </div>
+                    <div class="tosa-filter-group">
+                        <label class="tosa-filter-label" for="tosa-result"><i class="bi bi-check2-circle" aria-hidden="true"></i> Result</label>
+                        <select id="tosa-result" class="tosa-filter-control" name="result">
+                            <option value="all" @selected($tosaResultFilter === 'all')>All results</option>
+                            <option value="qualified" @selected($tosaResultFilter === 'qualified')>Qualified</option>
+                            <option value="not_qualified" @selected($tosaResultFilter === 'not_qualified')>Not Qualified</option>
+                        </select>
+                    </div>
+                    <a href="{{ route('office.tosa', ['tab' => 'submissions']) }}" class="tosa-filter-reset" aria-label="Reset filters" title="Reset filters"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></a>
+                    <button class="org-btn org-btn-ghost org-btn-sm" type="submit">Apply</button>
+                </form>
+                <span class="tosa-filter-count"><i class="bi bi-people-fill" aria-hidden="true"></i> {{ $tosaApplicants->total() }} applicants</span>
+            </div>
             <section class="tosa-card" aria-labelledby="tosaSubmissionsHeading">
                 <h2 id="tosaSubmissionsHeading">Applications</h2>
-                <p class="tosa-note">{{ $tosaApplicants->total() }} applicants</p>
-                <div class="tosa-toolbar">
-                    <form method="get" action="{{ route('office.tosa') }}">
-                        <input type="hidden" name="tab" value="submissions">
-                        <input class="tosa-input" type="search" name="search" value="{{ $tosaSearch }}" maxlength="100" placeholder="Search name, student ID or program" aria-label="Search applicants">
-                        <button class="org-btn org-btn-ghost org-btn-sm" type="submit">Search</button>
-                    </form>
-                </div>
                 <div class="tosa-table-wrap" role="region" aria-label="Submitted applications" tabindex="0">
                     <table class="tosa-table">
-                        <thead><tr><th>Applicant</th><th>Program / year</th><th>Review</th><th>Date sent</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Applicant</th><th>Program / year</th><th>Review / result</th><th>Date sent</th><th>Actions</th></tr></thead>
                         <tbody>
                             @forelse ($tosaApplicants as $applicant)
                                 @php
                                     $returned = $applicant->subsection === 'returned';
                                     $verified = app(\App\Services\TosaWorkflowService::class)->isVerified($applicant);
+                                    $decision = $tosaShortlist->decisionFor($applicant, $verified);
                                 @endphp
                                 <tr>
                                     <td data-label="Applicant"><div><strong>{{ $applicant->full_name }}</strong><small>{{ $applicant->sr_code }}</small></div></td>
                                     <td data-label="Program / year"><div>{{ $applicant->program ?: '—' }}<small>{{ $applicant->year_level ?: '—' }}</small></div></td>
-                                    <td data-label="Review"><div><span class="tosa-status {{ $verified ? 'is-verified' : '' }}">{{ $returned ? 'For correction' : ($verified ? 'Reviewed' : 'For review') }}</span></div></td>
+                                    <td data-label="Review / result"><div><span class="tosa-status {{ $verified ? 'is-verified' : '' }}">{{ $returned ? 'For correction' : ($verified ? 'Reviewed' : 'Pending review') }}</span>@if ($decision)<small>{{ $decision === 'qualified' ? 'Qualified' : 'Not Qualified' }} · Published</small>@endif</div></td>
                                     <td data-label="Date sent"><div>{{ $applicant->latest_submission_at ? \Carbon\Carbon::parse($applicant->latest_submission_at)->format('M j, Y') : '—' }}</div></td>
                                     <td data-label="Actions"><div class="tosa-actions">
                                         <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-tosa-open="{{ $applicant->id }}">View files</button>
@@ -154,7 +184,7 @@
                     $hasUnavailable = false;
                     $draftIds = array_map('intval', $tosaShortlist->draft_ids ?? []);
                     $inDraft = in_array((int) $applicant->id, $draftIds, true);
-                    $alreadyReviewed = $inDraft && app(\App\Services\TosaWorkflowService::class)->isVerified($applicant);
+                    $alreadyReviewed = app(\App\Services\TosaWorkflowService::class)->isVerified($applicant);
                 @endphp
                 <dialog class="tosa-modal" id="tosa-review-{{ $applicant->id }}" aria-labelledby="tosa-review-title-{{ $applicant->id }}">
                     <div class="tosa-modal-body">
@@ -165,7 +195,7 @@
                         @if ($returned)
                             <p class="tosa-note">Waiting for the student to resubmit.</p>
                         @elseif ($tosaCanManageWorkflow)
-                            <p class="tosa-note">Review all files before adding this applicant.</p>
+                            <p class="tosa-note">Review all seven files, then mark the application as reviewed. Top 10 selection is a separate step.</p>
                         @else
                             <p class="tosa-note">Open a file to review it.</p>
                         @endif
@@ -195,13 +225,21 @@
                         @if ($hasUnavailable)<p class="tosa-note">Unavailable files cannot be viewed. Ask the student to upload the actual documents.</p>@endif
                         @if ($tosaCanManageWorkflow && !$returned)
                             <div class="tosa-footer">
-                                @if ($alreadyReviewed)
-                                    <span class="tosa-status is-verified"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> In Top 10 draft</span>
-                                @else
-                                    <form method="post" action="{{ route('office.tosa.top10.add', $applicant) }}" data-confirm-message="Have you reviewed all seven documents? Add this applicant to the Top 10 draft?">
+                                @if (!$alreadyReviewed)
+                                    <form method="post" action="{{ route('office.tosa.review', $applicant) }}" data-confirm-message="Have you reviewed all seven documents? Mark this application as reviewed?">
                                         @csrf
-                                        <button type="submit" class="org-btn org-btn-primary org-btn-sm" @disabled($hasUnavailable || (!$inDraft && count($draftIds) >= 10))><i class="bi bi-star-fill" aria-hidden="true"></i> Add to Top 10</button>
+                                        <button type="submit" class="org-btn org-btn-primary org-btn-sm" @disabled($hasUnavailable)><i class="bi bi-check-circle" aria-hidden="true"></i> Mark as Reviewed</button>
                                     </form>
+                                @else
+                                    <span class="tosa-status is-verified"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Reviewed</span>
+                                    @if ($inDraft)
+                                        <button type="button" class="org-btn org-btn-primary org-btn-sm" disabled><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Added to Top 10</button>
+                                    @else
+                                        <form method="post" action="{{ route('office.tosa.top10.add', $applicant) }}" data-tosa-add data-confirm-message="Add this reviewed applicant to the Top 10 draft?">
+                                            @csrf
+                                            <button type="submit" class="org-btn org-btn-primary org-btn-sm" @disabled(count($draftIds) >= 10)><i class="bi bi-star-fill" aria-hidden="true"></i> Add to Top 10</button>
+                                        </form>
+                                    @endif
                                 @endif
                             </div>
                             @if (!$inDraft && count($draftIds) >= 10)<p class="tosa-note">The draft is full. Remove someone in the Top 10 tab first.</p>@endif
@@ -234,7 +272,9 @@
                 <h2 id="tosaDocumentsHeading">Official documents</h2>
                 <p class="tosa-note">Download the application form and guides.</p>
                 @foreach (\App\Services\TosaRequirements::REFERENCES as $key => $reference)
-                    @php($template = $tosaTemplates[$reference['title']] ?? null)
+                    @php
+                        $template = $tosaTemplates[$reference['title']] ?? null;
+                    @endphp
                     <div class="tosa-template-row {{ $tosaCanManageTemplates ? 'has-replace' : '' }}">
                         <div class="tosa-file-row">
                             <div class="tosa-file-info">
@@ -290,25 +330,57 @@
                 </div>
             </section>
         @elseif ($tosaTab === 'top10')
-            @php($draftIds = $tosaShortlist->draft_ids ?? [])
+            @php
+                $draftIds = array_map('intval', $tosaShortlist->draft_ids ?? []);
+                $allReviewed = $tosaCandidates->every(fn ($candidate) => $candidate['verified']);
+                $canPublish = count($draftIds) === 10 && $allReviewed;
+            @endphp
             <section class="tosa-card" aria-labelledby="tosaTopHeading">
                 <h2 id="tosaTopHeading">Top 10</h2>
-                <p class="tosa-note">Add applicants from Submissions. Uncheck and save to remove someone; publish when ten are ready. This list is not ranked.</p>
-                <form method="post" action="{{ route('office.tosa.top10.save') }}" data-confirm-message="Save this Top 10 selection?" id="tosaTop10Form">
-                    @csrf
-                    <p class="tosa-note" id="tosaTopCount" aria-live="polite">{{ count($draftIds) }} of 10 selected</p>
-                    @forelse ($tosaCandidates as $candidate)
-                        @php($applicant = $candidate['applicant'])
-                        @php($selected = in_array((int) $applicant->id, $draftIds, true))
-                        <label class="tosa-candidate"><input type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" @checked($selected) @disabled(!$tosaCanManageWorkflow || (!$candidate['verified'] && !$selected))><span><strong>{{ $applicant->full_name }}</strong><small>{{ $applicant->program ?: '—' }} · {{ $candidate['verified'] ? 'Reviewed' : 'Review documents first' }}</small></span></label>
-                    @empty<p class="tosa-note">No submitted applications yet.</p>@endforelse
-                    @if ($tosaCanManageWorkflow)
-                        <div class="tosa-footer">
-                            <button type="submit" name="intent" value="save" class="org-btn org-btn-ghost org-btn-sm">Save draft</button>
-                            <button type="submit" name="intent" value="publish" class="org-btn org-btn-primary org-btn-sm" data-confirm-message="Publish these ten names to students?">Publish Top 10</button>
+                <p class="tosa-note">{{ count($draftIds) }} of 10 in draft · Not ranked</p>
+                <p class="tosa-note">Publishing marks the selected ten Qualified and other reviewed applications Not Qualified. Applications pending review receive no decision.</p>
+                @if ($tosaCandidates->isEmpty())
+                    <p class="tosa-note">No applicants in the draft yet. Add them from Submissions.</p>
+                @else
+                    <ul class="tosa-candidate-list">
+                        @foreach ($tosaCandidates as $candidate)
+                            <li class="tosa-candidate">
+                                <span class="tosa-file-icon" aria-hidden="true"><i class="bi bi-person"></i></span>
+                                <div class="tosa-candidate-copy">
+                                    <strong>{{ $candidate['applicant']?->full_name ?? 'Applicant unavailable' }}</strong>
+                                    <small>{{ $candidate['applicant']?->program ?: '—' }} · {{ $candidate['verified'] ? 'Reviewed' : 'Review needed' }}</small>
+                                </div>
+                                @if ($tosaCanManageWorkflow)
+                                    <form method="post" action="{{ route('office.tosa.top10.remove', $candidate['id']) }}" data-confirm-message="Remove this applicant from the Top 10 draft? Their application will not be deleted.">
+                                        @csrf
+                                        <button type="submit" class="tosa-icon-button" title="Remove from Top 10 draft" aria-label="Remove {{ $candidate['applicant']?->full_name ?? 'unavailable applicant' }} from Top 10 draft"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                    </form>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+                @if (count($draftIds) === 10 && !$allReviewed)<p class="tosa-note">Review the flagged applications before publishing.</p>@endif
+                @if ($tosaCanManageWorkflow)
+                    <details class="tosa-correction">
+                        <summary>Student notice details (optional)</summary>
+                        <p class="tosa-note">Students receive a private personalized result notice. Add current event details for selected students, and contact or signatory details only if confirmed. These details are saved when you publish.</p>
+                        <div class="tosa-call-form">
+                            <label>Recognition event details (Qualified only)<textarea class="tosa-input" name="notice_event" form="tosa-publish-form" maxlength="1000">{{ old('notice_event') }}</textarea></label>
+                            <label>Contact details<input class="tosa-input" name="notice_contact" form="tosa-publish-form" maxlength="500" value="{{ old('notice_contact') }}"></label>
+                            <label>Signatory and title<input class="tosa-input" name="notice_signatory" form="tosa-publish-form" maxlength="500" value="{{ old('notice_signatory') }}"></label>
                         </div>
-                    @endif
-                </form>
+                    </details>
+                    <div class="tosa-footer">
+                        <a class="org-btn org-btn-ghost org-btn-sm" href="{{ route('office.tosa') }}"><i class="bi bi-person-plus" aria-hidden="true"></i> Add applicants</a>
+                        <form id="tosa-publish-form" method="post" action="{{ route('office.tosa.top10.save') }}" data-confirm-message="Publish the Top 10 and personalized result notices for reviewed applicants?">
+                            @csrf
+                            <input type="hidden" name="intent" value="publish">
+                            @foreach ($draftIds as $id)<input type="hidden" name="applicant_ids[]" value="{{ $id }}">@endforeach
+                            <button type="submit" class="org-btn org-btn-primary org-btn-sm" @disabled(!$canPublish)>Publish Top 10</button>
+                        </form>
+                    </div>
+                @endif
             </section>
             @if ($tosaShortlist->published_at && is_array($tosaShortlist->published_entries))
                 <section class="tosa-card" aria-labelledby="tosaPublishedHeading">
@@ -318,7 +390,7 @@
                 </section>
             @endif
         @else
-            @php($eventLabels = ['submitted' => 'Application submitted', 'resubmitted' => 'Application resubmitted', 'reviewed' => 'Documents reviewed', 'returned' => 'Returned for correction', 'call_published' => 'TOSA call published', 'top10_saved' => 'Top 10 draft saved', 'top10_published' => 'Top 10 published', 'top10_unpublished' => 'Top 10 unpublished'])
+            @php($eventLabels = ['submitted' => 'Application submitted', 'resubmitted' => 'Application resubmitted', 'reviewed' => 'Documents reviewed', 'returned' => 'Returned for correction', 'call_published' => 'TOSA call published', 'top10_saved' => 'Top 10 draft saved', 'top10_removed' => 'Removed from Top 10 draft', 'top10_published' => 'Top 10 published', 'top10_unpublished' => 'Top 10 unpublished'])
             <section class="tosa-card" aria-labelledby="tosaHistoryHeading">
                 <h2 id="tosaHistoryHeading">History</h2>
                 <p class="tosa-note">Activity is recorded from this update onward.</p>
@@ -348,14 +420,14 @@
                 document.getElementById('tosa-review-' + button.dataset.tosaOpen)?.showModal();
             }));
             document.querySelectorAll('[data-tosa-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog')?.close()));
-            const topForm = document.getElementById('tosaTop10Form');
-            if (topForm) topForm.addEventListener('change', event => {
-                const boxes = [...topForm.querySelectorAll('input[name="applicant_ids[]"]:checked')];
-                if (boxes.length > 10 && event.target.matches('input[name="applicant_ids[]"]')) {
-                    event.target.checked = false;
-                }
-                document.getElementById('tosaTopCount').textContent = topForm.querySelectorAll('input[name="applicant_ids[]"]:checked').length + ' of 10 selected';
-            });
+            document.querySelectorAll('[data-tosa-add]').forEach(form => form.addEventListener('submit', event => {
+                if (event.defaultPrevented || !event.submitter) return;
+                event.submitter.disabled = true;
+                event.submitter.textContent = 'Adding…';
+            }));
+            @if (session()->has('tosa_open_applicant'))
+                document.getElementById('tosa-review-{{ (int) session('tosa_open_applicant') }}')?.showModal();
+            @endif
         </script>
     @endpush
 @endsection

@@ -232,6 +232,7 @@
                                 </label>
                             @endforeach
                         </div>
+                        <small><a href="https://www.un.org/sustainabledevelopment/" target="_blank" rel="noopener noreferrer">United Nations Sustainable Development Goals</a>. The content of this publication has not been approved by the United Nations and does not reflect the views of the United Nations or its officials or Member States.</small>
                         @error('sdg_goals') <em>{{ $message }}</em> @enderror
                     </fieldset>
                 </div>

@@ -79,7 +79,8 @@ See [[Transparency and Budget Visibility]] and [[Multi-Tier Office Roles SO OSO 
 | POST | `/office-desk/tosa/{applicant}/subsection` | OSO returns a selected document with a reason; email failure is reported |
 | POST | `/office-desk/tosa/{applicant}/top-ten` | OSO confirms all seven current files and adds the applicant to the private draft |
 | GET | `/office-desk/tosa/{applicant}/package` | OSO-only private ZIP; unavailable legacy originals are listed |
-| POST | `/office-desk/tosa/top-ten` | OSO saves, publishes or unpublishes an unranked list of ten reviewed applicants |
+| POST | `/office-desk/tosa/top-ten/{applicantId}/remove` | OSO removes one applicant from the private draft |
+| POST | `/office-desk/tosa/top-ten` | OSO publishes the unchanged draft of ten reviewed applicants or unpublishes the current list |
 | POST | `/office-desk/tosa/references/template` | OSO Master-only explicit reference replacement |
 
 No PIN is required; role/clearance checks remain. OSO verifies documents and explicitly publishes the manually chosen list; authorized OVCAA access is read-only. Submitted packets unlock only when returned for correction. There is no evaluator assignment, GWA input or automatic ranking. History records events only from this update onward. See [[TOSA Application and Review Workflow]].

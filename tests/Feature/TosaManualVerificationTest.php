@@ -96,13 +96,17 @@ class TosaManualVerificationTest extends TestCase
         return $applicant;
     }
 
-    public function test_one_confirmation_reviews_every_current_file_and_adds_a_private_draft(): void
+    public function test_review_and_top_ten_selection_are_separate_actions(): void
     {
         $officer = $this->officer();
         $applicant = $this->applicant();
         $url = route('office.tosa.top10.add', $applicant);
         $this->actingAs($officer, 'office');
 
+        $this->postJson($url, [])->assertUnprocessable()->assertJsonValidationErrors('applicant');
+        $this->assertSame([], TosaShortlist::query()->findOrFail(1)->draft_ids ?? []);
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
+        $this->assertSame([], TosaShortlist::query()->findOrFail(1)->draft_ids ?? []);
         $this->postJson($url, [])->assertOk()->assertJsonPath('added', true)->assertJsonPath('draft_count', 1);
         $saved = $applicant->fresh();
         $this->assertTrue(app(TosaWorkflowService::class)->isVerified($saved));
@@ -124,6 +128,8 @@ class TosaManualVerificationTest extends TestCase
             ], 'mysql');
         }
 
+        $this->from(route('office.tosa'))->post($url, [])->assertRedirect(route('office.tosa'))
+            ->assertSessionHas('tosa_open_applicant', $applicant->id);
         $this->postJson($url, [])->assertOk()->assertJsonPath('added', false)->assertJsonPath('draft_count', 1);
         $this->assertSame($saved->document_review, $applicant->fresh()->document_review);
         $this->assertSame([$applicant->id], $shortlist->fresh()->draft_ids);
@@ -138,11 +144,12 @@ class TosaManualVerificationTest extends TestCase
         $old = $applicant->requirementPath('academic');
         $initialReview = $applicant->document_review;
         Storage::disk('local')->delete($old);
-        $this->postJson($url, [])->assertUnprocessable()->assertJsonValidationErrors('documents');
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertUnprocessable()->assertJsonValidationErrors('documents');
         $this->assertSame($initialReview, $applicant->fresh()->document_review);
         $this->assertSame([], TosaShortlist::query()->findOrFail(1)->draft_ids ?? []);
 
         Storage::disk('local')->put($old, file_get_contents(base_path('TOSA/Guidelines TOSA 2025.pdf')));
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
         $this->postJson($url, [])->assertOk()->assertJsonPath('added', true);
         $previousReview = $applicant->fresh()->document_review;
         Storage::disk('local')->delete($old);
@@ -157,6 +164,8 @@ class TosaManualVerificationTest extends TestCase
         $requirements['academic']['path'] = $replacement;
         $applicant->update(['requirements' => $requirements]);
         $this->assertFalse(app(TosaWorkflowService::class)->isVerified($applicant->fresh()));
+        $this->postJson($url, [])->assertUnprocessable()->assertJsonValidationErrors('applicant');
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
         $this->postJson($url, [])->assertOk()->assertJsonPath('added', false);
         $this->assertSame($replacement, $applicant->fresh()->document_review['documents']['academic']['path']);
         $this->assertTrue(app(TosaWorkflowService::class)->isVerified($applicant->fresh()));
@@ -167,32 +176,39 @@ class TosaManualVerificationTest extends TestCase
     {
         $applicant = $this->applicant();
         $url = route('office.tosa.top10.add', $applicant);
+        $reviewUrl = route('office.tosa.review', $applicant);
+        $this->postJson($reviewUrl, [])->assertUnauthorized();
         $this->postJson($url, [])->assertUnauthorized();
         $this->actingAs($this->officer('ovcaa', 'Level 2 Evaluator'), 'office')
             ->postJson($url, [])->assertForbidden();
+        $this->postJson($reviewUrl, [])->assertForbidden();
         $this->actingAs($this->officer(), 'office');
         $this->postJson($url, ['verified_by' => 999])->assertUnprocessable();
         $this->postJson($url, ['documents' => array_keys(TosaRequirements::SUBMISSIONS)])->assertUnprocessable();
+        $this->postJson($reviewUrl, ['verified_by' => 999])->assertUnprocessable();
         $applicant->update(['status' => 'draft']);
         $this->postJson($url, [])->assertNotFound();
+        $this->postJson($reviewUrl, [])->assertNotFound();
         $this->assertSame(['records_management' => ['note' => 'historical']], $applicant->fresh()->document_review);
         $this->assertSame([], TosaShortlist::query()->findOrFail(1)->draft_ids ?? []);
     }
 
-    public function test_eleventh_applicant_cannot_be_reviewed_or_added_to_a_full_draft(): void
+    public function test_full_draft_does_not_prevent_review_but_blocks_adding_an_eleventh_applicant(): void
     {
         $this->actingAs($this->officer(), 'office');
         $ids = [];
         foreach (range(1, 10) as $number) {
             $applicant = $this->applicant('manual-limit-'.$number);
+            $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
             $this->postJson(route('office.tosa.top10.add', $applicant), [])
                 ->assertOk()->assertJsonPath('draft_count', $number);
             $ids[] = $applicant->id;
         }
         $extra = $this->applicant('manual-limit-11');
+        $this->postJson(route('office.tosa.review', $extra), [])->assertOk();
         $this->postJson(route('office.tosa.top10.add', $extra), [])
             ->assertUnprocessable()->assertJsonValidationErrors('applicant');
-        $this->assertSame(['records_management' => ['note' => 'historical']], $extra->fresh()->document_review);
+        $this->assertTrue(app(TosaWorkflowService::class)->isVerified($extra->fresh()));
         $this->assertSame($ids, TosaShortlist::query()->findOrFail(1)->draft_ids);
         $this->assertNull(TosaShortlist::query()->findOrFail(1)->published_entries);
     }
@@ -211,6 +227,7 @@ class TosaManualVerificationTest extends TestCase
             ->postJson($url, $payload)->assertForbidden();
         $this->actingAs($this->officer(), 'office');
         $addition = route('office.tosa.top10.add', $applicant);
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
         $this->postJson($addition, [])->assertOk()->assertJsonPath('added', true);
         $this->postJson($url, ['subsection' => 'returned'])->assertUnprocessable()
             ->assertJsonValidationErrors(['document_key', 'reason']);
@@ -229,6 +246,7 @@ class TosaManualVerificationTest extends TestCase
         $this->assertSame(1.25, $applicant->fresh()->gwa);
         $this->assertFalse(app(TosaWorkflowService::class)->isVerified($applicant->fresh()));
         $this->postJson($addition, [])->assertUnprocessable();
+        $this->postJson(route('office.tosa.review', $applicant), [])->assertUnprocessable();
         $this->postJson($url, $payload)->assertUnprocessable()->assertJsonValidationErrors('subsection');
         $this->assertCount(1, Mail::mailer('array')->getSymfonyTransport()->messages());
     }
