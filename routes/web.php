@@ -16,6 +16,7 @@ use App\Http\Controllers\SystemAdminAuthController;
 use App\Http\Controllers\SystemAdminController;
 use App\Http\Controllers\TosaPackageController;
 use App\Http\Controllers\TosaShortlistController;
+use App\Http\Controllers\TosaWorkbookPreviewController;
 use App\VotingSystem\Kernel as VotingKernel;
 use Illuminate\Support\Facades\Route;
 
@@ -72,6 +73,7 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::post('/activities/{activity}/rsvp', [StudentPortalController::class, 'toggleRsvp'])->name('activities.rsvp');
     Route::get('/expenses/{receipt}/verify', [StudentPortalController::class, 'verifyExpenseSeal'])->name('expenses.verify');
     Route::get('/tosa/templates/{key}', [StudentPortalController::class, 'downloadTosaTemplate'])->name('tosa.templates.show');
+    Route::get('/tosa/workbook-preview', [TosaWorkbookPreviewController::class, 'student'])->name('tosa.workbook.preview');
     Route::get('/tosa/documents/{key}', [StudentPortalController::class, 'downloadTosaDocument'])->name('tosa.documents.show');
     Route::post('/tosa/submit', [StudentPortalController::class, 'submitTosaApplication'])->name('tosa.submit');
 });
@@ -166,6 +168,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/renewal/documents/{document}/file', [OfficePortalController::class, 'renewalDocumentFile'])->name('renewal.documents.file');
     Route::post('/renewal/organizations/{organization}/status', [OfficePortalController::class, 'updateOrganizationQualification'])->name('renewal.organization.status');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
+    Route::get('/tosa/workbook-preview', [TosaWorkbookPreviewController::class, 'office'])->name('tosa.workbook.preview');
     Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
     Route::post('/tosa/top-ten', [TosaShortlistController::class, 'save'])->name('tosa.top10.save');
     Route::post('/tosa/top-ten/{applicantId}/remove', [TosaShortlistController::class, 'remove'])->whereNumber('applicantId')->name('tosa.top10.remove');

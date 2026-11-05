@@ -669,6 +669,72 @@ class TosaPrivateFilesTest extends TestCase
         }
     }
 
+    public function test_student_workbook_preview_reads_sheets_and_full_page_ranges_without_changing_the_download(): void
+    {
+        $url = route('portal.tosa.workbook.preview');
+        $this->get($url)->assertRedirect('/');
+        $this->actingAs($this->student(), 'student');
+        $first = $this->getJson($url)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertTrue($first->headers->hasCacheControlDirective('private'));
+        $this->assertTrue($first->headers->hasCacheControlDirective('no-store'));
+        $first->assertJsonPath('sheets', ['SUMMARY', 'Acad', 'L1', 'L2', 'L3', 'SC1', 'SC2'])
+            ->assertJsonPath('rows.0.0.text', 'TEN OUTSTANDING STUDENT AWARDS 2025');
+        $this->getJson($url.'?sheet=5&row=2')->assertOk()
+            ->assertJsonPath('first_row', 201)->assertJsonPath('last_row', 243)
+            ->assertJsonPath('rows.9.0.text', 'SUB-TOTAL');
+        $this->getJson($url.'?sheet=99')->assertStatus(422);
+        $this->getJson($url.'?row=-1')->assertStatus(422);
+        $download = $this->get(route('portal.tosa.templates.show', ['key' => 'computation']))
+            ->assertOk()->assertDownload('TOSA COMPUTATION.xlsx');
+        $this->assertSame($this->referenceBytes('computation'), file_get_contents($download->baseResponse->getFile()->getPathname()));
+    }
+
+    public function test_workbook_preview_uses_active_replacement_and_pages_across_rows_and_columns(): void
+    {
+        $workbook = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $workbook->getActiveSheet();
+        $sheet->setTitle('Replacement');
+        $sheet->setCellValue('A1', '<script>not markup</script>');
+        $sheet->setCellValue('A2', '=1+1');
+        $sheet->setCellValue('A99', 'Merged heading');
+        $sheet->mergeCells('A99:C102');
+        $sheet->setCellValue('AA150', 'Final marker');
+        $hidden = $workbook->createSheet();
+        $hidden->setTitle('Hidden');
+        $hidden->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_HIDDEN);
+        $hidden->setCellValue('A1', 'Hidden marker');
+        $temp = tempnam(sys_get_temp_dir(), 'tosa-xlsx-');
+        try {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($workbook);
+            $writer->setPreCalculateFormulas(false);
+            $writer->save($temp);
+            $zip = new \ZipArchive();
+            $this->assertTrue($zip->open($temp));
+            $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+            $this->assertStringContainsString('<f>1+1</f>', $xml);
+            $zip->addFromString('xl/worksheets/sheet1.xml', str_replace('<f>1+1</f>', '<f>1+1</f><v>17</v>', $xml));
+            $zip->close();
+            $bytes = file_get_contents($temp);
+            Storage::disk('public')->put('tosa-templates/computation.xlsx', $bytes);
+            OfficeTemplate::query()->create(['category' => 'TOSA', 'name' => 'TOSA COMPUTATION',
+                'original_name' => 'replacement.xlsx', 'file_path' => 'tosa-templates/computation.xlsx']);
+            $this->actingAs($this->student(), 'student');
+            $url = route('portal.tosa.workbook.preview');
+            $this->getJson($url)->assertOk()->assertJsonPath('sheets', ['Replacement'])
+                ->assertJsonPath('rows.0.0.text', '<script>not markup</script>')
+                ->assertJsonPath('rows.1.0.text', '17');
+            $this->getJson($url.'?row=1')->assertOk()->assertJsonPath('rows.0.0.text', 'Merged from A99 (see previous page)')
+                ->assertJsonPath('rows.0.0.rowspan', 2)->assertJsonPath('rows.0.0.colspan', 3);
+            $this->getJson($url.'?row=1&column=1')->assertOk()->assertJsonPath('first_row', 101)
+                ->assertJsonPath('first_column', 27)->assertJsonPath('rows.49.0.text', 'Final marker');
+            $download = $this->get(route('portal.tosa.templates.show', ['key' => 'computation']))->assertDownload('replacement.xlsx');
+            $this->assertSame($bytes, file_get_contents($download->baseResponse->getFile()->getPathname()));
+        } finally {
+            $workbook->disconnectWorksheets();
+            if ($temp !== false && is_file($temp)) unlink($temp);
+        }
+    }
+
     public function test_doc_reference_preview_is_private_and_releases_generated_files_after_streaming(): void
     {
         $this->actingAs($this->student(), 'student');

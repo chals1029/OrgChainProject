@@ -623,6 +623,21 @@ class OsoSettingsTest extends TestCase
         $this->assertSame($replacementBytes, file_get_contents($download->baseResponse->getFile()->getPathname()));
     }
 
+    public function test_tosa_workbook_preview_requires_clearance_and_preserves_original(): void
+    {
+        $url = route('office.tosa.workbook.preview');
+        $this->get($url)->assertRedirect();
+        $this->actingAs($this->officer('so'), 'office')->getJson($url)->assertForbidden();
+        $this->actingAs($this->officer('ovcaa'), 'office')->getJson($url)
+            ->assertOk()->assertJsonPath('sheets.0', 'SUMMARY');
+        $this->actingAs($this->officer('oso'), 'office')->getJson($url.'?sheet=5&row=2')
+            ->assertOk()->assertJsonPath('rows.9.0.text', 'SUB-TOTAL');
+        $html = $this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->getContent();
+        $document = new \DOMDocument;
+        @$document->loadHTML($html);
+        $this->assertSame(1, (new \DOMXPath($document))->query('//button[@aria-label="View TOSA COMPUTATION"]')->length);
+    }
+
     public function test_reference_template_upload_rejects_submission_keys_and_wrong_native_formats(): void
     {
         Storage::fake('public');

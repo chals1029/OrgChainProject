@@ -1297,6 +1297,9 @@
                             </div>
                             <div class="sp-tosa-document-links">
                                 @if ($reference['available'])
+                                    @if ($reference['key'] === 'computation')
+                                        <button type="button" class="sp-tosa-control app-view-action" aria-label="View {{ $reference['name'] }}" data-tosa-workbook-open data-workbook-url="{{ route('portal.tosa.workbook.preview') }}" data-workbook-download="{{ $reference['download_url'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
+                                    @endif
                                     @if ($reference['can_preview'])
                                         <a href="{{ $reference['preview_url'] }}" class="sp-tosa-control app-view-action" aria-label="View {{ $reference['name'] }}" data-document-preview
                                            data-document-preview-url="{{ $reference['preview_url'] }}" data-document-preview-title="{{ $reference['name'] }}"
@@ -1436,6 +1439,7 @@
             <div class="document-preview-body" data-document-preview-body></div>
         </div>
     </dialog>
+    @include('org.partials.tosa-workbook-preview')
     <script src="{{ asset('js/vendor/jszip.min.js') }}" defer></script>
     <script src="{{ asset('js/vendor/docx-preview.min.js') }}" defer></script>
     <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}" defer></script>

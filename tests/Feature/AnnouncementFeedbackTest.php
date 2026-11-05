@@ -363,6 +363,14 @@ class AnnouncementFeedbackTest extends TestCase
         $this->assertSame('tosa', $call->studentPublication()['category']);
     }
 
+    public function test_student_can_open_the_tosa_computation_preview(): void
+    {
+        $html = $this->actingAs($this->student(), 'student')->get(route('portal.home', ['tab' => 'tosa']))->assertOk()->getContent();
+        $document = new \DOMDocument;
+        @$document->loadHTML($html);
+        $this->assertSame(1, (new \DOMXPath($document))->query('//li[@data-tosa-reference="computation"]//button[contains(@aria-label,"View")]')->length);
+    }
+
     public function test_students_see_the_top_ten_only_after_publication(): void
     {
         $shortlist = TosaShortlist::query()->findOrFail(1);

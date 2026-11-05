@@ -283,7 +283,11 @@
                             </div>
                             <div class="tosa-file-actions">
                                 @if (!empty($template['url']))
-                                    @if ($reference['format'] !== 'XLSX')<button type="button" class="tosa-icon-button" title="View {{ $reference['title'] }}" aria-label="View {{ $reference['title'] }}" data-document-preview data-document-preview-url="{{ $template['preview_url'] ?: $template['url'] }}" data-document-preview-title="{{ $reference['title'] }}" data-document-original-name="{{ $template['name'] }}" data-document-preview-type="{{ strtolower($reference['format']) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>@endif
+                                    @if ($reference['format'] === 'XLSX')
+                                        <button type="button" class="tosa-icon-button" title="View {{ $reference['title'] }}" aria-label="View {{ $reference['title'] }}" data-tosa-workbook-open data-workbook-url="{{ route('office.tosa.workbook.preview') }}" data-workbook-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                    @else
+                                        <button type="button" class="tosa-icon-button" title="View {{ $reference['title'] }}" aria-label="View {{ $reference['title'] }}" data-document-preview data-document-preview-url="{{ $template['preview_url'] ?: $template['url'] }}" data-document-preview-title="{{ $reference['title'] }}" data-document-original-name="{{ $template['name'] }}" data-document-preview-type="{{ strtolower($reference['format']) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                    @endif
                                     <a class="tosa-icon-button" href="{{ $template['url'] }}?download=1" title="Download {{ $reference['title'] }}" aria-label="Download {{ $reference['title'] }}"><i class="bi bi-download" aria-hidden="true"></i></a>
                                 @endif
                             </div>
@@ -414,6 +418,7 @@
     </div>
 
     @include('org.partials.document-preview')
+    @include('org.partials.tosa-workbook-preview')
     @push('scripts')
         <script>
             document.querySelectorAll('[data-tosa-open]').forEach(button => button.addEventListener('click', () => {

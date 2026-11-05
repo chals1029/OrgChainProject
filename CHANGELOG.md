@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Add a read-only TOSA computation workbook preview for students and authorized office users, with worksheet navigation and paginated rows and columns. Preserve original XLSX downloads and display cached formula results without recalculation.
 - Display private personalized TOSA result notices on publication, with optional OSO-entered event, contact and signatory details; pending applicants receive no notice.
 - Restyled the TOSA submissions filter as a responsive dashboard-style bar with search, result selection, reset, Apply, and the filtered applicant count.
 - Added searchable TOSA submissions filters for published Qualified and Not Qualified results, excluding pending or stale reviews and retaining filters across pages.
