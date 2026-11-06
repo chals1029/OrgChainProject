@@ -107,6 +107,14 @@
                     return row.dataset.qualified === '1';
                 case 'not_qualified':
                     return row.dataset.qualified === '0';
+                case 'approved':
+                    return row.dataset.status === 'approved';
+                case 'submitted':
+                case 'pending_filing':
+                    return row.dataset.status === 'submitted' || row.dataset.status === 'returned';
+                case 'not_submitted':
+                case 'none':
+                    return row.dataset.status === 'none' || row.dataset.status === 'draft' || row.dataset.status === 'rejected';
                 default:
                     return row.dataset.status === value;
             }

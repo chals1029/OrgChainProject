@@ -4,8 +4,8 @@
     $formContext = old('form_context');
     $editingFile = $officialRequirementFiles[old('doc_key', '')] ?? null;
     $templateAccept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg';
-    $statusLabels = ['submitted' => 'Pending Review', 'returned' => 'For Revision', 'rejected' => 'Rejected', 'approved' => 'Renewed', 'draft' => 'Draft', 'none' => 'Pending Filing'];
-    $statusColors = ['submitted' => 'amber', 'returned' => 'red', 'rejected' => 'red', 'approved' => 'green', 'draft' => 'muted', 'none' => 'amber'];
+    $statusLabels = ['submitted' => 'Pending filing', 'returned' => 'Pending filing', 'rejected' => 'Not yet submitted', 'approved' => 'Renewed', 'draft' => 'Not yet submitted', 'none' => 'Not yet submitted'];
+    $statusColors = ['submitted' => 'amber', 'returned' => 'amber', 'rejected' => 'muted', 'approved' => 'green', 'draft' => 'muted', 'none' => 'muted'];
 @endphp
 <link rel="stylesheet" href="{{ asset('css/oso-renewal.css') }}?v={{ filemtime(public_path('css/oso-renewal.css')) }}">
 <div id="osoRenewalDashboard" class="or-dashboard">
@@ -55,7 +55,7 @@
     <section class="or-card" aria-labelledby="osoRenewalApplicationsHeading">
         <header class="or-card-head"><div><h2 id="osoRenewalApplicationsHeading">Renewal Applications</h2><p class="or-subtitle">Organization standing is based on the final OSO renewal decision, not account existence or uploads alone.</p></div><button id="osoRenewalExport" type="button" class="or-button is-small"><i class="bi bi-download" aria-hidden="true"></i> Export list</button></header>
         <div class="or-note"><i class="bi bi-award" aria-hidden="true"></i><p><strong>Official OSO status basis:</strong> <strong>Active · Renewed</strong> requires final approval in the current period and operational eligibility. Other organizations remain inactive or not renewed; filing eligibility is managed separately.</p></div>
-        <div class="or-filters"><label class="or-search"><i class="bi bi-search" aria-hidden="true"></i><input id="osoRenewalSearch" type="search" placeholder="Search organization or college…" aria-label="Search organization or college"></label><select id="osoRenewalStatusFilter" aria-label="Filter renewal applications"><option value="all">All statuses</option><option value="submitted">Pending Review</option><option value="returned">For Revision</option><option value="approved">Renewed</option><option value="rejected">Rejected</option><option value="draft">Draft</option><option value="none">Pending Filing</option><option value="active">Active · Renewed</option><option value="inactive">Inactive organizations</option><option value="qualified">Qualified to renew</option><option value="not_qualified">Not qualified</option></select></div>
+        <div class="or-filters"><label class="or-search"><i class="bi bi-search" aria-hidden="true"></i><input id="osoRenewalSearch" type="search" placeholder="Search organization or college…" aria-label="Search organization or college"></label><select id="osoRenewalStatusFilter" aria-label="Filter renewal applications"><option value="all">All statuses</option><option value="approved">Renewed</option><option value="submitted">Pending filing</option><option value="not_submitted">Not yet submitted</option><option value="active">Active · Renewed</option><option value="inactive">Inactive organizations</option><option value="qualified">Qualified to renew</option><option value="not_qualified">Not qualified</option></select></div>
         <div class="or-table-scroll">
             <table id="osoRenewalApplicationsTable" class="or-table"><thead><tr><th scope="col">Organization</th><th scope="col">Official Status</th><th scope="col">Renewal Status</th><th scope="col">Action</th></tr></thead><tbody>
                 @foreach ($allOrganizations as $organization)
