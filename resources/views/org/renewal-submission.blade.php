@@ -151,6 +151,8 @@
         .rs-act:hover { background:#fdf0f2; border-color:#e5c7cd; }
         .rs-act.is-view { background:#f5faff; color:#365f86; border-color:#d6e5f0; }
         .rs-act.is-view:hover { background:#eaf4fd; }
+        .rs-act.is-download { background:#fcf9fa; color:#6b5f63; border-color:#e2d8dc; }
+        .rs-act.is-download:hover { background:#f5e8eb; color:#8b1828; border-color:#8b1828; }
         .rs-act.is-verify { color:#15803d; border-color:#bbf7d0; }
         .rs-act.is-verify:hover { background:#f0fdf4; }
         .rs-act.is-return { color:#b45309; border-color:#fde68a; }
@@ -352,20 +354,20 @@
                         @endif
                         <div class="rs-row-actions">
                             @if ($doc)
-                                @if (in_array($ext, $previewable, true))
-                                    <button type="button" class="rs-act is-view app-view-action"
-                                        data-rs-preview="{{ route('office.renewal.documents.file', $doc) }}"
-                                        data-rs-download="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}"
-                                        data-rs-title="{{ $row['label'] }} · {{ $row['title'] }}"
-                                        data-rs-file="{{ $doc->file_name }}"
-                                        aria-label="View {{ $row['title'] }}">
-                                        <i class="bi bi-eye" aria-hidden="true"></i> View
-                                    </button>
-                                @else
-                                    <a class="rs-act is-view" href="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}" aria-label="Download {{ $row['title'] }} ({{ strtoupper($ext) ?: 'file' }})">
-                                        <i class="bi bi-download" aria-hidden="true"></i> Download
-                                    </a>
-                                @endif
+                                <button type="button" class="rs-act is-view app-view-action"
+                                    data-document-preview
+                                    data-document-preview-url="{{ route('office.renewal.documents.file', $doc) }}"
+                                    data-document-preview-title="{{ $row['label'] }} · {{ $row['title'] }}"
+                                    data-document-original-name="{{ $doc->file_name }}"
+                                    data-document-preview-type="{{ strtolower(pathinfo($doc->file_name ?: $doc->file_path, PATHINFO_EXTENSION)) }}"
+                                    data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
+                                    data-document-preview-download="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}"
+                                    aria-label="View {{ $row['title'] }}">
+                                    <i class="bi bi-eye" aria-hidden="true"></i> View
+                                </button>
+                                <a class="rs-act is-download" href="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}" aria-label="Download {{ $row['title'] }}">
+                                    <i class="bi bi-download" aria-hidden="true"></i> Download
+                                </a>
                                 <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}">
                                     @csrf
                                     <input type="hidden" name="decision" value="verified">
@@ -575,4 +577,8 @@
             });
         })();
     </script>
+    @include('org.partials.document-preview')
+    <script src="{{ asset('js/vendor/jszip.min.js') }}" defer></script>
+    <script src="{{ asset('js/vendor/docx-preview.min.js') }}" defer></script>
+    <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}" defer></script>
 @endsection
