@@ -2021,7 +2021,7 @@
 
         {{-- Document preview modal. The original response is fetched as a blob
              so Word files render here instead of navigating to a download. --}}
-        <dialog class="activity-document-preview-dialog" id="activityDocumentPreviewModal" data-document-preview-dialog aria-labelledby="activityDocumentPreviewTitle">
+        <dialog class="activity-document-preview-dialog" id="activityDocumentPreviewModal" data-document-preview-dialog data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="activityDocumentPreviewTitle">
             <div class="activity-document-preview-box">
                 <div class="activity-document-preview-head">
                     <div>

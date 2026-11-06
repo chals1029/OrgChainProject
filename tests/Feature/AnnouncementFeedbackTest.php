@@ -363,6 +363,59 @@ class AnnouncementFeedbackTest extends TestCase
         $this->assertSame('tosa', $call->studentPublication()['category']);
     }
 
+    public function test_archived_tosa_calls_preserve_history(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('announcements/tosa-test.pdf', '%PDF-1.4 synthetic attachment');
+        $call = OfficeAnnouncement::query()->create([
+            'title' => 'Synthetic TOSA call', 'type' => 'Call for TOSA', 'body' => 'Synthetic application details.',
+            'priority' => 'normal', 'expires_at' => now()->addDay(), 'attachment_path' => 'announcements/tosa-test.pdf', 'attachment_name' => 'tosa-test.pdf',
+        ]);
+        $originalExpiry = $call->expires_at->toDateTimeString();
+        $endUrl = route('office.tosa.announcements.end', $call);
+        $this->postJson($endUrl)->assertUnauthorized();
+        $this->actingAs($this->officer('ovcaa'), 'office')->postJson($endUrl)->assertForbidden();
+        $office = $this->officer();
+        $this->assertTrue(OfficeAnnouncement::published()->whereKey($call->id)->exists());
+        $student = $this->student();
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()->assertSee('The Call for TOSA is open.');
+        $this->actingAs($office, 'office');
+        $this->post($endUrl)->assertRedirect(route('office.tosa', ['tab' => 'documents']));
+        $this->assertNotNull($call->fresh()->ended_at);
+        $this->assertTrue(Storage::disk('public')->exists('announcements/tosa-test.pdf'));
+        $this->assertSame($originalExpiry, $call->fresh()->expires_at->toDateTimeString());
+        $this->assertFalse(OfficeAnnouncement::published()->whereKey($call->id)->exists());
+        $this->assertDatabaseHas('tosa_history_events', ['action' => 'call_ended', 'actor_id' => $office->id], 'mysql');
+        $this->get(route('office.tosa', ['tab' => 'documents']))->assertOk()->assertSee('Synthetic application details.')->assertSee('Archived');
+        $this->post(route('office.tosa.announcements.end', $this->announcement()))->assertNotFound();
+    }
+
+    public function test_returned_student_sees_call_deadline_state(): void
+    {
+        OfficeAnnouncement::query()->whereIn('type', ['TOSA', 'Call for TOSA'])->update(['expires_at' => now()->subMinute()]);
+        $call = OfficeAnnouncement::query()->create([
+            'title' => 'Revision call', 'type' => 'Call for TOSA', 'body' => 'Synthetic deadline.',
+            'priority' => 'normal', 'expires_at' => now()->addDay(),
+        ]);
+        $student = $this->student();
+        TosaApplicant::query()->create([
+            'sr_code' => $student->sr_code, 'full_name' => $student->full_name, 'email' => $student->email,
+            'college' => $student->college, 'program' => $student->program, 'year_level' => $student->year_level,
+            'status' => 'submitted', 'subsection' => 'returned', 'requirements' => [],
+        ]);
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()
+            ->assertSee('OSO requested a revision. Resubmit before the TOSA call closes.');
+        $call->update(['expires_at' => now()]);
+        $response = $this->get(route('portal.home'))->assertOk()
+            ->assertSee('OSO requested a revision, but TOSA applications are closed.')
+            ->assertSee('The TOSA call is closed; resubmission is unavailable.');
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $button = (new \DOMXPath($document))->query('//form[@id="tosaSubmitForm"]//button[@type="submit"]')->item(0);
+        $this->assertNotNull($button);
+        $this->assertTrue($button->hasAttribute('disabled'));
+    }
+
     public function test_student_can_open_the_tosa_computation_preview(): void
     {
         $html = $this->actingAs($this->student(), 'student')->get(route('portal.home', ['tab' => 'tosa']))->assertOk()->getContent();
@@ -371,7 +424,7 @@ class AnnouncementFeedbackTest extends TestCase
         $this->assertSame(1, (new \DOMXPath($document))->query('//li[@data-tosa-reference="computation"]//button[contains(@aria-label,"View")]')->length);
     }
 
-    public function test_students_see_the_top_ten_only_after_publication(): void
+    public function test_students_never_receive_the_published_top_ten_list(): void
     {
         $shortlist = TosaShortlist::query()->findOrFail(1);
         $shortlist->forceFill(['draft_ids' => [9876], 'published_entries' => null, 'published_at' => null])->save();
@@ -381,12 +434,112 @@ class AnnouncementFeedbackTest extends TestCase
             'name' => 'Synthetic Top Student '.$number, 'program' => 'Test Program',
         ])->all();
         $shortlist->forceFill(['published_entries' => $entries, 'published_at' => now()])->save();
-        $response = $this->get(route('portal.home'))->assertOk()->assertSee('Published Top 10');
+        $response = $this->get(route('portal.home'))->assertOk()->assertDontSee('Published Top 10');
         foreach ($entries as $entry) {
-            $response->assertSee($entry['name']);
+            $response->assertDontSee($entry['name']);
         }
         $shortlist->forceFill(['published_entries' => null, 'published_at' => null])->save();
         $this->get(route('portal.home'))->assertOk()->assertDontSee('Published Top 10');
+    }
+
+    public function test_publication_controls_reflect_published_and_unpublished_results(): void
+    {
+        Storage::fake('local');
+        $office = $this->officer();
+        $ids = [];
+        $docx = file_get_contents(base_path('TOSA/TOSA Application Form 2025.docx'));
+        $pdf = file_get_contents(base_path('TOSA/Guidelines TOSA 2025.pdf'));
+        foreach (range(1, 11) as $number) {
+            $srCode = 'publication-test-'.$number;
+            $requirements = $documents = [];
+            foreach (\App\Services\TosaRequirements::SUBMISSIONS as $key => $definition) {
+                $extension = $key === 'application_form' ? 'docx' : 'pdf';
+                $path = 'tosa/'.$srCode.'/'.$key.'.'.$extension;
+                Storage::disk('local')->put($path, $extension === 'docx' ? $docx : $pdf);
+                $requirements[$key] = ['path' => $path, 'name' => $key.'.'.$extension];
+                $documents[$key] = ['path' => $path, 'verified_by' => 1, 'verified_at' => now()->toIso8601String()];
+            }
+            $applicant = TosaApplicant::query()->create([
+                'sr_code' => $srCode, 'full_name' => 'Synthetic Applicant '.$number, 'email' => $srCode.'@example.test',
+                'college' => 'CICS', 'program' => 'BSIT', 'year_level' => '4th Year',
+                'status' => 'submitted', 'subsection' => 'screening', 'requirements' => $requirements,
+            ]);
+            $applicant->forceFill(['document_review' => ['documents' => $documents]])->save();
+            if ($number <= 10) $ids[] = $applicant->id;
+        }
+        TosaShortlist::query()->findOrFail(1)->forceFill(['draft_ids' => $ids, 'published_at' => null, 'published_decisions' => null, 'published_entries' => null])->save();
+        $this->actingAs($office, 'office');
+        $render = function (): \DOMXPath {
+            $html = $this->get(route('office.tosa', ['tab' => 'top10']))->assertOk()->getContent();
+            $document = new \DOMDocument;
+            @$document->loadHTML($html);
+            return new \DOMXPath($document);
+        };
+        $statusFor = function (int $number): string {
+            $html = $this->get(route('office.tosa', ['search' => 'publication-test-'.$number]))->assertOk()->getContent();
+            $document = new \DOMDocument;
+            @$document->loadHTML($html);
+            $xpath = new \DOMXPath($document);
+            $cell = $xpath->query('//tr[.//strong[normalize-space(.)="Synthetic Applicant '.$number.'"]]/td[@data-label="Review / result"]')->item(0);
+            $this->assertNotNull($cell);
+            return trim($cell->textContent);
+        };
+        $this->assertSame('Qualified', $statusFor(1));
+        $url = route('office.tosa.top10.save');
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids, 'caption_qualified' => 'Private selected notice', 'caption_not_qualified' => 'Private other notice'])->assertOk();
+        $this->assertSame('Qualified', $statusFor(1));
+        $this->assertSame('Not qualified', $statusFor(11));
+        $published = $render();
+        $this->assertTrue($published->query('//textarea[@name="caption_qualified"]')->item(0)->hasAttribute('readonly'));
+        $this->assertSame('Private selected notice', $published->query('//textarea[@name="caption_qualified"]')->item(0)->textContent);
+        $this->assertSame('Private other notice', $published->query('//textarea[@name="caption_not_qualified"]')->item(0)->textContent);
+        $this->postJson(route('office.tosa.top10.remove', $ids[0]), [])->assertForbidden();
+        $this->postJson($url, ['intent' => 'unpublish'])->assertOk();
+        $unpublished = $render();
+        $this->assertFalse($unpublished->query('//textarea[@name="caption_qualified"]')->item(0)->hasAttribute('readonly'));
+        $this->assertSame('Private selected notice', $unpublished->query('//textarea[@name="caption_qualified"]')->item(0)->textContent);
+        $this->postJson(route('office.tosa.top10.remove', $ids[0]), [])->assertOk();
+        $this->assertSame('Reviewed', $statusFor(1));
+        $this->postJson(route('office.tosa.top10.add', $ids[0]), [])->assertOk();
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids, 'caption_qualified' => 'Updated selected notice', 'caption_not_qualified' => 'Private other notice'])->assertOk();
+        $this->assertSame('Updated selected notice', $render()->query('//textarea[@name="caption_qualified"]')->item(0)->textContent);
+    }
+
+    public function test_each_student_receives_only_their_own_current_tosa_result(): void
+    {
+        Storage::fake('local');
+        $student = $this->student();
+        $other = $this->student();
+        $requirements = [];
+        $documents = [];
+        foreach (\App\Services\TosaRequirements::SUBMISSIONS as $key => $definition) {
+            $extension = $key === 'application_form' ? 'docx' : 'pdf';
+            $reference = $key === 'application_form' ? 'application_form' : 'guidelines';
+            $path = 'tosa/'.$student->sr_code.'/'.$key.'.'.$extension;
+            Storage::disk('local')->put($path, file_get_contents(base_path('TOSA/'.\App\Services\TosaRequirements::REFERENCES[$reference]['filename'])));
+            $requirements[$key] = ['path' => $path, 'name' => $key.'.'.$extension];
+            $documents[$key] = ['path' => $path, 'verified_by' => 1, 'verified_at' => now()->toIso8601String()];
+        }
+        $applicant = TosaApplicant::query()->create([
+            'sr_code' => $student->sr_code, 'full_name' => $student->full_name, 'email' => $student->email,
+            'college' => $student->college, 'program' => $student->program, 'year_level' => $student->year_level,
+            'status' => 'submitted', 'subsection' => 'screening', 'requirements' => $requirements,
+        ]);
+        $applicant->forceFill(['document_review' => ['documents' => $documents]])->save();
+        $shortlist = TosaShortlist::query()->findOrFail(1);
+        foreach (['qualified', 'not_qualified'] as $status) {
+            $shortlist->forceFill(['published_at' => now(), 'published_entries' => [['name' => 'Other Private Applicant', 'program' => 'Private Program']], 'published_decisions' => [
+                $applicant->id => ['status' => $status, 'review' => TosaShortlist::reviewFingerprint($applicant->fresh()), 'name' => $student->full_name, 'program' => $student->program, 'caption' => 'Private '.$status.' notice'],
+                999999999 => ['status' => 'qualified', 'name' => 'Other Private Applicant', 'caption' => 'Other private notice'],
+            ]])->save();
+            $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()
+                ->assertSee('Your TOSA result notice')->assertSee('Private '.$status.' notice')
+                ->assertDontSee('Other Private Applicant')->assertDontSee('Other private notice')->assertDontSee('Published Top 10');
+            $this->actingAs($other, 'student')->get(route('portal.home'))->assertOk()
+                ->assertDontSee('Private '.$status.' notice')->assertDontSee('Other Private Applicant');
+        }
+        $shortlist->forceFill(['published_at' => null])->save();
+        $this->actingAs($student, 'student')->get(route('portal.home'))->assertOk()->assertDontSee('Your TOSA result notice');
     }
 
     public function test_correction_reason_is_visible_only_to_the_owner_while_the_packet_is_returned(): void

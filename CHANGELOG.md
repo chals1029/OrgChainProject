@@ -2,8 +2,20 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Restyle the TOSA Top Selection workspace with a completion indicator, live applicant references, and labeled removal controls while retaining publication safeguards.
+- Update TOSA review, multi-document corrections, searchable status and History filters, and the unranked Top selection. Require two captions of at most 300 characters and unpublish before editing published results. Apply `2026_11_06_000001_add_tosa_shortlist_captions.php`.
 - Add a read-only TOSA computation workbook preview for students and authorized office users, with worksheet navigation and paginated rows and columns. Preserve original XLSX downloads and display cached formula results without recalculation.
-- Display private personalized TOSA result notices on publication, with optional OSO-entered event, contact and signatory details; pending applicants receive no notice.
+- Use the active TOSA call and its deadline for both new applications and revisions; remove the redundant filing switch. Call archival preserves attachments and original deadlines. Apply the additive `2026_11_05_000002_add_tosa_filing_controls.php` migration.
+- Replace browser confirmation prompts in the office, student and system-admin portals with accessible styled dialogs; preserve cancellation, files and submitters. The separate voting system is unchanged.
+- Redesign TOSA History with a responsive activity list, event icons and clearer correction details.
+- Lock the published TOSA selection until OSO chooses Edit results; disable adding at ten and relock after publication.
+- Simplify the OSO Top 10 header to the selected-applicant count.
+- Disable the TOSA Publish results button after publication; OSO can explicitly enable republication for changes without losing published captions.
+- Restyled the office-only published TOSA selection as an expandable table with an unpublish confirmation; student results remain private and unranked.
+- Keep the published TOSA selection and other applicants' identities out of student pages; each applicant sees only their own decision and result notice.
+- Convert Word previews privately to temporary PDFs for office, student, renewal and receipt viewers, preserving document headers and logos while keeping downloads unchanged.
+- Added private student preview and DOCX download of personalized TOSA result letters using the supplied qualified and not-qualified templates.
+- Display private personalized TOSA result notices on publication, with separate OSO-editable Qualified and Not Qualified captions; pending applicants receive no notice.
 - Restyled the TOSA submissions filter as a responsive dashboard-style bar with search, result selection, reset, Apply, and the filtered applicant count.
 - Added searchable TOSA submissions filters for published Qualified and Not Qualified results, excluding pending or stale reviews and retaining filters across pages.
 - Reopen the TOSA applicant dialog after adding to the Top 10 draft and show a disabled Added to Top 10 button, with immediate submission feedback.

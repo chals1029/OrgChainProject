@@ -2119,11 +2119,23 @@
                         return;
                     }
 
-                    if (!isDocx || !window.docx || typeof window.docx.renderAsync !== 'function') {
-                        throw new Error('Preview engine unavailable for this file type.');
-                    }
-
-                    await window.docx.renderAsync(blob, body, null, { breakPages: false });
+                    if (!isDocx) throw new Error('Preview is unavailable for this file type.');
+                    const csrf = document.querySelector('meta[name="csrf-token"]');
+                    if (!csrf) throw new Error('The security token is missing.');
+                    const form = new FormData();
+                    const extension = contentType.includes('msword') || /\.doc(?:$|[?#])/i.test(url) ? 'doc' : 'docx';
+                    form.append('file', blob, 'document.' + extension);
+                    const converted = await fetch(@json(route('office.documents.preview.convert')), {
+                        method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-TOKEN': csrf.content, Accept: 'application/json' }, body: form,
+                    });
+                    if (!converted.ok) throw new Error('The document converter is unavailable.');
+                    const pdf = await converted.blob();
+                    if (pdf.type !== 'application/pdf') throw new Error('The converter did not return a PDF.');
+                    officePreviewObjectUrl = URL.createObjectURL(pdf);
+                    const frame = document.createElement('iframe');
+                    frame.src = officePreviewObjectUrl;
+                    frame.title = `${title || 'Document'} PDF preview`;
+                    body.appendChild(frame);
                 } catch (e) {
                     body.innerHTML = '<p style="margin:0;font-size:0.85rem;color:var(--aso-ink-muted);">In-page preview is unavailable for this file — use Download Document instead.</p>';
                 }

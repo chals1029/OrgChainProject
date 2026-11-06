@@ -1169,12 +1169,14 @@
 
             @unless ($tosaLocked)
                 <div class="sp-tosa-card" role="status">
-                    @if ($tosaRevision)
-                        OSO requested a revision. You may resubmit even if the call has closed.
-                    @elseif ($tosaCall)
+                    @if ($tosaRevision && $tosaSubmissionOpen)
+                        OSO requested a revision. Resubmit before the TOSA call closes.
+                    @elseif ($tosaRevision)
+                        OSO requested a revision, but TOSA applications are closed.
+                    @elseif ($tosaSubmissionOpen && $tosaCall)
                         The Call for TOSA is open. <a href="{{ $tosaCall['url'] }}">View the call and requirements</a>.
                     @else
-                        New applications open when OSO publishes a Call for TOSA. You may prepare your files in the meantime.
+                        TOSA applications are currently closed. You may prepare your files in the meantime.
                     @endif
                 </div>
             @endunless
@@ -1183,37 +1185,14 @@
                     <h3 id="tosaNoticeHeading">Your TOSA result notice</h3>
                     <p><strong>{{ $tosaNotice['name'] }}</strong>@if (!empty($tosaNotice['program']))<br>{{ $tosaNotice['program'] }}@endif</p>
                     <p>Dear {{ $tosaNotice['name'] }},</p>
-                    @if ($tosaDecision === 'qualified')
-                        <p><strong>Warmest congratulations!</strong></p>
-                        <p>Following the review of your application and supporting documents, we are pleased to inform you that you have been selected as one of the Ten Outstanding Students Award recipients.</p>
-                        @if (!empty($tosaNotice['event']))<p>{{ $tosaNotice['event'] }}</p>@endif
-                        <p>Congratulations on your achievement and thank you for your dedication and service.</p>
-                    @else
-                        <p>Following the review of your application and supporting documents, we regret to inform you that you were not selected as one of the Ten Outstanding Students Award recipients.</p>
-                        <p>Thank you for your dedication, contributions, and service to the campus community. We encourage you to continue pursuing excellence in your future endeavors.</p>
-                    @endif
-                    @if (!empty($tosaNotice['contact']))<p>For questions: {{ $tosaNotice['contact'] }}</p>@endif
-                    @if (!empty($tosaNotice['signatory']))<p>{{ $tosaNotice['signatory'] }}</p>@endif
+                    <p style="white-space: pre-wrap">{{ $tosaNotice['caption'] ?? ($tosaDecision === 'qualified' ? 'Congratulations! You have been selected as one of the Top 10 TOSA applicants.' : 'Thank you for applying to TOSA. You were not selected for the Top 10.') }}</p>
+                    <div class="sp-tosa-document-links">
+                        <a href="{{ route('portal.tosa.letter') }}" class="sp-tosa-control app-view-action" data-document-preview data-document-preview-url="{{ route('portal.tosa.letter') }}" data-document-preview-title="TOSA result letter" data-document-preview-type="docx" data-document-preview-download="{{ route('portal.tosa.letter', ['download' => 1]) }}"><i class="bi bi-eye" aria-hidden="true"></i> View letter</a>
+                        <a href="{{ route('portal.tosa.letter', ['download' => 1]) }}" class="sp-tosa-control"><i class="bi bi-download" aria-hidden="true"></i> Download DOCX</a>
+                    </div>
                 </section>
             @endif
 
-
-            @if (is_array($tosaPublished) && count($tosaPublished) === 10)
-                <details class="sp-tosa-card sp-tosa-accordion" open aria-labelledby="tosaPublishedHeading">
-                    <summary class="sp-tosa-section-summary">
-                        <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
-                        <span class="sp-tosa-section-copy"><strong id="tosaPublishedHeading" class="sp-tosa-section-heading">Published Top 10</strong></span>
-                        <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
-                    </summary>
-                    <div class="sp-tosa-section-body">
-                        <ul>
-                            @foreach ($tosaPublished as $entry)
-                                <li><strong>{{ $entry['name'] }}</strong>@if (!empty($entry['program'])) · {{ $entry['program'] }}@endif</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </details>
-            @endif
 
             @php
                 $tosaMasterForm = collect($tosaReferences)->firstWhere('key', 'application_form');
@@ -1264,14 +1243,23 @@
                     <span class="sp-tosa-file-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
                     <span class="sp-tosa-section-copy">
                         <span class="sp-tosa-section-heading"><strong id="tosaStatusTitle">Application status</strong><span class="sp-tosa-section-badge">{{ $tosaRevision ? 'For correction' : ($tosaDecision === 'qualified' ? 'Qualified' : ($tosaDecision === 'not_qualified' ? 'Not Qualified' : ($tosaVerified ? 'Reviewed' : ($tosaApplicant?->status === 'submitted' ? 'Pending review' : 'Not submitted')))) }}</span></span>
-                        <small>{{ $tosaRevision ? 'Correct and resubmit your documents.' : ($tosaDecision === 'qualified' ? 'OSO published your selection in the Top 10.' : ($tosaDecision === 'not_qualified' ? 'OSO has published the Top 10; your application was not selected.' : ($tosaVerified ? 'OSO has reviewed your documents.' : ($tosaApplicant?->status === 'submitted' ? 'Waiting for OSO to review your documents.' : 'Upload the required documents.')))) }}</small>
+                        <small>{{ $tosaRevision ? ($tosaSubmissionOpen ? 'Correct and resubmit your documents before the deadline.' : 'The TOSA call is closed; resubmission is unavailable.') : ($tosaDecision === 'qualified' ? 'OSO published your selection in the Top 10.' : ($tosaDecision === 'not_qualified' ? 'OSO has published the Top 10; your application was not selected.' : ($tosaVerified ? 'OSO has reviewed your documents.' : ($tosaApplicant?->status === 'submitted' ? 'Waiting for OSO to review your documents.' : 'Upload the required documents.')))) }}</small>
                     </span>
                     <i class="bi bi-chevron-right sp-tosa-section-chevron" aria-hidden="true"></i>
                 </summary>
                 <div class="sp-tosa-section-body">
-                <p>{{ $tosaLocked ? 'Only an OSO Revision request allows changes.' : ($tosaRevision ? 'Update the requested files, then Resubmit for Review.' : 'Choose files, then Submit for Review. Files are saved together.') }}</p>
+                <p>{{ $tosaLocked ? 'Only an OSO Revision request allows changes.' : ($tosaRevision ? ($tosaSubmissionOpen ? 'Update the requested files, then Resubmit for Review.' : 'Resubmission is unavailable while the TOSA call is closed.') : 'Choose files, then Submit for Review. Files are saved together.') }}</p>
                 @if ($tosaRevision && is_array($tosaCorrection) && !empty($tosaCorrection['reason']))
-                    <p><strong>Document:</strong> {{ \App\Services\TosaRequirements::SUBMISSIONS[$tosaCorrection['document_key'] ?? '']['title'] ?? 'TOSA document' }}</p>
+                    @php
+                        $correctionKeys = is_array($tosaCorrection['document_keys'] ?? null)
+                            ? $tosaCorrection['document_keys']
+                            : (!empty($tosaCorrection['document_key']) ? [(string) $tosaCorrection['document_key']] : []);
+                        $correctionTitles = array_values(array_filter(array_map(
+                            fn ($key) => is_string($key) ? (\App\Services\TosaRequirements::SUBMISSIONS[$key]['title'] ?? null) : null,
+                            $correctionKeys
+                        )));
+                    @endphp
+                    <p><strong>{{ count($correctionTitles) > 1 ? 'Documents:' : 'Document:' }}</strong> {{ $correctionTitles !== [] ? implode(', ', $correctionTitles) : 'TOSA document' }}</p>
                     <p><strong>OSO's reason:</strong> {{ $tosaCorrection['reason'] }}</p>
                 @endif
                 </div>
@@ -1403,8 +1391,8 @@
             @else
             <div class="sp-tosa-card sp-tosa-submit-banner">
                 <div>
-                    <strong id="tosaSubmitStatus">{{ ! $tosaSubmissionOpen ? 'Waiting for a Call for TOSA' : ($tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit')) }}</strong>
-                    <p id="tosaSubmitHelp" aria-live="polite">{{ $tosaSubmissionOpen ? 'Submit the complete packet for OSO review. Your application locks after submission.' : 'New applications open when OSO publishes a Call for TOSA.' }}</p>
+                    <strong id="tosaSubmitStatus">{{ ! $tosaSubmissionOpen ? 'Applications closed' : ($tosaRevision ? 'Revision · Correct and resubmit' : ($tosaComplete ? 'Package ready for review' : 'Before you submit')) }}</strong>
+                    <p id="tosaSubmitHelp" aria-live="polite">{{ $tosaSubmissionOpen ? 'Submit the complete packet for OSO review. Your application locks after submission.' : 'TOSA applications are currently closed.' }}</p>
                 </div>
                     <form method="post" action="{{ route('portal.tosa.submit') }}" enctype="multipart/form-data" id="tosaSubmitForm" data-confirm="manual" data-tosa-revision="{{ $tosaRevision ? '1' : '0' }}" data-tosa-open="{{ $tosaSubmissionOpen ? '1' : '0' }}" data-confirm-message="Submit your complete A–G packet for OSO review? All files will be saved together and locked. Changes are allowed only if OSO requests Revision.">
                         @csrf
@@ -1412,7 +1400,7 @@
                         <button type="submit" class="sp-tosa-control sp-tosa-control-primary" aria-describedby="tosaSubmitHelp" @disabled(!$tosaComplete || !$tosaSubmissionOpen)>
                             <i class="bi bi-send-check" aria-hidden="true"></i> {{ $tosaRevision ? 'Resubmit for Review' : 'Submit for Review' }}
                         </button>
-                        <span id="tosaSubmitTooltip" class="sp-tosa-submit-tooltip" role="tooltip" @if ($tosaComplete && $tosaSubmissionOpen) hidden @endif>{{ $tosaSubmissionOpen ? 'Complete the required A–G files before submitting.' : 'New applications open when OSO publishes a Call for TOSA.' }}</span>
+                        <span id="tosaSubmitTooltip" class="sp-tosa-submit-tooltip" role="tooltip" @if ($tosaComplete && $tosaSubmissionOpen) hidden @endif>{{ $tosaSubmissionOpen ? 'Complete the required A–G files before submitting.' : 'TOSA applications are currently closed.' }}</span>
                         </span>
                     </form>
             </div>
@@ -1420,7 +1408,7 @@
         </div>
     </div>
 
-    <dialog id="tosaStudentDocViewerModal" class="document-preview-dialog" data-document-preview-dialog aria-labelledby="tosaStudentDocViewerTitle">
+    <dialog id="tosaStudentDocViewerModal" class="document-preview-dialog" data-document-preview-dialog data-document-conversion-url="{{ route('portal.documents.preview.convert') }}" aria-labelledby="tosaStudentDocViewerTitle">
         <div class="document-preview-box">
             <header class="document-preview-head">
                 <div class="document-preview-heading">

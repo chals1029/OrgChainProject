@@ -32,8 +32,9 @@ final class TosaPackageController extends Controller
             throw new \RuntimeException('The document package could not be created.');
         }
         $closed = false;
+        $downloadName = 'Applicant-'.$applicant->id.'.zip';
         try {
-            DB::connection('mysql')->transaction(function () use ($applicant, $office, $zip, &$closed): void {
+            DB::connection('mysql')->transaction(function () use ($applicant, $office, $zip, &$closed, &$downloadName): void {
                 $locked = TosaApplicant::query()->whereKey($applicant->id)->lockForUpdate()->firstOrFail();
                 $actor = OfficeUser::query()->whereKey($office->id)->lockForUpdate()->firstOrFail();
                 abort_unless($locked->status === 'submitted', 404);
@@ -62,6 +63,13 @@ final class TosaPackageController extends Controller
                 if (! $zip->close()) {
                     throw new \RuntimeException('The document package could not be completed.');
                 }
+                $rawName = trim((string) $locked->full_name);
+                $cleanName = preg_replace('~[\\\\/:*?"<>|\x00-\x1f\x7f]+~u', ' ', $rawName);
+                $cleanName = trim(preg_replace('~\s+~u', ' ', $cleanName ?? ''), ". \t\n\r\0\x0B");
+                if ($cleanName === '') {
+                    $cleanName = 'Applicant-'.$locked->id;
+                }
+                $downloadName = $cleanName.'.zip';
                 $closed = true;
             });
         } catch (\Throwable $error) {
@@ -72,7 +80,7 @@ final class TosaPackageController extends Controller
             throw $error;
         }
 
-        return response()->download($path, 'TOSA-documents-'.$applicant->id.'.zip', [
+        return response()->download($path, $downloadName, [
             'Content-Type' => 'application/zip',
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',

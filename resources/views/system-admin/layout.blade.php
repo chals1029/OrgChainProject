@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/system-admin.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/action-confirmations.css') }}?v={{ filemtime(public_path('css/action-confirmations.css')) }}">
+    <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}" data-confirm-scope="explicit"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="sys-admin-body">

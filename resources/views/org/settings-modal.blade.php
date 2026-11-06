@@ -1523,7 +1523,8 @@
             showSettingsToast('Please wait for the current settings change to finish.', 'info');
             return;
         }
-        if (!window.OrgActionConfirmations.confirm(confirmationMessage)) return;
+        if (!await window.OrgActionConfirmations.confirm(confirmationMessage)) return;
+        if (settingsMutationPending) return;
         settingsMutationPending = true;
         const controls = [...document.querySelectorAll('#orgSettingsModal button[onclick*="save"], #orgSettingsModal button[onclick*="resetLogo"], #orgSettingsModal button[onclick*="triggerLogo"], #settingsLogoUploadButton, [data-account-action], #setPanel-users button[type="submit"], #newOrgRetryBtn, #orgSettingsModal button[type="submit"], .org-settings-submodal button')]
             .filter(button => !button.disabled);

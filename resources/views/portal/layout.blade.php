@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="{{ asset('css/landing.css') }}?v={{ filemtime(public_path('css/landing.css')) }}">
     @endif
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/action-confirmations.css') }}?v={{ filemtime(public_path('css/action-confirmations.css')) }}">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
     <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/student-mobile.css') }}?v={{ filemtime(public_path('css/student-mobile.css')) }}">

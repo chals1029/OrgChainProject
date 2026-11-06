@@ -89,16 +89,24 @@
                 image.src = mediaUrl;
                 body.replaceChildren(image);
             } else if (mime.includes('wordprocessingml') || type === 'docx') {
-                if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-                    throw new Error('The Word preview library could not be loaded. Download the original file to inspect it.');
-                }
-                const container = document.createElement('div');
-                await window.docx.renderAsync(blob, container, null, {
-                    breakPages: true, ignoreWidth: false, ignoreHeight: false,
-                    renderHeaders: true, renderFooters: true, renderFootnotes: true, useBase64URL: true,
+                const csrf = document.querySelector('meta[name="csrf-token"]');
+                if (!csrf || !modal.dataset.conversionUrl) throw new Error('Word conversion is unavailable. Download the original file.');
+                message('Preparing the Word document preview…');
+                const form = new FormData();
+                form.append('file', blob, 'document.docx');
+                const converted = await fetch(modal.dataset.conversionUrl, {
+                    method: 'POST', credentials: 'same-origin', signal: controller.signal,
+                    headers: { 'X-CSRF-TOKEN': csrf.content, Accept: 'application/json' }, body: form,
                 });
+                if (!converted.ok) throw new Error('The document converter is unavailable. Download the original file.');
+                const pdf = await converted.blob();
                 if (token !== revision) return;
-                body.replaceChildren(container);
+                if (pdf.type !== 'application/pdf') throw new Error('The converter did not return a PDF.');
+                mediaUrl = URL.createObjectURL(pdf);
+                const frame = document.createElement('iframe');
+                frame.title = file.name || 'Receipt preview';
+                frame.src = mediaUrl + '#view=FitH';
+                body.replaceChildren(frame);
             } else {
                 message('This file type cannot be previewed in the browser. Download the original file to inspect it.');
             }

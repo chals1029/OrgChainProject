@@ -11,6 +11,7 @@
         "test:report:backend": "node scripts/run-tests-and-report.mjs --skip-ui",
         "test:report:auth": "node scripts/run-tests-and-report.mjs --skip-pages",
         "test:smoke": "node scripts/console-smoke.mjs",
+        "test:confirmations": "node scripts/confirmation-smoke.mjs",
         "test:auth": "node scripts/auth-otp-smoke.mjs",
         "chain-node": "node scripts/chain-node/server.mjs"
     },

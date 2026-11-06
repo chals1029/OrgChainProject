@@ -24,19 +24,14 @@ class OfficeAnnouncement extends Model
 
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime'];
+        return ['expires_at' => 'datetime', 'ended_at' => 'datetime'];
     }
 
     public function scopePublished(Builder $query): Builder
     {
         $now = now();
 
-        return $query->where(fn (Builder $expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', $now));
-    }
-
-    public static function activeTosaCall(): ?self
-    {
-        return static::query()->published()->whereIn('type', ['TOSA', 'Call for TOSA'])->latest()->first();
+        return $query->whereNull('ended_at')->where(fn (Builder $expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', $now));
     }
 
     /**

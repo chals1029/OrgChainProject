@@ -13,21 +13,32 @@ class OfficeDocumentPreviewController extends Controller
 {
     public function convert(Request $request, OfficeDocumentConverter $converter)
     {
-        $actor = Auth::guard('office')->user();
-        abort_unless($actor instanceof OfficeUser && $actor->is_active && in_array($actor->office_role, ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true), 403);
-        $request->validate(['file' => ['required', 'file', 'max:20480']]);
+        if ($request->routeIs('portal.documents.preview.convert')) {
+            abort_unless(Auth::guard('student')->check(), 403);
+        } else {
+            $actor = Auth::guard('office')->user();
+            abort_unless($actor instanceof OfficeUser && $actor->is_active && in_array($actor->office_role, ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true), 403);
+        }
+        $request->validate(['file' => ['required', 'file', 'max:25600']]);
         $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
         $mime = strtolower((string) $file->getMimeType());
         $allowedMimes = ['application/msword', 'application/vnd.ms-word', 'application/vnd.ms-office', 'application/x-ole-storage', 'application/cdfv2', 'application/x-cdf', 'application/octet-stream'];
-        if (strtolower($file->getClientOriginalExtension()) !== 'doc' || ! in_array($mime, $allowedMimes, true)
-            || ! $this->isWordBinary($file->getRealPath())) {
-            return response()->json(['message' => 'Choose a genuine, non-empty Word 97–2003 DOC file no larger than 20 MB. Renaming another file to .doc is not supported.'], 422)
+        $valid = $extension === 'doc' && in_array($mime, $allowedMimes, true) && $this->isWordBinary($file->getRealPath());
+        if ($extension === 'docx') {
+            $zip = new \ZipArchive;
+            if ($zip->open($file->getRealPath()) === true) {
+                $valid = $zip->locateName('[Content_Types].xml') !== false && $zip->locateName('word/document.xml') !== false;
+                $zip->close();
+            }
+        }
+        if (! $valid) {
+            return response()->json(['message' => 'Choose a genuine, non-empty DOC or DOCX file no larger than 25 MB.'], 422)
                 ->header('Cache-Control', 'private, no-store')->header('X-Content-Type-Options', 'nosniff');
         }
         $result = null;
         try {
-            // Uploaded temporary paths have no extension. Copy the actual bytes
-            // to an owned .doc input; never persist a submission or document row.
+            // Uploaded temporary paths have no extension; copy only into a private workspace.
             $directory = storage_path('app/private/office-document-preview/'.bin2hex(random_bytes(20)));
             if (! is_dir(dirname($directory)) && ! mkdir(dirname($directory), 0700, true) && ! is_dir(dirname($directory))) {
                 throw new RuntimeException('The document preview could not prepare its private workspace.');
@@ -36,14 +47,14 @@ class OfficeDocumentPreviewController extends Controller
                 throw new RuntimeException('The document preview could not prepare its private workspace.');
             }
             try {
-                $source = $directory.'/document.doc';
+                $source = $directory.'/document.'.$extension;
                 if (! copy($file->getRealPath(), $source)) {
                     throw new RuntimeException('The document preview could not read the uploaded bytes.');
                 }
                 if (PHP_OS_FAMILY !== 'Windows') chmod($source, 0600);
                 $result = $converter->toPdf($source);
             } finally {
-                if (is_file($directory.'/document.doc')) unlink($directory.'/document.doc');
+                if (is_file($source)) unlink($source);
                 rmdir($directory);
             }
         } catch (Throwable $error) {

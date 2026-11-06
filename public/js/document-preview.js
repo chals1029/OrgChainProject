@@ -81,15 +81,15 @@
         },
     };
 
-    async function convertDoc(blob, trigger, name, signal) {
-        var endpoint = trigger.dataset.documentConversionUrl;
+    async function convertDoc(blob, trigger, name, signal, extension) {
+        var endpoint = trigger.dataset.documentConversionUrl || modal.dataset.documentConversionUrl;
         if (!endpoint) {
-            throw new Error('Legacy DOC needs the isolated document converter; no conversion endpoint is available on this page.');
+            throw new Error('Word preview conversion is unavailable on this page.');
         }
         var csrf = document.querySelector('meta[name="csrf-token"]') || document.querySelector('input[name="_token"]');
         if (!csrf) throw new Error('The security token is missing. Reload this page and try again.');
-        var filename = trigger.dataset.documentOriginalName || name || 'document.doc';
-        if (!/\.doc$/i.test(filename)) filename = 'document.doc';
+        var filename = trigger.dataset.documentOriginalName || name || ('document.' + extension);
+        if (!filename.toLowerCase().endsWith('.' + extension)) filename = 'document.' + extension;
         var form = new FormData();
         form.append('file', blob, filename);
         var response = await fetch(endpoint, {
@@ -100,7 +100,7 @@
             body: form,
         });
         if (!response.ok) {
-            var errorMessage = 'DOC conversion failed (' + response.status + '). Reload this page or ask the administrator to check the document converter.';
+            var errorMessage = 'Word conversion failed (' + response.status + '). Reload this page or ask the administrator to check the document converter.';
             if ((response.headers.get('Content-Type') || '').indexOf('application/json') !== -1) {
                 var payload = await response.json();
                 if (typeof payload.message === 'string') errorMessage = payload.message;
@@ -146,10 +146,11 @@
                 || ((genericMime || mime === 'application/zip' || mime === 'application/x-zip-compressed') && type === 'docx');
             var isLegacyDoc = !isDocx && (type === 'doc' || mime === 'application/msword' || mime === 'application/vnd.ms-word');
             var converted = false;
-            if (isLegacyDoc) {
-                message('Converting the original DOC in the isolated document converter…');
-                if (status) status.textContent = 'Converting the original DOC bytes…';
-                blob = await convertDoc(blob, trigger, name, controller.signal);
+            if (isLegacyDoc || isDocx) {
+                var extension = isDocx ? 'docx' : 'doc';
+                message('Preparing the Word document preview…');
+                if (status) status.textContent = 'Converting the original Word bytes…';
+                blob = await convertDoc(blob, trigger, name, controller.signal, extension);
                 if (token !== revision) return false;
                 isPdf = true;
                 converted = true;
@@ -177,30 +178,13 @@
                 await image.decode();
                 if (token !== revision) return false;
                 body.replaceChildren(image);
-            } else if (isDocx) {
-                if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-                    throw new Error('The Word preview library could not be loaded.');
-                }
-                var container = document.createElement('div');
-                await window.docx.renderAsync(blob, container, null, {
-                    breakPages: true,
-                    ignoreWidth: false,
-                    ignoreHeight: false,
-                    renderHeaders: true,
-                    renderFooters: true,
-                    renderFootnotes: true,
-                    renderEndnotes: true,
-                    useBase64URL: true,
-                });
-                if (token !== revision) return false;
-                body.replaceChildren(container);
             } else {
                 message('This file type cannot be previewed in the browser. Use Download to open the original document.');
                 if (status) status.textContent = 'No browser preview is available for this file type.';
                 return false;
             }
             if (status) status.textContent = converted
-                ? 'DOC · PDF preview'
+                ? 'Word · PDF preview'
                 : (isPdf ? 'PDF · Native browser viewer' : (isDocx ? 'Word document preview' : 'Document preview'));
             body.scrollTop = 0;
             body.scrollLeft = 0;

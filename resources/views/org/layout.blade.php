@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="{{ asset('css/org-portal.css') }}?v={{ filemtime(public_path('css/org-portal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/action-confirmations.css') }}?v={{ filemtime(public_path('css/action-confirmations.css')) }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
 </head>
@@ -227,10 +228,10 @@
                                 </button>
                             @endif
 
-                            <button type="button" class="org-dropdown-item org-dropdown-logout-btn" onclick="openLogoutModal()">
-                                <i class="bi bi-box-arrow-left"></i>
-                                <span>Logout</span>
-                            </button>
+                            <form method="post" action="{{ route('office.logout') }}" data-confirm-title="Confirm Logout" data-confirm-accept="Yes, Log Out" data-confirm-message="Are you sure you want to log out of your OrgChain session? Any unsaved changes will be lost.">
+                                @csrf
+                                <button type="submit" class="org-dropdown-item org-dropdown-logout-btn"><i class="bi bi-box-arrow-left"></i><span>Logout</span></button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -256,31 +257,6 @@
         @include('org.settings-modal')
     @endif
 
-    {{-- Hidden Logout Form --}}
-    <form method="post" action="{{ route('office.logout') }}" id="orgLogoutForm" data-confirm="off" style="display: none;">
-        @csrf
-    </form>
-
-    {{-- Logout Confirmation Modal --}}
-    <div id="logoutConfirmModal" class="org-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div class="org-modal-box" style="background: #ffffff; border-radius: 20px; border: 1.5px solid #f0e6e8; padding: 2rem; max-width: 420px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center;">
-            <div style="width: 56px; height: 56px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin: 0 auto 1.25rem;">
-                <i class="bi bi-box-arrow-right"></i>
-            </div>
-            <h3 style="font-size: 1.25rem; font-weight: 800; color: #1a1618; margin: 0 0 0.5rem;">Confirm Logout</h3>
-            <p style="font-size: 0.88rem; color: #635b5e; margin: 0 0 1.5rem; line-height: 1.5;">
-                Are you sure you want to log out of your OrgChain session? Any unsaved changes will be lost.
-            </p>
-            <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                <button type="button" onclick="closeLogoutModal()" style="flex: 1; padding: 0.75rem 1.25rem; border-radius: 9999px; border: 1.5px solid #e8dedf; background: #ffffff; font-weight: 700; font-size: 0.88rem; color: #554d50; cursor: pointer;">
-                    Cancel
-                </button>
-                <button type="button" onclick="document.getElementById('orgLogoutForm').submit()" style="flex: 1; padding: 0.75rem 1.25rem; border-radius: 9999px; border: none; background: #8b1828; font-weight: 700; font-size: 0.88rem; color: #ffffff; cursor: pointer; box-shadow: 0 4px 14px rgba(139, 24, 40, 0.25);">
-                    Yes, Log Out
-                </button>
-            </div>
-        </div>
-    </div>
 
     <script>
         document.getElementById('orgNotifications')?.addEventListener('toggle', function (event) {
@@ -318,24 +294,9 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeOrgUserDropdown();
-                closeLogoutModal();
             }
         });
 
-        function openLogoutModal() {
-            closeOrgUserDropdown();
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-        function closeLogoutModal() {
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
 
             /* Instant feedback + preloading so full-page tab switches feel fast.
                Shows the top progress bar the moment a sidebar tab is clicked,

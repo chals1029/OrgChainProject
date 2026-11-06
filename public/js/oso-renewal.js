@@ -6,7 +6,6 @@
     var ACCEPT = ALLOWED_EXTENSIONS.map(function (ext) { return '.' + ext; }).join(',');
     var PAGE_SIZE = 6;
     var IFRAME_TYPES = ['pdf', 'png', 'jpg', 'jpeg'];
-    var DOCX_OPTIONS = { inWrapper: true, ignoreWidth: false, ignoreHeight: false };
 
     function init() {
         var root = document.getElementById('osoRenewalDashboard');
@@ -210,8 +209,8 @@
 
     function exportCsv(rows) {
         if (!rows.length) return;
-        var header = ['Organization', 'College', 'Official status', 'Submitted', 'Renewal status', 'Requirements'];
-        var selectors = ['.or-name', '.or-college', '.or-official-status', '.or-submitted-date', '.or-renewal-status', '.or-requirements-status'];
+        var header = ['Organization', 'College', 'Official status', 'Renewal status'];
+        var selectors = ['.or-name', '.or-college', '.or-official-status', '.or-renewal-status'];
         var lines = [header.map(csvCell).join(',')];
         rows.forEach(function (row) {
             lines.push(selectors.map(function (selector) {
@@ -438,7 +437,7 @@
 
     /* Template preview */
 
-    var preview = { token: 0, controller: null };
+    var preview = { token: 0, controller: null, mediaUrl: null };
 
     function previewEls() {
         return {
@@ -458,6 +457,8 @@
             preview.controller.abort();
             preview.controller = null;
         }
+        if (preview.mediaUrl) URL.revokeObjectURL(preview.mediaUrl);
+        preview.mediaUrl = null;
         var els = previewEls();
         if (els.frame) {
             els.frame.removeAttribute('src');
@@ -552,47 +553,42 @@
     }
 
     function renderDocx(url, token, els) {
-        if (!els.docx) {
+        if (!els.frame || !els.dialog.dataset.conversionUrl) {
             setPreviewMessage('Preview is unavailable here. Use Download to view the file.', true);
             return;
         }
-        if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-            setPreviewMessage('The Word preview library failed to load. Download the file to view it.', true);
-            return;
-        }
-
-        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        var controller = new AbortController();
         preview.controller = controller;
-        setPreviewMessage('Loading preview\u2026', false);
-
-        fetch(url, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-            signal: controller ? controller.signal : undefined,
-        }).then(function (response) {
-            if (!response.ok) throw new Error('The server returned ' + response.status + ' while loading the template.');
-            return response.arrayBuffer();
-        }).then(function (buffer) {
+        setPreviewMessage('Preparing the Word document preview…', false);
+        fetch(url, { credentials: 'same-origin', signal: controller.signal }).then(function (response) {
+            if (!response.ok) throw new Error('The document could not be loaded.');
+            return response.blob();
+        }).then(function (blob) {
             if (token !== preview.token) return null;
-            var container = document.createElement('div');
-            container.className = 'or-preview-docx-render';
-            els.docx.replaceChildren(container);
-            return window.docx.renderAsync(buffer, container, null, DOCX_OPTIONS).then(function () {
-                if (token !== preview.token) {
-                    container.remove();
-                    return;
-                }
-                if (preview.controller === controller) preview.controller = null;
-                els.docx.hidden = false;
-                setPreviewMessage('', false);
+            var form = new FormData();
+            form.append('file', blob, 'document.docx');
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+            if (!csrf) throw new Error('The security token is missing.');
+            return fetch(els.dialog.dataset.conversionUrl, {
+                method: 'POST', credentials: 'same-origin', signal: controller.signal,
+                headers: { 'X-CSRF-TOKEN': csrf.content, Accept: 'application/json' }, body: form,
             });
-        }).catch(function (error) {
-            if (token !== preview.token || (error && error.name === 'AbortError')) return;
+        }).then(function (response) {
+            if (!response || token !== preview.token) return null;
+            if (!response.ok) throw new Error('The document converter is unavailable.');
+            return response.blob();
+        }).then(function (blob) {
+            if (!blob || token !== preview.token) return;
+            if (blob.type !== 'application/pdf') throw new Error('The converter did not return a PDF.');
+            preview.mediaUrl = URL.createObjectURL(blob);
+            els.frame.src = preview.mediaUrl + '#view=FitH';
+            els.frame.hidden = false;
+            setPreviewMessage('', false);
             if (preview.controller === controller) preview.controller = null;
-            els.docx.replaceChildren();
-            els.docx.hidden = true;
-            var detail = error && error.message ? ' ' + error.message : '';
-            setPreviewMessage('Could not preview this document.' + detail + ' Download the file to view it.', true);
+        }).catch(function (error) {
+            if (token !== preview.token || error.name === 'AbortError') return;
+            if (preview.controller === controller) preview.controller = null;
+            setPreviewMessage('Could not preview this document. ' + error.message + ' Download the original file to view it.', true);
         });
     }
 

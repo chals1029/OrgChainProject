@@ -43,6 +43,7 @@ class TosaWorkspaceTest extends TestCase
         });
         (require database_path('migrations/2026_10_31_000001_create_tosa_workspace_tables.php'))->up();
         (require database_path('migrations/2026_11_05_000001_add_tosa_published_decisions.php'))->up();
+        (require database_path('migrations/2026_11_06_000001_add_tosa_shortlist_captions.php'))->up();
     }
 
     protected function tearDown(): void
@@ -92,7 +93,7 @@ class TosaWorkspaceTest extends TestCase
         $this->actingAs($this->officer('ovcaa'), 'office')->getJson($url)->assertForbidden();
         $this->actingAs($this->officer(), 'office');
         Storage::disk('local')->delete($applicant->requirementPath('academic'));
-        $response = $this->get($url)->assertOk()->assertHeader('Content-Type', 'application/zip');
+        $response = $this->get($url)->assertOk()->assertDownload($applicant->full_name.'.zip')->assertHeader('Content-Type', 'application/zip');
         $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
         $path = $response->baseResponse->getFile()->getPathname();
         $zip = new ZipArchive;
@@ -131,14 +132,15 @@ class TosaWorkspaceTest extends TestCase
         $this->assertNull(TosaShortlist::query()->findOrFail(1)->decisionFor($applicants[0]->fresh(), true));
         $this->assertNull(TosaShortlist::query()->findOrFail(1)->published_entries);
         $this->assertSame([], TosaShortlist::query()->findOrFail(1)->applicantIdsForDecision('qualified'));
-        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids, 'notice_event' => 'Recognition event', 'notice_contact' => 'OSO office', 'notice_signatory' => 'Committee chair'])->assertOk();
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids, 'caption_qualified' => 'Selected caption', 'caption_not_qualified' => 'Other caption'])->assertOk();
         $shortlist = TosaShortlist::query()->findOrFail(1);
         $this->assertSame('qualified', $shortlist->decisionFor($applicants[0]->fresh(), true));
         $this->assertSame('not_qualified', $shortlist->decisionFor($reviewedOther->fresh(), true));
         $this->assertNull($shortlist->decisionFor($pendingOther->fresh(), false));
         $this->assertSame('Synthetic Applicant 1', $shortlist->published_decisions[$applicants[0]->id]['name']);
         $this->assertSame('Synthetic Applicant 11', $shortlist->published_decisions[$reviewedOther->id]['name']);
-        $this->assertSame('Recognition event', $shortlist->published_decisions[$applicants[0]->id]['event']);
+        $this->assertSame('Selected caption', $shortlist->published_decisions[$applicants[0]->id]['caption']);
+        $this->assertSame('Other caption', $shortlist->published_decisions[$reviewedOther->id]['caption']);
         $this->assertArrayNotHasKey($pendingOther->id, $shortlist->published_decisions);
         $this->assertEqualsCanonicalizing($ids, $shortlist->applicantIdsForDecision('qualified'));
         $this->assertSame([$reviewedOther->id], $shortlist->applicantIdsForDecision('not_qualified'));
@@ -151,22 +153,24 @@ class TosaWorkspaceTest extends TestCase
         $this->assertArrayNotHasKey('sr_code', $published[0]);
         $this->assertArrayNotHasKey('email', $published[0]);
         $this->assertDatabaseHas('tosa_history_events', ['action' => 'top10_published', 'actor_id' => $office->id], 'mysql');
-
+        $this->postJson(route('office.tosa.top10.remove', $ids[0]), [])->assertForbidden();
+        $this->postJson(route('office.tosa.top10.add', $reviewedOther), [])->assertForbidden();
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids, 'caption_qualified' => 'Selected caption', 'caption_not_qualified' => 'Other caption'])->assertForbidden();
+        $this->postJson($url, ['intent' => 'unpublish'])->assertOk();
+        $this->assertNull($shortlist->fresh()->published_entries);
+        $this->assertNull($shortlist->fresh()->decisionFor($applicants[0]->fresh(), true));
         $this->postJson(route('office.tosa.top10.remove', $ids[0]), [])->assertOk()->assertJsonPath('removed', true);
-        $this->assertSame($published, $shortlist->fresh()->published_entries);
         $replacement = $reviewedOther;
         $this->postJson(route('office.tosa.top10.add', $replacement), [])->assertOk()->assertJsonPath('draft_count', 10);
         $currentIds = [...array_slice($ids, 1), $replacement->id];
-        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids])->assertUnprocessable();
+        $captions = ['caption_qualified' => 'Selected caption', 'caption_not_qualified' => 'Other caption'];
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $ids] + $captions)->assertUnprocessable();
         $this->assertSame($currentIds, $shortlist->fresh()->draft_ids);
-        $this->assertSame($published, $shortlist->fresh()->published_entries);
-        $this->assertSame('qualified', $shortlist->fresh()->decisionFor($applicants[0]->fresh(), true));
-        $this->assertSame('not_qualified', $shortlist->fresh()->decisionFor($replacement->fresh(), true));
         $applicants[1]->update(['subsection' => 'returned']);
-        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $currentIds])->assertUnprocessable();
-        $this->assertSame($published, $shortlist->fresh()->published_entries);
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $currentIds] + $captions)->assertUnprocessable();
         $applicants[1]->update(['subsection' => 'screening']);
-        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $currentIds])->assertOk();
+        $this->postJson($url, ['intent' => 'publish', 'applicant_ids' => $currentIds] + $captions)->assertOk();
+        $this->postJson(route('office.tosa.top10.remove', $currentIds[0]), [])->assertForbidden();
         $this->assertSame('not_qualified', $shortlist->fresh()->decisionFor($applicants[0]->fresh(), true));
         $this->assertSame('qualified', $shortlist->fresh()->decisionFor($replacement->fresh(), true));
         $review = $replacement->fresh()->document_review;
@@ -176,33 +180,28 @@ class TosaWorkspaceTest extends TestCase
         $this->assertNotContains($replacement->id, $shortlist->fresh()->applicantIdsForDecision('qualified'));
         $this->postJson($url, ['intent' => 'unpublish'])->assertOk();
         $this->assertNull($shortlist->fresh()->published_entries);
-        $this->assertNull($shortlist->fresh()->decisionFor($replacement->fresh(), true));
         $this->assertSame([], $shortlist->fresh()->applicantIdsForDecision('qualified'));
     }
 
-    public function test_removing_one_draft_applicant_preserves_other_entries_and_published_results(): void
+    public function test_removing_a_draft_applicant_requires_unpublishing_and_preserves_other_entries(): void
     {
         $office = $this->officer();
-        $first = $this->applicant(1, false);
-        $second = $this->applicant(2, false);
-        $missingId = 999999;
-        $published = [['name' => 'Previously Published', 'program' => 'Test Program']];
+        $first = $this->applicant(1);
+        $second = $this->applicant(2);
         $shortlist = TosaShortlist::query()->findOrFail(1);
-        $shortlist->update(['draft_ids' => [$first->id, $second->id, $missingId], 'published_entries' => $published, 'published_at' => now()]);
+        $shortlist->update(['draft_ids' => [$first->id, $second->id], 'published_entries' => [['name' => 'Previously Published']], 'published_at' => now()]);
         $url = route('office.tosa.top10.remove', $first->id);
         $this->postJson($url, [])->assertUnauthorized();
         $this->actingAs($this->officer('ovcaa'), 'office')->postJson($url, [])->assertForbidden();
         $this->actingAs($office, 'office');
         $this->postJson($url, ['applicant_ids' => []])->assertUnprocessable();
+        $this->postJson($url, [])->assertForbidden();
+        $this->postJson(route('office.tosa.top10.save'), ['intent' => 'unpublish'])->assertOk();
         $this->postJson($url, [])->assertOk()->assertJsonPath('removed', true);
-        $this->assertSame([$second->id, $missingId], $shortlist->fresh()->draft_ids);
-        $this->assertSame($published, $shortlist->fresh()->published_entries);
-        $this->assertSame('submitted', $first->fresh()->status);
+        $this->assertSame([$second->id], $shortlist->fresh()->draft_ids);
+        $this->assertTrue(app(\App\Services\TosaWorkflowService::class)->isVerified($first->fresh()));
         $this->assertTrue(Storage::disk('local')->exists($first->requirementPath('application_form')));
         $this->assertDatabaseHas('tosa_history_events', ['action' => 'top10_removed', 'actor_id' => $office->id, 'applicant_id' => $first->id], 'mysql');
         $this->postJson($url, [])->assertOk()->assertJsonPath('removed', false);
-        $this->postJson(route('office.tosa.top10.remove', $missingId), [])->assertOk()->assertJsonPath('removed', true);
-        $this->assertSame([$second->id], $shortlist->fresh()->draft_ids);
-        $this->assertSame($published, $shortlist->fresh()->published_entries);
     }
 }

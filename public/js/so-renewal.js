@@ -110,7 +110,8 @@
     save.addEventListener('click', async function () {
         if (saving || form.dataset.submitting === '1' || save.disabled) return;
         if (!details.every(function (input) { return input.reportValidity(); })) return;
-        if (!window.OrgActionConfirmations.confirm('Save these organization information changes?')) return;
+        if (!await window.OrgActionConfirmations.confirm('Save these organization information changes?')) return;
+        if (saving || form.dataset.submitting === '1' || save.disabled) return;
         var payload = {
             window_id: form.elements.window_id.value,
             organization_name: form.elements.organization_name.value

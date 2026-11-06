@@ -78,8 +78,8 @@ class OfficeDocumentConverter
 
     private function prepare(string $sourcePath, string $extension): array
     {
-        if (! is_file($sourcePath) || ! is_readable($sourcePath) || filesize($sourcePath) === 0 || filesize($sourcePath) > 20 * 1024 * 1024) {
-            throw new RuntimeException('Choose a non-empty document no larger than 20 MB.');
+        if (! is_file($sourcePath) || ! is_readable($sourcePath) || filesize($sourcePath) === 0 || filesize($sourcePath) > 25 * 1024 * 1024) {
+            throw new RuntimeException('Choose a non-empty document no larger than 25 MB.');
         }
         $root = storage_path('app/private/office-document-converter');
         if (! is_dir($root) && ! mkdir($root, 0700, true) && ! is_dir($root)) {

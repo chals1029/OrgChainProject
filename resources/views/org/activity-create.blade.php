@@ -358,7 +358,7 @@
         </div>
 
         {{-- Real DOCX/PDF/image preview modal. Preview never navigates directly to a download response. --}}
-        <dialog class="org-doc-preview-dialog" id="activityDocPreviewModal" data-document-preview-dialog aria-labelledby="activityDocPreviewTitle">
+        <dialog class="org-doc-preview-dialog" id="activityDocPreviewModal" data-document-preview-dialog data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="activityDocPreviewTitle">
             <div class="org-doc-preview-box">
                 <div class="org-doc-preview-head">
                     <div>

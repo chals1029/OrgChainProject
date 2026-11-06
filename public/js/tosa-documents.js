@@ -45,8 +45,8 @@
             submitStatus.textContent = 'Submitting packet for review';
             submitHelp.textContent = 'Saving files and sending your packet to OSO. Please wait.';
         } else if (!callOpen) {
-            submitStatus.textContent = 'Waiting for a Call for TOSA';
-            submitHelp.textContent = 'New applications open when OSO publishes a Call for TOSA.';
+            submitStatus.textContent = 'Applications closed';
+            submitHelp.textContent = 'TOSA applications are currently closed.';
         } else if (remaining) {
             submitStatus.textContent = 'Complete your packet before submitting';
             var missing = incomplete.filter(function (entry) { return !entry.input.files[0]; });

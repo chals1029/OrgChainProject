@@ -14,6 +14,7 @@ use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentPortalController;
 use App\Http\Controllers\SystemAdminAuthController;
 use App\Http\Controllers\SystemAdminController;
+use App\Http\Controllers\TosaFilingController;
 use App\Http\Controllers\TosaPackageController;
 use App\Http\Controllers\TosaShortlistController;
 use App\Http\Controllers\TosaWorkbookPreviewController;
@@ -72,8 +73,10 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::post('/feedback', [StudentPortalController::class, 'storeFeedback'])->name('feedback.store');
     Route::post('/activities/{activity}/rsvp', [StudentPortalController::class, 'toggleRsvp'])->name('activities.rsvp');
     Route::get('/expenses/{receipt}/verify', [StudentPortalController::class, 'verifyExpenseSeal'])->name('expenses.verify');
+    Route::post('/documents/preview/convert', [\App\Http\Controllers\OfficeDocumentPreviewController::class, 'convert'])->name('documents.preview.convert');
     Route::get('/tosa/templates/{key}', [StudentPortalController::class, 'downloadTosaTemplate'])->name('tosa.templates.show');
     Route::get('/tosa/workbook-preview', [TosaWorkbookPreviewController::class, 'student'])->name('tosa.workbook.preview');
+    Route::get('/tosa/result-letter', [StudentPortalController::class, 'tosaResultLetter'])->name('tosa.letter');
     Route::get('/tosa/documents/{key}', [StudentPortalController::class, 'downloadTosaDocument'])->name('tosa.documents.show');
     Route::post('/tosa/submit', [StudentPortalController::class, 'submitTosaApplication'])->name('tosa.submit');
 });
@@ -169,6 +172,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::post('/renewal/organizations/{organization}/status', [OfficePortalController::class, 'updateOrganizationQualification'])->name('renewal.organization.status');
     Route::get('/tosa', [OfficePortalController::class, 'tosa'])->name('tosa');
     Route::get('/tosa/workbook-preview', [TosaWorkbookPreviewController::class, 'office'])->name('tosa.workbook.preview');
+    Route::post('/tosa/announcements/{announcement}/end', [TosaFilingController::class, 'end'])->name('tosa.announcements.end');
     Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
     Route::post('/tosa/top-ten', [TosaShortlistController::class, 'save'])->name('tosa.top10.save');
     Route::post('/tosa/top-ten/{applicantId}/remove', [TosaShortlistController::class, 'remove'])->whereNumber('applicantId')->name('tosa.top10.remove');

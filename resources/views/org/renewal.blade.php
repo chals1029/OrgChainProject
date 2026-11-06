@@ -530,7 +530,7 @@
     </script>
 
     @if ($isSo)
-    <dialog id="renewalDocViewerModal" class="document-preview-dialog" data-document-preview-dialog aria-labelledby="renewalDocViewerTitle">
+    <dialog id="renewalDocViewerModal" class="document-preview-dialog" data-document-preview-dialog data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="renewalDocViewerTitle">
         <div class="document-preview-box">
             <header class="document-preview-head">
                 <div class="document-preview-heading">

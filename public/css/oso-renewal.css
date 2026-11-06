@@ -551,7 +551,7 @@ input.or-search:focus {
 .or-table {
     display: table;
     width: 100%;
-    min-width: 860px;
+    min-width: 640px;
     border-collapse: collapse;
     border-spacing: 0;
     overflow: visible;

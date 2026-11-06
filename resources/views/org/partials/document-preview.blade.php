@@ -1,6 +1,6 @@
 @once
     <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
-    <dialog class="document-preview-dialog" id="sharedDocumentPreviewDialog" data-document-preview-dialog aria-labelledby="sharedDocumentPreviewTitle">
+    <dialog class="document-preview-dialog" id="sharedDocumentPreviewDialog" data-document-preview-dialog data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="sharedDocumentPreviewTitle">
         <div class="document-preview-box">
             <header class="document-preview-head">
                 <div class="document-preview-title">

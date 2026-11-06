@@ -20,6 +20,7 @@ use App\Services\ActivityBudgetService;
 use App\Services\DocumentCompletion;
 use App\Services\OrganizationCashLedger;
 use App\Services\OfficeDocumentConverter;
+use App\Services\TosaLetterService;
 use App\Services\TosaRequirements;
 use App\Services\TosaWorkflowService;
 use Illuminate\Http\JsonResponse;
@@ -268,6 +269,25 @@ class StudentPortalController extends Controller
         );
     }
 
+    public function tosaResultLetter(Request $request): \Illuminate\Http\Response
+    {
+        abort_unless(Auth::guard('student')->check(), 401);
+        $applicant = $this->myTosaApplication(Auth::guard('student')->user());
+        abort_unless($applicant, 404);
+        $shortlist = TosaShortlist::query()->findOrFail(1);
+        $decision = $shortlist->decisionFor($applicant, app(TosaWorkflowService::class)->isVerified($applicant));
+        $notice = $decision ? ($shortlist->published_decisions[(string) $applicant->id] ?? null) : null;
+        abort_unless($decision && is_array($notice) && ! empty($notice['name']), 404);
+        $contents = app(TosaLetterService::class)->generate($decision, $notice);
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="TOSA-result-letter.docx"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     /**
      * Persist the complete selected packet and submit it in one operation.
      */
@@ -310,8 +330,11 @@ class StudentPortalController extends Controller
                     throw ValidationException::withMessages(['tosa' => 'Your submitted application is locked. Only OSO returning it for revision allows changes or resubmission.']);
                 }
                 $revision = $applicant && $applicant->status === 'submitted' && $applicant->subsection === 'returned';
-                if (! $revision && OfficeAnnouncement::activeTosaCall() === null) {
-                    throw ValidationException::withMessages(['tosa' => 'New applications open when OSO publishes a Call for TOSA.']);
+                // A shared call lock serializes submissions with manual closure.
+                $activeCall = OfficeAnnouncement::query()->published()
+                    ->whereIn('type', ['TOSA', 'Call for TOSA'])->latest()->sharedLock()->first();
+                if (! $activeCall || ($activeCall->expires_at && $activeCall->expires_at->lte(now()))) {
+                    throw ValidationException::withMessages(['tosa' => 'TOSA applications are closed.']);
                 }
                 foreach (TosaRequirements::SUBMISSIONS as $key => $definition) {
                     $file = $documents[$key] ?? null;
@@ -720,13 +743,24 @@ class StudentPortalController extends Controller
             ? TosaHistoryEvent::query()->where('applicant_id', $tosaApplicant->id)
                 ->where('action', 'returned')->orderByDesc('id')->first()?->details
             : null;
+        if (is_array($tosaCorrection)) {
+            $correctionKeys = is_array($tosaCorrection['document_keys'] ?? null)
+                ? array_values(array_filter($tosaCorrection['document_keys'], 'is_string'))
+                : (is_string($tosaCorrection['document_key'] ?? null) && $tosaCorrection['document_key'] !== ''
+                    ? [$tosaCorrection['document_key']]
+                    : []);
+            $tosaCorrection['document_keys'] = $correctionKeys;
+            $tosaCorrection['document_titles'] = array_values(array_filter(array_map(
+                fn (string $key): ?string => TosaRequirements::SUBMISSIONS[$key]['title'] ?? null,
+                $correctionKeys,
+            )));
+        }
         $tosaVerified = $tosaApplicant ? app(TosaWorkflowService::class)->isVerified($tosaApplicant) : false;
         $tosaCall = collect($announcements)->firstWhere('category', 'tosa');
-        $tosaSubmissionOpen = $tosaRevision || $tosaCall !== null;
+        $tosaSubmissionOpen = $tosaCall !== null;
         $tosaShortlist = TosaShortlist::query()->findOrFail(1);
         $tosaDecision = $tosaApplicant ? $tosaShortlist->decisionFor($tosaApplicant, $tosaVerified) : null;
         $tosaNotice = $tosaDecision ? ($tosaShortlist->published_decisions[(string) $tosaApplicant->id] ?? null) : null;
-        $tosaPublished = $tosaShortlist->published_at ? $tosaShortlist->published_entries : null;
 
         $tosaDocs = collect(TosaRequirements::SUBMISSIONS)->map(function (array $document, string $key) use ($tosaApplicant, $tosaRequirements): array {
             $path = $tosaApplicant?->requirementFile($key);
@@ -856,7 +890,6 @@ class StudentPortalController extends Controller
             'tosaNotice' => $tosaNotice,
             'tosaCall' => $tosaCall,
             'tosaSubmissionOpen' => $tosaSubmissionOpen,
-            'tosaPublished' => $tosaPublished,
             'bulletins' => $bulletins,
             'regCounts' => $regCounts,
             'myRsvps' => $myRsvps,

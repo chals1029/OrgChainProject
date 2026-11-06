@@ -408,7 +408,7 @@ class OsoSettingsTest extends TestCase
             ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id))
             ->assertSee($applicant->full_name);
         $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', [
-            'subsection' => 'returned', 'document_key' => 'application_form', 'reason' => 'Please complete the form.',
+            'subsection' => 'returned', 'document_keys' => ['application_form'], 'reason' => 'Please complete the form.',
         ])->assertOk();
         $this->assertSame('returned', $applicant->refresh()->subsection);
         $this->get('/office-desk/tosa')->assertOk()
@@ -471,10 +471,14 @@ class OsoSettingsTest extends TestCase
             $ovcaa->update(['tosa_clearance' => $clearance]);
             $this->assertSame('Level 1 Read-only', $ovcaa->effectiveTosaClearance());
             $session = ['office_auth_state' => ['id' => $ovcaa->id, 'version' => (int) $ovcaa->auth_version]];
-            $this->actingAs($ovcaa, 'office')->withSession($session)->get('/office-desk/tosa')->assertOk()
-                ->assertDontSee('Add to Top 10')
-                ->assertDontSee('Return for correction')
+            $response = $this->actingAs($ovcaa, 'office')->withSession($session)->get('/office-desk/tosa')->assertOk()
                 ->assertViewHas('tosaApplicants', fn ($applicants) => $applicants->contains('id', $applicant->id));
+            $document = new \DOMDocument;
+            @$document->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($document);
+            foreach (['office.tosa.top10.add', 'office.tosa.review', 'office.tosa.subsection'] as $route) {
+                $this->assertSame(0, $xpath->query('//form[@action="'.route($route, $applicant).'"]')->length);
+            }
             $this->postJson('/office-desk/tosa/'.$applicant->id.'/subsection', ['subsection' => 'returned'])
                 ->assertForbidden();
             $this->postJson('/office-desk/tosa/references/template', [])->assertForbidden();

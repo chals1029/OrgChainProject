@@ -55,6 +55,8 @@ class TosaManualVerificationTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_10_31_000001_create_tosa_workspace_tables.php'))->up();
+        (require database_path('migrations/2026_11_05_000001_add_tosa_published_decisions.php'))->up();
+        (require database_path('migrations/2026_11_06_000001_add_tosa_shortlist_captions.php'))->up();
     }
 
     protected function tearDown(): void
@@ -133,7 +135,8 @@ class TosaManualVerificationTest extends TestCase
         $this->postJson($url, [])->assertOk()->assertJsonPath('added', false)->assertJsonPath('draft_count', 1);
         $this->assertSame($saved->document_review, $applicant->fresh()->document_review);
         $this->assertSame([$applicant->id], $shortlist->fresh()->draft_ids);
-        $this->assertSame(2, TosaHistoryEvent::query()->count());
+        $this->assertSame(1, TosaHistoryEvent::query()->where('action', 'top10_saved')->where('applicant_id', $applicant->id)->count());
+        $this->assertSame(1, TosaHistoryEvent::query()->where('action', 'selection_updated')->count());
     }
 
     public function test_missing_or_replaced_original_blocks_addition_until_reviewed_again(): void
@@ -213,7 +216,7 @@ class TosaManualVerificationTest extends TestCase
         $this->assertNull(TosaShortlist::query()->findOrFail(1)->published_entries);
     }
 
-    public function test_oso_returns_a_specific_document_and_emails_the_linked_student(): void
+    public function test_oso_returns_selected_documents_removes_top_selection_and_emails_the_linked_student(): void
     {
         $applicant = $this->applicant();
         $applicant->update(['email' => 'outdated@example.invalid']);
@@ -222,7 +225,7 @@ class TosaManualVerificationTest extends TestCase
             'email' => 'linked-student@example.invalid', 'account_status' => 'active', 'role' => 'student',
         ]);
         $url = route('office.tosa.subsection', $applicant);
-        $payload = ['subsection' => 'returned', 'document_key' => 'application_form', 'reason' => 'Please add the missing signature.'];
+        $payload = ['subsection' => 'returned', 'document_keys' => ['application_form', 'academic'], 'reason' => 'Please add the missing signature.'];
         $this->actingAs($this->officer('ovcaa', 'Level 2 Evaluator'), 'office')
             ->postJson($url, $payload)->assertForbidden();
         $this->actingAs($this->officer(), 'office');
@@ -230,16 +233,19 @@ class TosaManualVerificationTest extends TestCase
         $this->postJson(route('office.tosa.review', $applicant), [])->assertOk();
         $this->postJson($addition, [])->assertOk()->assertJsonPath('added', true);
         $this->postJson($url, ['subsection' => 'returned'])->assertUnprocessable()
-            ->assertJsonValidationErrors(['document_key', 'reason']);
+            ->assertJsonValidationErrors(['document_keys', 'reason']);
         $this->postJson($url, $payload + ['gwa' => 1.0])->assertUnprocessable();
-        $this->postJson($url, array_merge($payload, ['document_key' => 'unknown']))->assertUnprocessable();
+        $this->postJson($url, array_merge($payload, ['document_keys' => ['unknown']]))->assertUnprocessable();
         $this->postJson($url, $payload)->assertOk()->assertJsonPath('email_sent', true);
         $this->assertSame('returned', $applicant->fresh()->subsection);
         $event = TosaHistoryEvent::query()->where('action', 'returned')->where('applicant_id', $applicant->id)->sole();
-        $this->assertSame(['document_key' => 'application_form', 'reason' => $payload['reason']], $event->details);
+        $this->assertSame(['document_keys' => ['application_form', 'academic'], 'reason' => $payload['reason']], $event->details);
+        $this->assertNotContains($applicant->id, TosaShortlist::query()->findOrFail(1)->draft_ids ?? []);
+        $this->assertDatabaseHas('tosa_history_events', ['action' => 'top10_removed', 'applicant_id' => $applicant->id], 'mysql');
         $mail = Mail::mailer('array')->getSymfonyTransport()->messages()->sole()->getOriginalMessage();
         $this->assertSame('linked-student@example.invalid', $mail->getTo()[0]->getAddress());
         $this->assertStringContainsString('Completed TOSA Application Form', $mail->getTextBody());
+        $this->assertStringContainsString('Academic Evidence', $mail->getTextBody());
         $this->assertStringContainsString($payload['reason'], $mail->getTextBody());
         $this->assertStringContainsString('/portal#tosa', $mail->getTextBody());
         $this->assertCount(0, $mail->getAttachments());
@@ -264,7 +270,7 @@ class TosaManualVerificationTest extends TestCase
                 }
             }
             $this->postJson(route('office.tosa.subsection', $applicant), [
-                'subsection' => 'returned', 'document_key' => 'application_form', 'reason' => 'Upload the signed form.',
+                'subsection' => 'returned', 'document_keys' => ['application_form'], 'reason' => 'Upload the signed form.',
             ])->assertOk()->assertJsonPath('email_sent', false);
             $this->assertSame('returned', $applicant->fresh()->subsection);
         }
@@ -277,7 +283,7 @@ class TosaManualVerificationTest extends TestCase
         UserAccount::query()->create(['sr_code' => $applicant->sr_code, 'email' => 'student@example.invalid', 'account_status' => 'active']);
         Mail::shouldReceive('raw')->once()->andThrow(new \RuntimeException('Simulated mail failure'));
         $this->actingAs($this->officer(), 'office')->postJson(route('office.tosa.subsection', $applicant), [
-            'subsection' => 'returned', 'document_key' => 'application_form', 'reason' => 'Add a signature.',
+            'subsection' => 'returned', 'document_keys' => ['application_form'], 'reason' => 'Add a signature.',
         ])->assertOk()->assertJsonPath('email_sent', false);
         $this->assertSame('returned', $applicant->fresh()->subsection);
         $this->assertSame('Add a signature.', TosaHistoryEvent::query()->where('action', 'returned')->sole()->details['reason']);

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\OfficeAnnouncement;
 use App\Models\OfficeTemplate;
 use App\Models\TosaApplicant;
+use App\Models\TosaShortlist;
 use App\Models\UserAccount;
 use App\Services\OfficeDocumentConverter;
 use App\Services\TosaRequirements;
@@ -72,6 +73,9 @@ class TosaPrivateFilesTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_10_31_000001_create_tosa_workspace_tables.php'))->up();
+        (require database_path('migrations/2026_11_05_000001_add_tosa_published_decisions.php'))->up();
+        (require database_path('migrations/2026_11_05_000002_add_tosa_filing_controls.php'))->up();
+        (require database_path('migrations/2026_11_06_000001_add_tosa_shortlist_captions.php'))->up();
     }
 
     protected function tearDown(): void
@@ -176,6 +180,54 @@ class TosaPrivateFilesTest extends TestCase
         return $files;
     }
 
+    public function test_result_letters_are_personalized_private_and_require_a_current_published_review(): void
+    {
+        $applicant = $this->completeApplication();
+        $documents = [];
+        foreach (self::SECTIONS as $key) {
+            $documents[$key] = ['path' => $applicant->requirementPath($key), 'verified_by' => 1, 'verified_at' => now()->toIso8601String()];
+        }
+        $applicant->forceFill(['status' => 'submitted', 'subsection' => 'screening', 'document_review' => ['documents' => $documents]])->save();
+        $shortlist = TosaShortlist::query()->findOrFail(1);
+        $url = route('portal.tosa.letter');
+        $this->get($url)->assertRedirect('/');
+        $this->actingAs($this->student(), 'student')->get($url)->assertNotFound();
+        foreach (['qualified' => 'Warmest Congratulations', 'not_qualified' => 'regrets to inform you'] as $status => $expected) {
+            $shortlist->update(['published_at' => now(), 'published_decisions' => [$applicant->id => [
+                'status' => $status, 'review' => TosaShortlist::reviewFingerprint($applicant),
+                'name' => 'Test & Student', 'program' => 'Test Program',
+            ]]]);
+            $response = $this->get($url.'?download=1')->assertOk();
+            $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
+            $this->assertTrue($response->headers->hasCacheControlDirective('private'));
+            $this->assertStringContainsString('attachment', $response->headers->get('Content-Disposition'));
+            $tmp = tempnam(sys_get_temp_dir(), 'letter-test-');
+            try {
+                file_put_contents($tmp, $response->getContent());
+                $zip = new \ZipArchive;
+                $this->assertTrue($zip->open($tmp));
+                $xml = $zip->getFromName('word/document.xml');
+                $zip->close();
+                $this->assertStringContainsString('Test &amp; Student', $xml);
+                $this->assertStringContainsString('Test Program', $xml);
+                $this->assertStringContainsString($expected, strip_tags($xml));
+                $this->assertStringNotContainsString('Villafranca', $xml);
+                $this->assertStringNotContainsString('Bautista', $xml);
+            } finally {
+                @unlink($tmp);
+            }
+            $this->assertStringContainsString('inline', $this->get($url)->assertOk()->headers->get('Content-Disposition'));
+        }
+        $other = UserAccount::query()->create(['user_id' => 2, 'sr_code' => 'other-student', 'full_name' => 'Other Student', 'account_status' => 'active', 'role' => 'student']);
+        $this->actingAs($other, 'student')->get($url.'?applicant='.$applicant->id)->assertNotFound();
+        $this->actingAs($this->student(), 'student');
+        $applicant->update(['subsection' => 'returned']);
+        $this->get($url)->assertNotFound();
+        $applicant->update(['subsection' => 'screening']);
+        $shortlist->update(['published_at' => null]);
+        $this->get($url)->assertNotFound();
+    }
+
     public function test_new_packet_requires_an_active_tosa_call_not_a_general_notice(): void
     {
         OfficeAnnouncement::query()->update(['type' => 'General Announcement']);
@@ -185,7 +237,15 @@ class TosaPrivateFilesTest extends TestCase
         $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
-    public function test_returned_packet_can_be_resubmitted_after_call_expires_and_requires_new_review(): void
+    public function test_archived_call_does_not_open_new_applications(): void
+    {
+        OfficeAnnouncement::query()->firstOrFail()->forceFill(['ended_at' => now()])->save();
+        $this->actingAs($this->student(), 'student')->post(route('portal.tosa.submit'), ['documents' => $this->packet()])
+            ->assertRedirect()->assertSessionHasErrors('tosa');
+        $this->assertSame(0, TosaApplicant::query()->count());
+    }
+
+    public function test_returned_packet_requires_an_active_call_and_new_review_after_resubmission(): void
     {
         $call = OfficeAnnouncement::query()->firstOrFail();
         $this->assertSame('tosa', $call->studentPublication()['category']);
@@ -202,7 +262,14 @@ class TosaPrivateFilesTest extends TestCase
             'committee_members' => ['members' => [5], 'assigned_by' => 1, 'assigned_at' => now()->toIso8601String()],
             'score_evaluation' => ['status' => 'finalized'],
         ])->save();
-        $call->update(['expires_at' => now()->subMinute()]);
+        $call->update(['expires_at' => now()]);
+        $this->post(route('portal.tosa.submit'))->assertRedirect()->assertSessionHasErrors('tosa');
+        $this->assertSame('returned', $applicant->fresh()->subsection);
+        $this->assertSame($files, $this->savedBytes($applicant->fresh()));
+        $call->forceFill(['expires_at' => now()->addDay(), 'ended_at' => now()])->save();
+        $this->post(route('portal.tosa.submit'))->assertRedirect()->assertSessionHasErrors('tosa');
+        $this->assertSame('returned', $applicant->fresh()->subsection);
+        $call->forceFill(['ended_at' => null])->save();
         $this->post(route('portal.tosa.submit'))->assertRedirect()->assertSessionHasNoErrors();
         $applicant->refresh();
         $this->assertDatabaseHas('tosa_history_events', [
@@ -777,6 +844,18 @@ class TosaPrivateFilesTest extends TestCase
             ->assertOk()->assertDownload('TOSA Submission Guide.doc');
         $this->assertSame($this->referenceBytes('submission_guide'), file_get_contents($download->baseResponse->getFile()->getPathname()));
         $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->assertSame(0, TosaApplicant::query()->count());
+    }
+
+    public function test_student_preview_rejects_invalid_docx_and_reports_converter_failure(): void
+    {
+        $url = route('portal.documents.preview.convert');
+        $this->post($url, ['file' => UploadedFile::fake()->createWithContent('file.docx', 'invalid')])->assertRedirect('/');
+        $this->actingAs($this->student(), 'student');
+        $this->postJson($url, ['file' => UploadedFile::fake()->createWithContent('file.docx', 'invalid')])->assertUnprocessable();
+        $this->mock(OfficeDocumentConverter::class)->shouldReceive('toPdf')->once()->andThrow(new RuntimeException('Converter unavailable.'));
+        $this->postJson($url, ['file' => UploadedFile::fake()->createWithContent('file.docx', $this->evidenceBytes('docx'))])
+            ->assertStatus(503)->assertJsonPath('message', 'Converter unavailable.');
         $this->assertSame(0, TosaApplicant::query()->count());
     }
 

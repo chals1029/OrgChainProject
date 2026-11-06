@@ -24,7 +24,7 @@
         .budget-receipt-head, .budget-receipt-files { padding: .75rem; }
     }
 </style>
-<dialog id="budgetReceiptPreviewDialog" class="budget-receipt-dialog" aria-labelledby="budgetReceiptPreviewTitle" aria-describedby="budgetReceiptPreviewContext">
+<dialog id="budgetReceiptPreviewDialog" class="budget-receipt-dialog" data-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="budgetReceiptPreviewTitle" aria-describedby="budgetReceiptPreviewContext">
     <div class="budget-receipt-preview">
         <header class="budget-receipt-head">
             <div class="budget-receipt-heading">

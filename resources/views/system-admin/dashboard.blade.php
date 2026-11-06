@@ -11,7 +11,7 @@
         </div>
         <div class="sys-heading-actions">
             <span class="sys-live-chip"><span></span> Live application</span>
-            <form method="post" action="{{ route('system-admin.cache.clear') }}" onsubmit="return confirm('Clear application caches now? The next request may take slightly longer while caches rebuild.');">
+            <form method="post" action="{{ route('system-admin.cache.clear') }}" data-confirm-message="Clear application caches now? The next request may take slightly longer while caches rebuild.">
                 @csrf
                 <button type="submit" class="sys-secondary-btn"><i class="bi bi-arrow-repeat"></i> Clear caches</button>
             </form>
@@ -75,7 +75,7 @@
                             <td><span class="sys-account-state {{ $user->is_active ? 'is-active' : 'is-disabled' }}"><i class="bi {{ $user->is_active ? 'bi-check-circle-fill' : 'bi-slash-circle-fill' }}"></i> {{ $user->is_active ? 'Active' : 'Disabled' }}</span></td>
                             <td class="sys-muted">{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
                             <td class="sys-table-action">
-                                <form method="post" action="{{ route('system-admin.office-users.status', $user) }}" onsubmit="return confirm('{{ $user->is_active ? 'Disable' : 'Activate' }} this office account?');">
+                                <form method="post" action="{{ route('system-admin.office-users.status', $user) }}" data-confirm-message="{{ $user->is_active ? 'Disable' : 'Activate' }} this office account?">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="is_active" value="{{ $user->is_active ? '0' : '1' }}">
                                     <button type="submit" class="sys-table-btn {{ $user->is_active ? 'is-danger' : 'is-success' }}">{{ $user->is_active ? 'Disable' : 'Activate' }}</button>

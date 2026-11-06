@@ -3841,20 +3841,26 @@ class OfficePortalController extends Controller
         $office = $this->tosaOfficer();
         $tab = request('tab', 'submissions');
         $tab = in_array($tab, ['submissions', 'documents', 'top10', 'history'], true) ? $tab : 'submissions';
+        $section = request('section', 'selection');
+        $section = in_array($section, ['selection', 'published'], true) ? $section : 'selection';
         $search = mb_substr(trim((string) request('search', '')), 0, 100);
         $resultFilter = request('result', 'all');
-        $resultFilter = in_array($resultFilter, ['all', 'qualified', 'not_qualified'], true) ? $resultFilter : 'all';
+        $resultFilter = in_array($resultFilter, ['all', 'reviewed', 'qualified', 'not_qualified', 'pending_review', 'for_correction'], true)
+            ? $resultFilter
+            : 'all';
+        $historySearch = mb_substr(trim((string) request('history_search', '')), 0, 100);
+        $historyActivity = request('activity', 'all');
+        $historyActivity = in_array($historyActivity, ['all', 'publishing', 'applicant_changes'], true) ? $historyActivity : 'all';
         $applicants = null;
         $reviewApplicants = collect();
         $templates = [];
         $calls = null;
-        $shortlist = null;
+        $shortlist = TosaShortlist::query()->findOrFail(1);
         $candidates = collect();
         $events = null;
 
         if ($tab === 'submissions') {
-            $shortlist = TosaShortlist::query()->findOrFail(1);
-            $decisionIds = $resultFilter === 'all' ? null : $shortlist->applicantIdsForDecision($resultFilter);
+            $decisionIds = $resultFilter === 'all' ? null : $this->tosaApplicantIdsForResultFilter($shortlist, $resultFilter);
             $applicants = TosaApplicant::query()->where('status', 'submitted')
                 ->when($decisionIds !== null, fn ($query) => $query->whereIn('id', $decisionIds))
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search): void {
@@ -3882,7 +3888,6 @@ class OfficePortalController extends Controller
             $calls = OfficeAnnouncement::query()->whereIn('type', ['TOSA', 'Call for TOSA'])
                 ->latest()->orderByDesc('id')->paginate(10, ['*'], 'call_page')->withQueryString();
         } elseif ($tab === 'top10') {
-            $shortlist = TosaShortlist::query()->findOrFail(1);
             $workflow = app(TosaWorkflowService::class);
             $draftIds = array_map('intval', $shortlist->draft_ids ?? []);
             $byId = TosaApplicant::query()->whereKey($draftIds)->get()->keyBy('id');
@@ -3892,15 +3897,18 @@ class OfficePortalController extends Controller
                 return ['id' => $id, 'applicant' => $applicant, 'verified' => $applicant !== null && $workflow->isVerified($applicant)];
             });
         } else {
-            $events = TosaHistoryEvent::query()->with('applicant:id,full_name')
-                ->orderByDesc('id')->paginate(20)->withQueryString();
+            $events = $this->tosaHistoryQuery($historySearch, $historyActivity)
+                ->orderByDesc('id')->paginate(10)->withQueryString();
         }
 
         return view('org.tosa', array_merge($this->deskContext(), [
             'activeNav' => 'tosa',
             'tosaTab' => $tab,
+            'tosaSection' => $section,
             'tosaSearch' => $search,
             'tosaResultFilter' => $resultFilter,
+            'tosaHistorySearch' => $historySearch,
+            'tosaHistoryActivity' => $historyActivity,
             'tosaCanManageTemplates' => $office->office_role === 'oso',
             'tosaCanManageWorkflow' => $office->office_role === 'oso',
             'tosaApplicants' => $applicants,
@@ -3908,9 +3916,121 @@ class OfficePortalController extends Controller
             'tosaTemplates' => $templates,
             'tosaCalls' => $calls,
             'tosaShortlist' => $shortlist,
+            'tosaEditing' => $shortlist->published_at === null,
             'tosaCandidates' => $candidates,
             'tosaEvents' => $events,
         ]));
+    }
+
+    /** @return list<int> */
+    private function tosaApplicantIdsForResultFilter(TosaShortlist $shortlist, string $resultFilter): array
+    {
+        if ($resultFilter === 'for_correction') {
+            return TosaApplicant::query()
+                ->where('status', 'submitted')
+                ->where('subsection', 'returned')
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->values()
+                ->all();
+        }
+        if ($shortlist->published_at !== null && in_array($resultFilter, ['qualified', 'not_qualified'], true)) {
+            return $shortlist->applicantIdsForDecision($resultFilter);
+        }
+        if (! $shortlist->published_at && $resultFilter === 'not_qualified') {
+            return [];
+        }
+
+        $workflow = app(TosaWorkflowService::class);
+        $draftLookup = array_fill_keys(array_map('intval', $shortlist->draft_ids ?? []), true);
+        $published = $shortlist->published_at !== null;
+
+        return TosaApplicant::query()
+            ->where('status', 'submitted')
+            ->where(function ($query): void {
+                $query->whereNull('subsection')->orWhere('subsection', '!=', 'returned');
+            })
+            ->get()
+            ->filter(function (TosaApplicant $applicant) use ($shortlist, $workflow, $draftLookup, $published, $resultFilter): bool {
+                $verified = $workflow->isVerified($applicant);
+                if ($published) {
+                    $decision = $shortlist->decisionFor($applicant, $verified);
+                    $status = $decision ?? ($verified ? 'reviewed' : 'pending_review');
+                } else {
+                    $status = ! $verified
+                        ? 'pending_review'
+                        : (isset($draftLookup[(int) $applicant->id]) ? 'qualified' : 'reviewed');
+                }
+
+                return $status === $resultFilter;
+            })
+            ->map(fn (TosaApplicant $applicant): int => (int) $applicant->id)
+            ->values()
+            ->all();
+    }
+
+    private function tosaHistoryQuery(string $historySearch, string $historyActivity): \Illuminate\Database\Eloquent\Builder
+    {
+        $activityActions = match ($historyActivity) {
+            'publishing' => ['top10_published', 'top10_unpublished'],
+            'applicant_changes' => ['top10_saved', 'top10_removed', 'returned', 'selection_updated'],
+            default => null,
+        };
+
+        $matchingActions = [];
+        $matchingDocKeys = [];
+        if ($historySearch !== '') {
+            $eventLabels = [
+                'submitted' => 'Application submitted',
+                'resubmitted' => 'Application resubmitted',
+                'reviewed' => 'Documents reviewed',
+                'returned' => 'Returned for correction Document correction requested',
+                'call_published' => 'TOSA call published',
+                'call_ended' => 'TOSA call archived',
+                'filing_opened' => 'TOSA applications enabled',
+                'filing_closed' => 'TOSA applications closed',
+                'top10_saved' => 'Applicant added Top 10 draft saved Added to Top 10',
+                'top10_removed' => 'Applicant removed Removed from Top 10 draft',
+                'selection_updated' => 'Selection updated Top 10 selection updated',
+                'top10_published' => 'Top 10 published Results published',
+                'top10_unpublished' => 'Top 10 unpublished Results unpublished',
+            ];
+            foreach ($eventLabels as $actionKey => $labelText) {
+                if (stripos($actionKey, $historySearch) !== false || mb_stripos($labelText, $historySearch) !== false) {
+                    $matchingActions[] = $actionKey;
+                }
+            }
+            foreach (TosaRequirements::SUBMISSIONS as $docKey => $docDef) {
+                if (stripos($docKey, $historySearch) !== false
+                    || mb_stripos($docDef['title'], $historySearch) !== false
+                    || mb_stripos('Section '.$docDef['code'], $historySearch) !== false) {
+                    $matchingDocKeys[] = $docKey;
+                }
+            }
+        }
+
+        return TosaHistoryEvent::query()
+            ->with('applicant:id,full_name')
+            ->when($activityActions !== null, fn ($query) => $query->whereIn('action', $activityActions))
+            ->when($historySearch !== '', function ($query) use ($historySearch, $matchingActions, $matchingDocKeys): void {
+                $like = '%'.$historySearch.'%';
+                $query->where(function ($query) use ($like, $matchingActions, $matchingDocKeys): void {
+                    $query->where('actor_name', 'like', $like)
+                        ->orWhere('action', 'like', $like)
+                        ->orWhere('details', 'like', $like)
+                        ->orWhereHas('applicant', function ($applicantQuery) use ($like): void {
+                            $applicantQuery->where('full_name', 'like', $like)
+                                ->orWhere('sr_code', 'like', $like)
+                                ->orWhere('program', 'like', $like);
+                        });
+                    if ($matchingActions !== []) {
+                        $query->orWhereIn('action', $matchingActions);
+                    }
+                    foreach ($matchingDocKeys as $docKey) {
+                        $query->orWhere('details', 'like', '%"'.$docKey.'"%');
+                    }
+                });
+            });
     }
 
     /**
@@ -5351,16 +5471,34 @@ class OfficePortalController extends Controller
     {
         $office = $this->osoOfficer();
         abort_unless($applicant->status === 'submitted', 404);
-        if (array_diff(array_keys($request->except('_token')), ['subsection', 'document_key', 'reason']) !== []) {
+        if (array_diff(array_keys($request->except('_token')), ['subsection', 'document_keys', 'reason']) !== []) {
             throw ValidationException::withMessages(['subsection' => 'Only a correction request is supported.']);
         }
+        $allowedKeys = array_keys(TosaRequirements::SUBMISSIONS);
         $data = $request->validate([
             'subsection' => ['required', 'in:returned'],
-            'document_key' => ['required', 'string', Rule::in(array_keys(TosaRequirements::SUBMISSIONS))],
+            'document_keys' => ['bail', 'required', 'array', 'list', 'min:1', function (string $attribute, mixed $value, \Closure $fail) use ($allowedKeys): void {
+                $seen = [];
+                foreach ($value as $item) {
+                    if (! is_string($item) || ! in_array($item, $allowedKeys, true)) {
+                        $fail('Choose valid TOSA submission documents for correction.');
+
+                        return;
+                    }
+                    if (isset($seen[$item])) {
+                        $fail('Choose each document only once.');
+
+                        return;
+                    }
+                    $seen[$item] = true;
+                }
+            }],
             'reason' => ['required', 'string', 'max:1000'],
         ]);
+        $documentKeys = array_values($data['document_keys']);
 
-        $applicant = DB::connection('mysql')->transaction(function () use ($applicant, $office, $data): TosaApplicant {
+        $applicant = DB::connection('mysql')->transaction(function () use ($applicant, $office, $data, $documentKeys): TosaApplicant {
+            $shortlist = TosaShortlist::query()->whereKey(1)->lockForUpdate()->firstOrFail();
             $locked = TosaApplicant::query()->whereKey($applicant->id)->lockForUpdate()->firstOrFail();
             $reviewer = OfficeUser::query()->whereKey($office->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->status === 'submitted', 404);
@@ -5369,10 +5507,34 @@ class OfficePortalController extends Controller
             if ($locked->subsection === 'returned') {
                 throw ValidationException::withMessages(['subsection' => 'This application is already awaiting correction.']);
             }
+
+            $applicantId = (int) $locked->id;
+            $draftIds = array_map('intval', $shortlist->draft_ids ?? []);
+            $wasInDraft = in_array($applicantId, $draftIds, true);
+            $shortlistChanged = false;
+            if ($wasInDraft) {
+                $shortlist->draft_ids = array_values(array_filter($draftIds, fn (int $id): bool => $id !== $applicantId));
+                $shortlistChanged = true;
+            }
+
+            $removedFromPublished = false;
+            if ($shortlist->published_at !== null) {
+                [$publishedChanged, $removedFromPublished] = $this->removeApplicantFromPublishedShortlist($shortlist, $locked);
+                $shortlistChanged = $shortlistChanged || $publishedChanged;
+            }
+            if ($shortlistChanged) {
+                $shortlist->save();
+            }
+
             $locked->subsection = 'returned';
             $locked->save();
-            TosaHistoryEvent::record('returned', 'office', (int) $reviewer->id, $reviewer->name, (int) $locked->id, [
-                'document_key' => $data['document_key'],
+
+            if ($wasInDraft || $removedFromPublished) {
+                TosaHistoryEvent::record('top10_removed', 'office', (int) $reviewer->id, $reviewer->name, $applicantId, ['cause' => 'correction']);
+                TosaHistoryEvent::record('selection_updated', 'office', (int) $reviewer->id, $reviewer->name, $applicantId, ['draft_count' => count($shortlist->draft_ids ?? [])]);
+            }
+            TosaHistoryEvent::record('returned', 'office', (int) $reviewer->id, $reviewer->name, $applicantId, [
+                'document_keys' => $documentKeys,
                 'reason' => $data['reason'],
             ]);
 
@@ -5386,10 +5548,19 @@ class OfficePortalController extends Controller
                 ->where('account_status', 'active')->limit(2)->get();
             $email = $accounts->count() === 1 ? trim((string) $accounts->first()->email) : '';
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $document = TosaRequirements::SUBMISSIONS[$data['document_key']]['title'];
+                $documentTitles = array_map(
+                    fn (string $key): string => TosaRequirements::SUBMISSIONS[$key]['title'],
+                    $documentKeys,
+                );
+                $documentLine = count($documentTitles) === 1
+                    ? 'Document: '.$documentTitles[0]
+                    : 'Documents: '.implode(', ', $documentTitles);
+                $updatePrompt = count($documentTitles) === 1
+                    ? 'Update the document and resubmit at '.route('portal.home')."#tosa\n\n"
+                    : 'Update the requested documents and resubmit at '.route('portal.home')."#tosa\n\n";
                 $body = "OSO returned your TOSA application for correction.\n\n"
-                    ."Document: {$document}\nReason: {$data['reason']}\n\n"
-                    .'Update the document and resubmit at '.route('portal.home')."#tosa\n\n"
+                    ."{$documentLine}\nReason: {$data['reason']}\n\n"
+                    .$updatePrompt
                     .'— Office of Student Organizations';
                 $emailSent = Mail::raw($body, fn ($message) => $message->to($email)
                     ->subject('OrgChain TOSA: document correction requested')) !== null;
@@ -5411,6 +5582,87 @@ class OfficePortalController extends Controller
         }
 
         return redirect()->route('office.tosa')->with($emailSent ? 'success' : 'warning', $message);
+    }
+
+    /**
+     * Remove the applicant's published decision and, when identifiable, one
+     * corresponding display entry without changing other published entries.
+     *
+     * @return array{bool, bool} [shortlistChanged, removedFromPublishedSelection]
+     */
+    private function removeApplicantFromPublishedShortlist(TosaShortlist $shortlist, TosaApplicant $locked): array
+    {
+        $decisions = is_array($shortlist->published_decisions) ? $shortlist->published_decisions : [];
+        $hadQualifiedSnapshots = collect($decisions)->contains(
+            fn (mixed $entry): bool => is_array($entry) && ($entry['status'] ?? null) === 'qualified'
+        );
+
+        $key = (string) $locked->id;
+        $priorDecision = $decisions[$key] ?? null;
+        $hadDecision = is_array($priorDecision);
+        $wasPublishedQualified = $hadDecision && ($priorDecision['status'] ?? null) === 'qualified';
+        $changed = false;
+        if ($hadDecision) {
+            unset($decisions[$key]);
+            $shortlist->published_decisions = $decisions;
+            $changed = true;
+        }
+
+        if ($hadQualifiedSnapshots) {
+            if (! $wasPublishedQualified) {
+                return [$changed, false];
+            }
+            $entries = $shortlist->published_entries;
+            if (is_array($entries)) {
+                $name = $priorDecision['name'] ?? $locked->full_name;
+                $program = ($priorDecision['program'] ?? $locked->program) ?: null;
+                foreach ($entries as $index => $entry) {
+                    if (is_array($entry) && ($entry['name'] ?? null) === $name
+                        && (($entry['program'] ?? null) ?: null) === $program) {
+                        unset($entries[$index]);
+                        $shortlist->published_entries = array_values($entries);
+                        break;
+                    }
+                }
+            }
+
+            return [true, true];
+        }
+
+        if (! is_array($shortlist->published_entries) || $shortlist->published_entries === []) {
+            return [$changed, false];
+        }
+        $matchingIndices = [];
+        foreach ($shortlist->published_entries as $index => $entry) {
+            if (is_array($entry)
+                && ($entry['name'] ?? null) === $locked->full_name
+                && (($entry['program'] ?? null) ?: null) === ($locked->program ?: null)) {
+                $matchingIndices[] = $index;
+            }
+        }
+        if (count($matchingIndices) !== 1) {
+            return [$changed, false];
+        }
+        $hasSameIdentityPeer = TosaApplicant::query()
+            ->where('status', 'submitted')
+            ->whereKeyNot($locked->id)
+            ->where('full_name', $locked->full_name)
+            ->where(function ($query) use ($locked): void {
+                if ($locked->program === null || $locked->program === '') {
+                    $query->whereNull('program')->orWhere('program', '');
+                } else {
+                    $query->where('program', $locked->program);
+                }
+            })
+            ->exists();
+        if ($hasSameIdentityPeer) {
+            return [$changed, false];
+        }
+        $entries = $shortlist->published_entries;
+        unset($entries[$matchingIndices[0]]);
+        $shortlist->published_entries = array_values($entries);
+
+        return [true, true];
     }
 
     private function reportingPeriod(?Carbon $date): array
