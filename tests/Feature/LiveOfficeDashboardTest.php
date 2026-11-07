@@ -162,6 +162,9 @@ class LiveOfficeDashboardTest extends TestCase
 
         $csv = $this->get('/office-desk/analytics/export')->assertOk()->streamedContent();
         $rows = array_map('str_getcsv', array_filter(explode("\n", $csv)));
+        $this->assertSame(['', '', '', '', 'Financial & Analytics Report'], $rows[0]);
+        $this->assertSame('', $rows[1][0]);
+        $this->assertStringStartsWith('Date Generated: ', $rows[1][4] ?? '');
         $this->assertContains(['Compliance rate', 'N/A'], $rows);
 
         $activity = $this->activity('Recorded unspent budget', 'oc_approved', extra: [

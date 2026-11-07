@@ -71,73 +71,113 @@
 .or-metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 0.85rem;
     min-width: 0;
 }
 
 .or-metric {
+    border-radius: 22px;
+    padding: 1.15rem 1.25rem 1.2rem;
+    display: grid;
+    gap: 0.35rem;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(240, 230, 232, 0.95);
+    box-shadow: 0 4px 20px rgba(90, 15, 30, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
+    cursor: default;
+    text-decoration: none !important;
+    color: inherit;
+}
+
+.or-metric::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3.5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background: linear-gradient(90deg, transparent, #8b1828, transparent);
+}
+
+.or-metric:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 44px rgba(74, 10, 21, 0.12), 0 4px 12px rgba(74, 10, 21, 0.04);
+    border-color: rgba(139, 24, 40, 0.25);
+}
+
+.or-metric:hover::after {
+    opacity: 1;
+}
+
+.or-metric:active {
+    transform: translateY(-2px) scale(0.99);
+}
+
+.or-metric-top {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
-    min-width: 0;
-    padding: 1.4rem 1.6rem;
-    background: var(--or-surface);
-    border: 1.5px solid var(--or-line);
-    border-radius: 20px;
-    box-shadow: var(--or-shadow);
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
 }
 
 .or-metric-icon {
-    flex: 0 0 auto;
-    display: inline-grid;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--or-rose);
-    color: var(--or-burgundy);
-    font-size: 1rem;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+    color: #8b1828;
+    box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
 }
 
-.or-metric-icon svg {
-    width: 18px;
-    height: 18px;
+.or-metric:hover .or-metric-icon {
+    transform: scale(1.08) rotate(3deg);
 }
 
-
-.or-metric-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
+.or-metric-icon.is-green,
+.or-metric-icon.is-red,
+.or-metric-icon.is-maroon,
+.or-metric-icon.is-amber,
+.or-metric-icon.is-muted {
+    background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+    color: #8b1828;
+    box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.2);
 }
 
-.or-metric-label {
-    order: 2;
-    color: var(--or-ink);
-    font-size: 0.98rem;
-    font-weight: 700;
-    overflow-wrap: anywhere;
-}
-
-.or-metric-value {
-    order: 1;
-    color: var(--or-burgundy);
-    font-size: 2.15rem;
-    font-weight: 800;
-    line-height: 1;
+.or-metric-top strong {
+    font-size: clamp(1.65rem, 2.3vw, 2.1rem);
+    color: #1a1618;
+    letter-spacing: -0.035em;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    font-weight: 850;
+    line-height: 1;
+    margin-left: auto;
 }
 
-.or-metric-hint {
-    order: 3;
-    color: var(--or-muted);
-    font-size: 0.78rem;
-    overflow-wrap: anywhere;
+.or-metric span.or-metric-label {
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    display: block;
+    margin-top: 0.2rem;
 }
 
+.or-metric small.or-metric-hint {
+    color: #786f73;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    display: block;
+    margin-top: 0.15rem;
+}
 /* Cards -------------------------------------------------------------------- */
 .or-card {
     display: grid;

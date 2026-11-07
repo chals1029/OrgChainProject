@@ -11,14 +11,20 @@
 <div id="osoRenewalDashboard" class="or-dashboard">
     <section class="or-metrics" aria-label="Organization renewal totals">
         @foreach ([
-            ['label' => 'Registered organizations', 'value' => $orgStats['total'], 'hint' => 'All registry records, including inactive', 'icon' => 'people', 'color' => 'red'],
-            ['label' => 'Qualified to renew', 'value' => $orgStats['qualified'], 'hint' => 'OSO filing eligibility', 'icon' => 'check-lg', 'color' => 'green'],
-            ['label' => 'Not qualified', 'value' => $orgStats['not_qualified'], 'hint' => 'Unresolved filing eligibility', 'icon' => 'x-lg', 'color' => 'red'],
-            ['label' => 'Inactive organizations', 'value' => $orgStats['inactive'], 'hint' => 'Inactive or not renewed', 'icon' => 'archive', 'color' => 'muted'],
+            ['label' => 'Registered organizations', 'value' => $orgStats['total'], 'hint' => 'All registry records, including inactive', 'icon' => 'people-fill'],
+            ['label' => 'Qualified to renew', 'value' => $orgStats['qualified'], 'hint' => 'OSO filing eligibility', 'icon' => 'check2-circle'],
+            ['label' => 'Not qualified', 'value' => $orgStats['not_qualified'], 'hint' => 'Unresolved filing eligibility', 'icon' => 'x-circle-fill'],
+            ['label' => 'Inactive organizations', 'value' => $orgStats['inactive'], 'hint' => 'Inactive or not renewed', 'icon' => 'archive-fill'],
         ] as $metric)
             <article class="or-metric">
-                <span class="or-metric-icon is-{{ $metric['color'] }}"><i class="bi bi-{{ $metric['icon'] }}" aria-hidden="true"></i></span>
-                <div class="or-metric-copy"><span class="or-metric-label">{{ $metric['label'] }}</span><strong class="or-metric-value">{{ $metric['value'] }}</strong><small class="or-metric-hint">{{ $metric['hint'] }}</small></div>
+                <div class="or-metric-top">
+                    <div class="or-metric-icon">
+                        <i class="bi bi-{{ $metric['icon'] }}" aria-hidden="true"></i>
+                    </div>
+                    <strong>{{ $metric['value'] }}</strong>
+                </div>
+                <span class="or-metric-label">{{ $metric['label'] }}</span>
+                <small class="or-metric-hint">{{ $metric['hint'] }}</small>
             </article>
         @endforeach
     </section>
@@ -64,7 +70,7 @@
                         $standing = $organization['officially_active'] ? 'Active · Renewed' : ($status === 'approved' ? 'Inactive · Renewed' : 'Inactive · Not Renewed');
                         $initials = mb_substr($organization['short_name'], 0, 4);
                     @endphp
-                    <tr data-renewal-row data-search="{{ $organization['name'].' '.$organization['short_name'].' '.$organization['college'] }}" data-status="{{ $status }}" data-official-active="{{ $organization['officially_active'] ? '1' : '0' }}" data-qualified="{{ $organization['can_file_renewal'] ? '1' : '0' }}">
+                    <tr data-renewal-row data-search="{{ $organization['name'].' '.$organization['short_name'].' '.$organization['college'] }}" data-status="{{ $status }}" data-official-active="{{ $organization['officially_active'] ? '1' : '0' }}" data-qualified="{{ $organization['can_file_renewal'] ? '1' : '0' }}" data-adviser="{{ $organization['adviser'] }}" data-academic-year="{{ $organization['academic_year'] }}" data-last-renewal-year="{{ $organization['last_renewal_year'] }}">
                         <td><div class="or-org"><span class="or-org-mark" title="{{ $organization['short_name'] }}" aria-hidden="true">{{ $initials }}</span><div class="or-org-copy"><strong class="or-name">{{ $organization['name'] }}</strong><small class="or-college">{{ $organization['college'] }}</small></div></div></td>
                         <td><span class="or-pill or-official-status is-{{ $organization['officially_active'] ? 'green' : 'red' }}">{{ $standing }}</span></td>
                         <td><span class="or-pill or-renewal-status is-{{ $statusColors[$status] ?? 'muted' }}">{{ $statusLabels[$status] ?? ucfirst($status) }}</span></td>

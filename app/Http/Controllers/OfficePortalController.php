@@ -610,8 +610,8 @@ class OfficePortalController extends Controller
             $money = fn ($n) => 'PHP '.number_format((float) $n, 2);
             $clean = fn ($value) => preg_match('/^[=+@\-\t\r]/', (string) $value) ? "'".$value : $value;
 
-            fputcsv($out, ['OrgChain — Financial & Analytics Report']);
-            fputcsv($out, ['Generated at', now()->toDateTimeString()]);
+            fputcsv($out, ['', '', '', '', 'Financial & Analytics Report']);
+            fputcsv($out, ['', '', '', '', 'Date Generated: '.now()->format('F j, Y · g:i A')]);
             fputcsv($out, []);
 
             $o = $data['overview'];
@@ -2940,14 +2940,16 @@ class OfficePortalController extends Controller
             $allOrganizations = StudentOrganization::query()
                 ->orderBy('name')
                 ->get()
-                ->map(function (StudentOrganization $org) use ($submissionsByOrganization, $requiredDocs) {
+                ->map(function (StudentOrganization $org) use ($submissionsByOrganization, $requiredDocs, $window) {
                     $sub = $submissionsByOrganization->get(mb_strtolower($org->name));
                     $review = $sub?->requiredDocumentReview($requiredDocs)
                         ?? ['required' => count($requiredDocs), 'verified' => 0, 'missing' => count($requiredDocs)];
                     // Final approval is authoritative, including approvals made before
                     // later template/checklist edits. Administrative flags stay separate.
                     $officiallyActive = (bool) $org->is_active && $sub?->status === 'approved';
-
+                    $currentAcademicYear = $window?->academic_year ?? '2026-2027';
+                    $lastRenewalYear = $officiallyActive ? $currentAcademicYear : ($org->academic_year ?: '—');
+                    $adviserName = $sub?->adviser_name ?: '—';
                     return [
                         'id' => $org->id,
                         'name' => $org->name,
@@ -2967,6 +2969,9 @@ class OfficePortalController extends Controller
                         'requirements_pending' => max(0, $review['required'] - $review['verified']),
                         'requirements_missing' => $review['missing'],
                         'docs_count' => $review['required'] - $review['missing'],
+                        'adviser' => $adviserName,
+                        'academic_year' => $currentAcademicYear,
+                        'last_renewal_year' => $lastRenewalYear,
                         'status_url' => route('office.renewal.organization.status', $org),
                     ];
                 });
@@ -6178,6 +6183,7 @@ class OfficePortalController extends Controller
                 'pending' => (clone $base)->where('status', 'pending')->count(),
                 'verified' => (clone $base)->where('status', 'verified')->count(),
                 'dismissed' => (clone $base)->where('status', 'dismissed')->count(),
+                'resolved' => (clone $base)->where('status', 'resolved')->count(),
             ],
             'colleges' => StudentFeedback::query()
                 ->whereNotNull('college')->where('college', '!=', '')
@@ -6197,21 +6203,25 @@ class OfficePortalController extends Controller
         $officer = $this->osoOfficer();
 
         $validated = $request->validate([
-            'decision' => ['required', 'in:acknowledged,dismissed'],
+            'decision' => ['required', 'in:acknowledged,dismissed,resolved'],
             'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $decision = $validated['decision'] === 'acknowledged' ? 'verified' : 'dismissed';
+        $decision = match ($validated['decision']) {
+            'acknowledged' => 'verified',
+            'resolved' => 'resolved',
+            default => 'dismissed',
+        };
         $changed = DB::connection($report->getConnectionName())->transaction(function () use ($report, $validated, $decision, $officer): bool {
             $locked = StudentFeedback::query()->whereKey($report->id)->lockForUpdate()->firstOrFail();
-            if ($locked->status !== 'pending') {
+            if ($locked->status !== 'pending' && $locked->status !== 'verified') {
                 return false;
             }
 
             // Keep the historical verified storage value, now presented as acknowledgment.
             $locked->status = $decision;
-            $locked->review_note = $validated['review_note'] ?? null;
-            if ($decision === 'verified') {
+            $locked->review_note = $validated['review_note'] ?? $locked->review_note;
+            if ($decision === 'verified' || $decision === 'resolved') {
                 $locked->verified_by = $officer->id;
                 $locked->verified_at = now();
             }
@@ -6222,7 +6232,9 @@ class OfficePortalController extends Controller
 
         return back()->with('success', ! $changed
             ? 'Student feedback was already reviewed; the original decision was retained.'
-            : ($decision === 'verified' ? 'Student feedback acknowledged.' : 'Student feedback dismissed.'));
+            : ($decision === 'resolved'
+                ? 'Student feedback resolved.'
+                : ($decision === 'verified' ? 'Student feedback acknowledged.' : 'Student feedback dismissed.')));
     }
 
     /**

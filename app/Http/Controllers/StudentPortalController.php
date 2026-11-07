@@ -853,11 +853,11 @@ class StudentPortalController extends Controller
             : collect();
         $myFeedback = $ownFeedback;
         $feedbackNotifications = $ownFeedback
-            ->where('status', 'verified')
+            ->whereIn('status', ['verified', 'resolved'])
             ->map(fn (StudentFeedback $feedback): array => [
                 'id' => 'feedback-'.$feedback->id,
-                'title' => 'Feedback acknowledged',
-                'body' => $feedback->review_note ?: 'OSO has acknowledged your feedback.',
+                'title' => $feedback->status === 'resolved' ? 'Feedback resolved' : 'Feedback acknowledged',
+                'body' => $feedback->review_note ?: ($feedback->status === 'resolved' ? 'OSO has marked your feedback as resolved.' : 'OSO has acknowledged your feedback.'),
                 'author' => 'Office of Student Organizations',
                 'time' => $feedback->verified_at?->diffForHumans() ?? '',
                 'url' => route('portal.home').'#feedback-'.$feedback->id,

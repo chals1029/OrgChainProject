@@ -57,13 +57,15 @@
 .org-calendar .cal-timing-upcoming { color: #745284; background: #f3edf8; }
 .org-calendar .cal-footnote { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #f0e7ea; font-size: .73rem; color: var(--cal-muted); line-height: 1.6; }
 .org-calendar .cal-month-empty { margin: 16px 0 0; color: var(--cal-muted); text-align: center; font-size: .82rem; }
-.org-calendar .cal-sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; align-items: start; }
-.org-calendar .cal-side-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 15px; }
+.org-calendar .cal-sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; align-items: stretch; }
+.org-calendar .cal-side-card { display: flex; flex-direction: column; height: 100%; min-height: 180px; box-sizing: border-box; }
+.org-calendar .cal-side-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; flex-shrink: 0; }
 .org-calendar .cal-side-heading h2 { margin: 0; font-size: .95rem; font-weight: 800; }
 .org-calendar .cal-count { min-width: 25px; padding: 3px 7px; border-radius: 8px; background: #faf0f3; color: var(--cal-accent); font-size: .73rem; font-weight: 700; text-align: center; }
-.org-calendar .cal-side-list { display: grid; gap: 10px; max-height: 440px; overflow-y: auto; scrollbar-width: thin; padding: 3px; margin: -3px; }
-.org-calendar .cal-side-list[data-calendar-list="ongoing"] { max-height: 270px; }
-.org-calendar .cal-side-empty { margin: 0; padding: 8px 0; color: var(--cal-muted); font-size: .8rem; line-height: 1.6; }
+.org-calendar .cal-side-list { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 80px; max-height: 400px; overflow-y: auto; scrollbar-width: thin; padding: 3px; margin: -3px; }
+.org-calendar .cal-side-list[data-calendar-list="ongoing"] { max-height: 400px; }
+.org-calendar .cal-side-empty { margin: 0; padding: 16px; color: #63535a; font-size: .9rem; font-weight: 600; line-height: 1.5; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; width: 100%; height: 100%; }
+.org-calendar .cal-side-empty span, .org-calendar .cal-side-empty p { margin: 0; color: #63535a; font-size: 0.92rem; font-weight: 600; }
 .org-calendar .cal-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .org-calendar .cal-dialog { position: fixed; inset: 0; margin: auto; width: min(600px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--cal-border); border-radius: 18px; background: #fff; color: #392731; box-shadow: 0 24px 90px #32141c40; overflow: hidden; }
 .org-calendar .cal-dialog[open] { display: flex; flex-direction: column; }

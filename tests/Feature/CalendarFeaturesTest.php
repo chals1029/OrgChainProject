@@ -241,4 +241,13 @@ class CalendarFeaturesTest extends TestCase
         $this->assertSame($before, $activity->refresh()->getRawOriginal());
         $this->assertSame(1, OrgActivity::where('organization_name', $this->organization->name)->count());
     }
+
+    public function test_calendar_side_cards_render_no_upcoming_activities_message_when_empty(): void
+    {
+        $response = $this->calendar(['timing' => 'past']);
+        $response->assertSee('No upcoming activities');
+        $response->assertSee('No ongoing schedules');
+        $response->assertSee('cal-side-empty');
+        $response->assertSee('cal-side-card');
+    }
 }

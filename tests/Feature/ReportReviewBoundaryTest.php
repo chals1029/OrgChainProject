@@ -112,7 +112,7 @@ class ReportReviewBoundaryTest extends TestCase
         }
         $filters = ['q' => $needle, 'college' => 'CICS', 'topic' => 'campus', 'status' => 'pending'];
         $response = $this->actingAs($office, 'office')->get(route('office.student-reports', $filters))->assertOk();
-        $this->assertSame(['total' => 16, 'pending' => 16, 'verified' => 0, 'dismissed' => 0], $response->viewData('stats'));
+        $this->assertSame(['total' => 16, 'pending' => 16, 'verified' => 0, 'dismissed' => 0, 'resolved' => 0], $response->viewData('stats'));
         $first = $response->viewData('reports');
         $second = $this->get(route('office.student-reports', $filters + ['page' => 2]))->assertOk()->viewData('reports');
         $actual = $first->getCollection()->pluck('id')->merge($second->getCollection()->pluck('id'))->sort()->values()->all();

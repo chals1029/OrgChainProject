@@ -29,6 +29,7 @@ class AnnouncementFeedbackTest extends TestCase
             throw new \RuntimeException('AnnouncementFeedbackTest requires isolated core and voting test databases.');
         }
         $this->useLaragonDatabase();
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
         DB::connection('mysql')->beginTransaction();
         Carbon::setTestNow('2030-05-01 10:00:00');
     }

@@ -173,15 +173,7 @@
     @endif
 
     @if ($isOso)
-        <nav class="rn-tabs" aria-label="Renewal sections">
-            <a href="{{ route('office.renewal') }}" @if (! $renewalTracking) aria-current="page" @endif>Renewal Dashboard</a>
-            <a href="{{ route('office.renewal', ['tab' => 'tracking']) }}" @if ($renewalTracking) aria-current="page" @endif>Organization Status</a>
-        </nav>
-        @if ($renewalTracking)
-            @include('org.partials.oso-renewal-tracking')
-        @else
-            @include('org.partials.oso-renewal-dashboard')
-        @endif
+        @include('org.partials.oso-renewal-dashboard')
     @endif
 
     @if ($isSo)

@@ -217,13 +217,26 @@
 
     function exportCsv(rows) {
         if (!rows.length) return;
-        var header = ['Organization', 'College', 'Official status', 'Renewal status'];
-        var selectors = ['.or-name', '.or-college', '.or-official-status', '.or-renewal-status'];
+        var header = ['#', 'Organization', 'College', 'Status', 'Adviser', 'Academic Year', 'Last Renewal Year'];
         var lines = [header.map(csvCell).join(',')];
-        rows.forEach(function (row) {
-            lines.push(selectors.map(function (selector) {
-                return csvCell(cleanText(row.querySelector(selector)));
-            }).join(','));
+        rows.forEach(function (row, index) {
+            var itemNo = index + 1;
+            var org = cleanText(row.querySelector('.or-name'));
+            var college = cleanText(row.querySelector('.or-college'));
+            var status = cleanText(row.querySelector('.or-renewal-status'));
+            var adviser = row.dataset.adviser || '—';
+            var academicYear = row.dataset.academicYear || '';
+            var lastRenewalYear = row.dataset.lastRenewalYear || '—';
+
+            lines.push([
+                csvCell(itemNo),
+                csvCell(org),
+                csvCell(college),
+                csvCell(status),
+                csvCell(adviser),
+                csvCell(academicYear),
+                csvCell(lastRenewalYear)
+            ].join(','));
         });
 
         var blob = new Blob(['\uFEFF' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });

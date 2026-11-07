@@ -124,7 +124,9 @@
                                     <span class="cal-event-tags"><span class="cal-status cal-status-{{ $event['status_key'] }}">{{ $event['status'] }}</span><span>{{ $event['scope_key'] === 'off' ? 'Off-campus' : 'In-campus' }}</span></span>
                                 </button>
                             @empty
-                                <p class="cal-side-empty">{{ $sectionKey === 'ongoing' ? 'No ongoing schedules' : 'No upcoming activities' }}{{ $hasFilters ? ' match these filters' : '' }}.</p>
+                                <div class="cal-side-empty">
+                                    <span>{{ $sectionKey === 'ongoing' ? 'No ongoing schedules' : 'No upcoming activities' }}</span>
+                                </div>
                             @endforelse
                         </div>
                     </section>

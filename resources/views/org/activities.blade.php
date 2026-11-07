@@ -122,7 +122,7 @@
         @endif
     @else
         @if ($isOso || $isSdo || $isOvcaa || $isOc)
-            <button type="button" class="org-btn org-btn-outline" onclick="window.print()">
+            <button type="button" class="org-btn org-btn-outline" onclick="printProposalsSummary()">
                 <i class="bi bi-printer"></i> Print Summary
             </button>
         @else
@@ -138,6 +138,141 @@
         /* =========================================================
            Activities List & Detail Styles (Pixel-Perfect Matching)
            ========================================================= */
+        /* Dedicated Proposals Print Summary Report (Hidden on Screen) */
+        .proposals-print-report {
+            display: none !important;
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 15mm 12mm 15mm 12mm;
+            }
+
+            /* Hide the interactive application shell and screen UI */
+            .org-ambient,
+            .org-sidebar,
+            .org-topbar,
+            .org-controls-toolbar,
+            .org-pipeline-summary-bar,
+            .org-activity-grid-container,
+            .org-activity-table-card,
+            .org-activity-empty-state,
+            .org-pagination-footer,
+            .ap-dialog,
+            dialog,
+            .org-btn,
+            .org-back-link,
+            #orgSidebarOverlay,
+            .org-detail-container,
+            .org-detail-sidebar {
+                display: none !important;
+            }
+
+            body,
+            .org-body,
+            .org-shell,
+            .org-main,
+            .org-content {
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+                display: block !important;
+            }
+
+            /* Simple formal document report */
+            .proposals-print-report {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                color: #111 !important;
+                font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+                font-size: 10pt !important;
+                line-height: 1.4 !important;
+            }
+
+            .proposals-print-header {
+                text-align: center !important;
+                margin-bottom: 1.25rem !important;
+                padding-bottom: 0.75rem !important;
+                border-bottom: 1.5px solid #222 !important;
+            }
+
+            .proposals-print-office {
+                font-size: 11pt !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.04em !important;
+                text-transform: uppercase !important;
+                margin: 0 0 0.35rem 0 !important;
+                color: #222 !important;
+            }
+
+            .proposals-print-title {
+                font-size: 16pt !important;
+                font-weight: 800 !important;
+                text-align: center !important;
+                margin: 0 0 0.45rem 0 !important;
+                color: #000 !important;
+            }
+
+            .proposals-print-date {
+                font-size: 9pt !important;
+                color: #555 !important;
+                margin: 0 !important;
+            }
+
+            .proposals-print-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 0.75rem !important;
+                font-size: 9.5pt !important;
+            }
+
+            .proposals-print-table th,
+            .proposals-print-table td {
+                border: 1px solid #333 !important;
+                padding: 6px 8px !important;
+                text-align: left !important;
+                vertical-align: top !important;
+                color: #000 !important;
+            }
+
+            .proposals-print-table th {
+                background-color: #f2f2f2 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                font-size: 8.5pt !important;
+            }
+
+            .proposals-print-table td.text-center,
+            .proposals-print-table th.text-center {
+                text-align: center !important;
+            }
+
+            .proposals-print-table tr {
+                page-break-inside: avoid;
+            }
+
+            .proposals-print-footer {
+                margin-top: 2rem !important;
+                padding-top: 0.5rem !important;
+                border-top: 1px solid #bbb !important;
+                text-align: center !important;
+                font-size: 8pt !important;
+                color: #666 !important;
+            }
+        }
         
         /* Top Toolbar & Filter Pills */
         .org-controls-toolbar {
@@ -2354,9 +2489,254 @@
             <span id="orgActivityCountText">Showing 0 of 0 {{ $isOso ? 'proposals' : 'activities' }}</span>
             <div class="org-pagination-controls" id="orgActivityPaginationControls" aria-label="Activity pages"></div>
         </div>
+        {{-- Dedicated Proposals Print Summary Report (Rendered only on print) --}}
+        <div id="proposalsPrintReport" class="proposals-print-report" aria-hidden="true">
+            <header class="proposals-print-header">
+                <p class="proposals-print-office">Office of the Student Organizations (OSO)</p>
+                <h1 class="proposals-print-title">Proposals &amp; Activity Summary Report</h1>
+                <p class="proposals-print-date">Date Generated: <span id="proposalsPrintDate">{{ now()->format('F j, Y · g:i A') }}</span></p>
+            </header>
+
+            <table class="proposals-print-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; text-align: center;">#</th>
+                        <th style="width: 25%;">Organization Name</th>
+                        <th style="width: 30%;">Activity Name / Title</th>
+                        <th style="width: 14%;">Activity Type</th>
+                        <th style="width: 12%;">Activity Date</th>
+                        <th style="width: 14%;">Venue</th>
+                    </tr>
+                </thead>
+                <tbody id="proposalsPrintTableBody">
+                    @forelse ($activities as $index => $item)
+                        <tr class="proposals-print-row"
+                            data-category="{{ $item['filter_category'] }}"
+                            data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
+                            <td class="text-center proposals-print-idx" style="text-align: center;">{{ $index + 1 }}</td>
+                            <td><strong>{{ $item['organization'] ?? '—' }}</strong></td>
+                            <td>{{ $item['title'] ?? '—' }}</td>
+                            <td>{{ $item['activity_type'] ?? '—' }}</td>
+                            <td>{{ $item['date'] ?? '—' }}</td>
+                            <td>{{ $item['location'] ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 1rem;">No proposals or activities recorded.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            <footer class="proposals-print-footer">
+                <p>Batangas State University · Office of the Student Organizations (OSO)</p>
+            </footer>
+        </div>
 
         {{-- Front-End View Toggle, Live Search & Filter Script --}}
         <script>
+            window.printProposalsSummary = function () {
+                const reportEl = document.getElementById('proposalsPrintReport');
+                if (!reportEl) {
+                    window.print();
+                    return;
+                }
+
+                const now = new Date();
+                const formattedDate = now.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) + ' · ' + now.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                const searchInput = document.getElementById('orgProposalSearch');
+                const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+                const activeFilterBtn = document.querySelector('#orgFilterPills .org-filter-pill-btn.is-active');
+                const activeCat = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'all';
+
+                const rows = Array.from(reportEl.querySelectorAll('#proposalsPrintTableBody tr'));
+                let rowsHtml = '';
+                let visibleIdx = 1;
+                rows.forEach((row) => {
+                    const cells = Array.from(row.querySelectorAll('td'));
+                    if (cells.length < 6) {
+                        rowsHtml += row.outerHTML;
+                        return;
+                    }
+                    const rowCat = row.getAttribute('data-category');
+                    const rowSearch = (row.getAttribute('data-search') || '').toLowerCase();
+                    const matchesCat = activeCat === 'all' || rowCat === activeCat;
+                    const matchesSearch = !searchVal || rowSearch.includes(searchVal);
+
+                    if (matchesCat && matchesSearch) {
+                        rowsHtml += `
+                            <tr>
+                                <td style="text-align:center;">${visibleIdx++}</td>
+                                <td><strong>${cells[1].innerHTML}</strong></td>
+                                <td>${cells[2].innerHTML}</td>
+                                <td>${cells[3].innerHTML}</td>
+                                <td>${cells[4].innerHTML}</td>
+                                <td>${cells[5].innerHTML}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                if (!rowsHtml.trim()) {
+                    rowsHtml = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;">No matching proposals found.</td></tr>';
+                }
+
+                const printHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Proposals &amp; Activity Summary Report</title>
+    <style>
+        @page { size: A4 portrait; margin: 15mm 12mm; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+            font-size: 10pt;
+            color: #111;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+            background: #fff;
+        }
+        .proposals-print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #222;
+        }
+        .proposals-print-office {
+            font-size: 11pt;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin: 0 0 6px 0;
+            color: #222;
+            text-align: center;
+        }
+        .proposals-print-title {
+            font-size: 16pt;
+            font-weight: 800;
+            text-align: center;
+            margin: 0 0 6px 0;
+            color: #000;
+        }
+        .proposals-print-date {
+            font-size: 9pt;
+            color: #555;
+            margin: 0;
+            text-align: center;
+            font-style: italic;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 9.5pt;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 7px 10px;
+            text-align: left;
+            vertical-align: top;
+            color: #000;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 8.5pt;
+            letter-spacing: 0.02em;
+        }
+        .text-center {
+            text-align: center;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+        .proposals-print-footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="proposals-print-header">
+        <div class="proposals-print-office">Office of the Student Organizations (OSO)</div>
+        <div class="proposals-print-title">Proposals &amp; Activity Summary Report</div>
+        <div class="proposals-print-date">Date Generated: ${formattedDate}</div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%; text-align: center;">#</th>
+                <th style="width: 26%;">Organization Name</th>
+                <th style="width: 28%;">Activity Name / Title</th>
+                <th style="width: 15%;">Activity Type</th>
+                <th style="width: 12%;">Activity Date</th>
+                <th style="width: 14%;">Venue</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml}
+        </tbody>
+    </table>
+    <div class="proposals-print-footer">
+        <p>Batangas State University · Office of the Student Organizations (OSO) · Generated via OrgChain</p>
+    </div>
+</body>
+</html>`;
+
+                // Open clean print window
+                const printWin = window.open('', '_blank', 'width=960,height=720');
+                if (printWin) {
+                    printWin.document.open();
+                    printWin.document.write(printHtml);
+                    printWin.document.close();
+                    printWin.focus();
+                    setTimeout(() => {
+                        printWin.print();
+                    }, 350);
+                } else {
+                    // Fallback using invisible iframe
+                    let printFrame = document.getElementById('proposalsPrintIframe');
+                    if (!printFrame) {
+                        printFrame = document.createElement('iframe');
+                        printFrame.id = 'proposalsPrintIframe';
+                        printFrame.style.position = 'fixed';
+                        printFrame.style.right = '0';
+                        printFrame.style.bottom = '0';
+                        printFrame.style.width = '0';
+                        printFrame.style.height = '0';
+                        printFrame.style.border = '0';
+                        document.body.appendChild(printFrame);
+                    }
+                    const doc = printFrame.contentWindow.document;
+                    doc.open();
+                    doc.write(printHtml);
+                    doc.close();
+                    setTimeout(() => {
+                        printFrame.contentWindow.focus();
+                        printFrame.contentWindow.print();
+                    }, 350);
+                }
+            };
+
             document.addEventListener('DOMContentLoaded', function () {
                 const gridView = document.getElementById('orgActivityGrid');
                 const tableView = document.getElementById('orgActivityTableWrap');

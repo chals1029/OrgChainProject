@@ -305,7 +305,7 @@
                         <h3 id="rsRequirementsTitle"><i class="bi bi-folder2-open" aria-hidden="true"></i> Submitted Renewal Documents</h3>
                         <p>
                             @if ($isReviewable)
-                                Open each file, then verify it or return/reject it with remarks for the SO desk.
+                                Open each file, then verify it or return it for revision with remarks for the SO desk.
                             @else
                                 Document review is available only while the packet is submitted.
                             @endif
@@ -368,7 +368,10 @@
                                 <a class="rs-act is-download" href="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}" aria-label="Download {{ $row['title'] }}">
                                     <i class="bi bi-download" aria-hidden="true"></i> Download
                                 </a>
-                                <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}">
+                                <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}"
+                                    data-confirm-title="Verify Requirement?"
+                                    data-confirm-accept="Yes, Verify"
+                                    data-confirm-message="Are you sure you want to verify {{ $row['label'] }} ({{ $row['title'] }})?">
                                     @csrf
                                     <input type="hidden" name="decision" value="verified">
                                     <input type="hidden" name="file_version" value="{{ $fileVersion }}">
@@ -384,15 +387,6 @@
                                     data-rs-subject="{{ $row['label'] }} · {{ $row['title'] }}"
                                     data-rs-submit="Return for Revision">
                                     <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return
-                                </button>
-                                <button type="button" class="rs-act is-reject" aria-label="Reject {{ $row['title'] }}" @disabled(! $isReviewable)
-                                    data-rs-remarks="{{ route('office.renewal.documents.review', $doc) }}"
-                                    data-rs-decision="rejected"
-                                    data-rs-file-version="{{ $fileVersion }}"
-                                    data-rs-heading="Reject document"
-                                    data-rs-subject="{{ $row['label'] }} · {{ $row['title'] }}"
-                                    data-rs-submit="Reject Document">
-                                    <i class="bi bi-x-lg" aria-hidden="true"></i> Reject
                                 </button>
                             @else
                                 <span class="rs-missing-note">No file to review</span>
@@ -431,15 +425,10 @@
                     data-rs-submit="Return Packet">
                     <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return for Revisions
                 </button>
-                <button type="button" class="org-btn org-btn-sm rs-btn-reject" @disabled(! $isReviewable)
-                    data-rs-remarks="{{ route('office.renewal.review', $submission) }}"
-                    data-rs-decision="rejected"
-                    data-rs-heading="Reject renewal"
-                    data-rs-subject="{{ $fullName }}"
-                    data-rs-submit="Reject Renewal">
-                    <i class="bi bi-x-octagon" aria-hidden="true"></i> Reject Renewal
-                </button>
-                <form method="POST" action="{{ route('office.renewal.review', $submission) }}">
+                <form method="POST" action="{{ route('office.renewal.review', $submission) }}"
+                    data-confirm-title="Approve Renewal?"
+                    data-confirm-accept="Yes, Approve"
+                    data-confirm-message="Are you sure you want to approve the renewal packet for {{ $fullName }}?">
                     @csrf
                     <input type="hidden" name="decision" value="approved">
                     <button type="submit" class="org-btn org-btn-primary org-btn-sm" aria-describedby="rsDecisionSummary" @disabled(! $canApprove)>
@@ -464,7 +453,7 @@
             </div>
             <label for="rsRemarksInput">
                 Remarks for the SO desk *
-                <textarea name="remarks" id="rsRemarksInput" rows="4" maxlength="2000" required placeholder="Explain what must be corrected or why this is rejected."></textarea>
+                <textarea name="remarks" id="rsRemarksInput" rows="4" maxlength="2000" required placeholder="Explain what must be corrected."></textarea>
             </label>
             <div class="rs-dialog-actions">
                 <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-rs-close>Cancel</button>

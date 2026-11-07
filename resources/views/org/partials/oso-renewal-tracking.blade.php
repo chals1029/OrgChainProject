@@ -1,11 +1,11 @@
 @php
     $trackingLabels = [
         'approved' => ['Renewed', 'green'],
-        'submitted' => ['Pending Review', 'amber'],
-        'returned' => ['Returned for Revision', 'red'],
-        'rejected' => ['Rejected', 'red'],
-        'none' => ['Not Renewed', 'muted'],
-        'draft' => ['Not Renewed', 'muted'],
+        'submitted' => ['Pending filing', 'amber'],
+        'returned' => ['Pending filing', 'amber'],
+        'rejected' => ['Not yet submitted', 'muted'],
+        'none' => ['Not yet submitted', 'muted'],
+        'draft' => ['Not yet submitted', 'muted'],
         'unavailable' => ['No renewal period', 'muted'],
     ];
     $trackingCounts = collect($allOrganizations)->countBy('submission_status');
@@ -19,16 +19,17 @@
     #osoRenewalDashboard .or-track-table { min-width:680px; }
     @media (max-width:900px) { #osoRenewalDashboard .or-track-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     @media (max-width:560px) { #osoRenewalDashboard .or-track-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    .tosa-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; margin-top:.85rem; }
+    .tosa-pagination .tosa-actions { margin-left:auto; display:inline-flex; align-items:center; gap:.4rem; flex-wrap:nowrap; }
+    .tosa-note { color:#6b6064; font-size:.84rem; margin:.3rem 0; line-height:1.45; }
 </style>
 <div id="osoRenewalDashboard" class="or-dashboard">
     @if ($window)
         <section class="or-track-metrics" aria-label="Renewal status totals">
             @foreach ([
                 ['Renewed', $trackingCounts->get('approved', 0)],
-                ['Pending Review', $trackingCounts->get('submitted', 0)],
-                ['Not Renewed', $trackingCounts->get('none', 0) + $trackingCounts->get('draft', 0)],
-                ['Returned for Revision', $trackingCounts->get('returned', 0)],
-                ['Rejected', $trackingCounts->get('rejected', 0)],
+                ['Pending filing', $trackingCounts->get('submitted', 0) + $trackingCounts->get('returned', 0)],
+                ['Not yet submitted', $trackingCounts->get('none', 0) + $trackingCounts->get('draft', 0) + $trackingCounts->get('rejected', 0)],
             ] as [$label, $count])
                 <article class="or-track-metric"><strong>{{ $count }}</strong><span>{{ $label }}</span></article>
             @endforeach
@@ -47,10 +48,8 @@
                 <option value="all">All statuses</option>
                 @if ($window)
                     <option value="approved">Renewed</option>
-                    <option value="submitted">Pending Review</option>
-                    <option value="none">Not Renewed</option>
-                    <option value="returned">Returned for Revision</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="submitted">Pending filing</option>
+                    <option value="none">Not yet submitted</option>
                 @endif
             </select>
         </div>
@@ -61,8 +60,8 @@
                     @foreach ($allOrganizations as $organization)
                         @php
                             $status = $window ? $organization['submission_status'] : 'unavailable';
-                            $filterStatus = $status === 'draft' ? 'none' : $status;
-                            [$label, $color] = $trackingLabels[$status] ?? [ucfirst($status), 'muted'];
+                            $filterStatus = in_array($status, ['submitted', 'returned'], true) ? 'submitted' : (in_array($status, ['none', 'draft', 'rejected'], true) ? 'none' : $status);
+                            [$label, $color] = $trackingLabels[$status] ?? ['Not yet submitted', 'muted'];
                         @endphp
                         <tr data-tracking-row data-status="{{ $filterStatus }}" data-search="{{ $organization['name'].' '.$organization['short_name'].' '.$organization['college'] }}">
                             <td><div class="or-org"><div class="or-org-copy"><strong class="or-name">{{ $organization['name'] }}</strong><small class="or-college">{{ $organization['college'] }}</small></div></div></td>
@@ -75,7 +74,13 @@
             </table>
         </div>
         <p id="renewalTrackingEmpty" class="or-empty" @if ($allOrganizations->isNotEmpty()) hidden @endif>No organizations match these filters.</p>
-        <footer class="or-table-footer"><small id="renewalTrackingCount" role="status" aria-live="polite">{{ $allOrganizations->count() }} organizations</small></footer>
+        <div class="tosa-pagination" id="renewalTrackingPagination">
+            <span class="tosa-note" id="renewalTrackingPageNote">Page 1 of 1</span>
+            <div class="tosa-actions" id="renewalTrackingActions">
+                <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="renewalTrackingPrev" style="display:none;">Previous</button>
+                <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="renewalTrackingNext" style="display:none;">Next</button>
+            </div>
+        </div>
     </section>
 </div>
 <script>
@@ -84,20 +89,73 @@
         const status = document.getElementById('renewalTrackingStatus');
         const rows = [...document.querySelectorAll('[data-tracking-row]')];
         const empty = document.getElementById('renewalTrackingEmpty');
-        const count = document.getElementById('renewalTrackingCount');
+        const pagination = document.getElementById('renewalTrackingPagination');
+        const pageNote = document.getElementById('renewalTrackingPageNote');
+        const prevBtn = document.getElementById('renewalTrackingPrev');
+        const nextBtn = document.getElementById('renewalTrackingNext');
+
+        const PAGE_SIZE = 10;
+        let currentPage = 1;
+        let matched = [];
+
+        function renderPage() {
+            const total = matched.length;
+            const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            if (total === 0) {
+                pagination.style.display = 'none';
+                return;
+            }
+            pagination.style.display = 'flex';
+            pageNote.textContent = `Page ${currentPage} of ${totalPages}`;
+
+            prevBtn.style.display = currentPage > 1 ? '' : 'none';
+            nextBtn.style.display = currentPage < totalPages ? '' : 'none';
+
+            const start = (currentPage - 1) * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+
+            matched.forEach((row, index) => {
+                row.hidden = !(index >= start && index < end);
+            });
+        }
+
         function filterTracking() {
             const query = search.value.trim().toLocaleLowerCase();
-            let shown = 0;
+            matched = [];
             rows.forEach(row => {
                 const matches = (!query || row.dataset.search.toLocaleLowerCase().includes(query))
                     && (status.value === 'all' || row.dataset.status === status.value);
-                row.hidden = !matches;
-                if (matches) shown++;
+                if (matches) {
+                    matched.push(row);
+                } else {
+                    row.hidden = true;
+                 }
             });
-            empty.hidden = shown !== 0;
-            count.textContent = `${shown} ${shown === 1 ? 'organization' : 'organizations'}`;
+            empty.hidden = matched.length !== 0;
+            currentPage = 1;
+            renderPage();
         }
+
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(matched.length / PAGE_SIZE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage();
+            }
+        });
+
         search.addEventListener('input', filterTracking);
         status.addEventListener('change', filterTracking);
+        filterTracking();
     })();
 </script>

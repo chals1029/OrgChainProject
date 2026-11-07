@@ -21,6 +21,23 @@
     const maxBytes = Number(fileInput.dataset.maxSize) * 1024;
     let expiryTimer;
 
+    function showFileExceedsPopup(message) {
+        const modal = document.getElementById('fileExceedsModal');
+        const msgEl = document.getElementById('fileExceedsMessage');
+        if (msgEl) msgEl.textContent = message;
+        if (modal && typeof modal.showModal === 'function') {
+            try {
+                modal.showModal();
+                return;
+            } catch (_) {}
+        }
+        window.alert(message);
+    }
+
+    window.closeFileExceedsModal = () => {
+        const modal = document.getElementById('fileExceedsModal');
+        if (modal) modal.close();
+    };
     function refresh() {
         clearTimeout(expiryTimer);
         const now = serverStart + performance.now() - clockStart;
@@ -35,15 +52,15 @@
         let file = fileInput.files[0];
         if (file) {
             const error = file.size === 0
-                ? 'The attachment is empty and cannot be uploaded. Choose a non-empty file.'
+                ? 'The supporting file is empty and cannot be uploaded. Choose a non-empty file.'
                 : file.size > maxBytes
-                    ? 'The attachment exceeds the 15 MB limit and cannot be uploaded. Choose a smaller file.'
+                    ? 'The supporting file exceeds the maximum allowed limit. The file must be smaller than the maximum size (15 MB).'
                     : !extensions.has(`.${file.name.split('.').pop().toLowerCase()}`)
                         ? 'This file type cannot be uploaded. Choose a PDF, Word, Excel or supported image file.' : '';
             if (error) {
                 fileInput.value = '';
                 file = null;
-                window.alert(error);
+                showFileExceedsPopup(error);
             }
         }
         document.getElementById('attachedFileName').textContent = file?.name || '';
@@ -83,6 +100,13 @@
     };
 
     form.addEventListener('input', refresh);
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file && file.size > maxBytes) {
+            fileInput.value = '';
+            showFileExceedsPopup('The supporting file exceeds the maximum allowed limit. The file must be smaller than the maximum size (15 MB).');
+        }
+    });
     // Run after the shared document-level upload handler has updated validity.
     window.addEventListener('change', event => {
         if (form.contains(event.target)) refresh();

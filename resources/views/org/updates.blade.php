@@ -1189,8 +1189,6 @@
                             <option value="General Announcement" @selected(old('type', 'General Announcement') === 'General Announcement')>General Announcement</option>
                             <option value="Call for TOSA" @selected(old('type') === 'Call for TOSA')>Call for TOSA</option>
                             <option value="Deadline" @selected(old('type') === 'Deadline')>Deadline Notice</option>
-                            <option value="Guideline" @selected(old('type') === 'Guideline')>Policy &amp; Guideline</option>
-                            <option value="Reminder" @selected(old('type') === 'Reminder')>Compliance Reminder</option>
                         </select>
                     </div>
 
@@ -1290,12 +1288,6 @@
                 </button>
                 <button type="button" class="aso-filter-btn" data-filter="Deadline" onclick="filterAnnouncements('Deadline', this)">
                     <i class="bi bi-hourglass-split" aria-hidden="true"></i> Deadline Notice
-                </button>
-                <button type="button" class="aso-filter-btn" data-filter="Guideline" onclick="filterAnnouncements('Guideline', this)">
-                    <i class="bi bi-journal-text" aria-hidden="true"></i> Policy &amp; Guideline
-                </button>
-                <button type="button" class="aso-filter-btn" data-filter="Reminder" onclick="filterAnnouncements('Reminder', this)">
-                    <i class="bi bi-bell-fill" aria-hidden="true"></i> Compliance Reminder
                 </button>
             </div>
         </div>
@@ -1686,6 +1678,21 @@
         </div>
     </dialog>
 
+    {{-- File Size Exceeds Modal Popup --}}
+    <dialog class="aso-modal" id="fileExceedsModal" style="max-width: 440px;" aria-labelledby="fileExceedsTitle" aria-describedby="fileExceedsMessage">
+        <div class="aso-modal-box" style="text-align: center; padding: 2rem 1.6rem;">
+            <div style="width: 58px; height: 58px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: inline-flex; align-items: center; justify-content: center; font-size: 1.85rem; margin-bottom: 1.1rem;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <h3 id="fileExceedsTitle" style="margin: 0 0 0.5rem; font-size: 1.18rem; font-weight: 800; color: #1e293b;">File Exceeds Maximum Size</h3>
+            <p id="fileExceedsMessage" style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.9rem; line-height: 1.55;">
+                The supporting file exceeds the maximum allowed limit. The file must be smaller than the maximum size (15 MB).
+            </p>
+            <button type="button" class="org-btn org-btn-primary" style="width: 100%; justify-content: center; padding: 0.7rem 1.25rem; font-weight: 700;" onclick="closeFileExceedsModal()">
+                Understood
+            </button>
+        </div>
+    </dialog>
     {{-- Upload Official Template Modal --}}
     @if ($isOso)
         <dialog class="aso-modal" id="uploadTemplateModal">
