@@ -195,22 +195,17 @@
     }
 </style>
 
-<section class="org-settings-panel org-accounts-page is-active" id="setPanel-users" aria-labelledby="accountsPanelTitle">
-    <div class="org-settings-panel-header">
-        <div>
-            <h2 class="org-settings-panel-title" id="accountsPanelTitle">Users &amp; Role Permissions</h2>
-            <p class="org-settings-panel-desc">Manage office and student organization accounts, register new student organizations, and perform secure officer turnover.</p>
+<section class="org-settings-panel org-accounts-page is-active" id="setPanel-users" aria-label="Users and Roles">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.25rem;">
+        <div class="org-accounts-tabs" role="tablist" aria-label="Account type" style="margin: 0;">
+            <button type="button" id="organizationAccountsTab" class="org-accounts-tab" role="tab" aria-selected="true" aria-controls="accountsPanel" data-accounts-tab="organization">Organization Accounts</button>
+            <button type="button" id="officeAccountsTab" class="org-accounts-tab" role="tab" aria-selected="false" aria-controls="accountsPanel" data-accounts-tab="office" tabindex="-1">Office Accounts</button>
         </div>
         <div class="org-accounts-header-actions">
             <button type="button" class="org-settings-btn-outline" id="accountsHowToUseBtn" aria-haspopup="dialog" aria-controls="accountsHowToUseModal" onclick="openAccountsHowToUseModal()">
                 <i class="bi bi-question-circle-fill" aria-hidden="true"></i> How to use
             </button>
         </div>
-    </div>
-
-    <div class="org-accounts-tabs" role="tablist" aria-label="Account type">
-        <button type="button" id="organizationAccountsTab" class="org-accounts-tab" role="tab" aria-selected="true" aria-controls="accountsPanel" data-accounts-tab="organization">Organization Accounts</button>
-        <button type="button" id="officeAccountsTab" class="org-accounts-tab" role="tab" aria-selected="false" aria-controls="accountsPanel" data-accounts-tab="office" tabindex="-1">Office Accounts</button>
     </div>
 
     <div id="accountsPanel" role="tabpanel" aria-labelledby="organizationAccountsTab">
