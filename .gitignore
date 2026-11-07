@@ -76,3 +76,6 @@ storage/framework/lsp-*.php
 /Local Off Campus
 /TOSA
 /Reports
+
+# Local Graphify export for the Obsidian vault
+/ORGCHAIN/Graphify Generated/

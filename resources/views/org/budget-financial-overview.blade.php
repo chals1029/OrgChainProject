@@ -155,36 +155,7 @@
     }
 </style>
 
-<section class="org-info-card oso-cash-overview" id="osoFinancialOverview" aria-label="Organization Financial Overview">
-    <div class="oso-cash-heading">
-        <div>
-            <h2><i class="bi bi-bank" aria-hidden="true"></i> {{ $selectedOrganization !== '' ? $selectedOrganization.' · Budget Utilization' : 'Organization Financial Overview' }}</h2>
-            <p>AY {{ $selectedYear }} · {{ $selectedSemester === 'Annual' ? 'Full academic year' : $selectedSemester }} · {{ $selectedOrganization ?: 'All organizations' }}</p>
-        </div>
-        @if ($selectedOrganization === '')
-            <span class="org-info-pill-badge">Read-only · {{ $osoFinancialOverview['totals']['organization_count'] }} {{ $osoFinancialOverview['totals']['organization_count'] === 1 ? 'organization' : 'organizations' }}</span>
-        @endif
-    </div>
-
-    <div class="oso-cash-grid">
-        @foreach ([
-            'beginning_balance' => ['Beginning cash balance', ''],
-            'cash_inflow' => ['Cash inflow', 'is-inflow'],
-            'cash_outflow' => ['Cash outflow', 'is-outflow'],
-            'ending_balance' => ['Ending cash balance', 'is-ending'],
-        ] as $key => [$label, $class])
-            <article class="oso-cash-metric {{ $class }}">
-                <span>{{ $label }}</span>
-                <strong data-cash-metric="{{ $key }}">₱{{ number_format($osoFinancialOverview['totals'][$key], 2) }}</strong>
-            </article>
-        @endforeach
-    </div>
-    <div class="oso-cash-approved">
-        <span>Approved activity budgets <small>— separate from cash spending</small></span>
-        <strong data-cash-metric="approved_budget">₱{{ number_format($osoFinancialOverview['totals']['approved_budget'], 2) }}</strong>
-    </div>
-    <p class="oso-cash-explanation"><i class="bi bi-info-circle-fill" aria-hidden="true"></i><span>Cash balance = beginning balance + inflows − outflows. Approved budgets are tracked separately and do not count as cash spending. Search and filters do not change totals. <strong>—</strong> means no saved cash account for the selected year; ₱0.00 is a recorded zero.</span></p>
-
+<section class="org-info-card oso-cash-overview" id="osoFinancialOverview" aria-label="Organizations Directory">
     @if ($selectedOrganization === '')
         <section class="oso-budget-directory" id="osoOrganizationDirectory" data-budget-directory="organizations" aria-labelledby="osoOrganizationDirectoryHeading">
             <div class="oso-directory-head">

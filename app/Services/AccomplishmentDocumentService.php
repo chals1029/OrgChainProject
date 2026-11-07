@@ -68,7 +68,7 @@ class AccomplishmentDocumentService
                 .$this->p($period, true).$this->p('STUDENT ORGANIZATION ACCOMPLISHMENT REPORT', true)
                 .$this->p('Generated: '.$packet['generated_at']).$this->sectionBreak($section, false, $document);
             $content .= $this->p('STUDENT ORGANIZATION ACCOMPLISHMENT REPORT', true, 'Heading1').$this->p($period, true)
-                .$this->p('Name of Organization: '.$packet['organization']).$this->p('Classification: '.($packet['classification'] ?: '________________________'))
+                .$this->p('Name of Organization: '.$packet['organization'])
                 .$this->p('PARTICULARS OF THE ACCOMPLISHMENTS', true, 'Heading2');
             $rows = [];
             foreach ($packet['reports'] as $report) {
@@ -76,8 +76,13 @@ class AccomplishmentDocumentService
                     'Total: '.$report['participants']."\nMale: ".$report['male_participants']."\nFemale: ".$report['female_participants'],
                     $report['date_label']."\n".$report['venue']."\n".$report['time_label'], 'PHP '.$report['financial']['total_expenses'], $report['problems_encountered'], $report['recommendations']];
             }
-            $content .= $this->table(self::PARTICULARS, $rows, 15840, true).$this->signatories($packet['signatories'], true)
-                .$this->sectionBreak($section, true, $document);
+            $content .= $this->table(self::PARTICULARS, $rows, 15840, true)
+                .$this->sectionBreak($section, true, $document)
+                .$this->p('STUDENT ORGANIZATION ACCOMPLISHMENT REPORT', true, 'Heading1')
+                .$this->p($period, true)
+                .$this->p('Name of Organization: '.$packet['organization'])
+                .$this->endorsementsPage($packet['signatories'] ?? ($packet['reports'][0]['signatories'] ?? []), $packet['organization'])
+                .$this->sectionBreak($section, false, $document);
             foreach ($packet['reports'] as $index => $report) {
                 if ($index > 0) {
                     $content .= $this->pageBreak();
@@ -89,30 +94,29 @@ class AccomplishmentDocumentService
                     .$this->p('Objectives: '.$report['objectives']).$this->p('Sustainable Development Goals: '.self::sdgLabels($report['sdg_goals']))
                     .$this->p('Number of Participants — Total: '.$report['participants'].'; Male: '.$report['male_participants'].'; Female: '.$report['female_participants'])
                     .$this->p('Persons Involved / Participants: '.$report['people_involved']).$this->p('II. Highlights of the Activity', true, 'Heading2')
-                    .$this->p($report['narrative']).$this->p('A. Brief Overview of the Activity', true, 'Heading2').$this->p($report['brief_description'])
-                    .$this->p('Problems Encountered: '.$report['problems_encountered']).$this->p('Recommendations: '.$report['recommendations']);
-                foreach ($report['evidence'] as $image) {
-                    $content .= $this->pageBreak().$this->p('B. Documentation — '.$report['title'], true, 'Heading2')
-                        .$this->image($image, $zip, $relationships, $types, ++$imageNumber).$this->p($image['caption']).$this->p($image['name']);
+                    .$this->p($report['narrative']).$this->p('A. Brief Overview of the Activity', true, 'Heading2').$this->p($report['brief_description']);
+                foreach ($report['evidence'] as $evidenceIndex => $image) {
+                    $content .= $this->pageBreak();
+                    if ($evidenceIndex === 0) {
+                        $content .= $this->p('B. Documentation — '.$report['title'], true, 'Heading2');
+                    }
+                    $content .= $this->image($image, $zip, $relationships, $types, ++$imageNumber).$this->p($image['caption']).$this->p($image['name']);
                 }
                 $finance = $report['financial'];
                 $content .= $this->pageBreak().$this->p('C. Financial Report / Expenses for the Activity', true, 'Heading2')
-                    .$this->p($report['title'], true).$this->p('Collection', true)
-                    .$this->financialTable($finance['collections']).$this->p('Total Collection: PHP '.$finance['total_collection'], true)
+                    .$this->p($report['title'], true)
                     .$this->p('Expenses', true).$this->financialTable($finance['expenses'])
                     .$this->p('Total Expenses: PHP '.$finance['total_expenses'], true)
-                    .$this->p('NET ACTIVITY COLLECTION (collections − expenses): PHP '.$finance['net_collection'], true)
-                    .$this->p($finance['source_note']).$this->p('Financial snapshot recorded: '.$finance['recorded_at'])
-                    .$this->p('ATTACHMENT — Receipt References / Supporting Evidence', true, 'Heading2');
-                $references = [];
-                foreach ($finance['expenses'] as $expense) {
-                    $references[] = [$expense['posting_reference'], $expense['reference'] ?: 'No receipt reference recorded', $expense['particulars'], $expense['date'] ?? '', 'PHP '.$expense['total']];
-                }
-                $content .= $this->table(['Posting', 'Receipt No.', 'Particulars', 'Date', 'Total Cost'], $references, 9360);
-                $content .= $this->signatories($report['signatories']);
-                foreach ($finance['receipt_attachments'] ?? [] as $attachment) {
-                    $content .= $this->pageBreak().$this->p('Supporting Receipt Scan — '.$report['title'], true, 'Heading2')
-                        .$this->image($attachment, $zip, $relationships, $types, ++$imageNumber).$this->p($attachment['caption']).$this->p($attachment['name']);
+                    .$this->p('REMAINING FUND:', true)
+                    .$this->p('Remaining Fund = Collection – Expenses')
+                    .$this->p('** Expenses incurred for this come from the remaining funds of the council');
+                foreach ($finance['receipt_attachments'] ?? [] as $receiptIndex => $attachment) {
+                    $content .= $this->pageBreak();
+                    if ($receiptIndex === 0) {
+                        $content .= $this->p('ATTACHMENTS', true, 'Heading2')
+                            .$this->p($report['title'], true);
+                    }
+                    $content .= $this->image($attachment, $zip, $relationships, $types, ++$imageNumber).$this->p($attachment['caption']).$this->p($attachment['name']);
                 }
             }
             // A break paragraph can overflow onto an otherwise empty page after a full table.
@@ -140,7 +144,7 @@ class AccomplishmentDocumentService
     {
         $values = array_map(fn (array $row): array => [($row['date'] ? $row['date']."\n" : '').$row['particulars'],
             (string) $row['quantity'], 'PHP '.$row['unit_cost'], 'PHP '.$row['total'], $row['reference'] ?: 'No receipt reference recorded'], $rows);
-        return $this->table(['Particulars', 'Quantity', 'Unit Cost', 'Total Cost', 'Receipt No.'], $values, 9360);
+        return $this->table(['Item', 'Quantity', 'Unit Cost', 'Total Amount', 'Receipt No.'], $values, 9360);
     }
 
     private function signatories(array $names, bool $summary = false): string
@@ -163,6 +167,38 @@ class AccomplishmentDocumentService
             }
         }
         return $content.'</w:tbl>';
+    }
+    private function endorsementsPage(array $signatories, string $organization): string
+    {
+        $sec = trim((string) ($signatories['secretary'] ?? '')) ?: '________________________________';
+        $dep = trim((string) ($signatories['deputy_secretary_general'] ?? $signatories['deputy_secretary'] ?? '')) ?: '________________________________';
+        $pres = trim((string) ($signatories['president'] ?? '')) ?: '________________________________';
+        $adv = trim((string) ($signatories['adviser'] ?? '')) ?: '________________________________';
+        $head = 'Dr. DYEMNAH INASIAH P. BENTIR';
+
+        $content = $this->p('Prepared by:', true);
+        $content .= '<w:tbl><w:tblPr><w:tblW w:w="12000" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>'
+            .'<w:tblGrid><w:gridCol w:w="6000"/><w:gridCol w:w="6000"/></w:tblGrid>'
+            .'<w:tr><w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>'
+            .$this->p($sec, true).$this->p('Secretary, '.$organization).'</w:tc>'
+            .'<w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>'
+            .$this->p($dep, true).$this->p('Deputy Secretary General, '.$organization).'</w:tc></w:tr></w:tbl>';
+
+        $content .= $this->p('Noted by:', true);
+        $content .= '<w:tbl><w:tblPr><w:tblW w:w="6000" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>'
+            .'<w:tblGrid><w:gridCol w:w="6000"/></w:tblGrid>'
+            .'<w:tr><w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>'
+            .$this->p($pres, true).$this->p('President, '.$organization).'</w:tc></w:tr>'
+            .'<w:tr><w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>'
+            .$this->p($adv, true).$this->p('Adviser, '.$organization).'</w:tc></w:tr></w:tbl>';
+
+        $content .= $this->p('Verified true and correct:', true);
+        $content .= '<w:tbl><w:tblPr><w:tblW w:w="6000" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>'
+            .'<w:tblGrid><w:gridCol w:w="6000"/></w:tblGrid>'
+            .'<w:tr><w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>'
+            .$this->p($head, true).$this->p('Head, Office of Student Organization').'</w:tc></w:tr></w:tbl>';
+
+        return $content;
     }
 
     private function p(string $text, bool $bold = false, ?string $style = null): string

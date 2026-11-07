@@ -92,7 +92,7 @@
     </style>
 
     <div class="office-review-kpis" aria-label="Student feedback totals">
-        @foreach ([['total', 'Total reports', 'chat-square-text', 'Matching submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['resolved', 'Resolved', 'check-all', 'Resolved by OSO'], ['dismissed', 'Dismissed', 'archive', 'Dismissed by OSO']] as [$key, $label, $icon, $hint])
+        @foreach ([['total', 'Total reports', 'chat-square-text', 'Matching submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['resolved', 'Resolved', 'check-all', 'Resolved by OSO']] as [$key, $label, $icon, $hint])
             <article class="office-review-kpi"><span class="office-review-kpi-icon"><i class="bi bi-{{ $icon }}" aria-hidden="true"></i></span><strong class="office-review-kpi-value">{{ $stats[$key] ?? 0 }}</strong><span class="office-review-kpi-label">{{ $label }}</span><p class="office-review-kpi-hint">{{ $hint }}</p></article>
         @endforeach
     </div>

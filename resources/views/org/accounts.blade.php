@@ -63,7 +63,119 @@
         min-width: 0;
         overflow-wrap: anywhere;
     }
+    /* Modern, minimalist flat table styling */
+    .org-settings-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .org-settings-table th {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e2e8f0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .org-settings-table td {
+        padding: 14px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+        vertical-align: middle;
+        transition: background-color 0.15s ease;
+    }
+    .org-settings-table tbody tr:hover td {
+        background-color: #fafbfd;
+    }
+    .org-settings-table tbody tr:last-child td {
+        background: #fff8f9 !important; /* Soft faint light-pink/off-white background tint on bottom row */
+    }
 
+    /* Pill-shaped toggle switches */
+    .org-toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 38px;
+        height: 20px;
+        margin: 0;
+        cursor: pointer;
+        user-select: none;
+        flex-shrink: 0;
+    }
+    .org-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+        margin: 0;
+    }
+    .org-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1; /* Inactive: light gray track */
+        transition: background-color 0.2s ease;
+        border-radius: 999px; /* Pill-shaped */
+    }
+    .org-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #ffffff; /* White circular slider knob */
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .org-toggle-switch input:checked + .org-toggle-slider {
+        background-color: #2563eb; /* Active: bright blue track */
+    }
+    .org-toggle-switch input:checked + .org-toggle-slider:before {
+        transform: translateX(18px);
+    }
+    .org-toggle-switch input:focus-visible + .org-toggle-slider {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
+    }
+    .org-toggle-switch input:disabled + .org-toggle-slider {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    /* Status Badges / Chips directly to the right of each toggle switch */
+    .org-status-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 68px;
+        padding: 2.5px 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.25;
+        border-radius: 4px; /* Compact, rounded-corner rectangular labels */
+        letter-spacing: 0.02em;
+        text-align: center;
+        user-select: none;
+        box-sizing: border-box;
+    }
+    .org-status-chip.is-active {
+        background-color: #16a34a; /* Solid green background */
+        color: #ffffff;            /* Bold white text (Level 1 and Enable) */
+    }
+    .org-status-chip.is-inactive {
+        background-color: #334155; /* Solid charcoal-gray background */
+        color: #ffffff;            /* Bold white text (Disable and No Access) */
+    }
+    .org-accounts-pagination button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed !important;
+    }
+    .org-accounts-pagination [hidden] {
+        display: none !important;
+    }
 
     .org-accounts-header-actions {
         display: flex;
@@ -196,19 +308,13 @@
 </style>
 
 <section class="org-settings-panel org-accounts-page is-active" id="setPanel-users" aria-label="Users and Roles">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.25rem;">
-        <div class="org-accounts-tabs" role="tablist" aria-label="Account type" style="margin: 0;">
-            <button type="button" id="organizationAccountsTab" class="org-accounts-tab" role="tab" aria-selected="true" aria-controls="accountsPanel" data-accounts-tab="organization">Organization Accounts</button>
-            <button type="button" id="officeAccountsTab" class="org-accounts-tab" role="tab" aria-selected="false" aria-controls="accountsPanel" data-accounts-tab="office" tabindex="-1">Office Accounts</button>
-        </div>
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 0.25rem;">
         <div class="org-accounts-header-actions">
             <button type="button" class="org-settings-btn-outline" id="accountsHowToUseBtn" aria-haspopup="dialog" aria-controls="accountsHowToUseModal" onclick="openAccountsHowToUseModal()">
                 <i class="bi bi-question-circle-fill" aria-hidden="true"></i> How to use
             </button>
         </div>
     </div>
-
-    <div id="accountsPanel" role="tabpanel" aria-labelledby="organizationAccountsTab">
 
     {{-- Register New Student Organization & Email Officer Credentials --}}
     <div class="org-settings-card" id="newOrganizationAccountCard">
@@ -237,13 +343,21 @@
                     </button>
                 </div>
 
-                <div class="org-settings-grid-3">
+                <div class="org-settings-grid-2">
                     <div class="org-settings-field">
                         <label for="newOrgName" class="org-settings-label">
                             <span>Organization Name</span>
                             <span class="org-settings-required">*</span>
                         </label>
                         <input type="text" id="newOrgName" name="organization_name" class="org-settings-input" required maxlength="255" placeholder="e.g. Junior Philippine Computer Society (JPCS)">
+                    </div>
+                    <div class="org-settings-field">
+                        <label for="newOrgOfficerEmail" class="org-settings-label">
+                            <span>Authorized Email Address</span>
+                            <span class="org-settings-required">*</span>
+                        </label>
+                        <input type="email" id="newOrgOfficerEmail" name="email" class="org-settings-input" required maxlength="255" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. officer@g.batstate-u.edu.ph or org@gmail.com">
+                        <small class="org-settings-help">Use an official BatStateU email (<code>@g.batstate-u.edu.ph</code> / <code>@batstate-u.edu.ph</code>) or the organization's Gmail address (<code>@gmail.com</code>).</small>
                     </div>
                     <div class="org-settings-field">
                         <label for="newOrgShortName" class="org-settings-label">Short Name / Acronym (optional)</label>
@@ -263,78 +377,75 @@
                     </div>
                 </div>
 
-                <div class="org-settings-grid-2">
-                    <div class="org-settings-field">
-                        <label for="newOrgOfficerName" class="org-settings-label">
-                            <span>Officer Full Name</span>
-                            <span class="org-settings-required">*</span>
-                        </label>
-                        <input type="text" id="newOrgOfficerName" name="officer_name" class="org-settings-input" required maxlength="255" autocomplete="name" placeholder="e.g. Maria Clara Santos">
-                    </div>
-                    <div class="org-settings-field">
-                        <label for="newOrgOfficerEmail" class="org-settings-label">
-                            <span>Officer Email Address</span>
-                            <span class="org-settings-required">*</span>
-                        </label>
-                        <input type="email" id="newOrgOfficerEmail" name="email" class="org-settings-input" required maxlength="255" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. officer@g.batstate-u.edu.ph or org@gmail.com">
-                        <small class="org-settings-help">Use an official BatStateU email (<code>@g.batstate-u.edu.ph</code> / <code>@batstate-u.edu.ph</code>) or the organization's Gmail address (<code>@gmail.com</code>).</small>
-                    </div>
-                </div>
-
                 <div class="org-accounts-form-footer">
                     <p class="org-settings-help" style="margin: 0;">
                         <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                        Temporary credentials are generated by the server and sent by email only—never displayed here. New organizations are operational for renewal filing and are not marked recognized for an academic year until renewal is approved.
+                        Temporary credentials are emailed only. New organizations require approved renewal for academic-year recognition.
                     </p>
                     <button type="submit" id="newOrgSubmitBtn" class="org-settings-save-btn">
-                        <i class="bi bi-envelope-check-fill" aria-hidden="true"></i> Create Organization &amp; Email Credentials
+                        <i class="bi bi-envelope-check-fill" aria-hidden="true"></i> Register Organization
                     </button>
                 </div>
             </form>
         </div>
     </div>
+    {{-- Account Type Tabs --}}
+    <div class="org-accounts-tabs" role="tablist" aria-label="Account type" style="margin: 0.25rem 0;">
+        <button type="button" id="organizationAccountsTab" class="org-accounts-tab" role="tab" aria-selected="true" aria-controls="accountsPanel" data-accounts-tab="organization">Organization Accounts</button>
+        <button type="button" id="officeAccountsTab" class="org-accounts-tab" role="tab" aria-selected="false" aria-controls="accountsPanel" data-accounts-tab="office" tabindex="-1">Office Accounts</button>
+    </div>
+
+    <div id="accountsPanel" role="tabpanel" aria-labelledby="organizationAccountsTab">
 
     {{-- User Accounts Table --}}
     <div class="org-settings-card">
         <div class="org-settings-card-header">
             <div class="org-settings-card-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></div>
             <div>
-                <h3 class="org-settings-card-title" id="accountsTableTitle">Organization Accounts</h3>
+                <h3 class="org-settings-card-title" id="accountsTableTitle">Authorized Accounts</h3>
                 <p class="org-settings-card-desc" id="accountsTableDescription">Officer names and their assigned organizations. Disabled accounts remain visible.</p>
             </div>
         </div>
         <div class="org-settings-card-body" style="padding: 0;">
             <div style="padding: 1rem;">
                 <label for="settingsAccountSearch" class="org-settings-label">Search accounts</label>
-                <input type="search" id="settingsAccountSearch" class="org-settings-input" placeholder="Name, university email, organization, or role" autocomplete="off" oninput="filterSettingsAccounts(this.value)">
+                <input type="search" id="settingsAccountSearch" class="org-settings-input" placeholder="Name, university email, organization, or role" autocomplete="off" oninput="accountsCurrentPage = 1; filterSettingsAccounts(this.value)">
                 <p id="settingsAccountSearchEmpty" class="org-settings-help" role="status" hidden></p>
             </div>
             <div class="org-settings-table-wrap">
                 <table class="org-settings-table">
                     <thead>
                         <tr>
-                            <th>Officer Name</th>
-                            <th>Organization / Office</th>
-                            <th>TOSA Clearance</th>
-                            <th>Account Status</th>
-                            <th>Last Updated</th>
-                            <th>Actions</th>
+                            <th id="colHeaderName">ORGANIZATION NAME</th>
+                            <th id="colHeaderDept">COLLEGE / DEPARTMENT</th>
+                            <th id="colHeaderClearance" style="text-align: center; color: #64748b; font-family: system-ui, -apple-system, sans-serif; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">TOSA CLEARANCE</th>
+                            <th id="colHeaderStatus" style="text-align: center; color: #64748b; font-family: system-ui, -apple-system, sans-serif; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">ACCOUNT STATUS</th>
+                            <th>LAST UPDATED</th>
+                            <th>ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody id="settingsUserListTbody">
                         @foreach ($settingsUsers as $user)
                             @php
+                                $orgName = $user->office_role === 'so'
+                                    ? ($user->studentOrganization?->name ?: $user->name)
+                                    : $user->name;
+                                $displayInitials = $user->office_role === 'so' && $user->studentOrganization?->short_name
+                                    ? mb_substr($user->studentOrganization->short_name, 0, 3)
+                                    : $user->initials();
+                                $college = $user->studentOrganization?->college;
                                 $userData = [
                                     'id' => $user->id,
                                     'name' => $user->name,
+                                    'organization_name' => $user->studentOrganization?->name,
+                                    'college' => $college,
                                     'email' => $user->email,
                                     'office_role' => $user->office_role,
                                     'role' => $user->roleLabel(),
                                     'office_title' => $user->office_title,
                                     'employee_id' => $user->employee_id,
                                     'student_organization_id' => $user->student_organization_id,
-                                    'organization_name' => $user->studentOrganization?->name,
-                                    'initials' => $user->initials(),
+                                    'initials' => $displayInitials,
                                     'updated_at' => $user->updated_at?->toIso8601String(),
                                     'tosa_clearance' => $user->effectiveTosaClearance(),
                                     'is_active' => (bool) $user->is_active,
@@ -345,22 +456,45 @@
                             <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}" @if ($user->office_role !== 'so') hidden @endif>
                                 <td>
                                     <div class="org-settings-user-identity">
-                                        <div class="org-settings-avatar-sm">{{ $userData['initials'] }}</div>
+                                        <div class="org-settings-avatar-sm">{{ $displayInitials }}</div>
                                         <div>
-                                            <strong data-user-name>{{ $user->name }}</strong>
+                                            <strong data-user-name style="text-transform: uppercase;">{{ strtoupper($orgName) }}</strong>
                                             <small data-user-email>{{ $user->email }}</small>
-                                            <small data-user-title>{{ $user->office_title }}</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="org-settings-role-badge">{{ $userData['role'] }}</span>
-                                    <small data-user-organization>{{ $userData['organization_name'] ?? ($user->office_role === 'so' ? 'No organization assigned' : '') }}</small>
+                                    <span data-user-college style="font-weight: 600; color: #2d3748;">{{ $college ?? ($user->office_role === 'so' ? '—' : $userData['role']) }}</span>
+                                    @if ($user->office_role !== 'so' && $user->office_title)
+                                        <small style="display: block; color: #718096; font-size: 0.75rem;">{{ $user->office_title }}</small>
+                                    @endif
                                 </td>
-                                <td><span data-user-clearance class="{{ $userData['tosa_clearance'] === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green' }}">{{ $userData['tosa_clearance'] }}</span></td>
-                                <td>
-                                    <span data-user-status class="{{ $user->is_active ? 'org-settings-status-active' : 'org-settings-pill-gray' }}">{{ $user->is_active ? 'Enabled' : 'Disabled' }}</span>
-                                    <small data-user-password-state>{{ $userData['must_change_password'] ? 'Password change required' : '' }}</small>
+                                <td style="text-align: center;">
+                                    @php
+                                        $isCleared = $userData['tosa_clearance'] !== 'No Access';
+                                        $canEditClearance = $user->office_role === 'so' || $user->office_role === 'ovcaa';
+                                    @endphp
+                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <label class="org-toggle-switch" title="{{ $isCleared ? 'Level 1 (Allowed)' : 'No Access (Restricted)' }}">
+                                            <input type="checkbox" data-tosa-toggle="{{ $user->id }}" @checked($isCleared) @disabled(!$canEditClearance) onclick="handleTosaClearanceToggleClick(event, {{ $user->id }})">
+                                            <span class="org-toggle-slider"></span>
+                                        </label>
+                                        <span class="org-status-chip {{ $isCleared ? 'is-active' : 'is-inactive' }}" data-tosa-chip="{{ $user->id }}">
+                                            {{ $isCleared ? 'Level 1' : 'No Access' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td style="text-align: center;">
+                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <label class="org-toggle-switch" title="{{ $user->is_active ? 'Account Enabled' : 'Account Disabled' }}">
+                                            <input type="checkbox" data-status-toggle="{{ $user->id }}" @checked($user->is_active) @disabled($isCurrentAccount) onclick="handleStatusToggleClick(event, {{ $user->id }})">
+                                            <span class="org-toggle-slider"></span>
+                                        </label>
+                                        <span class="org-status-chip {{ $user->is_active ? 'is-active' : 'is-inactive' }}" data-status-chip="{{ $user->id }}">
+                                            {{ $user->is_active ? 'Enable' : 'Disable' }}
+                                        </span>
+                                    </div>
+                                    <small data-user-password-state style="display: block; font-size: 0.7rem; color: #dc2626; margin-top: 0.2rem;">{{ $userData['must_change_password'] ? 'Password change required' : '' }}</small>
                                 </td>
                                 <td data-user-updated>{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
                                 <td>
@@ -373,7 +507,6 @@
                                             @if ($user->office_role === 'so')
                                                 <button type="button" class="org-settings-btn-subtle" data-account-action="turnover" aria-label="Turn over SO officer: {{ $user->name }}" @disabled(!$user->is_active || !$user->student_organization_id) title="{{ !$user->is_active || !$user->student_organization_id ? 'Turnover requires an enabled account with an assigned organization' : 'Turn over SO officer' }}">Turn over</button>
                                             @endif
-                                            <button type="button" class="org-settings-btn-subtle" data-account-action="status" aria-label="{{ $user->is_active ? 'Disable' : 'Enable' }} account: {{ $user->name }}" title="{{ $user->is_active ? 'Disable' : 'Enable' }} account">{{ $user->is_active ? 'Disable' : 'Enable' }}</button>
                                             @if ($user->office_role === 'so' && $user->is_active && $user->student_organization_id && $user->must_change_password)
                                                 <button type="button" class="org-settings-btn-subtle" data-account-action="retry-email" data-retry-url="{{ route('office.organizations.accounts.retry', $user) }}" aria-label="Email credentials: {{ $user->name }}" title="Generate a new temporary password, replace the previous temporary password, and email login credentials">Email credentials</button>
                                             @endif
@@ -385,10 +518,17 @@
                     </tbody>
                 </table>
             </div>
+            <div class="org-accounts-pagination" id="accountsPagination" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #fff;" hidden>
+                <span id="accountsPageInfo" style="font-size: 0.82rem; color: #64748b; font-weight: 600;"></span>
+                <nav style="display: flex; align-items: center; gap: 0.4rem;" aria-label="Accounts table pages">
+                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="accountsPrevBtn" onclick="changeAccountsPage(-1)" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; color: #8b1828; font-weight: 700;">Previous</button>
+                    <div id="accountsPageNumbers" style="display: inline-flex; align-items: center; gap: 0.35rem;"></div>
+                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="accountsNextBtn" onclick="changeAccountsPage(1)" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; color: #8b1828; font-weight: 700;">Next</button>
+                </nav>
+            </div>
         </div>
     </div>
     </div>
-
     {{-- Roles & Permissions Matrix & TOSA Authorized Users --}}
     <div class="org-settings-card">
         <div class="org-settings-card-header">
@@ -549,7 +689,7 @@
         organization_name: 'newOrgName',
         short_name: 'newOrgShortName',
         college: 'newOrgCollege',
-        officer_name: 'newOrgOfficerName',
+        officer_name: 'newOrgName',
         email: 'newOrgOfficerEmail',
     };
 
@@ -614,11 +754,12 @@
         event.preventDefault();
         clearNewOrgFieldErrors();
 
+        const orgName = settingsInputValue('newOrgName').trim();
         const payload = {
-            organization_name: settingsInputValue('newOrgName').trim(),
+            organization_name: orgName,
             short_name: settingsInputValue('newOrgShortName').trim(),
             college: settingsInputValue('newOrgCollege').trim(),
-            officer_name: settingsInputValue('newOrgOfficerName').trim(),
+            officer_name: orgName,
             email: settingsInputValue('newOrgOfficerEmail').trim(),
         };
 
@@ -746,26 +887,108 @@
         dialog.querySelector('button')?.focus();
     }
 
+    const ACCOUNTS_PER_PAGE = 10;
+    let accountsCurrentPage = 1;
+
     // Account metadata is shared by server-rendered rows and confirmed API responses.
     function filterSettingsAccounts(query = settingsInputValue('settingsAccountSearch')) {
         const q = query.trim().toLowerCase();
-        let matches = 0;
-        document.querySelectorAll('[data-settings-user-id]').forEach(row => {
+        const allRows = [...document.querySelectorAll('[data-settings-user-id]')];
+        const matchingRows = [];
+
+        allRows.forEach(row => {
             const user = settingsAccounts.get(Number(row.dataset.settingsUserId));
             if (!user) return;
-            const text = [user.name, user.email, user.organization_name, user.role, user.office_role, user.office_title].join(' ').toLowerCase();
+            const text = [user.name, user.email, user.organization_name, user.college, user.role, user.office_role, user.office_title].join(' ').toLowerCase();
             const inTab = activeAccountsTab === 'organization' ? user.office_role === 'so' : user.office_role !== 'so';
-            row.hidden = !inTab || (Boolean(q) && !text.includes(q));
-            if (!row.hidden) matches++;
+            const matchesQuery = !Boolean(q) || text.includes(q);
+
+            if (inTab && matchesQuery) {
+                matchingRows.push(row);
+            } else {
+                row.hidden = true;
+            }
         });
+
+        const totalMatches = matchingRows.length;
+        const totalPages = Math.max(1, Math.ceil(totalMatches / ACCOUNTS_PER_PAGE));
+
+        if (accountsCurrentPage > totalPages) accountsCurrentPage = totalPages;
+        if (accountsCurrentPage < 1) accountsCurrentPage = 1;
+
+        const startIndex = (accountsCurrentPage - 1) * ACCOUNTS_PER_PAGE;
+        const endIndex = startIndex + ACCOUNTS_PER_PAGE;
+
+        matchingRows.forEach((row, index) => {
+            row.hidden = !(index >= startIndex && index < endIndex);
+        });
+
         const empty = document.getElementById('settingsAccountSearchEmpty');
         if (empty) {
-            empty.hidden = matches > 0;
-            empty.textContent = q ? 'No accounts match your search.' : `No ${activeAccountsTab} accounts yet.`;
+            empty.hidden = totalMatches > 0;
+            empty.textContent = q ? 'No accounts match your search.' : `No ${activeAccountsTab === 'organization' ? 'organization' : 'office'} accounts yet.`;
+        }
+
+        const pagination = document.getElementById('accountsPagination');
+        const pageInfo = document.getElementById('accountsPageInfo');
+        const prevBtn = document.getElementById('accountsPrevBtn');
+        const nextBtn = document.getElementById('accountsNextBtn');
+        const pageNumbersContainer = document.getElementById('accountsPageNumbers');
+
+        if (pagination && pageInfo && prevBtn && nextBtn) {
+            if (totalMatches <= ACCOUNTS_PER_PAGE) {
+                pagination.hidden = totalMatches === 0;
+                if (totalMatches > 0) {
+                    pageInfo.textContent = `Showing all ${totalMatches} ${totalMatches === 1 ? 'account' : 'accounts'}`;
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                    if (pageNumbersContainer) pageNumbersContainer.innerHTML = '';
+                }
+            } else {
+                pagination.hidden = false;
+                const displayStart = startIndex + 1;
+                const displayEnd = Math.min(endIndex, totalMatches);
+                pageInfo.textContent = `Showing ${displayStart}–${displayEnd} of ${totalMatches} accounts`;
+
+                prevBtn.style.display = '';
+                prevBtn.disabled = accountsCurrentPage <= 1;
+                nextBtn.style.display = '';
+                nextBtn.disabled = accountsCurrentPage >= totalPages;
+
+                if (pageNumbersContainer) {
+                    pageNumbersContainer.innerHTML = '';
+                    for (let p = 1; p <= totalPages; p++) {
+                        const pageBtn = document.createElement('button');
+                        pageBtn.type = 'button';
+                        pageBtn.textContent = p;
+                        pageBtn.style.cssText = 'min-width: 28px; height: 28px; padding: 0 6px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;';
+                        if (p === accountsCurrentPage) {
+                            pageBtn.style.background = '#8b1828';
+                            pageBtn.style.color = '#ffffff';
+                            pageBtn.style.borderColor = '#8b1828';
+                            pageBtn.setAttribute('aria-current', 'page');
+                        } else {
+                            pageBtn.style.background = '#ffffff';
+                            pageBtn.style.color = '#334155';
+                            pageBtn.addEventListener('click', () => {
+                                accountsCurrentPage = p;
+                                filterSettingsAccounts();
+                            });
+                        }
+                        pageNumbersContainer.appendChild(pageBtn);
+                    }
+                }
+            }
         }
     }
 
+    function changeAccountsPage(delta) {
+        accountsCurrentPage += delta;
+        filterSettingsAccounts();
+    }
+
     function selectAccountsTab(tab) {
+        accountsCurrentPage = 1;
         activeAccountsTab = tab.dataset.accountsTab;
         document.querySelectorAll('[data-accounts-tab]').forEach(button => {
             const selected = button === tab;
@@ -774,10 +997,14 @@
         });
         document.getElementById('accountsPanel').setAttribute('aria-labelledby', tab.id);
         document.getElementById('newOrganizationAccountCard').hidden = activeAccountsTab !== 'organization';
-        document.getElementById('accountsTableTitle').textContent = activeAccountsTab === 'organization' ? 'Organization Accounts' : 'Office Accounts';
+        document.getElementById('accountsTableTitle').textContent = activeAccountsTab === 'organization' ? 'Authorized Accounts' : 'Office Accounts';
         document.getElementById('accountsTableDescription').textContent = activeAccountsTab === 'organization'
             ? 'Officer names and their assigned organizations. Disabled accounts remain visible.'
             : 'OSO, SDO, OVCAA, and OC accounts. Disabled accounts remain visible.';
+        const colName = document.getElementById('colHeaderName');
+        if (colName) colName.textContent = activeAccountsTab === 'organization' ? 'ORGANIZATION NAME' : 'OFFICE ACCOUNT / NAME';
+        const colDept = document.getElementById('colHeaderDept');
+        if (colDept) colDept.textContent = activeAccountsTab === 'organization' ? 'COLLEGE / DEPARTMENT' : 'OFFICE / ROLE';
         filterSettingsAccounts();
     }
 
@@ -828,26 +1055,35 @@
             tbody.prepend(row);
         }
         row.dataset.settingsUser = JSON.stringify(user);
+        const isCurrent = id === Number(settingsOfficerId);
+        const isCleared = Boolean(user.tosa_clearance && user.tosa_clearance !== 'No Access');
+        const canEditClearance = user.office_role === 'so' || user.office_role === 'ovcaa';
+        const isActive = Boolean(user.is_active);
+
         // Only fixed markup is parsed; every account-provided value uses textContent.
-        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name></strong><small data-user-email></small><small data-user-title></small></div></div></td><td><span class="org-settings-role-badge"></span><small data-user-organization></small></td><td><span data-user-clearance></span></td><td><span data-user-status></span><small data-user-password-state></small></td><td data-user-updated></td><td><div class="org-settings-user-actions"></div></td>';
-        row.querySelector('[data-user-name]').textContent = user.name;
+        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name style="text-transform: uppercase;"></strong><small data-user-email></small></div></div></td><td><span data-user-college style="font-weight: 600; color: #2d3748;"></span></td><td style="text-align: center;"><div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;"><label class="org-toggle-switch" title="' + (isCleared ? 'Level 1 (Allowed)' : 'No Access (Restricted)') + '"><input type="checkbox" data-tosa-toggle="' + id + '"' + (isCleared ? ' checked' : '') + (!canEditClearance ? ' disabled' : '') + '><span class="org-toggle-slider"></span></label><span class="org-status-chip ' + (isCleared ? 'is-active' : 'is-inactive') + '" data-tosa-chip="' + id + '">' + (isCleared ? 'Level 1' : 'No Access') + '</span></div></td><td style="text-align: center;"><div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;"><label class="org-toggle-switch" title="' + (isActive ? 'Account Enabled' : 'Account Disabled') + '"><input type="checkbox" data-status-toggle="' + id + '"' + (isActive ? ' checked' : '') + (isCurrent ? ' disabled' : '') + '><span class="org-toggle-slider"></span></label><span class="org-status-chip ' + (isActive ? 'is-active' : 'is-inactive') + '" data-status-chip="' + id + '">' + (isActive ? 'Enable' : 'Disable') + '</span></div><small data-user-password-state style="display: block; font-size: 0.7rem; color: #dc2626; margin-top: 0.2rem;"></small></td><td data-user-updated></td><td><div class="org-settings-user-actions"></div></td>';
+        const orgName = user.office_role === 'so' ? (user.organization_name || user.name) : user.name;
+        row.querySelector('[data-user-name]').textContent = (orgName || '').toUpperCase();
         row.querySelector('[data-user-email]').textContent = user.email;
-        row.querySelector('[data-user-title]').textContent = user.office_title || '';
         row.querySelector('.org-settings-avatar-sm').textContent = user.initials;
-        const role = row.querySelector('.org-settings-role-badge');
-        role.textContent = user.role;
-        const roleClass = { so: 'is-so', oso: 'is-admin', sdo: 'is-sdo', oc: 'is-oc', ovcaa: 'is-ovcaa' }[user.office_role];
-        if (roleClass) role.classList.add(roleClass);
-        row.querySelector('[data-user-organization]').textContent = user.organization_name || (user.office_role === 'so' ? 'No organization assigned' : '');
-        const clearance = row.querySelector('[data-user-clearance]');
-        clearance.textContent = user.tosa_clearance;
-        clearance.className = user.tosa_clearance === 'No Access' ? 'org-settings-pill-gray' : 'org-settings-pill-green';
-        const status = row.querySelector('[data-user-status]');
-        status.textContent = user.is_active ? 'Enabled' : 'Disabled';
-        status.className = user.is_active ? 'org-settings-status-active' : 'org-settings-pill-gray';
+        const collegeEl = row.querySelector('[data-user-college]');
+        if (collegeEl) collegeEl.textContent = user.office_role === 'so' ? (user.college || '—') : (user.role || '—');
         row.querySelector('[data-user-password-state]').textContent = user.must_change_password ? 'Password change required' : '';
         const updatedAt = user.updated_at ? new Date(user.updated_at) : null;
         row.querySelector('[data-user-updated]').textContent = updatedAt && !Number.isNaN(updatedAt.getTime()) ? updatedAt.toLocaleString() : 'Not recorded';
+        // Bind toggle click listeners (only enable/disable upon user confirmation)
+        const statusToggle = row.querySelector(`[data-status-toggle="${id}"]`);
+        if (statusToggle) {
+            statusToggle.addEventListener('click', (event) => {
+                handleStatusToggleClick(event, id);
+            });
+        }
+        const tosaToggle = row.querySelector(`[data-tosa-toggle="${id}"]`);
+        if (tosaToggle) {
+            tosaToggle.addEventListener('click', (event) => {
+                handleTosaClearanceToggleClick(event, id);
+            });
+        }
         const actions = row.querySelector('.org-settings-user-actions');
         const addAction = (action, label, accessibleLabel, disabled = false) => {
             const button = document.createElement('button');
@@ -868,7 +1104,6 @@
             addAction('edit', 'Edit', 'Edit profile');
             addAction('reset', 'Password', 'Reset temporary password');
             if (user.office_role === 'so') addAction('turnover', 'Turn over', 'Turn over SO officer', !user.is_active || !user.student_organization_id);
-            addAction('status', user.is_active ? 'Disable' : 'Enable', user.is_active ? 'Disable account' : 'Enable account');
             if (user.office_role === 'so' && user.is_active && user.student_organization_id && user.must_change_password) {
                 const retryButton = addAction('retry-email', 'Email credentials', 'Email credentials');
                 retryButton.dataset.retryUrl = `${osoAccountRoutes.organizationRetryBase}/${id}/retry-email`;
@@ -967,18 +1202,55 @@
         }, { edit: 'Save these officer account changes?', reset: 'Reset this officer password?', turnover: 'Turn over this officer account? Existing sessions will be revoked.' }[action]);
     }
 
-    function toggleOsoUserStatus(id, isActive) {
+    function handleStatusToggleClick(event, id) {
+        if (event) {
+            event.preventDefault(); // Stop toggle switch from changing before confirmation!
+        }
         if (Number(id) === Number(settingsOfficerId)) {
             showSettingsToast('Use My Account to manage your own profile and password. You cannot change your own account status.', 'error');
             return;
         }
         const user = settingsAccounts.get(Number(id));
         if (!user || settingsMutationPending) return;
-        return runSettingsMutation(async () => {
-            const data = await postSettingsJson(`${osoAccountRoutes.userStatusBase}/${id}/status`, { is_active: isActive }, 'PATCH');
+
+        const targetActive = !user.is_active;
+        const confirmMessage = targetActive
+            ? `Enable ${user.name}?`
+            : `Disable ${user.name}? Existing sessions will be revoked.`;
+
+        runSettingsMutation(async () => {
+            const data = await postSettingsJson(`${osoAccountRoutes.userStatusBase}/${id}/status`, { is_active: targetActive }, 'PATCH');
             upsertOsoUser(data.user);
             showSettingsToast(data.message || 'Officer account status updated.', 'success');
-        }, isActive ? `Enable ${user.name}?` : `Disable ${user.name}? Existing sessions will be revoked.`);
+        }, confirmMessage);
+    }
+
+    function handleTosaClearanceToggleClick(event, id) {
+        if (event) {
+            event.preventDefault(); // Stop toggle switch from changing before confirmation!
+        }
+        const user = settingsAccounts.get(Number(id));
+        if (!user || settingsMutationPending) return;
+
+        const isCurrentlyCleared = Boolean(user.tosa_clearance && user.tosa_clearance !== 'No Access');
+        const targetClearance = isCurrentlyCleared ? 'No Access' : 'Level 1 Read-only';
+        const confirmMessage = isCurrentlyCleared
+            ? `Revoke TOSA clearance for ${user.name}?`
+            : `Grant TOSA Level 1 clearance to ${user.name}?`;
+
+        runSettingsMutation(async () => {
+            const data = await postSettingsJson(`${osoAccountRoutes.userStatusBase}/${id}`, { tosa_clearance: targetClearance }, 'PATCH');
+            upsertOsoUser(data.user);
+            showSettingsToast(data.message || 'TOSA clearance updated.', 'success');
+        }, confirmMessage);
+    }
+
+    function toggleOsoUserStatus(id, isActive) {
+        return handleStatusToggleClick(null, id);
+    }
+
+    function toggleOsoTosaClearance(id, clearance) {
+        return handleTosaClearanceToggleClick(null, id);
     }
 
     document.querySelectorAll('[data-settings-user]').forEach(row => {
@@ -991,9 +1263,7 @@
         if (!button || button.disabled || settingsMutationPending) return;
         const id = Number(button.closest('[data-settings-user-id]').dataset.settingsUserId);
         const action = button.dataset.accountAction;
-        if (action === 'status') {
-            toggleOsoUserStatus(id, !settingsAccounts.get(id).is_active);
-        } else if (action === 'retry-email') {
+        if (action === 'retry-email') {
             retryNewOrganizationEmail(id, button.dataset.retryUrl || '');
         } else {
             openAccountManagement(id, action);

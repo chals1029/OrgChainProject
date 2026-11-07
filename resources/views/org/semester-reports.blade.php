@@ -95,21 +95,39 @@
                     <thead><tr><th scope="col">Organization</th><th scope="col">Accomplishment Report (AR)</th><th scope="col">Financial Report (FR)</th><th scope="col">Reports</th></tr></thead>
                     <tbody>
                         @forelse (($reportDirectory ?? []) as $entry)
-                            <tr data-sr-directory-row data-search="{{ \Illuminate\Support\Str::lower($entry['organization'].' '.($entry['short_name'] ?? '').' '.($entry['college'] ?? '')) }}" @class(['is-selected' => $selectedOrganization === $entry['organization']]) @if ($loop->index >= 5) hidden @endif>
+                            <?php
+                                $modalReports = [];
+                                foreach (['ar', 'fr'] as $modalType) {
+                                    $item = $entry['reports'][$modalType] ?? [];
+                                    $document = !empty($item['can_view']) ? ($item['documents']->first() ?? null) : null;
+                                    $nativeAr = $modalType === 'ar' && $document && $document->accomplishment_summary !== null;
+                                    $modalReports[$modalType] = [
+                                        'type' => $modalType, 'title' => $item['title'] ?? strtoupper($modalType),
+                                        'state' => $item['state'] ?? 'draft', 'state_label' => $item['state_label'] ?? 'Not submitted',
+                                        'can_view' => !empty($item['can_view']), 'can_review' => !empty($item['can_review']),
+                                        'has_document' => !empty($item['has_document']), 'notes' => $item['notes'] ?? '',
+                                        'filename' => $document?->original_name,
+                                        'submission_date' => $reportDate($item['submitted_at'] ?? null),
+                                        'is_workbook' => $document && !$nativeAr && $document->isWorkbook(),
+                                        'preview_url' => $document ? route('office.reports.documents.view', ['document' => $document, 'embedded' => 1]) : null,
+                                        'workbook_url' => $document && $modalType === 'fr' && !$nativeAr && $document->isWorkbook() ? route('office.reports.documents.workbook', ['document' => $document]) : null,
+                                        'download_url' => $document ? route('office.reports.documents.view', ['document' => $document, 'download' => 1]) : null,
+                                        'review_url' => route('office.reports.review', ['reportType' => $modalType]),
+                                    ];
+                                }
+                                $modalData = ['organization' => $entry['organization'], 'college' => $entry['college'] ?? '', 'academic_year' => $selectedYear, 'semester' => $selectedSemester, 'reports' => $modalReports];
+                            ?>
+                            <tr data-sr-directory-row data-reports="{{ json_encode($modalData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}" data-search="{{ \Illuminate\Support\Str::lower($entry['organization'].' '.($entry['short_name'] ?? '').' '.($entry['college'] ?? '')) }}" @class(['is-selected' => $selectedOrganization === $entry['organization']]) @if ($loop->index >= 5) hidden @endif>
                                 <td data-label="Organization"><strong>{{ $entry['organization'] }}</strong><small>{{ $entry['short_name'] ?? '' }}@if (!empty($entry['short_name']) && !empty($entry['college'])) · @endif{{ $entry['college'] ?? '' }}</small></td>
                                 @foreach (['ar', 'fr'] as $type)
                                     @php($directoryReport = $entry['reports'][$type] ?? [])
                                     <td data-label="{{ strtoupper($type) }} status">
-                                        <span class="sr-status is-{{ $directoryReport['state'] ?? 'draft' }}">{{ empty($directoryReport['can_view']) ? 'Not submitted' : ($directoryReport['state_label'] ?? 'Submitted') }}</span>
+                                        <span class="sr-status is-{{ $directoryReport['state'] ?? 'draft' }}">{{ empty($directoryReport['can_view']) && ($directoryReport['state'] ?? '') !== 'returned' ? 'Not submitted' : ($directoryReport['state_label'] ?? 'Submitted') }}</span>
                                         @if (!empty($directoryReport['notes']))<small>{{ $directoryReport['notes'] }}</small>@endif
                                     </td>
                                 @endforeach
                                 <td data-label="Reports">
-                                    @if ($entry['can_view_submitted'])
-                                        <a class="app-view-action" href="{{ $entry['view_url'] }}#srSelectedReport" data-sr-view-submitted aria-label="View submitted reports for {{ $entry['organization'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
-                                    @else
-                                        <button type="button" class="app-view-action" disabled title="No submitted AR or FR file is available for review." aria-label="View submitted reports for {{ $entry['organization'] }} — unavailable"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
-                                    @endif
+                                    <button type="button" class="app-view-action" data-oso-view aria-label="View reports for {{ $entry['organization'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                 </td>
                             </tr>
                         @empty
@@ -168,9 +186,9 @@
                 @endif
                 @if (!empty($record['can_review']))
                     <h3>Review {{ strtoupper($selectedTab) }}</h3>
-                    <p class="sr-muted">These actions apply only to the selected {{ $reportTitle }}. Return for fixable issues; rejection is final.</p>
-                    <div class="sr-review-grid">
-                        @foreach (['return' => 'Return for Revision', 'reject' => 'Reject'] as $decision => $label)
+                    <p class="sr-muted">These actions apply only to the selected {{ $reportTitle }}. Return for fixable issues.</p>
+                    <div class="sr-review-grid" style="grid-template-columns: 1fr;">
+                        @foreach (['return' => 'Return for Revision'] as $decision => $label)
                             <form method="post" action="{{ route('office.reports.review', ['reportType' => $selectedTab]) }}" class="sr-review" data-sr-review-form>
                                 @csrf
                                 <input type="hidden" name="reportType" value="{{ $selectedTab }}">
@@ -178,7 +196,7 @@
                                 <input type="hidden" name="semester" value="{{ $selectedSemester }}">
                                 <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
                                 <input type="hidden" name="decision" value="{{ $decision }}">
-                                <label>{{ $decision === 'return' ? 'Revision' : 'Rejection' }} reason (required)<textarea name="notes" rows="3" required>{{ old('decision') === $decision && old('reportType') === $selectedTab ? old('notes') : '' }}</textarea></label>
+                                <label>Revision reason (required)<textarea name="notes" rows="3" required>{{ old('decision') === $decision && old('reportType') === $selectedTab ? old('notes') : '' }}</textarea></label>
                                 <button type="submit" class="org-btn org-btn-ghost">{{ $label }} — {{ strtoupper($selectedTab) }}</button>
                             </form>
                         @endforeach
@@ -192,13 +210,100 @@
                         <input type="hidden" name="decision" value="accept">
                         <button type="submit" class="org-btn org-btn-primary" @disabled(empty($record['has_document']))><i class="bi bi-check2-circle"></i> Verify &amp; archive {{ strtoupper($selectedTab) }}</button>
                     </form>
-                    @if (empty($record['has_document']))<p class="sr-notice is-error">Verification and archiving require a readable submitted file. Return this {{ strtoupper($selectedTab) }} for revision or reject it with a reason.</p>@endif
+                    @if (empty($record['has_document']))<p class="sr-notice is-error">Verification and archiving require a readable submitted file. Return this {{ strtoupper($selectedTab) }} for revision.</p>@endif
                 @elseif (($record['state'] ?? '') === 'oso_review')
                     <p class="sr-notice is-error">This report is not currently eligible for a review decision.</p>
                 @endif
         </section>
         @endif
     </div>
+
+    <style>
+        .oso-reports-modal { box-sizing:border-box; position:fixed !important; top:50% !important; left:50% !important; transform:translate(-50%, -50%) !important; width:min(1180px, calc(100vw - 3rem)) !important; height:min(880px, calc(100dvh - 3rem)) !important; max-width:none; max-height:none; margin:0 !important; padding:0; border:1px solid #eadde2; border-radius:20px !important; background:#fff; color:#30282b; box-shadow:0 25px 80px rgba(45,15,24,.28); overflow:hidden; }
+        .oso-reports-modal[open] { display:flex; flex-direction:column; }
+        .org-content > .oso-reports-modal { animation:none; opacity:1; }
+        .oso-reports-modal::backdrop { background:rgba(45,25,32,.48); backdrop-filter:blur(4px); }
+        .oso-reports-modal [hidden] { display:none !important; }
+        .oso-modal-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex:none; padding:1.5rem 1.5rem 1.25rem; border-bottom:1px solid #f1e4e8; }
+        .oso-modal-label { margin:0 0 .35rem; color:#852d49; font-size:.72rem; font-weight:800; letter-spacing:.09em; }
+        .oso-modal-header h2 { margin:0; font-size:1.35rem; font-weight:800; }
+        .oso-modal-college { margin:.3rem 0 .75rem; color:#76686d; }
+        .oso-modal-semester { display:inline-block; padding:.35rem .75rem; border-radius:999px; background:#f6e9ed; color:#842b47; font-size:.8rem; font-weight:700; }
+        .oso-modal-body { overflow-y:auto; flex:1; min-height:0; padding:1.5rem; }
+        .oso-modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:1rem; }
+        .oso-modal-card { display:flex; flex-direction:column; min-width:0; padding:1.25rem; border:1px solid #eadde2; border-radius:14px; overflow-wrap:anywhere; }
+        .oso-modal-card h3 { margin:0; font-size:1.05rem; }
+        .oso-card-heading { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; }
+        .oso-card-heading .sr-status:last-child { margin-left:auto; }
+        .oso-card-abbr { padding:.4rem .55rem; border-radius:8px; background:#f6e9ed; color:#842b47; font-weight:800; }
+        .oso-modal-preview { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; min-height:180px; margin:1rem 0; padding:1rem; background:#faf7f8; border-radius:10px; color:#7a7074; text-align:center; }
+        .oso-modal-preview i { color:#a04c66; font-size:2.5rem; }
+        .oso-modal-preview p { margin:.35rem 0 0; font-size:.9rem; }
+        .oso-card-filename { margin:.25rem 0; font-weight:700; }
+        .oso-card-date { margin:0 0 1rem; }
+        .oso-card-actions { display:grid; gap:.5rem; margin-top:auto; }
+        .oso-card-actions .org-btn { width:100%; justify-content:center; box-sizing:border-box; text-align:center; }
+        .oso-focused-heading { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin:0 0 1rem; }
+        .oso-preview-panel { border:1px solid #eadde2; border-radius:14px; overflow:hidden; background:#fff; }
+        .oso-preview-toolbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.25rem; border-bottom:1px solid #f1e4e8; }
+        .oso-preview-toolbar p { margin:.2rem 0 0; }
+        .oso-preview-toolbar strong { overflow-wrap:anywhere; }
+        .oso-modal-document-full { box-sizing:border-box; width:100%; height:580px; min-height:480px; border:1px solid #e6dde0; border-radius:12px; background:#fff; }
+        #osoFocusedPreview { overflow:auto; }
+        iframe.oso-modal-document-full { display:block; border:0; }
+        .oso-workbook { font-size:.8rem; }
+        .oso-workbook h4, .oso-workbook table, .oso-workbook > p { margin:1.25rem; }
+        .oso-workbook table { border-collapse:collapse; }
+        .oso-workbook td { border:1px solid #ddd; padding:.35rem; white-space:pre-wrap; }
+        .oso-modal-review { margin-top:1rem; padding:1.25rem; border:1px solid #eadde2; border-radius:14px; background:#fff; }
+        .oso-review-heading { display:flex; align-items:center; gap:.75rem; }
+        .oso-review-heading i { display:grid; place-items:center; width:2.5rem; height:2.5rem; border-radius:10px; background:#f6e9ed; color:#842b47; font-size:1.2rem; }
+        .oso-review-heading h3 { margin:0; }
+        .oso-review-instruction { margin:.75rem 0 1rem; color:#76686d; }
+        .oso-review-status-card { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #eadde2; border-radius:10px; background:#faf7f8; }
+        .oso-modal-review label { display:block; font-weight:700; }
+        .oso-modal-review textarea { display:block; width:100%; box-sizing:border-box; margin-top:.5rem; }
+        .oso-modal-message { margin:.75rem 0; }
+        .oso-modal-footer { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex:none; padding:1rem 1.5rem; border-top:1px solid #f1e4e8; background:#faf7f8; }
+        .oso-modal-footer p { margin:0; color:#76686d; font-size:.85rem; }
+        @media (max-width:760px) { .oso-modal-grid { grid-template-columns:1fr; } .oso-preview-toolbar, .oso-modal-footer { align-items:flex-start; flex-direction:column; } .oso-focused-heading { flex-wrap:wrap; } }
+    </style>
+    <dialog class="oso-reports-modal" id="osoReportsModal" aria-labelledby="osoModalTitle">
+        <header class="oso-modal-header">
+            <div><p class="oso-modal-label" id="osoModalLabel">SUBMITTED REPORTS</p><h2 id="osoModalTitle"></h2><p class="oso-modal-college" id="osoModalCollege"></p><span class="oso-modal-semester" id="osoModalSemesterBadge"></span></div>
+            <button type="button" class="fin-icon-btn" id="osoModalClose" aria-label="Close reports"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </header>
+        <div class="oso-modal-body">
+            <div id="osoModalCardsView"><div class="oso-modal-grid" id="osoModalCards"></div></div>
+            <div id="osoModalFocusedView" hidden>
+                <div class="oso-focused-heading">
+                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" id="osoModalBack"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to submitted reports</button>
+                    <span class="oso-modal-semester" id="osoFocusedSemesterBadge"></span>
+                </div>
+                <section class="oso-preview-panel" aria-label="Report preview">
+                    <div class="oso-preview-toolbar">
+                        <div><strong id="osoFocusedFilename"></strong><p class="sr-muted" id="osoFocusedDate"></p></div>
+                        <a id="osoFocusedDownload" class="org-btn org-btn-ghost" href=""><i class="bi bi-download" aria-hidden="true"></i> Download report</a>
+                    </div>
+                    <div id="osoFocusedPreview" class="oso-modal-document-full oso-workbook"></div>
+                </section>
+                <form class="sr-review oso-modal-review" id="osoReviewForm" data-confirm="manual">
+                    @csrf
+                    <div class="oso-review-heading"><i class="bi bi-clipboard-check" aria-hidden="true"></i><h3>OSO review</h3></div>
+                    <p class="oso-review-instruction">Review the submitted document above and record your decision below.</p>
+                    <div class="oso-review-status-card"><strong>Assessment status</strong><span class="sr-status" id="osoReviewStatus"></span></div>
+                    <label for="osoReviewRemarks">OSO remarks<textarea id="osoReviewRemarks" name="notes" rows="5" maxlength="1000" aria-describedby="osoReviewEligibility"></textarea></label>
+                    <p class="sr-muted" id="osoReviewEligibility"></p>
+                    <p class="oso-modal-message sr-danger" id="osoReviewMessage" role="alert" hidden></p>
+                    <div class="sr-actions">
+                        <button type="submit" name="decision" value="return" class="org-btn org-btn-ghost" disabled>Return for revision</button>
+                        <button type="submit" name="decision" value="accept" class="org-btn org-btn-primary">Approve &amp; archive</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <footer class="oso-modal-footer"><p id="osoModalFooterText">Review each submitted report carefully before approving or returning.</p><button type="button" class="org-btn org-btn-ghost" id="osoModalFooterClose">Close viewer</button></footer>
+    </dialog>
 
     <dialog id="srLockDialog" class="sr-lock-dialog" aria-labelledby="srLockTitle" aria-describedby="srLockPeriod srLockDescription">
         <div class="sr-lock-box">
@@ -243,6 +348,192 @@
     <script src="{{ asset('js/semester-reports.js') }}?v={{ filemtime(public_path('js/semester-reports.js')) }}" defer></script>
     <script>
         (() => {
+            const osoModal = document.getElementById('osoReportsModal');
+            const cardsView = document.getElementById('osoModalCardsView');
+            const focusedView = document.getElementById('osoModalFocusedView');
+            const cards = document.getElementById('osoModalCards');
+            const form = document.getElementById('osoReviewForm');
+            const remarks = document.getElementById('osoReviewRemarks');
+            const message = document.getElementById('osoReviewMessage');
+            const preview = document.getElementById('osoFocusedPreview');
+            const returnButton = form.querySelector('button[value="return"]');
+            const approveButton = form.querySelector('button[value="accept"]');
+            function updateReviewButtons() {
+                const eligible = !pending && !!org?.reports[type]?.can_review;
+                returnButton.disabled = !eligible || !remarks.value.trim();
+                approveButton.disabled = !eligible;
+            }
+            let org, row, type, pending = false, previewVersion = 0;
+            const element = (tag, className = '', text) => {
+                const result = document.createElement(tag);
+                result.className = className;
+                if (text !== undefined) result.textContent = text;
+                return result;
+            };
+            function showCards() {
+                previewVersion++;
+                preview.replaceChildren();
+                focusedView.hidden = true;
+                cardsView.hidden = false;
+                document.getElementById('osoModalLabel').textContent = 'SUBMITTED REPORTS';
+                document.getElementById('osoModalCollege').textContent = org.college || '';
+                document.getElementById('osoModalSemesterBadge').hidden = false;
+                document.getElementById('osoModalFooterText').textContent = 'Review each submitted report carefully before approving or returning.';
+                cards.replaceChildren();
+                ['ar', 'fr'].forEach(reportType => {
+                    const report = org.reports[reportType];
+                    const card = element('section', 'oso-modal-card');
+                    const heading = element('div', 'oso-card-heading');
+                    heading.append(element('span', 'oso-card-abbr', reportType.toUpperCase()), element('h3', '', report.title), element('span', `sr-status is-${report.state}`, report.can_view || report.state === 'returned' ? report.state_label : 'Not submitted'));
+                    card.append(heading);
+                    const icon = element('div', 'oso-modal-preview');
+                    const symbol = element('i', report.can_view ? 'bi bi-file-earmark-text' : 'bi bi-file-earmark-x');
+                    symbol.setAttribute('aria-hidden', 'true');
+                    icon.append(symbol);
+                    if (!report.can_view) {
+                        icon.append(element('strong', '', 'No report submitted'), element('p', '', 'There is no report available for review.'));
+                        card.append(icon);
+                    } else {
+                        card.append(icon, element('p', 'oso-card-filename', report.filename || 'No readable document available'), element('p', 'sr-muted oso-card-date', `Submitted: ${report.submission_date}`));
+                        if (report.has_document) {
+                            const actions = element('div', 'oso-card-actions');
+                            const button = element('button', 'org-btn org-btn-primary', 'View & review report');
+                            button.type = 'button';
+                            button.addEventListener('click', () => openFocusedReview(reportType));
+                            const download = element('a', 'org-btn org-btn-ghost', 'Download report');
+                            download.href = report.download_url;
+                            actions.append(button, download);
+                            card.append(actions);
+                        } else card.append(element('p', 'sr-danger', 'The submitted file is missing or unreadable.'));
+                    }
+                    cards.append(card);
+                });
+            }
+            function openOsoReportsModal(data, sourceRow) {
+                org = data;
+                row = sourceRow;
+                document.getElementById('osoModalTitle').textContent = org.organization;
+                document.getElementById('osoModalCollege').textContent = org.college || '';
+                document.getElementById('osoModalSemesterBadge').textContent = [org.academic_year ? `AY ${org.academic_year}` : '', org.semester].filter(Boolean).join(' · ');
+                showCards();
+                osoModal.showModal();
+            }
+            async function openFocusedReview(reportType) {
+                type = reportType;
+                const report = org.reports[type];
+                const version = ++previewVersion;
+                cardsView.hidden = true;
+                focusedView.hidden = false;
+                const period = [org.academic_year ? `AY ${org.academic_year}` : '', org.semester].filter(Boolean).join(' · ');
+                document.getElementById('osoModalLabel').textContent = 'REPORT REVIEW';
+                document.getElementById('osoModalCollege').textContent = [org.college, 'Office of the Student Organizations (OSO)', report.title].filter(Boolean).join(' · ');
+                document.getElementById('osoModalSemesterBadge').hidden = true;
+                document.getElementById('osoFocusedSemesterBadge').textContent = period;
+                document.getElementById('osoModalFooterText').textContent = [report.title, period].filter(Boolean).join(' · ');
+                document.getElementById('osoFocusedFilename').textContent = report.filename || 'Report document';
+                document.getElementById('osoFocusedDate').textContent = `Submitted on ${report.submission_date}`;
+                document.getElementById('osoFocusedDownload').href = report.download_url;
+                const badge = document.getElementById('osoReviewStatus');
+                badge.className = `sr-status is-${report.state}`;
+                badge.textContent = report.state_label;
+                remarks.value = report.notes || '';
+                remarks.disabled = !report.can_review;
+                updateReviewButtons();
+                document.getElementById('osoReviewEligibility').textContent = report.can_review ? 'Remarks are required when returning a report.' : 'This report is not currently eligible for a review decision.';
+                message.hidden = true;
+                preview.replaceChildren();
+                if (!report.is_workbook) {
+                    const frame = element('iframe', 'oso-modal-document-full');
+                    frame.title = `${report.title} preview`;
+                    frame.src = report.preview_url;
+                    preview.append(frame);
+                    return;
+                }
+                preview.append(element('p', '', 'Loading workbook preview…'));
+                try {
+                    const response = await fetch(report.workbook_url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    const payload = await response.json();
+                    if (!response.ok || !Array.isArray(payload.sheets)) throw new Error(payload.message || 'Unable to preview workbook.');
+                    if (version !== previewVersion) return;
+                    preview.replaceChildren();
+                    if (!payload.sheets.length) preview.append(element('p', '', 'This workbook has no worksheets.'));
+                    payload.sheets.forEach((sheet, index) => {
+                        preview.append(element('h4', '', sheet.name || `Sheet ${index + 1}`));
+                        const table = element('table');
+                        (sheet.rows || []).forEach(cells => {
+                            const tr = element('tr');
+                            cells.forEach(cell => {
+                                if (cell?.skip) return;
+                                const td = element('td', '', cell?.text == null ? '' : String(cell.text));
+                                if (cell?.colspan > 1) td.colSpan = cell.colspan;
+                                if (cell?.rowspan > 1) td.rowSpan = cell.rowspan;
+                                tr.append(td);
+                            });
+                            table.append(tr);
+                        });
+                        preview.append(table);
+                    });
+                } catch (error) {
+                    if (version === previewVersion) preview.replaceChildren(element('p', 'sr-danger', error.message || 'Unable to preview workbook.'));
+                }
+            }
+            document.querySelectorAll('[data-oso-view]').forEach(button => button.addEventListener('click', () => {
+                const sourceRow = button.closest('[data-sr-directory-row]');
+                openOsoReportsModal(JSON.parse(sourceRow.dataset.reports), sourceRow);
+            }));
+            document.getElementById('osoModalClose').addEventListener('click', () => { if (!pending) osoModal.close(); });
+            document.getElementById('osoModalFooterClose').addEventListener('click', () => { if (!pending) osoModal.close(); });
+            document.getElementById('osoModalBack').addEventListener('click', () => { if (!pending) showCards(); });
+            osoModal.addEventListener('cancel', event => { if (pending) event.preventDefault(); });
+            osoModal.addEventListener('close', () => { previewVersion++; preview.replaceChildren(); });
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                if (pending || !org || !type) return;
+                const decision = event.submitter?.value;
+                if (!['return', 'accept'].includes(decision)) return;
+                if (decision === 'return' && !remarks.value.trim()) {
+                    message.textContent = 'Enter remarks before returning this report.';
+                    message.hidden = false;
+                    remarks.focus();
+                    return;
+                }
+                if (!window.confirm(decision === 'return' ? 'Return this report for revision?' : 'Approve and archive this report?')) return;
+                const report = org.reports[type];
+                const data = new FormData(form);
+                data.set('decision', decision);
+                data.set('organization_name', org.organization);
+                data.set('academic_year', org.academic_year);
+                data.set('semester', org.semester);
+                pending = true;
+                form.querySelectorAll('button[type=submit]').forEach(button => { button.disabled = true; });
+                message.hidden = true;
+                try {
+                    const response = await fetch(report.review_url, { method: 'POST', body: data, headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    const result = await response.json();
+                    if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to submit the review.');
+                    report.state = decision === 'accept' ? 'archived' : 'returned';
+                    report.state_label = result.status_label;
+                    report.notes = remarks.value;
+                    report.can_review = false;
+                    if (decision === 'return') report.can_view = false;
+                    row.dataset.reports = JSON.stringify(org);
+                    const cell = row.querySelector(`td[data-label="${type.toUpperCase()} status"]`);
+                    const badge = cell.querySelector('.sr-status');
+                    badge.className = `sr-status is-${report.state}`;
+                    badge.textContent = report.state_label;
+                    let note = cell.querySelector('small');
+                    if (!note) { note = element('small'); cell.append(note); }
+                    note.textContent = report.notes;
+                    showCards();
+                } catch (error) {
+                    message.textContent = error.message || 'Unable to submit the review.';
+                    message.hidden = false;
+                } finally {
+                    pending = false;
+                    updateReviewButtons();
+                }
+            });
+            remarks.addEventListener('input', () => { message.hidden = true; updateReviewButtons(); });
             const lockDialog = document.getElementById('srLockDialog');
             const lockConfirm = document.getElementById('srLockConfirm');
             let pendingLock = null;

@@ -12,7 +12,7 @@
     const previewBox = document.getElementById('soReceiptPreview');
     const status = document.getElementById('soReceiptUploadStatus');
     const maxBytes = 5 * 1024 * 1024;
-    const maxFiles = 3;
+    const maxFiles = 50;
     const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
     const imageExtensions = new Set(['jpg', 'jpeg', 'png', 'webp']);
     let selectedFiles = [];

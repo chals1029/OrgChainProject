@@ -140,13 +140,20 @@ class OfficeAccountController extends Controller
 
     public function update(Request $request, OfficeUser $user): JsonResponse
     {
+        if (! $request->has('name')) {
+            $request->merge(['name' => $user->name]);
+        }
+        if (! $request->has('email')) {
+            $request->merge(['email' => $user->email]);
+        }
+
         return $this->perform($request, $this->identityRules($user) + [
             'office_role' => ['prohibited'], 'student_organization_id' => ['prohibited'],
             'password' => ['prohibited'], 'tosa_clearance' => ['sometimes', Rule::in(['No Access', 'Level 1 Read-only'])],
         ], function (array $data, OfficeUser $actor) use ($user): JsonResponse {
             $target = $this->target($user, $actor);
-            if (array_key_exists('tosa_clearance', $data) && $target->office_role !== 'ovcaa') {
-                throw ValidationException::withMessages(['tosa_clearance' => 'Only OVCAA accounts can change TOSA clearance.']);
+            if (array_key_exists('tosa_clearance', $data) && ! in_array($target->office_role, ['ovcaa', 'so'], true)) {
+                throw ValidationException::withMessages(['tosa_clearance' => 'Select a clearance supported by this office role.']);
             }
             $target->update($data);
 

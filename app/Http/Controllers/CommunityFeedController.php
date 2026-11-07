@@ -166,6 +166,7 @@ class CommunityFeedController extends Controller
                         : null,
                     'created_at' => optional($comment->created_at)->toIso8601String(),
                     'like_url' => route('portal.community.comments.like', $comment),
+                    'delete_url' => route('portal.community.comments.destroy', $comment),
                     'likes_count' => 0,
                     'liked_by_me' => false,
                 ],
@@ -181,25 +182,32 @@ class CommunityFeedController extends Controller
         $post = $comment->post;
         abort_unless($student instanceof UserAccount && $post && $this->canViewPost($post, $student), 404);
 
-        $liked = false;
+        $validated = $request->validate([
+            'reaction' => ['nullable', 'string', 'in:'.implode(',', self::REACTIONS)],
+        ]);
+        $requestedReaction = $validated['reaction'] ?? 'like';
+        $reaction = null;
 
-        DB::transaction(function () use ($comment, $student, &$liked): void {
+        DB::transaction(function () use ($comment, $student, $requestedReaction, &$reaction): void {
             $existing = CommunityCommentLike::query()
                 ->where('comment_id', $comment->id)
                 ->where('student_id', $student->id)
                 ->lockForUpdate()
                 ->first();
 
-            if ($existing) {
+            if ($existing && $existing->reaction === $requestedReaction) {
                 $existing->delete();
-                return;
+            } elseif ($existing) {
+                $existing->update(['reaction' => $requestedReaction]);
+                $reaction = $requestedReaction;
+            } else {
+                CommunityCommentLike::create([
+                    'comment_id' => $comment->id,
+                    'student_id' => $student->id,
+                    'reaction' => $requestedReaction,
+                ]);
+                $reaction = $requestedReaction;
             }
-
-            CommunityCommentLike::create([
-                'comment_id' => $comment->id,
-                'student_id' => $student->id,
-            ]);
-            $liked = true;
         });
 
         $likesCount = $comment->likes()->count();
@@ -207,13 +215,38 @@ class CommunityFeedController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'ok' => true,
-                'liked' => $liked,
+                'liked' => $reaction !== null,
+                'reaction' => $reaction,
                 'likes_count' => $likesCount,
             ]);
         }
 
         return back();
     }
+    public function destroyComment(Request $request, CommunityComment $comment): JsonResponse|RedirectResponse
+    {
+        $student = Auth::guard('student')->user();
+        $post = $comment->post;
+        abort_unless($student instanceof UserAccount && $post, 404);
+        abort_unless($comment->student_id === $student->id || $post->student_id === $student->id, 403);
+
+        $comment->likes()->delete();
+        $comment->delete();
+
+        $post->forceFill(['comments_count' => $post->comments()->count()])->save();
+        $post->refresh();
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'comments_count' => (int) $post->comments_count,
+                'comment_id' => $comment->id,
+            ]);
+        }
+
+        return back()->with('status', 'Comment deleted.');
+    }
+
 
     public function likers(CommunityPost $post): JsonResponse
     {

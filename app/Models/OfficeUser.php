@@ -129,12 +129,12 @@ class OfficeUser extends Authenticatable
             return 3;
         }
 
-        if ($this->office_role !== 'ovcaa') {
+        if ($this->office_role !== 'ovcaa' && $this->office_role !== 'so') {
             return 0;
         }
 
         return match ($this->tosa_clearance) {
-            null, '', 'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master' => 1,
+            'Level 1 Read-only', 'Level 2 Evaluator', 'Level 3 Master', 'Cleared' => 1,
             default => 0,
         };
     }

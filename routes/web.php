@@ -68,9 +68,11 @@ Route::middleware('student.auth')->prefix('portal')->name('portal.')->group(func
     Route::post('/community/posts/{post}/like', [CommunityFeedController::class, 'like'])->name('community.posts.like');
     Route::post('/community/posts/{post}/comments', [CommunityFeedController::class, 'comment'])->name('community.posts.comment');
     Route::post('/community/comments/{comment}/like', [CommunityFeedController::class, 'likeComment'])->name('community.comments.like');
+    Route::delete('/community/comments/{comment}', [CommunityFeedController::class, 'destroyComment'])->name('community.comments.destroy');
     Route::delete('/community/posts/{post}', [CommunityFeedController::class, 'destroy'])->name('community.posts.destroy');
     Route::put('/profile', [StudentPortalController::class, 'updateProfile'])->name('profile.update');
     Route::post('/feedback', [StudentPortalController::class, 'storeFeedback'])->name('feedback.store');
+    Route::delete('/feedback/{feedback}', [StudentPortalController::class, 'destroyFeedback'])->name('feedback.destroy');
     Route::post('/activities/{activity}/rsvp', [StudentPortalController::class, 'toggleRsvp'])->name('activities.rsvp');
     Route::get('/expenses/{receipt}/verify', [StudentPortalController::class, 'verifyExpenseSeal'])->name('expenses.verify');
     Route::post('/documents/preview/convert', [\App\Http\Controllers\OfficeDocumentPreviewController::class, 'convert'])->name('documents.preview.convert');

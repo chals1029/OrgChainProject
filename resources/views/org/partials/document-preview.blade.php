@@ -2,11 +2,14 @@
     <link rel="stylesheet" href="{{ asset('css/document-preview.css') }}?v={{ filemtime(public_path('css/document-preview.css')) }}">
     <dialog class="document-preview-dialog" id="sharedDocumentPreviewDialog" data-document-preview-dialog data-document-conversion-url="{{ route('office.documents.preview.convert') }}" aria-labelledby="sharedDocumentPreviewTitle">
         <div class="document-preview-box">
-            <header class="document-preview-head">
+            <header class="document-preview-head" style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="document-preview-title">
                     <strong id="sharedDocumentPreviewTitle" data-document-preview-title>Document Preview</strong>
                     <small data-document-preview-status aria-live="polite">Original document</small>
                 </div>
+                <button type="button" class="document-preview-action" data-document-preview-close aria-label="Close preview" title="Close" style="border: 0; background: transparent; font-size: 1.35rem; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; line-height: 1; padding: 0;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </header>
             <div class="document-preview-body" data-document-preview-body tabindex="0" aria-label="Document contents; scroll to read"></div>
             <footer class="document-preview-actions">

@@ -28,7 +28,6 @@
                     @endforeach
                 </select>
             </label>
-            <button type="reset" class="sp-sdg-clear"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Clear filters</button>
         </form>
     </div>
 
@@ -60,6 +59,8 @@
         <ul data-sdg-dialog-activities></ul>
     </dialog>
     <style>
+        .sp-sdg-highlights, .sp-sdg-grid, .sp-sdg-card { overflow:hidden; width:100%; box-sizing:border-box; min-width:0; }
+        .sp-sdg-source, .sp-sdg-source a { overflow-wrap:anywhere; word-break:break-word; }
         .sp-sdg-highlights [hidden] { display:none !important; }
         .sp-sdg-card-copy .app-view-action { margin-top:.6rem; }
         .sp-sdg-dialog { box-sizing:border-box; width:min(640px,calc(100vw - 2rem)); max-width:none; max-height:calc(100dvh - 2rem); margin:auto; padding:1.25rem; border:1px solid #e9d9df; border-radius:18px; background:#fff; color:#3b2b34; }
@@ -69,5 +70,24 @@
         .sp-sdg-dialog p { margin:.35rem 0 0; color:#8c7582; font-size:.8rem; }
         .sp-sdg-dialog ul { list-style:none; padding:0; margin:1rem 0 0; display:grid; gap:.6rem; }
         .sp-sdg-dialog li { padding:.85rem; border:1px solid #efdfE6; border-radius:10px; background:#fff8fb; font-size:.87rem; line-height:1.6; overflow-wrap:anywhere; }
+        @media (max-width:768px) {
+            .portal-body .sp-sdg-header { flex-direction:column; align-items:stretch; width:100%; min-width:0; }
+            .portal-body .sp-sdg-heading, .portal-body .sp-sdg-filters { flex:0 1 auto; width:100%; min-width:0; }
+            .portal-body .sp-sdg-heading > div { min-width:0; overflow-wrap:anywhere; }
+            .portal-body .sp-sdg-filters { flex-direction:column; align-items:stretch; max-width:100%; }
+            .portal-body .sp-sdg-search, .portal-body .sp-sdg-select { flex:0 1 auto; width:100%; min-width:0; min-height:44px; box-sizing:border-box; }
+            .portal-body .sp-sdg-search input, .portal-body .sp-sdg-select select { width:100%; min-width:0; font-size:16px; }
+            .portal-body .sp-sdg-grid { grid-template-columns:1fr !important; }
+            .portal-body .sp-sdg-card { display:flex; flex-direction:row; align-items:flex-start; width:100%; min-width:0; padding:.85rem; overflow:hidden; }
+            .portal-body .sp-sdg-badge { width:56px; height:56px; flex:0 0 56px; }
+            .portal-body .sp-sdg-card-copy { flex:1 1 auto; min-width:0; }
+            .portal-body .sp-sdg-activity-titles { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+            .portal-body .sp-sdg-card-copy .app-view-action { min-height:44px; max-width:100%; white-space:normal; }
+            .portal-body .sp-sdg-dialog { width:calc(100vw - 1.5rem); max-width:calc(100vw - 1.5rem); max-height:calc(100dvh - 2rem); }
+        }
+        @media (max-width:380px) {
+            .portal-body .sp-sdg-badge { width:48px; height:48px; flex-basis:48px; }
+            .portal-body .sp-sdg-card-copy h3 { font-size:.85rem; }
+        }
     </style>
 </section>

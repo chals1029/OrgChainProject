@@ -251,8 +251,8 @@ class OfficePortalController extends Controller
     {
         $labels = [
             'draft' => 'Not submitted', 'oso_review' => 'Pending review',
-            'returned' => 'Returned for revision', 'rejected' => 'Rejected',
-            'verified' => 'Verified / approved', 'archived' => 'Verified / approved · archived',
+            'returned' => 'Returned for Revision', 'rejected' => 'Rejected',
+            'verified' => 'Approved', 'archived' => 'Approved & Archived',
         ];
         $records = [];
         $isOso = Auth::guard('office')->user()?->office_role === 'oso';
@@ -895,6 +895,7 @@ class OfficePortalController extends Controller
             $actual = round($postedSpent + $legacySpent, 2);
             $entries['activity-'.$a->id] = [
                 'activityId' => $a->id, 'orgName' => $a->organization_name, 'orgCategory' => $a->college ?: 'Campus Wide',
+                'college' => $a->college ?: 'Campus Wide',
                 'orgUnit' => $a->college ?: 'Campus Wide', 'actName' => $a->title, 'actType' => 'Approved activity',
                 'actDate' => $a->starts_at?->format('M j, Y') ?? 'TBA', 'actVenue' => $a->location ?: 'TBA',
                 ...$this->academicPeriod($a->starts_at),
@@ -1797,7 +1798,10 @@ class OfficePortalController extends Controller
         $selectedSemester = (string) request('semester', 'Annual');
         $budgetService->dates($selectedYear, $selectedSemester);
         $orgFilter = $this->organizationFilterForOffice(request('organization', ''));
-        $department = trim((string) request('department', ''));
+        $department = trim((string) request('college', request('department', '')));
+        if ($department === 'all') {
+            $department = '';
+        }
         $departmentValues = $department !== '' ? $this->departmentValues($department) : null;
         $osoFinancialOverview = Auth::guard('office')->user()?->office_role === 'oso'
             ? app(\App\Services\OsoFinancialOverviewService::class)->overview(
@@ -1831,9 +1835,28 @@ class OfficePortalController extends Controller
             ->where('report_type', 'budget')
             ->latest()
             ->first();
+        $defaultColleges = [
+            'College of Accountancy, Business, Economics, and International Hospitality Management',
+            'College of Arts and Sciences',
+            'College of Criminal Justice Education',
+            'College of Health Sciences',
+            'College of Informatics and Computing Sciences',
+            'College of Teacher Education',
+            'Laboratory School',
+            'Campus Wide',
+        ];
+        $colleges = collect($defaultColleges)
+            ->merge(collect(config('student_orgs.organizations', []))->pluck('college'))
+            ->merge(StudentOrganization::query()->whereNotNull('college')->pluck('college'))
+            ->map(fn ($college): string => trim((string) $college))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         return view('org.budget', array_merge($this->deskContext(), [
             'selectedYear' => $selectedYear,
+            'selectedSemester' => $selectedSemester,
             'osoFinancialOverview' => $osoFinancialOverview,
             'financialTransactions' => $financialTransactions,
             'approvedActivityChoices' => collect($liveBudget['entries'])->except('all')->values(),
@@ -1841,6 +1864,7 @@ class OfficePortalController extends Controller
             'budget' => $budget,
             'budgetItems' => $items,
             'organizations' => $osoFinancialOverview['organizations'] ?? $this->recognizedOrgNames(),
+            'colleges' => $colleges,
             'selectedOrganization' => $orgFilter,
             'liveBudgetEntries' => $liveBudget['entries'],
             'liveScopeTotals' => $liveBudget['scopeTotals'],
@@ -1878,11 +1902,11 @@ class OfficePortalController extends Controller
                 'expenses.*.payment_method' => ['required', 'in:gcash,maya,cash,card,bank_transfer,unknown'],
                 // The active SO client uploads one shared receipt set. The
                 // per-row keys remain accepted for older clients.
-                'receipts' => ['nullable', 'array', 'max:3'],
+                'receipts' => ['nullable', 'array', 'max:50'],
                 'receipts.*' => $fileRules,
                 // New clients submit expenses.*.receipts[]; receipt remains
                 // accepted for older clients and saved records.
-                'expenses.*.receipts' => ['nullable', 'array', 'max:6'],
+                'expenses.*.receipts' => ['nullable', 'array', 'max:50'],
                 'expenses.*.receipts.*' => $fileRules,
                 'expenses.*.receipt' => ['nullable', ...$fileRules],
             ]);
@@ -1956,14 +1980,34 @@ class OfficePortalController extends Controller
     public function printBudget(): View
     {
         $data = $this->budget()->getData();
-        $year = $data['selectedYear'];
-        $semester = (string) request('semester', 'Annual');
+        $year = (string) request('academic_year', $data['selectedYear']);
+        $semester = (string) request('semester', $data['selectedSemester'] ?? 'Annual');
         $activityId = (int) request('activity_id', 0);
-        $entries = collect($data['liveBudgetEntries'])->except('all')->filter(fn ($entry) =>
-            ($entry['academic_year'] ?? null) === $year
-            && ($semester === 'Annual' || ($entry['semester'] ?? null) === $semester)
-            && (! $activityId || $entry['activityId'] === $activityId));
+        $collegeFilter = trim((string) request('college', request('department', '')));
+        if ($collegeFilter === 'all') {
+            $collegeFilter = '';
+        }
+        $orgFilter = trim((string) request('organization', ''));
+        if ($orgFilter === 'all') {
+            $orgFilter = '';
+        }
+
+        $entries = collect($data['liveBudgetEntries'])->except('all')->filter(function ($entry) use ($year, $semester, $activityId, $collegeFilter, $orgFilter) {
+            $matchYear = ($entry['academic_year'] ?? null) === $year;
+            $matchSemester = $semester === 'Annual' || ($entry['semester'] ?? null) === $semester;
+            $matchActivity = ! $activityId || ($entry['activityId'] ?? 0) === $activityId;
+            $matchOrg = $orgFilter === '' || strcasecmp($entry['orgName'] ?? '', $orgFilter) === 0;
+            $entryCollege = $entry['college'] ?? ($entry['orgCategory'] ?? '');
+            $matchCollege = $collegeFilter === '' || strcasecmp($entryCollege, $collegeFilter) === 0;
+
+            return $matchYear && $matchSemester && $matchActivity && $matchOrg && $matchCollege;
+        });
+
         $data['liveBudgetEntries'] = $entries->all();
+        $data['selectedCollege'] = $collegeFilter;
+        $data['selectedOrganization'] = $orgFilter;
+        $data['selectedSemester'] = $semester;
+        $data['selectedYear'] = $year;
 
         return view('org.budget-print', array_merge($data, [
             'generatedAt' => now()->format('M j, Y g:i A'),
@@ -5259,7 +5303,7 @@ class OfficePortalController extends Controller
             ->with('success', strtoupper($reportType).' submitted to OSO for review.');
     }
 
-    public function reviewSemesterReport(Request $request, string $reportType): RedirectResponse
+    public function reviewSemesterReport(Request $request, string $reportType): RedirectResponse|JsonResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->office_role === 'oso', 403);
@@ -5323,12 +5367,24 @@ class OfficePortalController extends Controller
                 ]);
             });
         } catch (SemesterReportRejected $rejected) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['ok' => false, 'message' => $rejected->getMessage()], 422);
+            }
             return redirect()->route('office.reports.index', $period)->withErrors(['report' => $rejected->getMessage()]);
         }
         $decision = match ($validated['decision']) {
             'return' => 'returned to SO for revision', 'reject' => 'rejected',
             default => 'verified by OSO and archived',
         };
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'decision' => $validated['decision'],
+                'status' => match ($validated['decision']) { 'accept' => 'accepted', 'return' => 'returned', default => 'rejected' },
+                'status_label' => match ($validated['decision']) { 'accept' => 'Approved & Archived', 'return' => 'Returned for Revision', default => 'Rejected' },
+                'message' => strtoupper($reportType).' '.$decision.'.',
+            ]);
+        }
         return redirect()->route('office.reports.index', $period)
             ->with('success', strtoupper($reportType).' '.$decision.'.');
     }

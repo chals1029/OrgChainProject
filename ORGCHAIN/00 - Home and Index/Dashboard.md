@@ -20,6 +20,7 @@ OrgChain manages student-organization activity approvals, budgets, renewal, repo
 | Follow TOSA submission, correction and manual verification | [[TOSA Application and Review Workflow]] |
 | Review the recorded VPS pilot and public status boundaries | [[VPS Pilot Deployment and Status]] |
 | Find safe local commands | [[Quick Reference and Cheatsheet]] |
+| Explore the local code graph | [[Graphify Project Graph]] |
 
 ## Reading rules
 

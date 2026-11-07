@@ -71,6 +71,215 @@
             </article>
         </section>
 
+            <style>
+                .sp-org-cash-card {
+                    background: #ffffff;
+                    background-image: linear-gradient(180deg, #ffffff 0%, #fffcfd 100%);
+                    border: 1px solid #f2e1e5;
+                    border-radius: 20px;
+                    padding: 1.25rem 1.35rem;
+                    margin-top: 1rem;
+                    box-shadow: 0 4px 20px rgba(139, 24, 40, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+                }
+                .sp-org-cash-head {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                }
+                .sp-org-cash-title-wrap {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.65rem;
+                }
+                .sp-org-cash-icon-badge {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 10px;
+                    background: #fbebf0;
+                    color: #8b1828;
+                    display: grid;
+                    place-items: center;
+                    font-size: 1.15rem;
+                    flex-shrink: 0;
+                }
+                .sp-org-cash-badge {
+                    background: #fdf2f4;
+                    color: #8b1828;
+                    border: 1px solid #f5d5dc;
+                    font-size: 0.75rem;
+                    font-weight: 750;
+                    padding: 0.28rem 0.65rem;
+                    border-radius: 999px;
+                    letter-spacing: 0.02em;
+                    white-space: nowrap;
+                }
+                .sp-org-cash-desc {
+                    margin: 0.45rem 0 1.15rem;
+                    font-size: 0.81rem;
+                    color: #786670;
+                    line-height: 1.5;
+                }
+                .sp-org-cash-item {
+                    border: 1px solid #f4e8eb;
+                    border-radius: 14px;
+                    background: #fffbfa;
+                    padding: 1rem 1.15rem;
+                    margin-bottom: 0.85rem;
+                    box-shadow: 0 2px 6px rgba(139, 24, 40, 0.02);
+                }
+                .sp-org-cash-item:last-child {
+                    margin-bottom: 0;
+                }
+                .sp-org-cash-name-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding-bottom: 0.65rem;
+                    border-bottom: 1px solid #f2e2e6;
+                    margin-bottom: 0.85rem;
+                }
+                .sp-org-cash-name {
+                    font-size: 0.95rem;
+                    font-weight: 800;
+                    color: #1a1618;
+                    overflow-wrap: anywhere;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.45rem;
+                }
+                .sp-org-cash-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .sp-org-cash-col {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.25rem 0.4rem;
+                    min-width: 0;
+                }
+                .sp-org-cash-circle-icon {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 50%;
+                    background: #fdf2f4;
+                    border: 1px solid #f8dce2;
+                    color: #8b1828;
+                    display: grid;
+                    place-items: center;
+                    font-size: 1.1rem;
+                    flex-shrink: 0;
+                }
+                .sp-org-cash-info {
+                    min-width: 0;
+                }
+                .sp-org-cash-label {
+                    font-size: 0.72rem;
+                    font-weight: 750;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                    color: #85727b;
+                    margin-bottom: 2px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .sp-org-cash-val {
+                    font-size: 1.15rem;
+                    font-weight: 800;
+                    color: #1a1618;
+                    line-height: 1.25;
+                    overflow-wrap: anywhere;
+                }
+                .sp-org-cash-divider {
+                    width: 1px;
+                    height: 38px;
+                    background: #eedfe3;
+                    flex-shrink: 0;
+                }
+                @media (max-width: 720px) {
+                    .sp-org-cash-grid {
+                        grid-template-columns: 1fr;
+                        gap: 0.75rem;
+                    }
+                    .sp-org-cash-divider {
+                        display: none;
+                    }
+                }
+            </style>
+
+            <div class="sp-org-cash-card">
+                <div class="sp-org-cash-head">
+                    <div class="sp-org-cash-title-wrap">
+                        <div class="sp-org-cash-icon-badge">
+                            <i class="bi bi-wallet2" aria-hidden="true"></i>
+                        </div>
+                        <h3 style="margin: 0; font-size: 1.12rem; font-weight: 800; color: #1a1618; letter-spacing: -0.01em;">Organization Cash</h3>
+                    </div>
+                    <span class="sp-org-cash-badge">A.Y. {{ $organizationCashYear }}</span>
+                </div>
+                <p class="sp-org-cash-desc">The same recorded cash shown to each active organization in your college. Cash includes funds not yet allocated to activities.</p>
+                @forelse ($organizationCash as $cash)
+                    <article class="sp-org-cash-item">
+                        <div class="sp-org-cash-name-row">
+                            <strong class="sp-org-cash-name">
+                                <i class="bi bi-building" style="color: #8b1828; font-size: 0.85rem;" aria-hidden="true"></i>
+                                {{ $cash['name'] }}
+                            </strong>
+                        </div>
+                        @if ($cash['has_account'])
+                            <div class="sp-org-cash-grid">
+                                {{-- 1. Total funds --}}
+                                <div class="sp-org-cash-col">
+                                    <div class="sp-org-cash-circle-icon">
+                                        <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="sp-org-cash-info">
+                                        <div class="sp-org-cash-label">Total funds</div>
+                                        <div class="sp-org-cash-val">₱{{ number_format($cash['total'], 2) }}</div>
+                                    </div>
+                                </div>
+
+                                {{-- Thin vertical divider 1 --}}
+                                <div class="sp-org-cash-divider" aria-hidden="true"></div>
+
+                                {{-- 2. Utilized --}}
+                                <div class="sp-org-cash-col">
+                                    <div class="sp-org-cash-circle-icon">
+                                        <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="sp-org-cash-info">
+                                        <div class="sp-org-cash-label">Utilized ({{ $cash['percent'] }}%)</div>
+                                        <div class="sp-org-cash-val">₱{{ number_format($cash['spent'], 2) }}</div>
+                                    </div>
+                                </div>
+
+                                {{-- Thin vertical divider 2 --}}
+                                <div class="sp-org-cash-divider" aria-hidden="true"></div>
+
+                                {{-- 3. Recorded cash --}}
+                                <div class="sp-org-cash-col">
+                                    <div class="sp-org-cash-circle-icon">
+                                        <i class="bi bi-wallet2" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="sp-org-cash-info">
+                                        <div class="sp-org-cash-label">Recorded cash ({{ $cash['cash_percent'] }}%)</div>
+                                        <div class="sp-org-cash-val" style="color: #8b1828;">₱{{ number_format($cash['cash'], 2) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <p class="sp-empty-sm">No cash account recorded for this academic year.</p>
+                        @endif
+                    </article>
+                @empty
+                    <p class="sp-empty-sm">No active organization cash accounts are available for your college.</p>
+                @endforelse
+            </div>
         {{-- SDG highlights --}}
         @include('portal.sdg-highlights')
 
@@ -80,7 +289,7 @@
             <div class="sp-section-head">
                 <div>
                     <h2><i class="bi bi-wallet2"></i> Budget Utilization</h2>
-                    <p>Approved activity allocations and spending across your college. Organization cash is shown separately below.</p>
+                    <p>Approved activity allocations and spending across your college. Organization cash is shown separately above.</p>
                 </div>
             </div>
 
@@ -187,29 +396,6 @@
                 </div>
             </div>
 
-            <div class="sp-budget-chart-card liquid-glass" style="margin-top:1rem;">
-                <div class="sp-chart-card-head">
-                    <h3><i class="bi bi-wallet2"></i> Organization Cash</h3>
-                    <span class="sp-chart-count">A.Y. {{ $organizationCashYear }}</span>
-                </div>
-                <p style="margin:0 0 1rem;font-size:.82rem;color:#6b6468;">The same recorded cash shown to each active organization in your college. Cash includes funds not yet allocated to activities.</p>
-                @forelse ($organizationCash as $cash)
-                    <article style="padding:.8rem 0;border-top:1px solid #f0e6e8;">
-                        <strong style="display:block;overflow-wrap:anywhere;">{{ $cash['name'] }}</strong>
-                        @if ($cash['has_account'])
-                            <dl style="display:flex;flex-wrap:wrap;gap:.8rem;margin:.7rem 0 0;">
-                                <div style="flex:1 1 8rem;min-width:0;"><dt>Total funds</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['total'], 2) }}</dd></div>
-                                <div style="flex:1 1 8rem;min-width:0;"><dt>Utilized ({{ $cash['percent'] }}%)</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['spent'], 2) }}</dd></div>
-                                <div style="flex:1 1 8rem;min-width:0;"><dt>Recorded cash ({{ $cash['cash_percent'] }}%)</dt><dd style="margin:0;font-weight:700;">₱{{ number_format($cash['cash'], 2) }}</dd></div>
-                            </dl>
-                        @else
-                            <p class="sp-empty-sm">No cash account recorded for this academic year.</p>
-                        @endif
-                    </article>
-                @empty
-                    <p class="sp-empty-sm">No active organization cash accounts are available for your college.</p>
-                @endforelse
-            </div>
 
             @php
                 $publicExpenses = $publicExpenses ?? collect();
@@ -225,7 +411,7 @@
                     <p style="margin:0 0 0.85rem;font-size:0.82rem;color:#6b6468;">Verified expenses are sealed to OrgChain’s permissioned budget blockchain so students can audit utilization publicly.</p>
 
                     @if ($publicExpenses->isNotEmpty())
-                        <div style="overflow-x:auto;margin-bottom:0.9rem;">
+                        <div class="sp-budget-chain-table" style="overflow-x:auto;margin-bottom:0.9rem;">
                             <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
                                 <thead>
                                     <tr style="text-align:left;border-bottom:1.5px solid #f0e6e8;color:#7a7074;">
@@ -271,6 +457,14 @@
         @include('portal.student-voice')
 
         {{-- Activities & Announcements (Upcoming, Recent, Announcements Side-by-Side Table Cards) --}}
+        <style>
+            .sp-activity-table-card { display: flex; flex-direction: column; height: 100%; }
+            .sp-activity-table-card .sp-table-responsive { display: flex; flex-direction: column; flex: 1; }
+            .sp-activity-table-card .sp-act-table { height: 100%; flex: 1; }
+            .sp-activity-table-card .sp-act-table tbody { height: 100%; }
+            .sp-act-empty-row { height: 100%; }
+            .sp-act-empty-row td.sp-table-empty { vertical-align: middle !important; text-align: center !important; height: 100%; padding: 3rem 1rem !important; }
+        </style>
         <section class="sp-section">
             <div class="sp-activities-grid">
                 {{-- Left: Upcoming Activities Card --}}
@@ -326,7 +520,10 @@
                                 @empty
                                     <tr class="sp-act-empty-row">
                                         <td colspan="3" class="sp-table-empty">
-                                            <i class="bi bi-calendar-x"></i> No upcoming activities yet.
+                                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45rem; min-height: 160px; margin: auto; color: #718096;">
+                                                <i class="bi bi-calendar-x" style="font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.88rem;">No upcoming activities yet.</span>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -385,7 +582,10 @@
                                 @empty
                                     <tr class="sp-act-empty-row">
                                         <td colspan="3" class="sp-table-empty">
-                                            <i class="bi bi-archive"></i> No completed activities yet.
+                                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45rem; min-height: 160px; margin: auto; color: #718096;">
+                                                <i class="bi bi-archive" style="font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.88rem;">No completed activities yet.</span>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -445,7 +645,10 @@
                                 @empty
                                     <tr class="sp-act-empty-row">
                                         <td colspan="3" class="sp-table-empty">
-                                            <i class="bi bi-megaphone"></i> No announcements yet.
+                                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45rem; min-height: 160px; margin: auto; color: #718096;">
+                                                <i class="bi bi-megaphone" style="font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.88rem;">No announcements yet.</span>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -1564,20 +1767,6 @@
                                         <small>Anyone on Campus</small>
                                     </div>
                                 </button>
-                                <button type="button" class="sp-audience-item" data-audience="department" data-icon="bi-building" data-label="Department">
-                                    <i class="bi bi-building"></i>
-                                    <div>
-                                        <strong>Department</strong>
-                                        <small>Your college peers</small>
-                                    </div>
-                                </button>
-                                <button type="button" class="sp-audience-item" data-audience="org" data-icon="bi-shield-shaded" data-label="Org Only">
-                                    <i class="bi bi-shield-shaded"></i>
-                                    <div>
-                                        <strong>Org Members</strong>
-                                        <small>Officers and delegates</small>
-                                    </div>
-                                </button>
                             </div>
                         </div>
 
@@ -1597,6 +1786,48 @@
             </form>
         </section>
 
+        <style>
+            .sp-comment-send-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                border: 0;
+                border-radius: 50%;
+                background: transparent;
+                color: #8b1828;
+                cursor: pointer;
+                font-size: 0.95rem;
+                transition: all 0.2s ease;
+                padding: 0;
+                flex-shrink: 0;
+                margin-left: 0.35rem;
+            }
+            .sp-comment-send-btn:hover {
+                background: #fbebf0;
+                color: #731421;
+                transform: scale(1.08);
+            }
+            .sp-comment-send-btn:active {
+                transform: scale(0.95);
+            }
+            .sp-comment-like-wrap { position: relative; display: inline-flex; }
+            .sp-comment-like-btn.is-liked { color: #8b1828; font-weight: 700; }
+            .sp-comment-like-count { font-size: .75rem; color: #85727b; }
+            .sp-sub-btn.is-delete {
+                cursor: pointer;
+                background: transparent;
+                border: 0;
+                padding: 0;
+                font-size: inherit;
+                font-family: inherit;
+            }
+            .sp-sub-btn.is-delete:hover {
+                text-decoration: underline;
+                color: #b91c1c !important;
+            }
+        </style>
         {{-- Community feed --}}
         <section class="sp-section">
             @php
@@ -1612,51 +1843,11 @@
                     <h2><i class="bi bi-chat-quote-fill"></i> Community feed</h2>
                     <p>See what's happening in our campus community.</p>
                 </div>
-                <div class="sp-feed-controls">
-                    <div class="sp-feed-sort-dropdown-wrap">
-                        <button type="button" class="sp-feed-sort-btn" id="spFeedSortBtn" title="Sort feed" aria-expanded="false" aria-controls="spFeedSortPopover">
-                            <span id="spFeedSortLabel">{{ ['recent' => 'Most recent', 'top' => 'Top comments', 'popular' => 'Most liked'][$feedSort ?? 'recent'] }}</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                        <div class="sp-action-popover sp-sort-popover liquid-glass" id="spFeedSortPopover" hidden>
-                            @foreach (['recent' => 'Most recent', 'top' => 'Top comments', 'popular' => 'Most liked'] as $sortValue => $sortLabel)
-                                <a class="sp-sort-opt {{ ($feedSort ?? 'recent') === $sortValue ? 'is-active' : '' }}" href="{{ route('portal.community', array_merge($feedQuery, ['sort' => $sortValue])) }}" @if (($feedSort ?? 'recent') === $sortValue) aria-current="true" @endif>{{ $sortLabel }}</a>
-                            @endforeach
-                        </div>
-                    </div>
-                    <details class="sp-feed-filter-dropdown" @if ($feedHasFilters) open @endif>
-                        <summary class="sp-feed-filter-toggle-btn {{ $feedHasFilters ? 'is-active' : '' }}" id="spFeedFilterToggle" title="Feed filters" aria-label="Feed filters">
-                            <i class="bi bi-sliders" aria-hidden="true"></i>
-                        </summary>
-                        <form method="get" action="{{ route('portal.community') }}" class="sp-feed-filter-panel liquid-glass" aria-label="Filter community posts">
-                            <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
-                            <input type="hidden" name="community_q" value="{{ $communitySearch ?? '' }}">
-                            <label>Audience
-                                <select name="community_audience">
-                                    @foreach (['all' => 'All visible posts', 'public' => 'Public posts', 'department' => 'Department posts', 'org' => 'Organization posts'] as $value => $label)
-                                        <option value="{{ $value }}" @selected(($communityAudience ?? 'all') === $value)>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            <label>Posted
-                                <select name="community_period">
-                                    @foreach (['all' => 'Any time', 'day' => 'Last 24 hours', 'week' => 'Last 7 days', 'month' => 'Last 30 days'] as $value => $label)
-                                        <option value="{{ $value }}" @selected(($communityPeriod ?? 'all') === $value)>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                            <div class="sp-feed-filter-actions">
-                                <a href="{{ route('portal.community', ['community_q' => $communitySearch ?? '', 'sort' => $feedSort ?? 'recent']) }}">Clear filters</a>
-                                <button type="submit">Apply filters</button>
-                            </div>
-                        </form>
-                    </details>
-                </div>
             </div>
 
             <div class="sp-feed">
                 @forelse ($posts as $post)
-                    <article class="sp-post liquid-glass community-post" data-post-id="{{ $post->id }}">
+                    <article id="post-{{ $post->id }}" class="sp-post liquid-glass community-post" data-post-id="{{ $post->id }}">
                         <header class="sp-post-head">
                             <div class="sp-avatar sp-avatar-sm sp-feed-avatar">
                                 @if (!empty($post->student->avatar_path))
@@ -1766,7 +1957,7 @@
                         <div class="sp-comments" data-comments>
                             @if ($post->comments->isNotEmpty())
                                 @foreach ($post->comments as $comment)
-                                    <div class="sp-comment-thread {{ $loop->index >= 5 ? 'sp-comment-extra' : '' }}" @if ($loop->index >= 5) hidden @endif>
+                                    <div class="sp-comment-thread {{ $loop->index >= 5 ? 'sp-comment-extra' : '' }}" @if ($loop->index >= 5) hidden @endif id="comment-thread-{{ $comment->id }}">
                                         <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
                                             <span>{{ strtoupper(substr($comment->student->name ?? 'J', 0, 2)) }}</span>
                                         </div>
@@ -1776,11 +1967,24 @@
                                                 <p>{{ $comment->body }}</p>
                                             </div>
                                             <div class="sp-comment-subactions">
-                                                <button type="button" class="sp-sub-btn">Like</button>
+                                                @php $commentReaction = $comment->likes->first()?->reaction; @endphp
+                                                <span class="sp-comment-like-wrap">
+                                                    <span class="sp-reactions-dock liquid-glass" role="toolbar" aria-label="Choose a comment reaction" hidden>
+                                                        @foreach ($communityReactions as $reaction => $reactionDisplay)
+                                                            <button type="button" class="sp-comment-dock-reaction sp-dock-reaction" data-reaction="{{ $reaction }}" data-label="{{ $reactionDisplay['label'] }}" title="{{ $reactionDisplay['label'] }}"><span class="sp-dock-emoji" aria-hidden="true">{{ $reactionDisplay['emoji'] }}</span><span class="sp-dock-label">{{ $reactionDisplay['label'] }}</span></button>
+                                                        @endforeach
+                                                    </span>
+                                                    <button type="button" class="sp-sub-btn sp-comment-like-btn {{ $commentReaction ? 'is-liked' : '' }}" data-like-url="{{ route('portal.community.comments.like', $comment) }}" data-reaction="{{ $commentReaction ?? '' }}" aria-haspopup="true">{{ $communityReactions[$commentReaction]['label'] ?? 'Like' }}</button>
+                                                </span>
+                                                <span class="sp-comment-like-count" @if (!$comment->likes_count) hidden @endif>{{ $comment->likes_count }}</span>
                                                 <span class="sp-sub-dot">·</span>
                                                 <button type="button" class="sp-sub-btn" onclick="document.getElementById('comment-{{ $post->id }}')?.focus()">Reply</button>
                                                 <span class="sp-sub-dot">·</span>
                                                 <span class="sp-sub-time">{{ $comment->created_at ? $comment->created_at->diffForHumans(null, true, true) : '1m' }}</span>
+                                                @if ($comment->student_id === $student->id || $post->student_id === $student->id)
+                                                    <span class="sp-sub-dot">·</span>
+                                                    <button type="button" class="sp-sub-btn is-delete" style="color: #dc2626;" onclick="deleteCommunityComment({{ $comment->id }}, '{{ route('portal.community.comments.destroy', $comment) }}')">Delete</button>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -1792,7 +1996,7 @@
                         </div>
 
                         {{-- Modern Comment Composer Capsule Input (Picture 1) --}}
-                        <form class="sp-comment-form" method="post" data-comment-form action="{{ route('portal.community.posts.comment', $post) }}" data-confirm="manual" data-confirm-message="Post this comment?">
+                        <form class="sp-comment-form" method="post" data-comment-form action="{{ route('portal.community.posts.comment', $post) }}" data-confirm="off">
                             @csrf
                             <div class="sp-avatar sp-avatar-sm sp-comment-composer-avatar">
                                 @if (!empty($student->avatar_path))
@@ -1803,8 +2007,10 @@
                             </div>
                             <div class="sp-comment-input-capsule">
                                 <input id="comment-{{ $post->id }}" type="text" name="body" maxlength="800" placeholder="Write a comment…" required autocomplete="off">
+                                <button type="submit" class="sp-comment-send-btn" aria-label="Send comment" title="Send comment">
+                                    <i class="bi bi-send-fill" aria-hidden="true"></i>
+                                </button>
                             </div>
-                            <button type="submit" class="sp-comment-submit-hidden" style="display: none;">Submit</button>
                         </form>
                     </article>
                 @empty

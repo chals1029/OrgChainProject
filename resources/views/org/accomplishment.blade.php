@@ -62,9 +62,8 @@
                 <label class="ar-field"><span>Academic year</span><select name="academic_year">@foreach (($ad['years'] ?? []) as $option)<option value="{{ $option }}" @selected($year === (string) $option)>{{ $option }}</option>@endforeach</select></label>
                 <label class="ar-field"><span>Semester</span><select name="semester">@foreach (($ad['semesters'] ?? []) as $option)<option value="{{ $option }}" @selected($semester === $option)>{{ $option }}</option>@endforeach</select></label>
             </form>
-            <div class="ar-stats" aria-label="Actual saved accomplishment statistics">
+            <div class="ar-stats" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));" aria-label="Actual saved accomplishment statistics">
                 <article><span class="ar-stat-icon"><i class="bi bi-journal-check"></i></span><div><small>Reported activities</small><strong>{{ number_format((int) data_get($ad, 'stats.activities', 0)) }}</strong><span>This reporting period</span></div></article>
-                <article><span class="ar-stat-icon"><i class="bi bi-people"></i></span><div><small>Actual participants</small><strong>{{ number_format((int) data_get($ad, 'stats.participants', 0)) }}</strong><span>Saved attendance</span></div></article>
                 <article><span class="ar-stat-icon"><i class="bi bi-images"></i></span><div><small>Supporting images</small><strong>{{ number_format((int) data_get($ad, 'stats.evidence', 0)) }}</strong><span>Captioned documentation</span></div></article>
                 <article><span class="ar-stat-icon"><i class="bi bi-receipt"></i></span><div><small>Recorded expenses</small><strong>{{ $money(data_get($ad, 'stats.expenses', 0)) }}</strong><span>Activity spending</span></div></article>
             </div>
@@ -73,18 +72,6 @@
         <section class="ar-card" aria-labelledby="arPacketTitle">
             <div class="ar-section-head"><div><span class="ar-eyebrow">Semester accomplishment report</span><h2 id="arPacketTitle">{{ $packetDocument && !$packetIsNative ? 'Uploaded AR report' : 'Compiled AR packet' }}</h2><p class="ar-muted">{{ $semester }} · AY {{ $year }}</p></div><span class="ar-status">{{ data_get($reportBundle ?? [], 'reports.ar.state', 'draft') === 'draft' ? 'Not submitted' : data_get($reportBundle ?? [], 'reports.ar.state_label', 'Not submitted') }}</span></div>
             @if (!empty($ad['locked']))<p class="ar-alert"><i class="bi bi-lock"></i> This AR is locked for editing.</p>@endif
-            <div class="ar-actions">
-                @if ($packetDocument && !$packetIsNative && $packetDocument->hasStoredFile())
-                    <button class="app-view-action" type="button" aria-label="View accomplishment report" data-document-preview data-document-preview-url="{{ route('office.reports.documents.view', $packetDocument) }}" data-document-preview-title="{{ $packetDocument->name ?: $packetDocument->original_name }}" data-document-original-name="{{ $packetDocument->original_name }}" data-document-preview-type="{{ strtolower(pathinfo($packetDocument->original_name, PATHINFO_EXTENSION)) }}" data-document-preview-download="{{ route('office.reports.documents.view', ['document' => $packetDocument, 'download' => 1]) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
-                    <a class="org-btn org-btn-ghost" href="{{ route('office.reports.documents.view', ['document' => $packetDocument, 'download' => 1]) }}"><i class="bi bi-download"></i> Download original</a>
-                @elseif ((!$packetDocument || $packetIsNative) && !empty($ad['preview_url']))
-                    <button class="app-view-action" type="button" aria-label="View semester accomplishment packet" data-ar-preview="{{ $ad['preview_url'] }}" data-ar-title="Semester accomplishment packet" data-ar-download="{{ $ad['export_url'] ?? '' }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
-                    <button class="org-btn org-btn-ghost" type="button" data-ar-preview="{{ $ad['preview_url'] }}" data-ar-title="Semester accomplishment packet" data-ar-print><i class="bi bi-printer"></i> Print / Save as PDF</button>
-                @endif
-                @if ((!$packetDocument || $packetIsNative) && !empty($ad['export_url']))<a class="org-btn org-btn-ghost" href="{{ $ad['export_url'] }}"><i class="bi bi-file-earmark-word"></i> Download Word</a>@endif
-                @if (!empty($ad['template_url']))<a class="org-btn org-btn-ghost" href="{{ $ad['template_url'] }}"><i class="bi bi-download"></i> Narrative template</a>@endif
-                @if (!empty($ad['particulars_template_url']))<a class="org-btn org-btn-ghost" href="{{ $ad['particulars_template_url'] }}"><i class="bi bi-download"></i> Particulars template</a>@endif
-            </div>
             @if (!$packetDocument)<p class="ar-muted">No saved report for this period.</p>@elseif (!$packetDocument->hasStoredFile())<p class="ar-alert is-error">The saved report file is missing or unreadable.</p>@endif
             @include('org.partials.semester-report-status', ['reportType' => 'ar', 'reportBundle' => $reportBundle ?? [], 'selectedOrganization' => $organization, 'selectedSemester' => $semester, 'selectedYear' => $year, 'hideReportPeriodControls' => true, 'embedReportStatus' => true])
         </section>

@@ -43,10 +43,12 @@ class OfficeOrganizationAccountController extends Controller
         $employeeId = trim((string) $request->input('employee_id', ''));
 
         $input = $request->all();
-        $input['organization_name'] = trim((string) $request->input('organization_name', ''));
+        $orgName = trim((string) $request->input('organization_name', ''));
+        $officerName = trim((string) $request->input('officer_name', ''));
+        $input['organization_name'] = $orgName;
         $input['short_name'] = $shortName === '' ? null : $shortName;
         $input['college'] = trim((string) $request->input('college', ''));
-        $input['officer_name'] = trim((string) $request->input('officer_name', ''));
+        $input['officer_name'] = $officerName !== '' ? $officerName : ($request->has('officer_name') ? '' : $orgName);
         $input['email'] = strtolower(trim((string) $request->input('email', '')));
 
         if ($request->has('office_title')) {

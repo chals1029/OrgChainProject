@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityRegistration;
 use App\Models\BudgetItem;
+use App\Models\CommunityComment;
+use App\Models\CommunityCommentLike;
+use App\Models\CommunityLike;
 use App\Models\CommunityPost;
 use App\Models\ExpenseReceiptReview;
 use App\Models\OfficeAnnouncement;
@@ -65,7 +68,7 @@ class StudentPortalController extends Controller
             'author_name' => $student?->full_name ?? $student?->name ?? 'Student',
             'program' => null,
             'college' => $student?->college,
-            'topic' => $validated['category'] ?? 'campus',
+            'topic' => $validated['category'] ?? 'General',
             'body' => $validated['message'],
             'is_anonymous' => false,
             'visibility' => 'oso',
@@ -74,6 +77,16 @@ class StudentPortalController extends Controller
         return back()->with('status', 'Thanks — your feedback was sent to OSO.');
     }
 
+    public function destroyFeedback(StudentFeedback $feedback): RedirectResponse
+    {
+        $student = Auth::guard('student')->user();
+        $studentId = (int) ($student?->user_id ?? $student?->id ?? 0);
+        abort_unless($studentId > 0 && (int) $feedback->student_id === $studentId, 403);
+
+        $feedback->delete();
+
+        return back()->with('status', 'Your concern submission has been deleted.');
+    }
     public function updateProfile(Request $request): RedirectResponse
     {
         // Profile is read-only by design (official records). Reject direct writes.
@@ -665,7 +678,7 @@ class StudentPortalController extends Controller
                 'activity',
                 'comments' => function ($query) use ($student): void {
                     $query
-                        ->with('student')
+                        ->with(['student', 'likes' => fn ($likes) => $likes->where('student_id', $student->id)])
                         ->withCount('likes')
                         ->withExists([
                             'likes as liked_by_me' => fn ($q) => $q->where('student_id', $student->id),
@@ -864,6 +877,35 @@ class StudentPortalController extends Controller
                 'acknowledgedAt' => $feedback->verified_at?->toIso8601String(),
             ])->values()->all();
 
+        $communityEvents = collect()
+            ->merge(CommunityComment::query()->where('student_id', '!=', $student->id)
+                ->whereHas('post', fn ($query) => $query->where('student_id', $student->id))
+                ->with('student')->latest()->limit(30)->get()
+                ->map(fn ($comment) => ['event' => $comment, 'post_id' => $comment->post_id, 'kind' => 'comment', 'title' => 'New comment on your post']))
+            ->merge(CommunityLike::query()->where('student_id', '!=', $student->id)
+                ->whereHas('post', fn ($query) => $query->where('student_id', $student->id))
+                ->with('student')->latest('updated_at')->limit(30)->get()
+                ->map(fn ($like) => ['event' => $like, 'post_id' => $like->post_id, 'kind' => 'post-reaction', 'title' => 'New reaction to your post']))
+            ->merge(CommunityCommentLike::query()->where('student_id', '!=', $student->id)
+                ->whereHas('comment', fn ($query) => $query->where('student_id', $student->id))
+                ->with(['student', 'comment'])->latest('updated_at')->limit(30)->get()
+                ->map(fn ($like) => ['event' => $like, 'post_id' => $like->comment->post_id, 'kind' => 'comment-reaction', 'title' => 'New reaction to your comment']));
+        $communityNotifications = $communityEvents
+            ->sortByDesc(fn ($item) => $item['event']->updated_at)
+            ->take(30)
+            ->map(function ($item): array {
+                $event = $item['event'];
+                return [
+                    'id' => 'comm-post-'.$item['post_id'].'-'.$item['kind'].'-'.$event->id,
+                    'title' => $item['title'],
+                    'body' => $item['kind'] === 'comment' ? $event->body : 'Reacted with '.($event->reaction ?? 'like').'.',
+                    'author' => $event->student?->name ?? 'Student',
+                    'time' => $event->updated_at?->diffForHumans() ?? '',
+                    'url' => route('portal.community').'#post-'.$item['post_id'],
+                    'published_at' => $event->updated_at?->toIso8601String(),
+                ];
+            })->values()->all();
+
         return view('portal.index', [
             'student' => $student,
             'tab' => $tab,
@@ -897,6 +939,7 @@ class StudentPortalController extends Controller
             'publicExpenseItemsByActivity' => $publicExpenseItemsByActivity,
             'myFeedback' => $myFeedback,
             'feedbackNotifications' => $feedbackNotifications,
+            'communityNotifications' => $communityNotifications,
             'sdgHighlights' => $sdgHighlights,
             'feedSort' => $feedSort,
             'communitySearch' => $communitySearch,

@@ -76,9 +76,15 @@
 @endsection
 
 @section('actions')
-    <a id="budgetPrintLink" href="{{ route('office.budget.print', $budgetPrintFilters) }}" target="_blank" rel="noopener" class="org-btn org-btn-primary" title="Open the budget utilization report">
-        <i class="bi bi-file-earmark-arrow-down"></i> Print / Export Report
-    </a>
+    @if ($isOso)
+        <button type="button" class="org-btn org-btn-primary" onclick="openBudgetPrintFilterModal()" title="Open the budget utilization report">
+            <i class="bi bi-file-earmark-arrow-down"></i> Print / Export Report
+        </button>
+    @else
+        <a id="budgetPrintLink" href="{{ route('office.budget.print', $budgetPrintFilters) }}" target="_blank" rel="noopener" class="org-btn org-btn-primary" title="Open the budget utilization report">
+            <i class="bi bi-file-earmark-arrow-down"></i> Print / Export Report
+        </a>
+    @endif
 @endsection
 
 @section('content')
@@ -96,6 +102,45 @@
 
         .org-budget-container > * {
             min-width: 0;
+        }
+
+        /* Perfectly Centered Print Filter Modal Card */
+        #budgetPrintFilterModal {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            margin: 0 !important;
+            width: 92% !important;
+            max-width: 520px !important;
+            border: 1.5px solid #eadde0 !important;
+            border-radius: 18px !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25) !important;
+            z-index: 99999 !important;
+            overflow: hidden !important;
+        }
+
+        #budgetPrintFilterModal::backdrop {
+            background: rgba(15, 23, 42, 0.5) !important;
+            backdrop-filter: blur(5px) !important;
+        }
+
+        #budgetPrintFilterModal[open] {
+            display: block !important;
+            animation: budgetModalZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes budgetModalZoomIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
         }
 
         /* Top Filter & Organization Switcher Card */
@@ -1037,9 +1082,10 @@
             .so-alert.is-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
             .so-expense-form { display: grid; gap: 1rem; }
             .so-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
-            .so-batch-activity { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: .8rem; }
+            .so-batch-activity { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: .8rem; align-items: start; }
             .so-batch-activity label, .so-expense-item label { display: grid; align-content: start; gap: .35rem; font-size: .78rem; font-weight: 800; color: #2b2427; }
-            .so-batch-activity input, .so-batch-activity select { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: .65rem .8rem; border: 1.5px solid #f0e0e3; border-radius: 12px; background: #fdfafb; color: #2b2427; font: inherit; font-weight: 500; }
+            .so-batch-activity input, .so-batch-activity select, .so-batch-activity textarea { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: .65rem .8rem; border: 1.5px solid #f0e0e3; border-radius: 12px; background: #fdfafb; color: #2b2427; font: inherit; font-weight: 500; }
+            .so-batch-activity textarea { resize: none; overflow-x: hidden; overflow-y: hidden; white-space: normal; word-break: break-word; line-height: 1.35; font-size: .84rem; }
             .so-budget-context { box-shadow: none; border-radius: 12px; }
             .so-budget-context .org-info-panels-grid { padding: 0 .85rem .85rem; }
             .so-budget-context .org-info-card { box-shadow: none; border-radius: 12px; }
@@ -1343,7 +1389,7 @@
                     </label>
                     <label>
                         <span>Organization Name</span>
-                        <input type="text" id="receiptOrganization" readonly value="{{ $selectedOrganization }}" placeholder="Filled from the selected activity">
+                        <textarea id="receiptOrganization" readonly rows="2" placeholder="Filled from the selected activity" style="resize: none; overflow-x: hidden; overflow-y: hidden; white-space: normal; word-break: break-word; line-height: 1.35; min-height: 44px; height: auto; padding: .55rem .8rem; font-size: .84rem;">{{ $selectedOrganization }}</textarea>
                     </label>
                 </div>
                 @yield('budget-context-details')
@@ -1352,13 +1398,13 @@
                 <div class="so-receipt-capture" id="soReceiptCapture">
                     <div class="so-receipt-capture-copy">
                         <strong><i class="bi bi-paperclip"></i> Receipts / Supporting Documents</strong>
-                        <p>Up to 3 shared documents for all items in this submission.</p>
+                        <p>Shared documents for all items in this submission.</p>
                     </div>
                     <div class="so-receipt-upload-board">
                         <div class="so-receipt-dropzone" id="soReceiptDropzone" role="button" tabindex="0" aria-controls="soReceiptInput" aria-label="Upload receipts and supporting documents">
                             <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
                             <button type="button" class="org-btn org-btn-outline" id="soUploadGalleryBtn" aria-controls="soReceiptInput">
-                                <i class="bi bi-folder2-open"></i> Upload receipts (up to 3)
+                                <i class="bi bi-folder2-open"></i> Upload receipts
                             </button>
                             <span>Drag and drop files here, or click to browse</span>
                             <small>Supports JPG, PNG, WebP, or PDF · max 5 MB each</small>
@@ -1550,6 +1596,100 @@
 
 
     </div>
+
+    @if ($isOso)
+        {{-- OSO Budget Utilization Report Filter Modal --}}
+        <dialog id="budgetPrintFilterModal" aria-labelledby="budgetPrintModalTitle">
+            <div style="padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: 1.1rem;">
+                            <i class="bi bi-printer-fill" aria-hidden="true"></i>
+                        </div>
+                        <h3 id="budgetPrintModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e293b;">Print Budget Utilization Report</h3>
+                    </div>
+                    <button type="button" onclick="closeBudgetPrintFilterModal()" style="border: 0; background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #64748b;" aria-label="Close">&times;</button>
+                </div>
+
+                <form id="budgetPrintFilterForm" onsubmit="submitBudgetPrintFilter(event)">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.4rem; display: block;">Report Scope</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #eadde0; border-radius: 10px; cursor: pointer; background: #fff;" id="printScopeAllLabel">
+                                <input type="radio" name="printScope" value="all" checked onchange="handlePrintScopeChange(this.value)" style="accent-color: #8b1828;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.85rem; color: #1e293b;">All Colleges &amp; Organizations</strong>
+                                    <small style="display: block; font-size: 0.72rem; color: #64748b;">Includes all colleges and all organizations (College Council prioritized first)</small>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #eadde0; border-radius: 10px; cursor: pointer; background: #fff;" id="printScopeCollegeLabel">
+                                <input type="radio" name="printScope" value="college" onchange="handlePrintScopeChange(this.value)" style="accent-color: #8b1828;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.85rem; color: #1e293b;">By College</strong>
+                                    <small style="display: block; font-size: 0.72rem; color: #64748b;">Filter report to activities and organizations under a specific college</small>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #eadde0; border-radius: 10px; cursor: pointer; background: #fff;" id="printScopeOrgLabel">
+                                <input type="radio" name="printScope" value="organization" onchange="handlePrintScopeChange(this.value)" style="accent-color: #8b1828;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.85rem; color: #1e293b;">By Department / Organization</strong>
+                                    <small style="display: block; font-size: 0.72rem; color: #64748b;">Filter report to a specific department or student organization</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- College selector (hidden by default) --}}
+                    <div id="printCollegeSelectGroup" style="display: none; margin-bottom: 1rem;">
+                        <label for="printCollegeSelect" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">Select College / Department</label>
+                        <select id="printCollegeSelect" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+                            <option value="">Choose a college...</option>
+                            @foreach ($colleges ?? [] as $colOption)
+                                <option value="{{ $colOption }}">{{ $colOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Organization selector (hidden by default) --}}
+                    <div id="printOrgSelectGroup" style="display: none; margin-bottom: 1rem;">
+                        <label for="printOrgSelect" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">Select Organization</label>
+                        <select id="printOrgSelect" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+                            <option value="">Choose an organization...</option>
+                            @foreach ($organizations ?? [] as $orgOption)
+                                <option value="{{ $orgOption }}">{{ $orgOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <div>
+                            <label for="printAcademicYear" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">Academic Year</label>
+                            <select id="printAcademicYear" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+                                @foreach ($osoFinancialOverview['years'] ?? [$selectedYear] as $y)
+                                    <option value="{{ $y }}" @selected($y === $selectedYear)>{{ $y }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="printSemester" style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.35rem; display: block;">Semester</label>
+                            <select id="printSemester" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+                                <option value="Annual" @selected($selectedSemester === 'Annual')>Annual (Full Year)</option>
+                                <option value="First Semester" @selected($selectedSemester === 'First Semester')>First Semester</option>
+                                <option value="Second Semester" @selected($selectedSemester === 'Second Semester')>Second Semester</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 0.65rem;">
+                        <button type="button" class="org-btn org-btn-outline" onclick="closeBudgetPrintFilterModal()">Cancel</button>
+                        <button type="submit" class="org-btn org-btn-primary" style="background: #8b1828; color: #fff;">
+                            <i class="bi bi-printer"></i> Generate &amp; Print Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
+    @endif
 
     @if (!$isOso || $osoSelectedActivity !== null || (!$osoHasActivityRequest && ($selectedOrganization ?? '') === '' && $osoFinancialOverview !== null))
         @include('org.partials.budget-receipt-preview')
@@ -2021,7 +2161,11 @@
             const receiptSelect = document.getElementById('receiptActivityId');
             if (selected && receiptSelect) receiptSelect.value = selected.activityId;
             const orgInput = document.getElementById('receiptOrganization');
-            if (selected && orgInput) orgInput.value = selected.orgName;
+            if (selected && orgInput) {
+                orgInput.value = selected.orgName;
+                orgInput.style.height = 'auto';
+                orgInput.style.height = Math.max(44, orgInput.scrollHeight) + 'px';
+            }
             if (!isOsoBudget) {
                 const printUrl = new URL(@json(route('office.budget.print')));
                 printUrl.searchParams.set('organization', @json($selectedOrganization));
@@ -2142,6 +2286,57 @@
             if (!this.open || !osoSelectedActivityKey) return;
             initBudgetCharts();
         });
+
+        window.openBudgetPrintFilterModal = function () {
+            const modal = document.getElementById('budgetPrintFilterModal');
+            if (modal && typeof modal.showModal === 'function') {
+                modal.showModal();
+                if (!modal.dataset.backdropBound) {
+                    modal.dataset.backdropBound = '1';
+                    modal.addEventListener('click', function (e) {
+                        const rect = modal.getBoundingClientRect();
+                        const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height
+                          && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+                        if (!isInDialog) {
+                            modal.close();
+                        }
+                    });
+                }
+            }
+        };
+
+        window.closeBudgetPrintFilterModal = function () {
+            const modal = document.getElementById('budgetPrintFilterModal');
+            if (modal) modal.close();
+        };
+        window.handlePrintScopeChange = function (scope) {
+            const colGroup = document.getElementById('printCollegeSelectGroup');
+            const orgGroup = document.getElementById('printOrgSelectGroup');
+            if (colGroup) colGroup.style.display = scope === 'college' ? 'block' : 'none';
+            if (orgGroup) orgGroup.style.display = scope === 'organization' ? 'block' : 'none';
+        };
+
+        window.submitBudgetPrintFilter = function (event) {
+            event.preventDefault();
+            const scope = document.querySelector('input[name="printScope"]:checked')?.value || 'all';
+            const year = document.getElementById('printAcademicYear')?.value || '';
+            const semester = document.getElementById('printSemester')?.value || '';
+            const params = new URLSearchParams();
+            if (year) params.set('academic_year', year);
+            if (semester) params.set('semester', semester);
+
+            if (scope === 'college') {
+                const college = document.getElementById('printCollegeSelect')?.value || '';
+                if (college) params.set('college', college);
+            } else if (scope === 'organization') {
+                const org = document.getElementById('printOrgSelect')?.value || '';
+                if (org) params.set('organization', org);
+            }
+
+            const url = @json(route('office.budget.print')) + '?' + params.toString();
+            window.open(url, '_blank', 'noopener');
+            closeBudgetPrintFilterModal();
+        };
 
         document.addEventListener('DOMContentLoaded', function () {
             const yearSelect = document.getElementById('budgetYearSelector');

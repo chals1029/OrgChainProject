@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Student Portal | OrgChain</title>
     <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
@@ -68,27 +68,27 @@
                 </div>
             @endif
 
-            <p class="sp-nav-section">Menu</p>
+            <p class="sp-nav-section" style="color: #8b1828; letter-spacing: .08em; font-weight: 800;">BatStateU Student Portal</p>
             <nav class="sp-nav" aria-label="Student Portal">
                 <button type="button" class="sp-nav-link {{ ($tab ?? '') === 'home' ? 'is-active' : '' }}" data-portal-tab="home">
                     <i class="bi bi-grid-1x2-fill"></i>
-                    <span>Dashboard</span>
+                    <span><strong>Dashboard</strong></span>
                 </button>
                 <button type="button" class="sp-nav-link {{ ($tab ?? '') === 'activities' ? 'is-active' : '' }}" data-portal-tab="activities">
                     <i class="bi bi-calendar-event-fill"></i>
-                    <span>Activities</span>
+                    <span><strong>Activities</strong></span>
                 </button>
                 <button type="button" class="sp-nav-link {{ ($tab ?? '') === 'announcements' ? 'is-active' : '' }}" data-portal-tab="announcements">
                     <i class="bi bi-megaphone-fill"></i>
-                    <span>Announcements</span>
+                    <span><strong>Announcements</strong></span>
                 </button>
                 <button type="button" class="sp-nav-link {{ ($tab ?? '') === 'tosa' ? 'is-active' : '' }}" data-portal-tab="tosa">
                     <i class="bi bi-award-fill"></i>
-                    <span>TOSA Applications</span>
+                    <span><strong>TOSA Applications</strong></span>
                 </button>
                 <button type="button" class="sp-nav-link {{ ($tab ?? '') === 'community' ? 'is-active' : '' }}" data-portal-tab="community">
                     <i class="bi bi-people-fill"></i>
-                    <span>Community</span>
+                    <span><strong>Community</strong></span>
                 </button>
             </nav>
         </aside>
@@ -100,13 +100,18 @@
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="sp-topbar-title">
-                    <h1 class="sp-page-title" id="spPageTitle">{{ ($tab ?? 'home') === 'community' ? 'Community' : (($tab ?? 'home') === 'tosa' ? 'TOSA Applications' : (($tab ?? 'home') === 'announcements' ? 'Announcements' : (($tab ?? 'home') === 'activities' ? 'Activities' : 'Dashboard'))) }}</h1>
-                    <p class="sp-module-kicker">BatStateU Student Portal</p>
+                    <p class="sp-module-kicker" style="margin-bottom: 2px;">BatStateU Student Portal</p>
+                    <h1 class="sp-page-title"><strong id="spPageTitle">{{ ($tab ?? 'home') === 'community' ? 'Community' : (($tab ?? 'home') === 'tosa' ? 'TOSA Applications' : (($tab ?? 'home') === 'announcements' ? 'Announcements' : (($tab ?? 'home') === 'activities' ? 'Activities' : 'Dashboard'))) }}</strong></h1>
                 </div>
                 <div class="sp-top-actions">
                     <form method="get" action="{{ route('portal.community') }}" class="sp-search-box" id="spTopSearchBox" @if(($tab ?? '') !== 'community') style="display: none;" @endif role="search">
                         <i class="bi bi-search" aria-hidden="true"></i>
-                        <input type="search" name="community_q" value="{{ $communitySearch ?? '' }}" placeholder="Search community posts…" aria-label="Search community posts">
+                        <input type="search" name="community_q" id="communitySearchInput" value="{{ $communitySearch ?? '' }}" placeholder="Search community posts…" aria-label="Search community posts">
+                        @if (!empty($communitySearch))
+                            <a href="{{ route('portal.community', ['sort' => $feedSort ?? 'recent']) }}" class="sp-search-clear-link" title="Clear search and view all posts" aria-label="Clear search" style="color: #94808a; display: inline-flex; align-items: center; text-decoration: none; font-size: 0.95rem; margin-right: 2px;">
+                                <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                            </a>
+                        @endif
                         <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
                         <input type="hidden" name="community_audience" value="{{ $communityAudience ?? 'all' }}">
                         <input type="hidden" name="community_period" value="{{ $communityPeriod ?? 'all' }}">
@@ -692,45 +697,8 @@
                 if (!e.target.closest('.sp-action-dropdown-wrap')) {
                     closeAllComposerPopovers();
                 }
-                if (!e.target.closest('.sp-feed-sort-dropdown-wrap')) {
-                    const sortPop = document.getElementById('spFeedSortPopover');
-                    if (sortPop) sortPop.hidden = true;
-                    document.getElementById('spFeedSortBtn')?.setAttribute('aria-expanded', 'false');
-                }
                 if (!e.target.closest('.sp-post-menu-wrap')) {
                     document.querySelectorAll('.sp-post-options-menu').forEach((m) => (m.hidden = true));
-                }
-                if (!e.target.closest('.sp-feed-filter-dropdown')) {
-                    document.querySelector('.sp-feed-filter-dropdown')?.removeAttribute('open');
-                }
-            });
-
-            // Feed Sort Dropdown Toggle
-            const feedSortBtn = document.getElementById('spFeedSortBtn');
-            const feedSortPopover = document.getElementById('spFeedSortPopover');
-
-            feedSortBtn?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (feedSortPopover) {
-                    feedSortPopover.hidden = !feedSortPopover.hidden;
-                    if (!feedSortPopover.hidden) {
-                        document.querySelector('.sp-feed-filter-dropdown')?.removeAttribute('open');
-                    }
-                    feedSortBtn.setAttribute('aria-expanded', String(!feedSortPopover.hidden));
-                }
-            });
-
-            document.addEventListener('keydown', (event) => {
-                if (event.key !== 'Escape') return;
-                if (feedSortPopover && !feedSortPopover.hidden) {
-                    feedSortPopover.hidden = true;
-                    feedSortBtn?.setAttribute('aria-expanded', 'false');
-                    feedSortBtn?.focus();
-                }
-                const filters = document.querySelector('.sp-feed-filter-dropdown[open]');
-                if (filters) {
-                    filters.removeAttribute('open');
-                    filters.querySelector('summary')?.focus();
                 }
             });
 
@@ -814,7 +782,71 @@
                 wrap.addEventListener('touchend', () => window.clearTimeout(holdTimer));
                 wrap.addEventListener('touchcancel', () => window.clearTimeout(holdTimer));
             });
+            const setupCommentReactionDock = (wrap) => {
+                const dock = wrap.querySelector('.sp-reactions-dock');
+                let holdTimer;
+                let hideTimer;
+                let held = false;
+                const show = () => {
+                    clearTimeout(hideTimer);
+                    closeReactionDocks(dock);
+                    dock.hidden = false;
+                };
+                wrap.addEventListener('mouseenter', show);
+                wrap.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => { dock.hidden = true; }, 250); });
+                wrap.addEventListener('focusin', (event) => { if (!event.sourceCapabilities?.firesTouchEvents) show(); });
+                wrap.addEventListener('focusout', (event) => { if (!wrap.contains(event.relatedTarget)) dock.hidden = true; });
+                wrap.addEventListener('touchstart', (event) => {
+                    if (event.target.closest('.sp-comment-dock-reaction')) return;
+                    held = false;
+                    holdTimer = setTimeout(() => { held = true; show(); }, 300);
+                }, { passive: true });
+                wrap.addEventListener('touchend', () => clearTimeout(holdTimer));
+                wrap.addEventListener('touchcancel', () => clearTimeout(holdTimer));
+                wrap.addEventListener('click', (event) => {
+                    if (held && event.target.closest('.sp-comment-like-btn')) {
+                        held = false;
+                        event.stopPropagation();
+                        event.preventDefault();
+                    }
+                });
+            };
+            document.querySelectorAll('.sp-comment-like-wrap').forEach(setupCommentReactionDock);
+            const sendCommentReaction = async (wrap, reaction = null) => {
+                const button = wrap?.querySelector('.sp-comment-like-btn');
+                if (!button || button.disabled) return;
+                button.disabled = true;
+                try {
+                    const body = new FormData();
+                    body.set('reaction', reaction || button.dataset.reaction || 'like');
+                    const response = await fetch(button.dataset.likeUrl, { method: 'POST', headers: likeHeaders(), body, credentials: 'same-origin' });
+                    if (!response.ok) throw new Error('reaction failed');
+                    const data = await response.json();
+                    button.dataset.reaction = data.reaction || '';
+                    button.classList.toggle('is-liked', data.liked);
+                    button.textContent = wrap.querySelector(`.sp-comment-dock-reaction[data-reaction="${data.reaction}"]`)?.dataset.label || 'Like';
+                    const count = wrap.parentElement.querySelector('.sp-comment-like-count');
+                    if (count) { count.textContent = data.likes_count; count.hidden = !data.likes_count; }
+                } catch (_) {
+                    // Keep the previous state if the request fails.
+                } finally {
+                    button.disabled = false;
+                }
+            };
             document.addEventListener('click', (e) => {
+                const commentReaction = e.target.closest('.sp-comment-dock-reaction');
+                if (commentReaction) {
+                    e.stopPropagation();
+                    closeReactionDocks();
+                    sendCommentReaction(commentReaction.closest('.sp-comment-like-wrap'), commentReaction.dataset.reaction);
+                    return;
+                }
+                const commentLike = e.target.closest('.sp-comment-like-btn');
+                if (commentLike) {
+                    e.stopPropagation();
+                    sendCommentReaction(commentLike.closest('.sp-comment-like-wrap'));
+                    return;
+                }
                 const reaction = e.target.closest('.sp-dock-reaction');
                 if (reaction) {
                     e.stopPropagation();
@@ -822,7 +854,7 @@
                     sendLike(reaction.closest('.community-post'), reaction.dataset.reaction);
                     return;
                 }
-                if (!e.target.closest('.sp-like-action-wrap')) closeReactionDocks();
+                if (!e.target.closest('.sp-like-action-wrap, .sp-comment-like-wrap')) closeReactionDocks();
 
                 // Handle standard tap / click on Like Button (Toggle)
                 const likeBtn = e.target.closest('.community-like-btn');
@@ -914,7 +946,9 @@
             const bellDot = document.getElementById('spBellDot');
             const announcementsFeed = @json(($announcements ?? []));
             const feedbackFeed = @json(($feedbackNotifications ?? []));
+            const communityFeed = @json(($communityNotifications ?? []));
             const notificationFeed = [
+                ...communityFeed.map((item) => ({ ...item, community: true })),
                 ...feedbackFeed.map((item) => ({ ...item, feedback: true })),
                 ...announcementsFeed,
             ];
@@ -932,6 +966,7 @@
                     item.querySelector('strong').textContent = notice.title || 'Announcement';
                     item.querySelector('small').textContent = `${notice.author || 'OSO'} · ${notice.time || ''}`;
                     if (notice.feedback) item.querySelector('small').textContent += ' · Acknowledged';
+                    if (notice.community) item.querySelector('small').textContent += ' · Community';
                     notifList.appendChild(item);
                 });
             }
@@ -1027,6 +1062,23 @@
                     input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
+            // Auto-reload all community posts when search input is cleared / 'x' is clicked
+            const communitySearchInput = document.getElementById('communitySearchInput');
+            if (communitySearchInput) {
+                communitySearchInput.addEventListener('search', function () {
+                    if (!this.value.trim()) {
+                        const form = this.closest('form');
+                        if (form) form.submit();
+                    }
+                });
+                communitySearchInput.addEventListener('input', function () {
+                    if (!this.value.trim() && new URLSearchParams(window.location.search).has('community_q') && new URLSearchParams(window.location.search).get('community_q') !== '') {
+                        const form = this.closest('form');
+                        if (form) form.submit();
+                    }
+                });
+            }
+
 
             // Check URL hash or initial tab
             if (location.hash === '#activities') {
@@ -1070,7 +1122,6 @@
                     const input = form.querySelector('input[name="body"]');
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (!card || !input || !input.value.trim() || submitBtn.disabled) return;
-                    if (!window.OrgActionConfirmations.confirmSubmit(e)) return;
 
                     submitBtn.disabled = true;
                     try {
@@ -1078,25 +1129,38 @@
                         const data = await postJson(form.action, body);
                         const list = card.querySelector('[data-comments]');
                         if (list && data.comment) {
-                            const row = document.createElement('div');
-                            row.className = 'sp-comment';
-                            const avatar = document.createElement('span');
-                            avatar.className = 'sp-comment-avatar';
-                            avatar.textContent = (data.comment.student_name || '?').charAt(0).toUpperCase();
-                            const body = document.createElement('div');
-                            body.className = 'sp-comment-body';
-                            const head = document.createElement('div');
-                            head.className = 'sp-comment-head';
-                            const name = document.createElement('strong');
-                            name.textContent = data.comment.student_name;
-                            head.appendChild(name);
-                            const text = document.createElement('span');
-                            text.textContent = data.comment.body;
-                            body.appendChild(head);
-                            body.appendChild(text);
-                            row.appendChild(avatar);
-                            row.appendChild(body);
-                            list.appendChild(row);
+                            const thread = document.createElement('div');
+                            thread.className = 'sp-comment-thread';
+                            thread.id = 'comment-thread-' + data.comment.id;
+                            const initials = (data.comment.student_name || 'S').substring(0, 2).toUpperCase();
+                            thread.innerHTML = `
+                                <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
+                                    <span>${initials}</span>
+                                </div>
+                                <div class="sp-comment-content">
+                                    <div class="sp-comment-bubble">
+                                        <strong>${data.comment.student_name}</strong>
+                                        <p>${data.comment.body}</p>
+                                    </div>
+                                    <div class="sp-comment-subactions">
+                                        <span class="sp-comment-like-wrap">
+                                            <span class="sp-reactions-dock liquid-glass" role="toolbar" aria-label="Choose a comment reaction" hidden>
+                                                ${[['like','Like','👍'],['love','Love','❤️'],['care','Care','🥰'],['haha','Haha','😆'],['wow','Wow','😮'],['sad','Sad','😢'],['angry','Angry','😡']].map(([value, label, emoji]) => `<button type="button" class="sp-comment-dock-reaction sp-dock-reaction" data-reaction="${value}" data-label="${label}" title="${label}"><span class="sp-dock-emoji" aria-hidden="true">${emoji}</span><span class="sp-dock-label">${label}</span></button>`).join('')}
+                                            </span>
+                                            <button type="button" class="sp-sub-btn sp-comment-like-btn" data-reaction="" aria-haspopup="true">Like</button>
+                                        </span>
+                                        <span class="sp-comment-like-count" hidden>0</span>
+                                        <span class="sp-sub-dot">·</span>
+                                        <button type="button" class="sp-sub-btn" onclick="document.getElementById('${input.id}')?.focus()">Reply</button>
+                                        <span class="sp-sub-dot">·</span>
+                                        <span class="sp-sub-time">Just now</span>
+                                        ${data.comment.delete_url ? `<span class="sp-sub-dot">·</span><button type="button" class="sp-sub-btn is-delete" style="color: #dc2626;" onclick="deleteCommunityComment(${data.comment.id}, '${data.comment.delete_url}')">Delete</button>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                            thread.querySelector('.sp-comment-like-btn').dataset.likeUrl = data.comment.like_url;
+                            setupCommentReactionDock(thread.querySelector('.sp-comment-like-wrap'));
+                            list.appendChild(thread);
                         }
                         const countEl = card.querySelector('[data-comments-count]');
                         if (countEl) {
@@ -1113,6 +1177,42 @@
                     }
                 });
             });
+
+            window.deleteCommunityComment = async function (commentId, deleteUrl) {
+                if (!confirm('Are you sure you want to delete this comment?')) return;
+                try {
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    const res = await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        }
+                    });
+                    const data = await res.json();
+                    if (data && data.ok) {
+                        const thread = document.getElementById('comment-thread-' + commentId);
+                        if (thread) {
+                            const card = thread.closest('.community-post');
+                            thread.remove();
+                            if (card) {
+                                const countEl = card.querySelector('[data-comments-count]');
+                                if (countEl) {
+                                    const countBtn = countEl.querySelector('.sp-comments-count-btn');
+                                    const label = `${data.comments_count} comment${data.comments_count === 1 ? '' : 's'}`;
+                                    if (countBtn) countBtn.textContent = label;
+                                    else countEl.textContent = label;
+                                }
+                            }
+                        }
+                    } else {
+                        alert('Could not delete comment.');
+                    }
+                } catch (err) {
+                    alert('Could not delete comment. Try again.');
+                }
+            };
 
             // Existing five-row dashboard tables retain their own page state.
             const initTablePagination = () => {

@@ -1,0 +1,5 @@
+# Local data, uploads, generated notes and blockchain runtime material.
+storage/
+tmp/
+ORGCHAIN/Graphify Generated/
+infra/besu/networkFiles/

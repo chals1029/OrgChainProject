@@ -12,6 +12,7 @@ class CommunityCommentLike extends Model
     protected $fillable = [
         'comment_id',
         'student_id',
+        'reaction',
     ];
 
     public function comment(): BelongsTo
