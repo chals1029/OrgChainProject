@@ -683,6 +683,27 @@
             border-bottom: none;
         }
 
+        .org-directory-toolbar, .org-directory-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0.75rem 0; font-size: 0.82rem; color: #706569; }
+        .org-directory-toolbar[hidden], .org-directory-pagination[hidden] { display: none; }
+        .org-directory-search { width: min(100%, 22rem); padding: 0.5rem 0.7rem; border: 1px solid #e4d5d8; border-radius: 8px; font: inherit; }
+        .org-directory-pagination button { padding: 0.4rem 0.75rem; border: 1px solid #e4d5d8; border-radius: 8px; background: #fff; color: #8b1828; font: inherit; cursor: pointer; }
+        .org-directory-pagination button:disabled { opacity: 0.45; cursor: default; }
+        .org-directory-search:focus-visible, .org-directory-pagination button:focus-visible, .org-directory-viewing a:focus-visible { outline: 3px solid rgba(139, 24, 40, 0.35); outline-offset: 2px; }
+        .org-directory-viewing { font-size: 0.82rem; color: #706569; }
+        .org-directory-viewing a, .org-directory-table a { color: #8b1828; font-weight: 700; }
+        .org-directory-table { min-width: 0; table-layout: fixed; font-size: 0.82rem; }
+        .org-directory-table th, .org-directory-table td { padding: 0.55rem; white-space: normal; overflow-wrap: anywhere; }
+        .org-directory-table th:first-child { width: 22%; }
+        .org-directory-table th:nth-child(2) { width: 16%; }
+        @media (max-width: 700px) {
+            .org-directory-table, .org-directory-table tbody, .org-directory-table tr, .org-directory-table td { display: block; }
+            .org-directory-table thead { display: none; }
+            .org-directory-table tr { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0e6e8; }
+            .org-directory-table td { display: flex; justify-content: space-between; gap: 1rem; border: 0; padding: 0.3rem 0; text-align: right; }
+            .org-directory-table td::before { content: attr(data-label); color: #706569; font-weight: 700; text-align: left; }
+            .org-directory-table tr[hidden] { display: none; }
+        }
+
         .org-count-badge {
             display: inline-flex;
             align-items: center;
@@ -873,7 +894,7 @@
                         <i class="bi bi-lock-fill oso-select-arrow" style="color: #8b1828;"></i>
                     @else
                         <select id="organizationFilter" class="oso-filter-select" title="{{ $selectedOrganization ?: 'All Organizations' }}" aria-describedby="analyticsOrganizationName" onchange="updateAnalyticsOrganizationFilter(this.value)">
-                            <option value="">All Organizations</option>
+                            <option value="all" @selected(empty($selectedOrganization))>All Organizations (Directory View)</option>
                             @foreach (($organizations ?? collect()) as $organizationName)
                                 <option value="{{ $organizationName }}" title="{{ $organizationName }}" @selected(($selectedOrganization ?? '') === $organizationName)>{{ $organizationName }}</option>
                             @endforeach
@@ -889,7 +910,7 @@
                 <label for="yearFilter" class="oso-filter-label"><i class="bi bi-calendar2-range"></i> Year</label>
                 <div class="oso-select-wrapper">
                     <select id="yearFilter" class="oso-filter-select" onchange="updateAnalyticsData()">
-                        @foreach (collect($activityFinancials ?? [])->pluck('year')->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
+                        @foreach (collect($allActivityFinancials ?? $activityFinancials ?? [])->pluck('year')->merge(range(now()->year - 2, now()->year))->filter()->unique()->sortDesc() as $calendarYear)
                             <option value="{{ $calendarYear }}" @selected((int) $calendarYear === now()->year)>{{ $calendarYear }} · Jan–Dec{{ (int) $calendarYear === now()->year ? ' (Current)' : '' }}</option>
                         @endforeach
                         <option value="all">All Calendar Years</option>
@@ -959,55 +980,102 @@
         </div>
     </section>
 
+    @php
+        $directoryView = empty($selectedOrganization);
+        $organizationCount = $organizationStats->count();
+        $averageAllocation = $organizationCount ? $organizationStats->sum('approved_budget') / $organizationCount : 0;
+        $averageExpenditure = $organizationCount ? $organizationStats->sum('implemented_budget') / $organizationCount : 0;
+        $averageReserve = $organizationCount ? $organizationStats->sum('remaining_balance') / $organizationCount : 0;
+        $averageBurnRate = $organizationCount ? $organizationStats->avg('utilization_percent') : 0;
+    @endphp
+
+    @if (! $directoryView)
+        <div class="org-directory-viewing">Viewing: <strong>{{ $selectedOrganization }}</strong>@if (! $isSo) &middot; <a href="{{ request()->fullUrlWithQuery(['organization' => 'all']) }}">Switch to Directory View</a>@endif</div>
+    @endif
+
     {{-- 1. Overall Budget Health KPIs (Dashboard Liquid-Glass Cards & Effects) --}}
     <div class="org-health-grid">
-        {{-- Card 1: Overall Budget Health --}}
-        <article class="ovcaa-stat-card liquid-glass is-green" title="{{ empty($activityFinancials) ? 'No budget health data' : 'Overall Budget Health: '.$overview['healthScore'].'%' }}">
+        {{-- Card 1: Organization health or average burn rate --}}
+        <article class="ovcaa-stat-card liquid-glass is-green" title="{{ $directoryView ? 'Average Organization Burn Rate' : 'Organization Budget Health' }}">
             <div class="ovcaa-stat-top">
                 <div class="ovcaa-stat-icon is-green">
                     <i class="bi bi-heart-pulse-fill"></i>
                 </div>
-                <strong class="val" id="kpiHealthScore">{{ empty($activityFinancials) ? 'No Data' : $overview['healthScore'].'% · '.($overview['healthScore'] >= 80 ? 'Optimal' : ($overview['healthScore'] >= 60 ? 'Watch' : 'Needs Attention')) }}</strong>
+                <strong class="val" id="kpiHealthScore">{{ $directoryView ? number_format($averageBurnRate, 1).'%' : (empty($activityFinancials) ? 'No Data' : $overview['healthScore'].'% · '.($overview['healthScore'] >= 80 ? 'Optimal' : ($overview['healthScore'] >= 60 ? 'Watch' : 'Needs Attention'))) }}</strong>
             </div>
-            <span class="ovcaa-stat-title">Overall Budget Health</span>
+            <span class="ovcaa-stat-title">{{ $directoryView ? 'Average Organization Burn Rate' : 'Organization Budget Health' }}</span>
         </article>
 
-        {{-- Card 2: Total Budget Allocated --}}
-        <article class="ovcaa-stat-card liquid-glass is-maroon" title="Total Budget Allocated">
+        {{-- Card 2: Allocation --}}
+        <article class="ovcaa-stat-card liquid-glass is-maroon" title="{{ $directoryView ? 'Average Organization Allocation' : 'Allocated Budget' }}">
             <div class="ovcaa-stat-top">
                 <div class="ovcaa-stat-icon is-maroon">
                     <i class="bi bi-wallet2"></i>
                 </div>
-                <strong class="val" id="kpiAllocated">₱{{ number_format($overview['totalAllocated']) }}</strong>
+                <strong class="val" id="kpiAllocated">₱{{ number_format($directoryView ? $averageAllocation : $overview['totalAllocated']) }}</strong>
             </div>
-            <span class="ovcaa-stat-title">Total Budget Allocated</span>
+            <span class="ovcaa-stat-title">{{ $directoryView ? 'Average Organization Allocation' : 'Allocated Budget' }}</span>
         </article>
 
-        {{-- Card 3: Total Budget Utilized --}}
-        <article class="ovcaa-stat-card liquid-glass is-blue" title="Total Budget Utilized">
+        {{-- Card 3: Expenditure --}}
+        <article class="ovcaa-stat-card liquid-glass is-blue" title="{{ $directoryView ? 'Average Organization Expenditure' : 'Utilized Budget' }}">
             <div class="ovcaa-stat-top">
                 <div class="ovcaa-stat-icon is-blue">
                     <i class="bi bi-pie-chart-fill"></i>
                 </div>
-                <strong class="val" id="kpiUtilized">₱{{ number_format($overview['totalUtilized']) }}</strong>
+                <strong class="val" id="kpiUtilized">₱{{ number_format($directoryView ? $averageExpenditure : $overview['totalUtilized']) }}</strong>
             </div>
-            <span class="ovcaa-stat-title">Total Budget Utilized</span>
+            <span class="ovcaa-stat-title">{{ $directoryView ? 'Average Organization Expenditure' : 'Utilized Budget' }}</span>
         </article>
 
         {{-- Card 4: Remaining Reserve --}}
-        <article class="ovcaa-stat-card liquid-glass is-amber" title="Remaining Reserve">
+        <article class="ovcaa-stat-card liquid-glass is-amber" title="{{ $directoryView ? 'Average Organization Reserve' : 'Remaining Reserve' }}">
             <div class="ovcaa-stat-top">
                 <div class="ovcaa-stat-icon is-amber">
                     <i class="bi bi-cash-coin"></i>
                 </div>
-                <strong class="val" id="kpiRemaining">₱{{ number_format($overview['remainingBalance']) }}</strong>
+                <strong class="val" id="kpiRemaining">₱{{ number_format($directoryView ? $averageReserve : $overview['remainingBalance']) }}</strong>
             </div>
-            <span class="ovcaa-stat-title">Remaining Reserve</span>
+            <span class="ovcaa-stat-title">{{ $directoryView ? 'Average Organization Reserve' : 'Remaining Reserve' }}</span>
         </article>
     </div>
 
+    @if ($directoryView)
+    <section class="org-analytics-card" aria-label="Individual Organization Performance and Budget Breakdown">
+        <div class="org-card-header-flex"><h2>Individual Organization Performance &amp; Budget Breakdown</h2></div>
+        <div class="org-directory-toolbar" id="organizationDirectorySearchControls" hidden>
+            <label for="organizationDirectorySearch">Search organizations</label>
+            <input class="org-directory-search" id="organizationDirectorySearch" type="search" placeholder="Search by organization or college">
+        </div>
+        <div class="org-table-responsive">
+            <table class="org-college-table org-directory-table">
+                <thead><tr><th>Organization Name</th><th>College</th><th>Activities</th><th>Approved Budget</th><th>Implemented Budget</th><th>Utilization %</th><th>Actions</th></tr></thead>
+                <tbody id="organizationPerformanceTableBody">
+                    @forelse ($organizationStats as $row)
+                        <tr data-organization="{{ $row['organization'] }}" data-search="{{ $row['organization'] }} {{ $row['short_name'] }} {{ $row['college'] }}">
+                            <td data-label="Organization"><strong>{{ $row['organization'] }}</strong>@if ($row['short_name']) <small>({{ $row['short_name'] }})</small>@endif</td>
+                            <td data-label="College">{{ $row['college'] }}</td><td data-label="Activities" data-org-activities>{{ $row['activities'] }}</td>
+                            <td data-label="Approved Budget" data-org-allocated>₱{{ number_format($row['approved_budget']) }}</td>
+                            <td data-label="Implemented Budget" data-org-utilized>₱{{ number_format($row['implemented_budget']) }}</td>
+                            <td data-label="Utilization" data-org-rate>{{ $row['utilization_percent'] }}%</td>
+                            <td data-label="Actions"><a href="{{ request()->fullUrlWithQuery(['organization' => $row['organization']]) }}">View Analytics</a></td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7">No recognized organizations available.</td></tr>
+                    @endforelse
+                    <tr id="organizationDirectoryNoResults" hidden><td colspan="7">No organizations match your search.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="org-directory-pagination" id="organizationDirectoryPagination" hidden>
+            <span id="organizationDirectoryStatus" role="status" aria-live="polite"></span>
+            <div><button type="button" id="organizationDirectoryPrevious">Previous</button> <button type="button" id="organizationDirectoryNext">Next</button></div>
+        </div>
+    </section>
+    @endif
+
     {{-- College Performance (controller-driven; below the cards) --}}
-    @isset($collegeStats)
+    @if (! $directoryView && isset($collegeStats))
         <section class="org-analytics-card" style="margin-bottom: 0;" aria-label="College Performance">
             <div class="org-card-header-flex">
                 <h2>
@@ -1112,7 +1180,7 @@
                 </div>
             @endif
         </section>
-    @endisset
+    @endif
 
     {{-- 2. Budget Utilization vs Budget Allocation Graph & Trend Analysis --}}
     <div class="org-analytics-grid-2">
@@ -1123,7 +1191,7 @@
                     <span class="org-card-icon" style="background:#fdf0f2; color:#8b1828; width:34px; height:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;">
                         <i class="bi bi-bar-chart-fill"></i>
                     </span>
-                    Budget Utilization vs Allocation
+                    {{ $directoryView ? 'Average Organization Utilization vs Allocation' : 'Budget Utilization vs Allocation' }}
                 </h2>
                 <span class="org-header-badge" id="chartPeriodBadge">{{ now()->year }} · Jan–Dec · All Semesters</span>
             </div>
@@ -1141,7 +1209,7 @@
                     </span>
                     Trend Analysis: Funds Over Time
                 </h2>
-                <span class="org-header-badge">Cumulative Spending</span>
+                <span class="org-header-badge">{{ $directoryView ? 'Average Cumulative Spending' : 'Cumulative Spending' }}</span>
             </div>
             <div class="chart-container-wrap">
                 <canvas id="trendAnalysisChart"></canvas>
@@ -1161,6 +1229,7 @@
             <span class="org-header-badge">Scope Performance</span>
         </div>
 
+        @if (! $directoryView)
         <div class="org-scope-comparison-grid">
             {{-- In-Campus Overview --}}
             <div class="org-scope-card" data-scope-card="in_campus">
@@ -1226,6 +1295,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         {{-- Detailed Activity Financial Breakdown Matrix --}}
         <div class="org-fin-table-scroll" role="region" aria-label="Activity financial breakdown" tabindex="0">
@@ -1299,12 +1369,15 @@
         let utilVsAllocChartInstance = null;
         let trendChartInstance = null;
         const analyticsRows = @json($activityFinancials ?? []);
+        const allAnalyticsRows = @json($allActivityFinancials ?? $activityFinancials ?? []);
+        const organizationStats = @json($organizationStats->values());
+        const directoryView = @json($directoryView);
         const currentCalendarYear = @json((string) now()->year);
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const semesterNames = { sem1: '1st Semester', sem2: '2nd Semester', midyear: 'Midyear' };
         const semesterMonths = { sem1: [8, 9, 10, 11, 12], sem2: [1, 2, 3, 4, 5], midyear: [6, 7] };
 
-        const reportRows = analyticsRows.map((row, index) => {
+        const normalizeRow = (row, index) => {
             const year = Number(row.year) || 0;
             const monthNumber = Number(row.month_number) || monthNames.indexOf(row.month) + 1;
             const academicYear = row.academic_year || (monthNumber >= 8
@@ -1326,7 +1399,9 @@
                     ? 'sem1'
                     : semesterMonths.sem2.includes(monthNumber) ? 'sem2' : semesterMonths.midyear.includes(monthNumber) ? 'midyear' : null)
             };
-        });
+        };
+        const reportRows = analyticsRows.map(normalizeRow);
+        const allReportRows = allAnalyticsRows.map(normalizeRow);
 
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
             '&': '&amp;',
@@ -1367,6 +1442,59 @@
             const health = rows.length ? Math.round((0.6 * budgetHealth) + (0.4 * completion)) : 0;
 
             return { allocated, utilized, remaining, completed, completion, burnRate, health };
+        }
+
+        function organizationSummaries(rows) {
+            const groups = new Map(organizationStats.map((org) => [org.organization, []]));
+            rows.forEach((row) => groups.get(row.organization)?.push(row));
+            return new Map(Array.from(groups, ([name, group]) => [name, { ...summarizeRows(group), activities: group.length }]));
+        }
+
+        function updateOrganizationTable(summaries) {
+            document.querySelectorAll('#organizationPerformanceTableBody tr[data-organization]').forEach((row) => {
+                const totals = summaries.get(row.dataset.organization);
+                if (!totals) return;
+                row.querySelector('[data-org-activities]').textContent = totals.activities;
+                row.querySelector('[data-org-allocated]').textContent = money(totals.allocated);
+                row.querySelector('[data-org-utilized]').textContent = money(totals.utilized);
+                row.querySelector('[data-org-rate]').textContent = `${totals.burnRate.toFixed(1)}%`;
+            });
+        }
+
+        function initOrganizationDirectory() {
+            const tbody = document.getElementById('organizationPerformanceTableBody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr[data-organization]'));
+            const search = document.getElementById('organizationDirectorySearch');
+            const previous = document.getElementById('organizationDirectoryPrevious');
+            const next = document.getElementById('organizationDirectoryNext');
+            const status = document.getElementById('organizationDirectoryStatus');
+            const noResults = document.getElementById('organizationDirectoryNoResults');
+            const pageSize = 8;
+            let page = 0;
+
+            function render() {
+                const query = search.value.trim().toLocaleLowerCase();
+                const matching = rows.filter((row) => row.dataset.search.toLocaleLowerCase().includes(query));
+                const pageCount = Math.ceil(matching.length / pageSize);
+                page = Math.max(0, Math.min(page, pageCount - 1));
+                const visible = new Set(matching.slice(page * pageSize, (page + 1) * pageSize));
+                rows.forEach((row) => { row.hidden = !visible.has(row); });
+                noResults.hidden = matching.length > 0 || rows.length === 0;
+                status.textContent = matching.length
+                    ? `Showing ${page * pageSize + 1}–${Math.min((page + 1) * pageSize, matching.length)} of ${matching.length} organizations`
+                    : 'No matching organizations';
+                previous.disabled = page === 0;
+                next.disabled = page + 1 >= pageCount;
+            }
+
+            search.addEventListener('input', () => { page = 0; render(); });
+            previous.addEventListener('click', () => { page--; render(); });
+            next.addEventListener('click', () => { page++; render(); });
+            document.getElementById('organizationDirectorySearchControls').hidden = false;
+            document.getElementById('organizationDirectoryPagination').hidden = false;
+            render();
         }
 
         function healthLabel(score, rows) {
@@ -1474,16 +1602,23 @@
             });
         }
 
-        function updateKpis(rows) {
-            const totals = summarizeRows(rows);
+        function updateKpis(rows, summaries) {
+            const count = summaries.size;
+            const values = [...summaries.values()];
+            const totals = directoryView ? {
+                allocated: count ? values.reduce((sum, item) => sum + item.allocated, 0) / count : 0,
+                utilized: count ? values.reduce((sum, item) => sum + item.utilized, 0) / count : 0,
+                remaining: count ? values.reduce((sum, item) => sum + item.remaining, 0) / count : 0,
+                burnRate: count ? values.reduce((sum, item) => sum + item.burnRate, 0) / count : 0
+            } : summarizeRows(rows);
             const health = document.getElementById('kpiHealthScore');
             const allocated = document.getElementById('kpiAllocated');
             const utilized = document.getElementById('kpiUtilized');
             const remaining = document.getElementById('kpiRemaining');
 
             if (health) {
-                health.textContent = rows.length ? `${totals.health}% · ${healthLabel(totals.health, rows)}` : 'No Data';
-                health.closest('article').title = rows.length ? `Overall Budget Health: ${totals.health}%` : 'No budget health data';
+                health.textContent = directoryView ? `${totals.burnRate.toFixed(1)}%` : (rows.length ? `${totals.health}% · ${healthLabel(totals.health, rows)}` : 'No Data');
+                health.closest('article').title = directoryView ? 'Average Organization Burn Rate' : (rows.length ? `Organization Budget Health: ${totals.health}%` : 'No budget health data');
             }
             if (allocated) allocated.textContent = money(totals.allocated);
             if (utilized) utilized.textContent = money(totals.utilized);
@@ -1520,8 +1655,9 @@
                     if (row.monthNumber !== point.monthNumber) return false;
                     return point.year === null || row.year === point.year;
                 });
-                allocated.push(monthRows.reduce((sum, row) => sum + row.allocated, 0));
-                utilized.push(monthRows.reduce((sum, row) => sum + row.utilized, 0));
+                const divisor = directoryView ? Math.max(organizationStats.length, 1) : 1;
+                allocated.push(monthRows.reduce((sum, row) => sum + row.allocated, 0) / divisor);
+                utilized.push(monthRows.reduce((sum, row) => sum + row.utilized, 0) / divisor);
             });
 
             let allocatedRunning = 0;
@@ -1562,7 +1698,7 @@
                     labels: [],
                     datasets: [
                         {
-                            label: 'Budget Allocated (₱)',
+                            label: directoryView ? 'Average Organization Allocation (₱)' : 'Budget Allocated (₱)',
                             data: [],
                             backgroundColor: 'rgba(224, 168, 178, 0.75)',
                             borderColor: '#c43b52',
@@ -1570,7 +1706,7 @@
                             borderRadius: 6,
                         },
                         {
-                            label: 'Budget Utilized (₱)',
+                            label: directoryView ? 'Average Organization Expenditure (₱)' : 'Budget Utilized (₱)',
                             data: [],
                             backgroundColor: '#8b1828',
                             borderColor: '#6f1020',
@@ -1624,7 +1760,7 @@
                     labels: [],
                     datasets: [
                         {
-                            label: 'Cumulative Allocation (₱)',
+                            label: directoryView ? 'Average Cumulative Allocation (₱)' : 'Cumulative Allocation (₱)',
                             data: [],
                             borderColor: '#d97706',
                             backgroundColor: 'rgba(217, 119, 6, 0.06)',
@@ -1634,7 +1770,7 @@
                             pointRadius: 3
                         },
                         {
-                            label: 'Cumulative Spending (₱)',
+                            label: directoryView ? 'Average Cumulative Spending (₱)' : 'Cumulative Spending (₱)',
                             data: [],
                             borderColor: '#8b1828',
                             backgroundColor: 'rgba(139, 24, 40, 0.08)',
@@ -1705,6 +1841,8 @@
         function updateAnalyticsData() {
             const filters = getAnalyticsFilters();
             const filteredRows = reportRows.filter((row) => rowMatchesFilters(row, filters));
+            const summaries = organizationSummaries(allReportRows.filter((row) => rowMatchesFilters(row, filters)));
+            updateOrganizationTable(summaries);
 
             // Build period badge text
             const periodText = filters.year === 'all'
@@ -1725,7 +1863,7 @@
             }
 
             // Every report block is derived from the same filtered rows.
-            updateKpis(filteredRows);
+            updateKpis(filteredRows, summaries);
             renderCollegePerformance(filteredRows);
             renderScopeCards(filteredRows);
             updateActivityRows(filteredRows);
@@ -1752,6 +1890,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
+            initOrganizationDirectory();
             initCharts();
             updateAnalyticsData();
         });

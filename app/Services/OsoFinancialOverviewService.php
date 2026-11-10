@@ -38,8 +38,9 @@ class OsoFinancialOverviewService
         $years = [$academicYear => true];
         $accountYears = [];
 
-        // Registered metadata takes precedence, including inactive organizations.
-        foreach (StudentOrganization::on('mysql')->orderBy('id')->get(['name', 'college']) as $registered) {
+        // Only officially renewed active organizations are listed in the budget utilization directory.
+        $renewedNames = \App\Models\OrgRenewalSubmission::where('status', 'approved')->pluck('organization_name')->all();
+        foreach (StudentOrganization::on('mysql')->where('is_active', true)->whereIn('name', $renewedNames)->orderBy('id')->get(['name', 'college']) as $registered) {
             $name = (string) $registered->name;
             if (trim($name) !== '') {
                 $directory[$name] = trim((string) $registered->college);
@@ -48,7 +49,7 @@ class OsoFinancialOverviewService
 
         // Match the ledger: invalid years are ignored and the oldest duplicate
         // org/year account is canonical. Merely listing an account never writes it.
-        foreach (OrgFundAccount::query()->orderBy('id')->get(['organization_name', 'college', 'fiscal_year']) as $account) {
+        foreach (OrgFundAccount::query()->whereIn('organization_name', $renewedNames)->orderBy('id')->get(['organization_name', 'college', 'fiscal_year']) as $account) {
             $name = (string) $account->organization_name;
             $year = (string) $account->fiscal_year;
             if (trim($name) === '' || ! $this->isAcademicYear($year) || isset($accountYears[$name][$year])) {
@@ -65,6 +66,7 @@ class OsoFinancialOverviewService
         // activity and its budget merely to discover names and available years.
         $activityYear = 'YEAR(starts_at) - CASE WHEN MONTH(starts_at) < 8 THEN 1 ELSE 0 END';
         $history = OrgActivity::query()->where('workflow_status', 'oc_approved')
+            ->whereIn('organization_name', $renewedNames)
             ->select(['organization_name', 'college'])
             ->selectRaw($activityYear.' AS start_year')
             ->groupBy('organization_name', 'college', 'start_year')

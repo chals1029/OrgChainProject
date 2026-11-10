@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/laravel/compare/v13.7.0...13.x)
 
+- Allow OSO to preview, download and replace TOSA decision letter DOCX templates while preserving required personalization placeholders.
 - Restyle the TOSA Top Selection workspace with a completion indicator, live applicant references, and labeled removal controls while retaining publication safeguards.
 - Update TOSA review, multi-document corrections, searchable status and History filters, and the unranked Top selection. Require two captions of at most 300 characters and unpublish before editing published results. Apply `2026_11_06_000001_add_tosa_shortlist_captions.php`.
 - Add a read-only TOSA computation workbook preview for students and authorized office users, with worksheet navigation and paginated rows and columns. Preserve original XLSX downloads and display cached formula results without recalculation.

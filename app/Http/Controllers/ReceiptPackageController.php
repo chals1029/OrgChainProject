@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OfficeUser;
 use App\Models\OrgActivity;
 use App\Services\ActivityBudgetService;
+use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -14,7 +15,7 @@ use ZipArchive;
 
 class ReceiptPackageController extends Controller
 {
-    public function __invoke(Request $request, ActivityBudgetService $budget)
+    public function __invoke(Request $request, ActivityBudgetService $budget, SpreadsheetExportService $exports)
     {
         $office = Auth::guard('office')->user();
         abort_unless($office instanceof OfficeUser && $office->is_active
@@ -47,6 +48,9 @@ class ReceiptPackageController extends Controller
         $rows = $query->orderBy('expense_date')->orderBy('id')->get();
         File::ensureDirectoryExists(storage_path('app/private/exports'));
         $path = tempnam(storage_path('app/private/exports'), 'receipts-');
+        if ($path === false) {
+            abort(500, 'The receipt compilation could not be created. Please retry.');
+        }
         $zip = new ZipArchive();
         if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
             File::delete($path);
@@ -56,6 +60,8 @@ class ReceiptPackageController extends Controller
         fputcsv($csv, ['Receipt ID', 'Activity ID', 'Organization', 'Activity', 'Expense date', 'Item', 'Supplier', 'Quantity', 'Unit cost', 'Total', 'Reference', 'Seal status', 'Hash', 'Receipt files', 'Receipt type', 'Payment method'], ',', '"', '');
         $clean = fn ($value) => preg_match('/^[=+@\-\t\r]/', (string) $value) ? "'".$value : $value;
         $archiveByFile = [];
+        $spreadsheetPath = null;
+        $receiptRows = [];
         try {
             foreach ($rows as $row) {
                 $zipNames = [];
@@ -70,31 +76,50 @@ class ReceiptPackageController extends Controller
                     $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                     $name = 'receipts/'.$row->id.'-'.($index + 1).'-'.Str::slug(pathinfo($file['name'], PATHINFO_FILENAME)).($extension ? '.'.$extension : '');
                     if ($available) {
-                        $zip->addFile($disk->path($file['path']), $name);
+                        if (! $zip->addFile($disk->path($file['path']), $name)) {
+                            throw new \RuntimeException('Unable to add a receipt to the compilation.');
+                        }
                         $archiveByFile[$fileKey] = $name.' ('.$file['name'].')';
                     } else {
                         $archiveByFile[$fileKey] = 'MISSING: '.$file['name'];
                     }
                     $zipNames[] = $archiveByFile[$fileKey];
                 }
-                fputcsv($csv, array_map($clean, [
+                $receiptRow = [
                     $row->id, $row->org_activity_id, $row->organization_name, $row->activity_title,
-                    $row->expense_date->toDateString(), $row->item_name, $row->supplier, $row->quantity, $row->unit_cost,
-                    number_format($row->quantity * (float) $row->unit_cost, 2, '.', ''), $row->receipt_reference,
+                    $row->expense_date->toDateString(), $row->item_name, $row->supplier, (float) $row->quantity, (float) $row->unit_cost,
+                    (float) $row->quantity * (float) $row->unit_cost, $row->receipt_reference,
                     $row->verification_status, $row->chain_hash, implode(' | ', $zipNames),
                     $row->receipt_type, $row->payment_method,
-                ]), ',', '"', '');
+                ];
+                $receiptRows[] = $receiptRow;
+                $csvRow = $receiptRow;
+                $csvRow[9] = number_format($receiptRow[9], 2, '.', '');
+                fputcsv($csv, array_map($clean, $csvRow), ',', '"', '');
             }
             rewind($csv);
-            $zip->addFromString('expense-register.csv', stream_get_contents($csv));
-            $zip->addFromString('README.txt', "OrgChain receipt compilation\nGenerated: ".now()->toIso8601String()."\nFilters: ".json_encode($filters)."\nOriginal receipts and the complete expense register are included. Missing originals are marked in the register. Pending seals are not confirmed blockchain records.\n");
-            $zip->close();
+            $csvContents = stream_get_contents($csv);
+            if ($csvContents === false || ! $zip->addFromString('expense-register.csv', $csvContents)
+                || ! $zip->addFromString('receipts.csv', $csvContents)) {
+                throw new \RuntimeException('Unable to add the expense register to the receipt compilation.');
+            }
+            $spreadsheetPath = $exports->exportReceiptPackage($receiptRows);
+            $spreadsheetContents = file_get_contents($spreadsheetPath);
+            if ($spreadsheetContents === false || ! $zip->addFromString('Receipt-Compilation.xlsx', $spreadsheetContents)) {
+                throw new \RuntimeException('Unable to add the spreadsheet to the receipt compilation.');
+            }
+            if (! $zip->addFromString('README.txt', "OrgChain receipt compilation\nGenerated: ".now()->toIso8601String()."\nFilters: ".json_encode($filters)."\nOriginal receipts and the complete expense register are included. Missing originals are marked in the register. Pending seals are not confirmed blockchain records.\n") || ! $zip->close()) {
+                throw new \RuntimeException('Unable to finish the receipt compilation.');
+            }
             return response()->download($path, 'Receipt-Compilation-'.now()->format('Ymd-His').'.zip')->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
             $zip->close();
             File::delete($path);
             throw $e;
         } finally {
+            if ($spreadsheetPath !== null) {
+                File::delete($spreadsheetPath);
+            }
             fclose($csv);
         }
     }

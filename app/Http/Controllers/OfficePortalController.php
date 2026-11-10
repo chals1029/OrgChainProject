@@ -35,6 +35,8 @@ use App\Services\FinancialWorkbookService;
 use App\Services\OrgWorkflowService;
 use App\Services\OrgTimeService;
 use App\Services\SemesterReportService;
+use App\Services\SpreadsheetExportService;
+use App\Services\TosaLetterService;
 use App\Services\TosaRequirements;
 use App\Services\TosaWorkflowService;
 use Carbon\Carbon;
@@ -77,6 +79,7 @@ class OfficePortalController extends Controller
         if (($office->office_role ?? '') === 'so') {
             $organization = $office->studentOrganization;
             $brand['title'] = $organization?->short_name ?: $organization?->name ?: $brand['title'];
+            $brand['logo_url'] = $organization?->logoUrl();
         }
         if ($isOso) {
             $brand['title'] = data_get($officeSettings, 'general.office_name', $brand['title']);
@@ -309,17 +312,19 @@ class OfficePortalController extends Controller
         $documents = OrgReportDocument::query()->whereIn('org_report_status_id', $currentStatuses->pluck('id'))
             ->with('reportStatus')->latest('id')->get()->groupBy('organization_name');
         $statusesByOrganization = $statuses->groupBy('organization_name');
-        $directory = $organizations->map(function (StudentOrganization $org) use ($statusesByOrganization, $documents, $semester, $year, $tab): array {
-            $reports = $this->semesterReportRecords($statusesByOrganization->get($org->name, collect()), $documents->get($org->name, collect()));
-            $viewableTypes = array_keys(array_filter($reports, fn (array $report): bool => $report['can_view'] && $report['has_document']));
-            $viewTab = in_array($tab, $viewableTypes, true) ? $tab : ($viewableTypes[0] ?? $tab);
-            return [
-                'organization' => $org->name, 'college' => $org->college, 'short_name' => $org->short_name,
-                'reports' => $reports,
-                'can_view_submitted' => $viewableTypes !== [],
-                'view_url' => route('office.reports.index', ['organization' => $org->name, 'semester' => $semester, 'academic_year' => $year, 'tab' => $viewTab]),
-            ];
-        })->all();
+        $directory = $organizations
+            ->when($organization !== '', fn ($coll) => $coll->where('name', $organization))
+            ->map(function (StudentOrganization $org) use ($statusesByOrganization, $documents, $semester, $year, $tab): array {
+                $reports = $this->semesterReportRecords($statusesByOrganization->get($org->name, collect()), $documents->get($org->name, collect()));
+                $viewableTypes = array_keys(array_filter($reports, fn (array $report): bool => $report['can_view'] && $report['has_document']));
+                $viewTab = in_array($tab, $viewableTypes, true) ? $tab : ($viewableTypes[0] ?? $tab);
+                return [
+                    'organization' => $org->name, 'college' => $org->college, 'short_name' => $org->short_name,
+                    'reports' => $reports,
+                    'can_view_submitted' => $viewableTypes !== [],
+                    'view_url' => route('office.reports.index', ['organization' => $org->name, 'semester' => $semester, 'academic_year' => $year, 'tab' => $viewTab]),
+                ];
+            })->all();
         $selected = collect($directory)->firstWhere('organization', $organization);
         $years = OrgReportStatus::query()->whereIn('report_type', $this->semesterReportTypes())
             ->distinct()->pluck('academic_year')->filter()->all();
@@ -597,66 +602,17 @@ class OfficePortalController extends Controller
         ]));
     }
 
-    /**
-     * Real CSV export of the Analytics page (overview + college table + activities).
-     */
-    public function exportAnalytics(): StreamedResponse
+    public function exportAnalytics(SpreadsheetExportService $exports): BinaryFileResponse
     {
-        $data = $this->buildAnalyticsData();
-        $filename = 'analytics-financial-report-'.now()->format('Ymd-His').'.csv';
-
-        return response()->streamDownload(function () use ($data) {
-            $out = fopen('php://output', 'w');
-            $money = fn ($n) => 'PHP '.number_format((float) $n, 2);
-            $clean = fn ($value) => preg_match('/^[=+@\-\t\r]/', (string) $value) ? "'".$value : $value;
-
-            fputcsv($out, ['', '', '', '', 'Financial & Analytics Report']);
-            fputcsv($out, ['', '', '', '', 'Date Generated: '.now()->format('F j, Y · g:i A')]);
-            fputcsv($out, []);
-
-            $o = $data['overview'];
-            fputcsv($out, ['OVERALL BUDGET HEALTH']);
-            fputcsv($out, ['Health score', ($o['healthScore'] ?? 0).'%']);
-            fputcsv($out, ['Total budget allocated', $money($o['totalAllocated'] ?? 0)]);
-            fputcsv($out, ['Total budget utilized', $money($o['totalUtilized'] ?? 0)]);
-            fputcsv($out, ['Remaining reserve', $money($o['remainingBalance'] ?? 0)]);
-            fputcsv($out, ['Burn rate', ($o['burnRate'] ?? 0).'%']);
-            fputcsv($out, ['Compliance rate', $o['complianceRate'] === null ? 'N/A' : $o['complianceRate'].'%']);
-            fputcsv($out, []);
-
-            fputcsv($out, ['COLLEGE PERFORMANCE']);
-            fputcsv($out, ['College', 'Activities', 'Completion %', 'Utilization %', 'Approved budget', 'Implemented budget']);
-            foreach ($data['collegeStats'] as $row) {
-                fputcsv($out, array_map($clean, [
-                    $row['college'] ?? '',
-                    $row['activities'] ?? 0,
-                    ($row['completion_percent'] ?? 0).'%',
-                    ($row['utilization_percent'] ?? 0).'%',
-                    $money($row['approved_budget'] ?? 0),
-                    $money($row['implemented_budget'] ?? 0),
-                ]));
-            }
-            fputcsv($out, []);
-
-            fputcsv($out, ['ACTIVITY FINANCIALS']);
-            fputcsv($out, ['Activity', 'Scope', 'College', 'Allocated', 'Utilized', 'Remaining', 'Burn rate %', 'Status', 'Month', 'Year']);
-            foreach ($data['activityFinancials'] as $row) {
-                fputcsv($out, array_map($clean, [
-                    $row['name'] ?? '',
-                    $row['scope_label'] ?? '',
-                    $row['college'] ?? '',
-                    $money($row['allocated'] ?? 0),
-                    $money($row['utilized'] ?? 0),
-                    $money($row['remaining'] ?? 0),
-                    $row['burn_rate'] ?? 0,
-                    $row['status'] ?? '',
-                    $row['month'] ?? '',
-                    $row['year'] ?? '',
-                ]));
-            }
-
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        $path = $exports->exportAnalytics($this->buildAnalyticsData());
+        try {
+            return response()->download($path, 'analytics-financial-report-'.now()->format('Ymd-His').'.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            @unlink($path);
+            throw $e;
+        }
     }
 
     /**
@@ -837,7 +793,12 @@ class OfficePortalController extends Controller
     {
         $organizationFilter = $this->organizationFilterForOffice($organizationFilter);
         $service = app(\App\Services\ActivityBudgetService::class);
+        $renewedOrgs = StudentOrganization::active()
+            ->whereIn('name', OrgRenewalSubmission::where('status', 'approved')->pluck('organization_name'))
+            ->pluck('name');
+
         $activities = OrgActivity::query()->visibleToStudents()
+            ->whereIn('organization_name', $renewedOrgs)
             ->when(filled($organizationFilter), fn ($q) => $q->where('organization_name', $organizationFilter))
             ->when($departmentValues !== null, fn ($q) => $q->whereIn('college', $departmentValues))->orderBy('id')->get();
         $receipts = $service->receipts()->whereIn('org_activity_id', $activities->pluck('id'))->latest('id')->get()->groupBy('org_activity_id');
@@ -969,15 +930,19 @@ class OfficePortalController extends Controller
             ->map(fn ($rows) => $rows->count())
             ->all();
 
-        $organization = $this->organizationFilterForOffice(request('organization', ''));
-        $dbActivities = $this->constrainToOfficeOrganization(OrgActivity::query())
-            ->when($organization !== '', fn ($q) => $q->where('organization_name', $organization))
+        $requestedOrganization = request()->query('organization');
+        $defaultOrganization = StudentOrganization::active()->where('short_name', 'CICS')->value('name')
+            ?: StudentOrganization::active()->orderBy('name')->value('name')
+            ?: $this->recognizedOrgNames()->first();
+        $organization = $this->organizationFilterForOffice($requestedOrganization === 'all' ? '' : ($requestedOrganization ?? $defaultOrganization));
+        $allActivities = $this->constrainToOfficeOrganization(OrgActivity::query())
             ->get()
             ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails(
                 Auth::guard('office')->user()?->office_role ?? '',
                 $activity->workflow_status ?: 'created',
             ))
             ->values();
+        $dbActivities = $organization !== '' ? $allActivities->where('organization_name', $organization)->values() : $allActivities;
         $budgetItems = $this->constrainToOfficeOrganization(BudgetItem::query())
             ->when($organization !== '', fn ($q) => $q->where('organization_name', $organization))
             ->orderByDesc('utilized')
@@ -1007,7 +972,7 @@ class OfficePortalController extends Controller
             ->values();
 
 
-        $activityFinancials = $dbActivities->map(function (OrgActivity $a) use ($workflow) {
+        $allActivityFinancials = $allActivities->map(function (OrgActivity $a) use ($workflow) {
             $allocated = (int) ($a->approved_budget ?: 0);
             $utilized = (int) ($a->implemented_budget ?: 0);
             $startsAt = $a->starts_at instanceof Carbon
@@ -1049,6 +1014,27 @@ class OfficePortalController extends Controller
                 'semester' => $semester,
             ];
         })->values()->all();
+        $activityFinancials = collect($allActivityFinancials)
+            ->when($organization !== '', fn ($rows) => $rows->where('organization', $organization))
+            ->values()->all();
+        $organizationRecords = StudentOrganization::active()->get()->keyBy('name');
+        $organizationStats = $this->recognizedOrgNames()->map(function ($name) use ($organizationRecords, $allActivityFinancials) {
+            $record = $organizationRecords->get($name);
+            $rows = collect($allActivityFinancials)->where('organization', $name);
+            $approved = (int) $rows->sum('allocated');
+            $implemented = (int) $rows->sum('utilized');
+
+            return [
+                'organization' => $name,
+                'short_name' => $record?->short_name,
+                'college' => $record?->college ?: ($rows->first()['college'] ?? 'Unassigned'),
+                'activities' => $rows->count(),
+                'approved_budget' => $approved,
+                'implemented_budget' => $implemented,
+                'remaining_balance' => max(0, $approved - $implemented),
+                'utilization_percent' => $approved > 0 ? round($implemented / $approved * 100, 1) : 0,
+            ];
+        });
 
 
         $inCampus = collect($activityFinancials)->where('scope', 'in_campus');
@@ -1076,6 +1062,8 @@ class OfficePortalController extends Controller
             'pipeline' => $pipeline,
             'budgetItems' => $budgetItems->take(6),
             'activityFinancials' => $activityFinancials,
+            'allActivityFinancials' => $allActivityFinancials,
+            'organizationStats' => $organizationStats,
             'organizations' => $this->recognizedOrgNames(),
             'selectedOrganization' => $organization,
             'collegeStats' => $collegeStats,
@@ -2158,7 +2146,7 @@ class OfficePortalController extends Controller
             })->all();
 
         $liveTemplates = OfficeTemplate::query()
-            ->where('category', '!=', 'TOSA')
+            ->whereNotIn('category', ['TOSA', 'TOSA_LETTER'])
             ->latest()
             ->get()
             ->map(fn (OfficeTemplate $t): array => [
@@ -2855,7 +2843,7 @@ class OfficePortalController extends Controller
     }
 
 
-    public function downloadOsoDataPackage(string $type): StreamedResponse
+    public function downloadOsoDataPackage(string $type, SpreadsheetExportService $exports): BinaryFileResponse
     {
         $this->osoOfficer();
         $type = Str::lower($type);
@@ -2865,7 +2853,8 @@ class OfficePortalController extends Controller
 
         $definition = match ($type) {
             'organization-roster' => [
-                'filename' => 'orgchain-organization-roster-'.now()->format('Ymd-His').'.csv',
+                'title' => 'Organization Roster',
+                'filename' => 'orgchain-organization-roster-'.now()->format('Ymd-His').'.xlsx',
                 'headers' => ['Name', 'Short Name', 'College', 'Academic Year', 'Status'],
                 'rows' => StudentOrganization::query()->orderBy('name')->get()->map(fn (StudentOrganization $org) => [
                     $org->name,
@@ -2876,20 +2865,23 @@ class OfficePortalController extends Controller
                 ])->all(),
             ],
             'accomplishment-dossier' => [
-                'filename' => 'orgchain-accomplishment-dossier-'.now()->format('Ymd-His').'.csv',
+                'title' => 'Accomplishment Dossier',
+                'filename' => 'orgchain-accomplishment-dossier-'.now()->format('Ymd-His').'.xlsx',
+                'options' => ['currency' => [5, 6], 'center' => [4, 7]],
                 'headers' => ['Activity', 'Organization', 'College', 'Start Date', 'Approved Budget', 'Implemented Budget', 'Workflow Status'],
                 'rows' => OrgActivity::query()->orderByDesc('starts_at')->get()->map(fn (OrgActivity $activity) => [
                     $activity->title,
                     $activity->organization_name,
                     $activity->college,
                     optional($activity->starts_at)->format('Y-m-d H:i'),
-                    number_format((float) $activity->approved_budget, 2, '.', ''),
-                    number_format((float) $activity->implemented_budget, 2, '.', ''),
+                    (float) $activity->approved_budget,
+                    (float) $activity->implemented_budget,
                     $activity->workflow_status,
                 ])->all(),
             ],
             'tosa-manifest' => [
-                'filename' => 'orgchain-tosa-manifest-'.now()->format('Ymd-His').'.csv',
+                'title' => 'TOSA Manifest',
+                'filename' => 'orgchain-tosa-manifest-'.now()->format('Ymd-His').'.xlsx',
                 'headers' => ['Applicant', 'Student ID', 'Program', 'Organization', 'Stage'],
                 'rows' => TosaApplicant::query()->where('status', 'submitted')->orderBy('full_name')->get()
                     ->map(fn (TosaApplicant $applicant): array => [
@@ -2903,19 +2895,16 @@ class OfficePortalController extends Controller
             default => abort(404),
         };
 
-        return response()->streamDownload(function () use ($definition): void {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $definition['headers']);
-            foreach ($definition['rows'] as $row) {
-                $safeRow = array_map(static function ($value) {
-                    return is_string($value) && preg_match('/^[\s]*[=+\-@]/u', $value)
-                        ? "'".$value
-                        : $value;
-                }, $row);
-                fputcsv($out, $safeRow);
-            }
-            fclose($out);
-        }, $definition['filename'], ['Content-Type' => 'text/csv; charset=utf-8']);
+        $options = $definition['options'] ?? ['center' => [5]];
+        $path = $exports->exportTable($definition['title'], $definition['headers'], $definition['rows'], $options);
+        try {
+            return response()->download($path, $definition['filename'], [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            @unlink($path);
+            throw $e;
+        }
     }
 
     public function downloadOsoSnapshot(): StreamedResponse
@@ -2998,6 +2987,7 @@ class OfficePortalController extends Controller
                         'id' => $org->id,
                         'name' => $org->name,
                         'short_name' => $org->short_name ?: $org->name,
+                        'logo_url' => $org->logoUrl(),
                         'college' => $org->college ?: 'Campus Wide',
                         'is_active' => (bool) $org->is_active,
                         'is_qualified_for_renewal' => (bool) ($org->is_qualified_for_renewal ?? true),
@@ -3963,6 +3953,7 @@ class OfficePortalController extends Controller
             'tosaApplicants' => $applicants,
             'tosaReviewApplicants' => $reviewApplicants,
             'tosaTemplates' => $templates,
+            'tosaLetterTemplates' => $tab === 'documents' ? app(TosaLetterService::class)->templatesSummary() : [],
             'tosaCalls' => $calls,
             'tosaShortlist' => $shortlist,
             'tosaEditing' => $shortlist->published_at === null,
@@ -4022,7 +4013,7 @@ class OfficePortalController extends Controller
     {
         $activityActions = match ($historyActivity) {
             'publishing' => ['top10_published', 'top10_unpublished'],
-            'applicant_changes' => ['top10_saved', 'top10_removed', 'returned', 'selection_updated'],
+            'applicant_changes' => ['top10_saved', 'top10_removed', 'returned', 'selection_updated', 'result_email_sent', 'result_email_failed', 'result_email_skipped'],
             default => null,
         };
 
@@ -4043,6 +4034,9 @@ class OfficePortalController extends Controller
                 'selection_updated' => 'Selection updated Top 10 selection updated',
                 'top10_published' => 'Top 10 published Results published',
                 'top10_unpublished' => 'Top 10 unpublished Results unpublished',
+                'result_email_sent' => 'Result email sent',
+                'result_email_failed' => 'Result email failed',
+                'result_email_skipped' => 'Result email skipped dummy',
             ];
             foreach ($eventLabels as $actionKey => $labelText) {
                 if (stripos($actionKey, $historySearch) !== false || mb_stripos($labelText, $historySearch) !== false) {
@@ -4080,6 +4074,69 @@ class OfficePortalController extends Controller
                     }
                 });
             });
+    }
+
+    public function downloadTosaLetterTemplate(Request $request, string $decision): BinaryFileResponse
+    {
+        $this->tosaOfficer();
+        abort_unless(isset(TosaLetterService::TEMPLATES[$decision]), 404);
+        $filename = TosaLetterService::TEMPLATES[$decision]['filename'];
+        $path = app(TosaLetterService::class)->resolveTemplatePath($decision);
+        $headers = ['Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if ($request->boolean('preview')) {
+            $headers['Content-Disposition'] = 'inline; filename="'.$filename.'"';
+
+            return response()->file($path, $headers);
+        }
+
+        return response()->download($path, $filename, $headers);
+    }
+
+    public function storeTosaLetterTemplate(Request $request): RedirectResponse
+    {
+        $office = $this->tosaOfficer(3);
+        abort_unless($office->office_role === 'oso', 403);
+        $validated = $request->validate([
+            'decision' => ['required', 'string', 'in:qualified,not_qualified'],
+            'template_file' => ['bail', 'required', 'file', 'max:20480'],
+        ]);
+        $file = $validated['template_file'];
+        if (strtolower($file->getClientOriginalExtension()) !== 'docx'
+            || ! app(TosaLetterService::class)->validateTemplateFile($file->getPathname())) {
+            return back()->withErrors(['template_file' => 'The uploaded DOCX must contain exactly two {{NAME}} placeholders and one {{PROGRAM}} placeholder.'])->withInput();
+        }
+
+        $title = TosaLetterService::TEMPLATES[$validated['decision']]['title'];
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('tosa-templates');
+        $root = realpath($disk->path(''));
+        $directory = realpath($disk->path('tosa-templates'));
+        abort_unless($root && $directory && $directory === $root.DIRECTORY_SEPARATOR.'tosa-templates', 403, 'The template upload location is unavailable.');
+        $path = $file->storeAs('tosa-templates', Str::uuid().'.docx', 'public');
+        abort_unless(is_string($path) && $path !== '', 500, 'The template could not be stored.');
+        $template = OfficeTemplate::query()->where('category', 'TOSA_LETTER')->where('name', $title)
+            ->latest()->orderByDesc('id')->first();
+        $oldPath = $template?->file_path;
+        $data = [
+            'category' => 'TOSA_LETTER', 'name' => $title, 'format' => 'DOCX',
+            'file_path' => $path, 'original_name' => $file->getClientOriginalName(),
+            'size' => $this->formatFileSize((int) $file->getSize()),
+        ];
+        if ($template) {
+            $template->update($data);
+        } else {
+            OfficeTemplate::query()->create($data);
+        }
+        if (is_string($oldPath) && (str_starts_with($oldPath, 'tosa-templates/') || str_starts_with($oldPath, 'templates/'))
+            && strpbrk($oldPath, "\\:\0") === false && ! in_array('..', explode('/', $oldPath), true)
+            && $oldPath !== $path) {
+            $oldAbsolute = realpath($disk->path($oldPath));
+            if ($oldAbsolute && str_starts_with($oldAbsolute, $root.DIRECTORY_SEPARATOR)) {
+                $disk->delete($oldPath);
+            }
+        }
+
+        return redirect()->route('office.tosa', ['tab' => 'documents'])->with('success', "Decision letter template updated for {$title}.");
     }
 
     /**
@@ -5608,7 +5665,7 @@ class OfficePortalController extends Controller
             $accounts = $srCode === '' ? collect() : UserAccount::query()->where('sr_code', $srCode)
                 ->where('account_status', 'active')->limit(2)->get();
             $email = $accounts->count() === 1 ? trim((string) $accounts->first()->email) : '';
-            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) && in_array(strtolower($email), \App\Services\TosaNotificationService::AUTHORIZED_EMAILS, true)) {
                 $documentTitles = array_map(
                     fn (string $key): string => TosaRequirements::SUBMISSIONS[$key]['title'],
                     $documentKeys,
@@ -5959,6 +6016,8 @@ class OfficePortalController extends Controller
             'transactions' => $transactions,
             'kpis' => [
                 'totalOrgs' => $recognitionRows->where('academic_year', $selectedRosterYear)->unique('organization_key')->count(),
+                'totalActivities' => $total,
+                'activitiesSub' => $inCampus.' In-Campus · '.$offCampus.' Off-Campus',
                 'pendingTrx' => $pendingTrx,
                 'pendingSub' => $pendingSubmissions.' Proposals · '.$renewalPending.' Renewal · '.$pendingReports.' AR/FR Reports · '.$tosaPending.' TOSA',
                 'totalSubmissions' => $total,

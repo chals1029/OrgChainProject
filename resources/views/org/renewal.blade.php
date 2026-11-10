@@ -304,12 +304,12 @@
                     </div>
                     <div class="so-renewal-banner-actions">
                         <button type="button" class="app-view-action" data-document-preview
-                                data-document-preview-url="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).pdf"
+                                data-document-preview-url="/templates/renewal/BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.pdf"
                                 data-document-preview-title="BatStateU-FO-SOA-01 Master Application Form" data-document-preview-type="pdf"
-                                data-document-preview-download="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx">
+                                data-document-preview-download="/templates/renewal/BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.docx">
                             <i class="bi bi-eye"></i> View
                         </button>
-                        <a href="/templates/renewal/Copy of BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03 (1) (1).docx" download class="org-btn org-btn-ghost org-btn-sm">
+                        <a href="/templates/renewal/BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.docx" download class="org-btn org-btn-ghost org-btn-sm">
                             <i class="bi bi-download"></i> Download
                         </a>
                     </div>
@@ -318,7 +318,7 @@
                 <section class="rn-card">
                     <div class="so-renewal-section-head">
                         <div>
-                            <h3><i class="bi bi-cloud-upload-fill"></i> Renewal Requirements{{ $defaultChecklist ? ' A–J' : '' }}</h3>
+                            <h3><i class="bi bi-cloud-upload-fill"></i> Renewal Requirements</h3>
                             <p class="rn-muted">{{ $window->instructions ?: 'View or download each template, complete and sign it, then select the finished document.' }}</p>
                         </div>
                         <span id="soRenewalCount" class="rn-pill {{ $remainingCount === 0 ? 'ok' : 'wait' }}">{{ $completedCount }}/{{ count($docs) }} ready</span>
@@ -336,7 +336,7 @@
                             $tmplPdf = $tmplDocx;
                             $tmplDocxUrl = $officialFile['download_url'] ?? null;
                             $tmplPdfUrl = $officialFile['preview_url'] ?? null;
-                            $label = $officialFile['code'] ?? ('Attachment '.chr(64 + $loop->iteration));
+                            $label = $officialFile['code'] ?? $doc['attachment_label'] ?? (($doc['key'] ?? '') === 'iso_form' ? 'ISO Form' : 'Attachment '.chr(64 + $loop->iteration));
                         @endphp
                         <article class="so-renewal-row {{ $hasUploadedFile ? 'is-ready' : '' }}">
                             <div class="so-renewal-row-main">

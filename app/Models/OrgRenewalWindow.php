@@ -41,6 +41,14 @@ class OrgRenewalWindow extends Model
     {
         return [
             [
+                'key' => 'iso_form',
+                'title' => 'Application for Recognition/Renewal of Student Organization',
+                'attachment_label' => 'ISO Form',
+                'template_path' => 'renewal-templates/BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.docx',
+                'template_name' => 'BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.docx',
+                'pdf_path' => 'renewal-templates/BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.pdf',
+            ],
+            [
                 'key' => 'commitment_letter',
                 'title' => 'Commitment Letter of the Adviser',
                 'attachment_label' => 'Attachment A',

@@ -1725,7 +1725,7 @@
             border: 1px solid #e8e2e4;
         }
 
-        /* On-Campus vs Off-Campus Widget */
+        /* In-Campus vs Off-Campus Widget */
         .oso-scope-panel {
             background: #faf6f7;
             border: 1px solid #f0e6e8;
@@ -2238,7 +2238,7 @@
                         <div class="oso-select-wrapper">
                             <select id="osoScopeSelect" class="oso-filter-select" onchange="applyOsoFilters()">
                                 <option value="all" selected>All Scopes</option>
-                                <option value="in-campus">On-Campus Only</option>
+                                <option value="in-campus">In-Campus Only</option>
                                 <option value="off-campus">Off-Campus Only</option>
                             </select>
                             <i class="bi bi-chevron-down oso-select-arrow"></i>
@@ -2270,16 +2270,16 @@
                     <h3 class="org-kpi-title">Recognized Organizations</h3>
                 </article>
 
-                {{-- Card 2: Pending Transactions --}}
+                {{-- Card 2: Total Activities --}}
                 <article class="org-kpi-card">
                     <div class="org-kpi-head">
                         <div class="org-kpi-icon">
-                            <i class="bi bi-hourglass-split"></i>
+                            <i class="bi bi-calendar2-check-fill"></i>
                         </div>
-                        <div class="org-kpi-num" id="kpiPendingTrxNum">{{ $osoKpis['pendingTrx'] ?? 0 }}</div>
+                        <div class="org-kpi-num" id="kpiPendingTrxNum">{{ $osoKpis['totalActivities'] ?? count($osoOverview['rows'] ?? []) }}</div>
                     </div>
-                    <h3 class="org-kpi-title">Pending Transactions</h3>
-                    <p class="org-kpi-sub" id="kpiPendingTrxSub">{{ $osoKpis['pendingSub'] ?? '' }}</p>
+                    <h3 class="org-kpi-title">Total Activities</h3>
+                    <p class="org-kpi-sub" id="kpiPendingTrxSub">{{ $osoKpis['activitiesSub'] ?? (($osoScope['inCampus'] ?? 0).' In-Campus · '.($osoScope['offCampus'] ?? 0).' Off-Campus') }}</p>
                 </article>
 
                 {{-- Card 3: Total Submissions --}}
@@ -2311,7 +2311,7 @@
             {{-- 2. MIDDLE ROW 1: Approval Status (Donut + On/Off Campus) & Submission Trend (Line Chart) --}}
             <div class="oso-analytics-2col">
 
-                {{-- Card A: Approval Status + On-Campus/Off-Campus Breakdown (Required Table Item 3) --}}
+                {{-- Card A: Approval Status + In-Campus/Off-Campus Breakdown (Required Table Item 3) --}}
                 <section class="oso-analytics-card">
                     <div class="oso-card-head">
                         <div class="oso-card-title-group">
@@ -2368,10 +2368,10 @@
                         </div>
                     </div>
 
-                    {{-- On-Campus vs Off-Campus Breakdown Total --}}
+                    {{-- In-Campus vs Off-Campus Breakdown Total --}}
                     <div class="oso-scope-panel">
                         <div class="oso-scope-head">
-                            <span><i class="bi bi-geo-alt-fill" style="color: #8b1828; margin-right: 0.25rem;"></i> On-Campus vs Off-Campus Submissions</span>
+                            <span><i class="bi bi-geo-alt-fill" style="color: #8b1828; margin-right: 0.25rem;"></i> In-Campus vs Off-Campus Submissions</span>
                             <span id="scopeTotalHeader">{{ $osoScopeTotal }} Activities Total</span>
                         </div>
                         <div class="oso-scope-progress-bar">
@@ -2380,7 +2380,7 @@
                         <div class="oso-scope-metrics-grid">
                             <div class="oso-scope-stat-box is-incampus">
                                 <div>
-                                    <span class="oso-scope-stat-name">On-Campus Activities</span>
+                                    <span class="oso-scope-stat-name">In-Campus Activities</span>
                                     <small id="scopeInCampusPct" style="display: block; color: #786f73; font-size: 0.7rem;">{{ $osoInPct }}% of total</small>
                                 </div>
                                 <span class="oso-scope-stat-num" id="scopeInCampusCount" style="color: #8b1828;">{{ $osoScope['inCampus'] ?? 0 }}</span>
@@ -3213,11 +3213,10 @@
                 const kpiTotalOrgs = document.getElementById('kpiTotalOrgsNum');
                 if (kpiTotalOrgs) kpiTotalOrgs.textContent = data.totalOrgs;
 
-                const kpiPending = document.getElementById('kpiPendingTrxNum');
-                const kpiPendingSub = document.getElementById('kpiPendingTrxSub');
-                if (kpiPending) kpiPending.textContent = currentPending;
-                if (kpiPendingSub) kpiPendingSub.textContent = (selectedMonth !== 'all' || selectedYear !== currentCalendarYear) ? `${currentPending} pending in selected period` : data.pendingSub;
-
+                const kpiActivities = document.getElementById('kpiPendingTrxNum');
+                const kpiActivitiesSub = document.getElementById('kpiPendingTrxSub');
+                if (kpiActivities) kpiActivities.textContent = currentTotalSubs;
+                if (kpiActivitiesSub) kpiActivitiesSub.textContent = `${data.scope.inCampus} In-Campus · ${data.scope.offCampus} Off-Campus`;
                 const kpiSubs = document.getElementById('kpiTotalSubmissionsNum');
                 const kpiSubsSub = document.getElementById('kpiTotalSubmissionsSub');
                 if (kpiSubs) kpiSubs.textContent = currentTotalSubs;

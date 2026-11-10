@@ -38,7 +38,11 @@
         <aside class="org-sidebar liquid-glass" id="orgSidebar">
             <div class="org-sidebar-brand">
                 <div class="org-brand-mark" aria-hidden="true">
-                    <i class="bi bi-people-fill"></i>
+                    @if (!empty($brand['logo_url']))
+                        <img src="{{ $brand['logo_url'] }}" alt="{{ $brand['title'] }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
+                    @else
+                        <i class="bi bi-people-fill"></i>
+                    @endif
                 </div>
                 <div>
                     <strong>{{ $brand['title'] }}</strong>
@@ -49,7 +53,7 @@
             <p class="org-nav-section">Menu</p>
             <nav class="org-nav" aria-label="Student Org">
                 <a href="{{ route('office.home') }}" class="org-nav-link {{ ($activeNav ?? '') === 'dashboard' ? 'is-active' : '' }}">
-                    <i class="bi bi-grid-1x2-fill is-ico-red"></i>
+                    <i class="bi bi-grid-1x2-fill is-ico-maroon"></i>
                     <span>Dashboard</span>
                     @if (($activeNav ?? '') === 'dashboard')
                         <em class="org-badge-new">New</em>
@@ -57,7 +61,7 @@
                 </a>
                 @if (!$isStudentOrgDesk)
                     <a href="{{ route('office.analytics') }}" class="org-nav-link {{ ($activeNav ?? '') === 'analytics' ? 'is-active' : '' }}">
-                        <i class="bi bi-bar-chart-fill is-ico-violet"></i>
+                        <i class="bi bi-bar-chart-fill is-ico-maroon"></i>
                         <span>Analytics</span>
                     </a>
                 @endif
@@ -65,75 +69,76 @@
                 {{-- Activity management for SO; proposal review for office desks. --}}
                 <a href="{{ route('office.activities') }}" class="org-nav-link {{ ($activeNav ?? '') === 'activities' ? 'is-active' : '' }}">
                     @if (in_array($office->office_role ?? '', ['oso', 'sdo', 'ovcaa', 'oc'], true))
-                        <i class="bi bi-file-earmark-check-fill is-ico-blue"></i>
+                        <i class="bi bi-file-earmark-check-fill is-ico-maroon"></i>
                         <span>Proposals</span>
                     @else
-                        <i class="bi bi-lightning-charge-fill is-ico-gold"></i>
+                        <i class="bi bi-lightning-charge-fill is-ico-maroon"></i>
                         <span>Activities</span>
                     @endif
                 </a>
 
                 <a href="{{ route('office.calendar') }}" class="org-nav-link {{ ($activeNav ?? '') === 'calendar' ? 'is-active' : '' }}">
-                    <i class="bi bi-calendar3 is-ico-blue"></i>
+                    <i class="bi bi-calendar3 is-ico-maroon"></i>
                     <span>Calendar</span>
                 </a>
 
                 {{-- Budget Utilization is limited to SO/OSO/SDO desks; approval desks do not configure funds. --}}
                 @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'oc'], true))
                 <a href="{{ route('office.budget') }}" class="org-nav-link {{ ($activeNav ?? '') === 'budget' ? 'is-active' : '' }}">
-                    <i class="bi bi-wallet2 is-ico-green"></i>
+                    <i class="bi bi-wallet2 is-ico-maroon"></i>
                     <span>Budget Utilization</span>
                 </a>
                 @endif
 
+                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
+                    <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
+                        <i class="bi bi-arrow-repeat is-ico-maroon"></i>
+                        <span>Renewal</span>
+                    </a>
+                @endif
                 {{-- Semester AR/FR reports belong only to SO and OSO. --}}
                 @if ($officeRole === 'oso')
                 <a href="{{ route('office.reports.index') }}" class="org-nav-link {{ ($activeNav ?? '') === 'semester-reports' ? 'is-active' : '' }}">
-                    <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
+                    <i class="bi bi-file-earmark-bar-graph is-ico-maroon"></i>
                     <span>AR &amp; FR Reports</span>
                 </a>
                 @elseif ($isStudentOrgDesk)
                 <a href="{{ route('office.financial') }}" class="org-nav-link {{ ($activeNav ?? '') === 'financial' ? 'is-active' : '' }}">
-                    <i class="bi bi-file-earmark-bar-graph is-ico-teal"></i>
+                    <i class="bi bi-file-earmark-bar-graph is-ico-maroon"></i>
                     <span>Financial Report</span>
                 </a>
                 <a href="{{ route('office.accomplishment') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accomplishment' ? 'is-active' : '' }}">
-                    <i class="bi bi-trophy is-ico-gold"></i>
+                    <i class="bi bi-trophy is-ico-maroon"></i>
                     <span>Accomplishment Report</span>
                 </a>
                 @endif
 
+                @if (($office?->tosaClearanceLevel() ?? 0) >= 1)
+                    <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
+                        <i class="bi bi-award-fill is-ico-maroon"></i>
+                        <span>TOSA</span>
+                    </a>
+                @endif
                 <a href="{{ route('office.updates') }}" class="org-nav-link {{ ($activeNav ?? '') === 'updates' ? 'is-active' : '' }}">
-                    <i class="bi bi-megaphone-fill is-ico-red"></i>
+                    <i class="bi bi-megaphone-fill is-ico-maroon"></i>
                     <span>Updates</span>
                 </a>
-                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
-                    <a href="{{ route('office.renewal') }}" class="org-nav-link {{ ($activeNav ?? '') === 'renewal' ? 'is-active' : '' }}">
-                        <i class="bi bi-arrow-repeat is-ico-gold"></i>
-                        <span>Renewal</span>
-                    </a>
-                @endif
-                @if (in_array($officeRole, ['so', 'oso'], true))
-                    <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
-                        <i class="bi bi-archive-fill is-ico-slate"></i>
-                        <span>Archive</span>
-                    </a>
-                @endif
                 @if ($officeRole === 'oso')
                     <a href="{{ route('office.student-reports') }}" class="org-nav-link {{ ($activeNav ?? '') === 'reports' ? 'is-active' : '' }}">
                         <i class="bi bi-chat-square-text-fill is-ico-maroon"></i>
                         <span>Student Reports</span>
                     </a>
+                @endif
+                @if (in_array($officeRole, ['so', 'oso'], true))
+                    <a href="{{ route('office.archive') }}" class="org-nav-link {{ ($activeNav ?? '') === 'archive' ? 'is-active' : '' }}">
+                        <i class="bi bi-archive-fill is-ico-maroon"></i>
+                        <span>Archive</span>
+                    </a>
+                @endif
+                @if ($officeRole === 'oso')
                     <a href="{{ route('office.accounts') }}" class="org-nav-link {{ ($activeNav ?? '') === 'accounts' ? 'is-active' : '' }}">
                         <i class="bi bi-people-fill is-ico-maroon"></i>
                         <span>Users &amp; Roles</span>
-                    </a>
-                @endif
-                @if (($office?->tosaClearanceLevel() ?? 0) >= 1)
-                    <a href="{{ route('office.tosa') }}" class="org-nav-link {{ ($activeNav ?? '') === 'tosa' ? 'is-active' : '' }}">
-                        <i class="bi bi-award-fill is-ico-maroon"></i>
-                        <span>TOSA</span>
-                        <em class="org-badge-count" style="background: rgba(139, 24, 40, 0.12); color: #8b1828; border: 1px solid #f2dfe2;"><i class="bi bi-lock-fill" style="font-size: 0.65rem;"></i></em>
                     </a>
                 @endif
             </nav>
@@ -141,7 +146,7 @@
             @if (in_array(($office->office_role ?? ''), ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true))
             <div style="margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--org-line); display: flex; flex-direction: column; gap: 0.35rem;">
                 <button type="button" class="org-nav-link org-sidebar-settings-btn" onclick="openSettingsModal()" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.75rem; font-family: inherit;">
-                    <i class="bi bi-gear-fill is-ico-slate"></i>
+                    <i class="bi bi-gear-fill is-ico-maroon"></i>
                     <span>Settings</span>
                 </button>
             </div>
@@ -172,27 +177,39 @@
                 <div class="org-top-actions">
                     @yield('actions')
                     
-                    <button type="button" class="org-bell" id="orgNotificationsButton" popovertarget="orgNotifications" aria-label="Notifications" aria-controls="orgNotifications" aria-expanded="false">
-                        <i class="bi bi-bell-fill" aria-hidden="true"></i>
-                        @if (($officeNotifications ?? collect())->isNotEmpty())<span class="org-bell-dot" aria-hidden="true"></span>@endif
-                    </button>
-                    <section id="orgNotifications" class="org-notifications" popover="auto" aria-labelledby="orgNotificationsHeading">
-                        <div class="org-notifications-heading">
-                            <div><h2 id="orgNotificationsHeading">Notifications</h2><p>Recent activity updates and announcements</p></div>
-                            <button type="button" popovertarget="orgNotifications" popovertargetaction="hide" aria-label="Close notifications">×</button>
-                        </div>
-                        <div class="org-notifications-list">
-                            @forelse (($officeNotifications ?? collect()) as $notification)
-                                <a href="{{ $notification['url'] }}">
-                                    <strong>{{ $notification['title'] }}</strong>
-                                    <span>{{ $notification['detail'] }}</span>
-                                    <time datetime="{{ $notification['at']->toIso8601String() }}">{{ $notification['at']->diffForHumans() }}</time>
-                                </a>
-                            @empty
-                                <p class="org-notifications-empty">No recent notifications.</p>
-                            @endforelse
-                        </div>
-                    </section>
+                    @php $notificationCount = ($officeNotifications ?? collect())->count(); @endphp
+                    <div class="org-bell-wrap">
+                        <button type="button" class="org-bell" id="orgNotificationsButton" aria-label="Notifications" aria-controls="orgNotificationsDropdown" aria-expanded="false" onclick="toggleOrgNotifications(event)">
+                            <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                            <span class="org-bell-badge" id="orgBellBadge" @if (!$notificationCount) hidden @endif>{{ min($notificationCount, 99) }}</span>
+                        </button>
+                        <section id="orgNotificationsDropdown" class="org-notifications-dropdown liquid-glass" aria-labelledby="orgNotificationsHeading">
+                            <div class="org-notif-header">
+                                <div class="org-notif-title-row">
+                                    <h2 class="org-notif-title" id="orgNotificationsHeading"><i class="bi bi-bell-fill" aria-hidden="true"></i> Notifications</h2>
+                                    <span class="org-notif-count-pill" id="orgNotifCount">{{ $notificationCount }} new</span>
+                                </div>
+                                <p class="org-notif-subtitle">Recent activity updates &amp; announcements</p>
+                                <button type="button" class="org-notif-mark-read" id="orgNotifMarkReadBtn" onclick="markAllOfficeNotificationsRead(event)" @if (!$notificationCount) disabled @endif>Mark all read</button>
+                            </div>
+                            <div class="org-notif-list">
+                                @forelse (($officeNotifications ?? collect()) as $notification)
+                                    @php $isAnnouncement = $notification['detail'] === 'Announcement'; @endphp
+                                    <a class="org-notif-item" href="{{ $notification['url'] }}" data-notification-at="{{ $notification['at']->toIso8601String() }}">
+                                        <span class="org-notif-item-icon {{ $isAnnouncement ? 'is-announcement' : 'is-activity' }}" aria-hidden="true"><i class="bi {{ $isAnnouncement ? 'bi-megaphone-fill' : 'bi-file-earmark-check-fill' }}"></i></span>
+                                        <span class="org-notif-item-content">
+                                            <span class="org-notif-item-meta"><span class="org-notif-tag">{{ $isAnnouncement ? 'ANNOUNCEMENT' : strtoupper($notification['detail']) }}</span><time datetime="{{ $notification['at']->toIso8601String() }}">{{ $notification['at']->diffForHumans() }}</time></span>
+                                            <strong class="org-notif-item-title">{{ $notification['title'] }}</strong>
+                                        </span>
+                                        <i class="bi bi-chevron-right org-notif-chevron" aria-hidden="true"></i>
+                                    </a>
+                                @empty
+                                    <div class="org-notif-empty"><div class="org-notif-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></div><strong>All caught up!</strong><p>No new activity updates or announcements.</p></div>
+                                @endforelse
+                            </div>
+                            <div class="org-notif-footer"><a class="org-notif-footer-link" href="{{ route('office.updates') }}">View All Announcements <span aria-hidden="true">→</span></a></div>
+                        </section>
+                    </div>
 
                     {{-- User Profile Pill Menu (Right side of Bell) --}}
                     <div class="org-user-menu-wrap">
@@ -214,7 +231,15 @@
                                 </div>
                                 <div class="org-dropdown-user-meta">
                                     <strong class="org-dropdown-name">{{ $office->name }}</strong>
-                                    <span class="org-dropdown-role">{{ $brand['role'] }}</span>
+                                    @php
+                                        $ddRole = $brand['role'] ?? '';
+                                        $nameS = strtolower(trim((string) ($office->name ?? '')));
+                                        $roleS = strtolower(trim((string) $ddRole));
+                                        $isRedundantRole = $nameS === $roleS || (str_contains($nameS, 'oso') && str_contains($roleS, 'oso')) || (str_contains($nameS, 'office') && str_contains($roleS, 'officer'));
+                                    @endphp
+                                    @if (!$isRedundantRole)
+                                        <span class="org-dropdown-role">{{ $ddRole }}</span>
+                                    @endif
                                     <small class="org-dropdown-email">{{ $office->email }}</small>
                                 </div>
                             </div>
@@ -259,9 +284,70 @@
 
 
     <script>
-        document.getElementById('orgNotifications')?.addEventListener('toggle', function (event) {
-            document.getElementById('orgNotificationsButton').setAttribute('aria-expanded', String(event.newState === 'open'));
-        });
+        function positionOrgNotifications() {
+            const dropdown = document.getElementById('orgNotificationsDropdown');
+            const button = document.getElementById('orgNotificationsButton');
+            if (!dropdown || !button) return;
+            if (window.innerWidth <= 900) {
+                const rect = button.getBoundingClientRect();
+                const width = Math.min(380, window.innerWidth - 24);
+                dropdown.style.left = `${Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12))}px`;
+                dropdown.style.top = `${rect.bottom + 10}px`;
+            } else {
+                dropdown.style.removeProperty('left');
+                dropdown.style.removeProperty('top');
+            }
+        }
+
+        function toggleOrgNotifications(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('orgNotificationsDropdown');
+            const button = document.getElementById('orgNotificationsButton');
+            if (!dropdown || !button) return;
+            const opening = !dropdown.classList.contains('is-open');
+            closeOrgUserDropdown();
+            if (opening) {
+                positionOrgNotifications();
+                dropdown.classList.add('is-open');
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                closeOrgNotifications();
+            }
+        }
+
+        function closeOrgNotifications() {
+            document.getElementById('orgNotificationsDropdown')?.classList.remove('is-open');
+            document.getElementById('orgNotificationsButton')?.setAttribute('aria-expanded', 'false');
+        }
+
+        function updateOfficeNotificationReadState(readTimestamp) {
+            let unread = 0;
+            document.querySelectorAll('.org-notif-item').forEach((item) => {
+                const isRead = readTimestamp > 0 && Date.parse(item.dataset.notificationAt) <= readTimestamp;
+                item.classList.toggle('is-read', isRead);
+                if (!isRead) unread++;
+            });
+            const badge = document.getElementById('orgBellBadge');
+            if (badge) {
+                badge.hidden = unread === 0;
+                badge.textContent = Math.min(unread, 99);
+            }
+            const count = document.getElementById('orgNotifCount');
+            if (count) count.textContent = `${unread} new`;
+            const markRead = document.getElementById('orgNotifMarkReadBtn');
+            if (markRead) markRead.disabled = unread === 0;
+        }
+
+        function markAllOfficeNotificationsRead(e) {
+            e.stopPropagation();
+            const timestamp = Date.now();
+            updateOfficeNotificationReadState(timestamp);
+            try { localStorage.setItem('org_office_notif_read_ts', timestamp.toString()); } catch (error) { /* Storage may be unavailable. */ }
+        }
+
+        try { updateOfficeNotificationReadState(Number(localStorage.getItem('org_office_notif_read_ts')) || 0); } catch (error) { /* Keep notifications unread if storage is unavailable. */ }
+        window.addEventListener('resize', positionOrgNotifications);
+        window.addEventListener('scroll', positionOrgNotifications, true);
         function toggleOrgUserDropdown(e) {
             e.stopPropagation();
             const btn = document.getElementById('orgUserMenuBtn');
@@ -272,6 +358,7 @@
             if (isOpen) {
                 closeOrgUserDropdown();
             } else {
+                closeOrgNotifications();
                 dropdown.classList.add('is-open');
                 btn.setAttribute('aria-expanded', 'true');
             }
@@ -289,11 +376,14 @@
             if (menuWrap && !menuWrap.contains(e.target)) {
                 closeOrgUserDropdown();
             }
+            const bellWrap = document.querySelector('.org-bell-wrap');
+            if (bellWrap && !bellWrap.contains(e.target)) closeOrgNotifications();
         });
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeOrgUserDropdown();
+                closeOrgNotifications();
             }
         });
 

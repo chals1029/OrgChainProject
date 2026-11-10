@@ -176,6 +176,8 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/tosa/workbook-preview', [TosaWorkbookPreviewController::class, 'office'])->name('tosa.workbook.preview');
     Route::post('/tosa/announcements/{announcement}/end', [TosaFilingController::class, 'end'])->name('tosa.announcements.end');
     Route::post('/tosa/references/template', [OfficePortalController::class, 'storeTosaReferenceTemplate'])->name('tosa.references.store');
+    Route::get('/tosa/letters/{decision}/template', [OfficePortalController::class, 'downloadTosaLetterTemplate'])->name('tosa.letters.template.download');
+    Route::post('/tosa/letters/template', [OfficePortalController::class, 'storeTosaLetterTemplate'])->name('tosa.letters.template.store');
     Route::post('/tosa/top-ten', [TosaShortlistController::class, 'save'])->name('tosa.top10.save');
     Route::post('/tosa/top-ten/{applicantId}/remove', [TosaShortlistController::class, 'remove'])->whereNumber('applicantId')->name('tosa.top10.remove');
     Route::post('/tosa/{applicant}/subsection', [OfficePortalController::class, 'updateTosaSubsection'])->name('tosa.subsection');

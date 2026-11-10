@@ -4,26 +4,11 @@
         .sv-heading h2 { margin:0; font-size:1.15rem; }
         .sv-heading p { color:#7d6b74; font-size:.84rem; margin:.35rem 0 1rem; }
 
-        /* Two-column layout: Left column (Student Voice + My Submissions), Right column (Submission Details) */
-        .sv-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
-            gap: 1.25rem;
-            align-items: stretch;
-        }
-        .sv-col-left {
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-            min-width: 0;
-            height: 100%;
-        }
-        .sv-col-right {
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            height: 100%;
-        }
+        .sv-layout { display:grid; grid-template-columns:1fr; gap:1.25rem; width:100%; transition:grid-template-columns .3s ease; }
+        .sv-layout.has-details { grid-template-columns:minmax(0, 1fr) minmax(320px, 32%); align-items:start; }
+        .sv-col-left { display:flex; flex-direction:column; gap:1.25rem; min-width:0; width:100%; }
+        .sv-col-right { display:none; }
+        .sv-layout.has-details .sv-col-right { display:flex; flex-direction:column; min-width:0; position:sticky; top:1rem; }
         #mySubmissionsCard {
             flex: 1;
             display: flex;
@@ -51,34 +36,34 @@
         .sv-submit { justify-self:start; padding:.65rem 1.15rem; border:0; border-radius:10px; background:#8b1828; color:#fff; font:inherit; font-size:.82rem; font-weight:750; cursor:pointer; display:inline-flex; align-items:center; gap:.4rem; }
         .sv-submit:hover { background:#731421; }
 
-        /* Details Card on Right Side */
-        #svDetailsCard {
-            height: 100%;
-            min-height: 100%;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .sv-details-box {
-            display: flex;
-            flex-direction: column;
-            gap: .75rem;
-            flex: 1;
-            min-height: 0;
-            overflow-y: auto;
-            padding-right: .25rem;
-        }
-        .sv-details-box::-webkit-scrollbar { width: 5px; }
-        .sv-details-box::-webkit-scrollbar-track { background: transparent; }
-        .sv-details-box::-webkit-scrollbar-thumb { background: #ecdfe4; border-radius: 4px; }
-
-        .sv-timeline { list-style:none; padding:0 0 0 .55rem; margin:.35rem 0 0; border-left:2px solid #ecd6df; }
-        .sv-timeline li { position:relative; padding:0 0 .55rem .65rem; font-size:.78rem; }
-        .sv-timeline li::before { content:''; position:absolute; width:7px; height:7px; border-radius:50%; background:#a44d69; left:-.83rem; top:.25rem; }
-        .sv-timeline li:last-child { padding-bottom:0; margin-bottom:0; }
-        .sv-timeline strong { display:block; color:#2d2429; font-size:.78rem; }
-        .sv-timeline small { color:#8e7682; margin-top:.15rem; display:block; font-size:.72rem; }
+        .sv-details-card { position:relative; box-sizing:border-box; background:#fff; border:1px solid #eadde2; border-radius:18px; box-shadow:0 4px 20px rgba(95,25,45,.04); padding:1.25rem; }
+        .sv-details-header { display:flex; align-items:flex-start; gap:.7rem; padding-right:2rem; }
+        .sv-details-icon { flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:#fdf0f2; color:#8b1828; }
+        .sv-details-header h3 { margin:0; }
+        .sv-details-header small { color:#7d6b74; font-size:.73rem; }
+        #svCloseDetailsBtn { position:absolute; top:1rem; right:1rem; width:30px; height:30px; display:grid; place-items:center; border:1px solid #eadde2; border-radius:50%; background:#fff; color:#6c5762; cursor:pointer; }
+        #svCloseDetailsBtn:hover { background:#fbf2f4; color:#8b1828; }
+        #svCloseDetailsBtn:focus-visible, .sv-action-btn:focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
+        .sv-student-banner { margin-top:.85rem; padding:.7rem .85rem; background:#fdf5f7; border-radius:10px; color:#6c5762; font-size:.76rem; line-height:1.5; }
+        .sv-student-banner strong, .sv-student-banner span { display:block; }
+        .sv-student-banner strong { color:#382630; font-size:.86rem; }
+        .sv-details-status { margin-top:.65rem; }
+        .sv-detail-section { border:1px solid #f0e2e7; border-radius:12px; padding:.75rem .85rem; margin-top:.75rem; }
+        .sv-detail-section.has-remarks { background:#f0fdf4; border-color:#bbf7d0; }
+        .sv-section-title { display:block; margin:0 0 .35rem; color:#7d6b74; font-size:.67rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+        .sv-detail-text { margin:0; color:#3b2b34; font-size:.8rem; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
+        .sv-remarks-date { display:block; margin-top:.35rem; color:#65796a; font-size:.7rem; }
+        .sv-timeline-steps { list-style:none; margin:.45rem 0 0; padding:0; }
+        .sv-timeline-steps li { position:relative; display:flex; gap:.6rem; padding:0 0 .8rem; color:#8e7682; font-size:.76rem; }
+        .sv-timeline-steps li:not(:last-child)::before { content:''; position:absolute; left:9px; top:20px; bottom:0; width:2px; background:#eadde2; }
+        .sv-timeline-steps li.is-complete:not(:last-child)::before { background:#86cba5; }
+        .sv-timeline-steps li:last-child { padding-bottom:0; }
+        .sv-timeline-dot { position:relative; z-index:1; flex:none; width:20px; height:20px; border:1px solid #decdd4; border-radius:50%; display:grid; place-items:center; background:#fff; color:#b8a5ae; font-size:.65rem; }
+        .is-complete .sv-timeline-dot { border-color:#86cba5; background:#eaf8ef; color:#16713c; }
+        .is-current .sv-timeline-dot { border-color:#8b1828; background:#8b1828; color:#fff; }
+        .sv-timeline-steps strong, .sv-timeline-steps small { display:block; }
+        .sv-timeline-steps strong { color:#3b2b34; font-size:.77rem; }
+        .sv-timeline-steps small { margin-top:.1rem; line-height:1.4; font-size:.7rem; }
 
         /* Submissions Table */
         .sv-table-wrap { overflow-x:auto; margin-top:.5rem; border:1px solid #f0e6e9; border-radius:12px; }
@@ -100,11 +85,10 @@
         .sv-btn-delete:hover { background:#fef2f2; border-color:#dc2626; }
 
         @media(max-width:992px) {
-            .sv-layout { grid-template-columns:1fr; }
-            .sv-col-right { height:auto; }
-            #svDetailsCard { height:auto; max-height:none; }
-            .sv-details-box { max-height:500px; }
+            .sv-layout.has-details { grid-template-columns:1fr; }
+            .sv-layout.has-details .sv-col-right { position:static; width:100%; }
         }
+        @media (prefers-reduced-motion:reduce) { .sv-layout { transition:none; } }
     </style>
 
     <div class="sv-layout">
@@ -169,6 +153,7 @@
                                         'status_label' => $statusLabel,
                                         'created_at' => $feedback->created_at?->format('M j, Y · g:i A') ?? 'Not recorded',
                                         'verified_at' => $feedback->verified_at?->format('M j, Y · g:i A'),
+                                        'updated_at' => $feedback->updated_at?->format('M j, Y · g:i A'),
                                     ];
                                 @endphp
                                 <tr id="feedback-row-{{ $feedback->id }}">
@@ -223,167 +208,94 @@
             </div>
         </div>
 
-        {{-- Right Column: Submission Details Panel (Top aligned with Student Voice, bottom matches My Submissions, internally scrollable) --}}
         <div class="sv-col-right">
-            <div class="sv-card" id="svDetailsCard">
-                @php
-                    $initialFeedback = $myFeedback->first();
-                    $initStudentUser = $initialFeedback?->student;
-                    $initCollegeDept = $initialFeedback ? ($initialFeedback->college ?: ($initStudentUser?->college ?? 'College / Department')) : '';
-                    if ($initialFeedback && ($initialFeedback->program ?: ($initStudentUser?->program ?? ''))) {
-                        $initCollegeDept .= ' ('.($initialFeedback->program ?: $initStudentUser->program).')';
-                    }
-                    $initStatusLabel = $initialFeedback ? match($initialFeedback->status) {
-                        'verified' => 'Acknowledged',
-                        'resolved' => 'Resolved',
-                        'dismissed' => 'Dismissed',
-                        default => 'Pending',
-                    } : 'Pending';
-                @endphp
-
-                {{-- Placeholder when no submissions exist yet --}}
-                <div id="sdPlaceholder" style="{{ $myFeedback->isNotEmpty() ? 'display: none;' : 'display: flex;' }} flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; min-height: 220px; padding: 1.5rem 1rem; color: #8e7682; margin: auto;">
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: 1.25rem; margin-bottom: 0.65rem;">
-                        <i class="bi bi-eye"></i>
-                    </div>
-                    <h4 style="margin: 0 0 0.25rem; font-size: 0.95rem; color: #1e293b; font-weight: 800;">Submission Details</h4>
-                    <p style="margin: 0; font-size: 0.8rem; color: #64748b; max-width: 270px; line-height: 1.5;">Click the <strong>View</strong> button on any submission in the table to inspect its full details and OSO response.</p>
-                </div>
-
-                {{-- Content when a submission is loaded or available --}}
-                <div id="sdContent" class="sv-details-box" style="{{ $myFeedback->isEmpty() ? 'display: none;' : 'display: flex;' }}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: .6rem; margin-bottom: .25rem; flex-shrink: 0;">
-                        <div style="display: flex; align-items: center; gap: .5rem;">
-                            <div style="width: 30px; height: 30px; border-radius: 50%; background: #fdf0f2; color: #8b1828; display: grid; place-items: center; font-size: .95rem;">
-                                <i class="bi bi-file-earmark-text-fill"></i>
-                            </div>
-                            <div>
-                                <h3 style="margin: 0; font-size: .95rem; font-weight: 800; color: #1e293b;">Submission Details</h3>
-                                <small id="sdTopicHeader" style="color: #64748b; font-size: .72rem; font-weight: 600;">
-                                    @if ($initialFeedback) Concern #{{ $initialFeedback->id }} @endif
-                                </small>
-                            </div>
-                        </div>
-                        <span id="sdStatusBadge" class="sv-status {{ $initialFeedback?->status ?? 'pending' }}">{{ $initStatusLabel }}</span>
-                    </div>
-
-                    {{-- Student Reporter info --}}
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: .6rem .85rem; flex-shrink: 0;">
-                        <span style="font-size: .67rem; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: .04em; display: block;">Student Reporter</span>
-                        <strong id="sdName" style="display: block; font-size: .88rem; color: #0f172a;">
-                            {{ $initialFeedback ? ($initialFeedback->is_anonymous ? 'Anonymous Student' : ($initialFeedback->author_name ?: ($initStudentUser?->full_name ?? 'Student'))) : '' }}
-                        </strong>
-                        <span id="sdCollegeDept" style="display: block; font-size: .76rem; color: #64748b; font-weight: 600; margin-top: 1px;">
-                            {{ $initCollegeDept }}
-                        </span>
-                    </div>
-
-                    {{-- Date Submitted --}}
-                    <div style="display: flex; align-items: center; gap: .4rem; font-size: .78rem; color: #475569; flex-shrink: 0;">
-                        <i class="bi bi-calendar3" style="color: #8b1828;"></i>
-                        <span>Date Submitted: <strong id="sdDateSubmitted" style="color: #0f172a;">{{ $initialFeedback?->created_at?->format('M j, Y · g:i A') ?? 'Not recorded' }}</strong></span>
-                    </div>
-
-                    {{-- Report / Concern Text --}}
-                    <div style="display: flex; flex-direction: column; flex: 1; min-height: 110px;">
-                        <span style="font-size: .67rem; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: .04em; display: block; margin-bottom: 3px;">Report / Concern</span>
-                        <p id="sdConcern" style="margin: 0; padding: .65rem .85rem; background: #fffafb; border: 1px solid #f1e4e8; border-radius: 8px; font-size: .82rem; color: #334155; line-height: 1.55; white-space: pre-wrap; word-break: break-word; flex: 1; min-height: 75px; overflow-y: auto;">{{ $initialFeedback?->body ?? '' }}</p>
-                    </div>
-
-                    {{-- OSO Remarks (Shown only when OSO remarks exist) --}}
-                    <div id="sdOsoRemarksSection" style="flex-shrink: 0; {{ !empty($initialFeedback?->review_note) ? '' : 'display: none;' }}">
-                        <span style="font-size: .67rem; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: .04em; display: block; margin-bottom: 2px;">OSO Remarks</span>
-                        <div id="sdOsoRemarksBox" style="margin: 0; padding: .6rem .85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: .82rem; color: #166534; line-height: 1.55; white-space: pre-wrap; word-break: break-word;">
-                            <strong style="display: block; margin-bottom: 2px; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em;">Office of Student Organizations (OSO)</strong>
-                            <span id="sdOsoRemarksText">{{ $initialFeedback?->review_note ?? '' }}</span>
-                        </div>
-                    </div>
-                    {{-- Status Timeline --}}
-                    <div style="flex-shrink: 0; margin-top: auto; padding-top: .4rem;">
-                        <span style="font-size: .67rem; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: .04em; display: block; margin-bottom: 2px;">Status Timeline</span>
-                        <ol id="sdTimeline" class="sv-timeline">
-                            @if ($initialFeedback)
-                                <li><strong>Submitted</strong><small>{{ $initialFeedback->created_at?->format('M j, Y · g:i A') ?? 'Submission recorded' }}</small></li>
-                                @if ($initialFeedback->status === 'verified')
-                                    <li><strong>Acknowledged by OSO</strong><small>{{ $initialFeedback->verified_at?->format('M j, Y · g:i A') ?? 'Acknowledged by office' }}</small></li>
-                                @elseif ($initialFeedback->status === 'resolved')
-                                    @if ($initialFeedback->verified_at)
-                                        <li><strong>Acknowledged by OSO</strong><small>{{ $initialFeedback->verified_at->format('M j, Y · g:i A') }}</small></li>
-                                    @endif
-                                    <li><strong>Resolved by OSO</strong><small>Resolution confirmed</small></li>
-                                @elseif ($initialFeedback->status === 'dismissed')
-                                    <li><strong>Dismissed by OSO</strong><small>Decision recorded</small></li>
-                                @else
-                                    <li><strong>Awaiting OSO review</strong><small>Pending initial assessment</small></li>
-                                @endif
-                            @endif
-                        </ol>
+            <aside class="sv-details-card" id="svDetailsCard" aria-labelledby="svDetailsHeading">
+                <button type="button" id="svCloseDetailsBtn" aria-label="Close submission details" onclick="closeSubmissionDetails()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                <div class="sv-details-header">
+                    <span class="sv-details-icon"><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i></span>
+                    <div>
+                        <h3 id="svDetailsHeading">Submission Details</h3>
+                        <small id="sdTopicHeader"></small>
                     </div>
                 </div>
-            </div>
+                <div class="sv-student-banner">
+                    <strong id="sdName"></strong>
+                    <span id="sdCollegeDept"></span>
+                    <span><i class="bi bi-calendar3" aria-hidden="true"></i> Submitted <span id="sdDateSubmitted" style="display:inline;"></span></span>
+                </div>
+                <div class="sv-details-status"><span id="sdStatusBadge" class="sv-status"></span></div>
+                <div class="sv-detail-section">
+                    <span class="sv-section-title">Report</span>
+                    <p id="sdConcern" class="sv-detail-text"></p>
+                </div>
+                <div id="sdOsoRemarksSection" class="sv-detail-section">
+                    <span class="sv-section-title">OSO Remarks</span>
+                    <p id="sdOsoRemarksText" class="sv-detail-text"></p>
+                    <small id="sdOsoRemarksDate" class="sv-remarks-date"></small>
+                </div>
+                <div class="sv-detail-section">
+                    <span class="sv-section-title">Status Timeline</span>
+                    <ol id="sdTimeline" class="sv-timeline-steps"></ol>
+                </div>
+            </aside>
         </div>
     </div>
 
     <script>
         window.viewSubmissionDetails = function (data) {
-            const placeholder = document.getElementById('sdPlaceholder');
-            const content = document.getElementById('sdContent');
+            const layout = document.querySelector('.sv-layout');
             const detailsCard = document.getElementById('svDetailsCard');
-
-            if (placeholder) placeholder.style.display = 'none';
-            if (content) content.style.display = 'flex';
-
-            document.getElementById('sdTopicHeader').textContent = 'Concern #' + data.id;
+            document.getElementById('sdTopicHeader').textContent = 'Concern #' + data.id + ' · Student Voice';
             document.getElementById('sdName').textContent = data.name || 'Student';
             document.getElementById('sdCollegeDept').textContent = data.college_department || '';
-            document.getElementById('sdDateSubmitted').textContent = data.date_submitted || '';
+            document.getElementById('sdDateSubmitted').textContent = data.date_submitted || 'Not recorded';
             document.getElementById('sdConcern').textContent = data.concern || '';
 
             const badge = document.getElementById('sdStatusBadge');
-            if (badge) {
-                badge.className = 'sv-status ' + (data.status || 'pending');
-                badge.textContent = data.status_label || 'Pending';
-            }
+            badge.className = 'sv-status ' + (data.status || 'pending');
+            badge.textContent = data.status_label || 'Pending';
 
-            const remarksSection = document.getElementById('sdOsoRemarksSection');
-            const remarksText = document.getElementById('sdOsoRemarksText');
             const remarks = (data.oso_remarks || '').trim();
-            const hasRemarks = Boolean(remarks && remarks !== 'No OSO remarks recorded yet.');
+            document.getElementById('sdOsoRemarksSection').classList.toggle('has-remarks', Boolean(remarks));
+            document.getElementById('sdOsoRemarksText').textContent = remarks || 'No OSO remarks yet.';
+            document.getElementById('sdOsoRemarksDate').textContent = remarks && data.updated_at ? 'Submission last updated: ' + data.updated_at : '';
 
-            if (remarksSection) {
-                remarksSection.style.display = hasRemarks ? 'block' : 'none';
-            }
-            if (remarksText) {
-                remarksText.textContent = remarks;
-            }
-
+            const isVerified = data.status === 'verified';
+            const isResolved = data.status === 'resolved';
+            const isDismissed = data.status === 'dismissed';
             const timeline = document.getElementById('sdTimeline');
-            if (timeline) {
-                let items = `<li><strong>Submitted</strong><small>${data.created_at || 'Submission recorded'}</small></li>`;
-                if (data.status === 'verified') {
-                    items += `<li><strong>Acknowledged by OSO</strong><small>${data.verified_at || 'Acknowledged by office'}</small></li>`;
-                } else if (data.status === 'resolved') {
-                    if (data.verified_at) {
-                        items += `<li><strong>Acknowledged by OSO</strong><small>${data.verified_at}</small></li>`;
-                    }
-                    items += `<li><strong>Resolved by OSO</strong><small>Resolution confirmed</small></li>`;
-                } else if (data.status === 'dismissed') {
-                    items += `<li><strong>Dismissed by OSO</strong><small>Decision recorded</small></li>`;
-                } else {
-                    items += `<li><strong>Awaiting OSO review</strong><small>Pending initial assessment</small></li>`;
-                }
-                timeline.innerHTML = items;
-            }
+            timeline.replaceChildren();
+            const steps = [
+                { label: 'Submitted', state: 'is-complete', detail: (data.created_at || 'Date not recorded') + ' · Concern received.' },
+                { label: 'Acknowledged', state: isVerified ? 'is-current' : '', detail: isVerified ? (data.verified_at || 'Date not recorded') + ' · Reviewed by OSO.' : (isResolved || isDismissed ? 'Acknowledgement history not recorded.' : 'Awaiting OSO review.') },
+                { label: isDismissed ? 'Dismissed' : 'Resolved', state: isResolved || isDismissed ? 'is-current' : '', detail: isResolved ? (data.verified_at || 'Date not recorded') + ' · Resolution recorded.' : (isDismissed ? 'Decision recorded; date not recorded.' : 'Awaiting a final decision.') },
+            ];
+            steps.forEach(function (step) {
+                const item = document.createElement('li');
+                if (step.state) item.className = step.state;
+                const dot = document.createElement('span');
+                dot.className = 'sv-timeline-dot';
+                dot.setAttribute('aria-hidden', 'true');
+                dot.innerHTML = step.state ? '<i class="bi bi-check-lg"></i>' : '<i class="bi bi-circle-fill"></i>';
+                const text = document.createElement('div');
+                const label = document.createElement('strong');
+                const detail = document.createElement('small');
+                label.textContent = step.label;
+                detail.textContent = step.detail;
+                text.append(label, detail);
+                item.append(dot, text);
+                timeline.append(item);
+            });
 
-            if (detailsCard) {
-                detailsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                detailsCard.style.boxShadow = '0 0 0 3px rgba(139, 24, 40, 0.25)';
-                setTimeout(() => detailsCard.style.boxShadow = '', 1500);
+            layout.classList.add('has-details');
+            if (window.matchMedia('(max-width: 992px)').matches) {
+                detailsCard.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
             }
         };
 
-        // Backwards compatibility alias
-        window.openSubmissionDetailsModal = window.viewSubmissionDetails;
+        window.closeSubmissionDetails = function () {
+            document.querySelector('.sv-layout').classList.remove('has-details');
+        };
 
         if (window.location.hash.startsWith('#feedback-')) {
             const id = window.location.hash.replace('#feedback-', '');

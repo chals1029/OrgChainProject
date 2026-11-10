@@ -6,6 +6,7 @@ use App\Models\OfficeUser;
 use App\Models\TosaApplicant;
 use App\Models\TosaHistoryEvent;
 use App\Models\TosaShortlist;
+use App\Services\TosaNotificationService;
 use App\Services\TosaSelectionEdit;
 use App\Services\TosaWorkflowService;
 use Illuminate\Http\JsonResponse;
@@ -240,6 +241,10 @@ final class TosaShortlistController extends Controller
 
             return $shortlist;
         }, 3);
+
+        if ($intent === 'publish') {
+            app(TosaNotificationService::class)->sendResultNotifications($shortlist, $office);
+        }
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([

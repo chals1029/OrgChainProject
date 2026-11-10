@@ -12,6 +12,7 @@
     $shortName = trim((string) ($org?->short_name ?? ''));
     $fullName = $org?->name ?: $submission->organization_name;
     $college = $org?->college ?: ($submission->college ?: 'Campus Wide');
+    $logoUrl = $org?->logoUrl();
 
     $initials = '';
     $shortHead = $shortName !== '' ? (preg_split('/[^A-Za-z0-9]+/', $shortName, -1, PREG_SPLIT_NO_EMPTY)[0] ?? '') : '';
@@ -67,7 +68,7 @@
             'key' => $req['key'] ?? 'doc'.$index,
             'title' => $req['title'] ?? $label,
             'label' => $label,
-            'letter' => strtoupper($letterMatch[1] ?? (string) ($index + 1)),
+            'letter' => ($req['key'] ?? '') === 'iso_form' ? 'ISO' : strtoupper($letterMatch[1] ?? (string) ($index + 1)),
             'doc' => $uploaded,
             'status' => $status,
         ];
@@ -244,7 +245,13 @@
             @endif
 
             <section class="rs-card rs-summary" aria-labelledby="rsOrgName">
-                <span class="rs-avatar" aria-hidden="true">{{ $initials }}</span>
+                <span class="rs-avatar" aria-hidden="true" style="overflow: hidden; padding: 2px;">
+                    @if (!empty($logoUrl))
+                        <img src="{{ $logoUrl }}" alt="{{ $shortName ?: $fullName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 10px;">
+                    @else
+                        {{ $initials }}
+                    @endif
+                </span>
                 <div class="rs-summary-copy">
                     <span class="rs-kicker">Renewal Application</span>
                     <h2 id="rsOrgName">{{ $fullName }}</h2>

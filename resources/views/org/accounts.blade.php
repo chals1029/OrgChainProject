@@ -290,12 +290,12 @@
         border-color: #dc2626;
         background: #fffafb;
     }
-    .org-settings-user-actions button[data-account-action="retry-email"] {
-        grid-column: 1 / -1;
-        color: #8b1828;
-        border-color: #e7c6cc;
-        background: #fffafb;
-    }
+    .org-settings-user-actions { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: .3rem; white-space: nowrap; }
+    .org-settings-user-actions .org-action-icon-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; padding: 0; font-size: .95rem; line-height: 1; border-radius: 6px; flex-shrink: 0; }
+    .org-action-icon-btn[data-tooltip]::before, .org-action-icon-btn[data-tooltip]::after { position: absolute; left: 50%; z-index: 5; opacity: 0; pointer-events: none; transform: translateX(-50%); }
+    .org-action-icon-btn[data-tooltip]::before { content: attr(data-tooltip); bottom: calc(100% + 7px); padding: .3rem .5rem; border-radius: 6px; background: #30262a; color: #fff; font-size: .72rem; font-weight: 600; line-height: 1; white-space: nowrap; }
+    .org-action-icon-btn[data-tooltip]::after { content: ''; bottom: calc(100% + 2px); border: 5px solid transparent; border-top-color: #30262a; border-bottom: 0; }
+    .org-action-icon-btn[data-tooltip]:hover::before, .org-action-icon-btn[data-tooltip]:hover::after, .org-action-icon-btn[data-tooltip]:focus-visible::before, .org-action-icon-btn[data-tooltip]:focus-visible::after { opacity: 1; }
     @media (max-width: 768px) {
         .org-accounts-header-actions,
         .org-accounts-header-actions button,
@@ -418,7 +418,6 @@
                         <tr>
                             <th id="colHeaderName">ORGANIZATION NAME</th>
                             <th id="colHeaderDept">COLLEGE / DEPARTMENT</th>
-                            <th id="colHeaderClearance" style="text-align: center; color: #64748b; font-family: system-ui, -apple-system, sans-serif; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">TOSA CLEARANCE</th>
                             <th id="colHeaderStatus" style="text-align: center; color: #64748b; font-family: system-ui, -apple-system, sans-serif; font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">ACCOUNT STATUS</th>
                             <th>LAST UPDATED</th>
                             <th>ACTIONS</th>
@@ -438,6 +437,7 @@
                                     'id' => $user->id,
                                     'name' => $user->name,
                                     'organization_name' => $user->studentOrganization?->name,
+                                    'org_logo_url' => $user->office_role === 'so' ? $user->studentOrganization?->logoUrl() : null,
                                     'college' => $college,
                                     'email' => $user->email,
                                     'office_role' => $user->office_role,
@@ -456,7 +456,7 @@
                             <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}" @if ($user->office_role !== 'so') hidden @endif>
                                 <td>
                                     <div class="org-settings-user-identity">
-                                        <div class="org-settings-avatar-sm">{{ $displayInitials }}</div>
+                                        <div class="org-settings-avatar-sm" style="overflow: hidden;">@if ($userData['org_logo_url'])<img src="{{ $userData['org_logo_url'] }}" alt="{{ $orgName }}" style="width: 100%; height: 100%; object-fit: contain;">@else{{ $displayInitials }}@endif</div>
                                         <div>
                                             <strong data-user-name style="text-transform: uppercase;">{{ strtoupper($orgName) }}</strong>
                                             <small data-user-email>{{ $user->email }}</small>
@@ -468,21 +468,6 @@
                                     @if ($user->office_role !== 'so' && $user->office_title)
                                         <small style="display: block; color: #718096; font-size: 0.75rem;">{{ $user->office_title }}</small>
                                     @endif
-                                </td>
-                                <td style="text-align: center;">
-                                    @php
-                                        $isCleared = $userData['tosa_clearance'] !== 'No Access';
-                                        $canEditClearance = $user->office_role === 'so' || $user->office_role === 'ovcaa';
-                                    @endphp
-                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <label class="org-toggle-switch" title="{{ $isCleared ? 'Level 1 (Allowed)' : 'No Access (Restricted)' }}">
-                                            <input type="checkbox" data-tosa-toggle="{{ $user->id }}" @checked($isCleared) @disabled(!$canEditClearance) onclick="handleTosaClearanceToggleClick(event, {{ $user->id }})">
-                                            <span class="org-toggle-slider"></span>
-                                        </label>
-                                        <span class="org-status-chip {{ $isCleared ? 'is-active' : 'is-inactive' }}" data-tosa-chip="{{ $user->id }}">
-                                            {{ $isCleared ? 'Level 1' : 'No Access' }}
-                                        </span>
-                                    </div>
                                 </td>
                                 <td style="text-align: center;">
                                     <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
@@ -497,18 +482,18 @@
                                     <small data-user-password-state style="display: block; font-size: 0.7rem; color: #dc2626; margin-top: 0.2rem;">{{ $userData['must_change_password'] ? 'Password change required' : '' }}</small>
                                 </td>
                                 <td data-user-updated>{{ $user->updated_at?->diffForHumans() ?? 'Not recorded' }}</td>
-                                <td>
+                                <td style="white-space: nowrap;">
                                     <div class="org-settings-user-actions">
                                         @if ($isCurrentAccount)
-                                            <button type="button" class="org-settings-btn-subtle" data-account-action="own" aria-label="My Account: {{ $user->name }}" title="Manage your account">My Account</button>
+                                            <button type="button" class="org-settings-btn-subtle org-action-icon-btn" data-account-action="own" data-tooltip="My Account" aria-label="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i></button>
                                         @else
-                                            <button type="button" class="org-settings-btn-subtle" data-account-action="edit" aria-label="Edit profile: {{ $user->name }}" title="Edit profile">Edit</button>
-                                            <button type="button" class="org-settings-btn-subtle" data-account-action="reset" aria-label="Reset temporary password: {{ $user->name }}" title="Reset temporary password">Password</button>
+                                            <button type="button" class="org-settings-btn-subtle org-action-icon-btn" data-account-action="edit" data-tooltip="Edit" aria-label="Edit profile: {{ $user->name }}"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+                                            <button type="button" class="org-settings-btn-subtle org-action-icon-btn" data-account-action="reset" data-tooltip="Password" aria-label="Reset temporary password: {{ $user->name }}"><i class="bi bi-key-fill" aria-hidden="true"></i></button>
                                             @if ($user->office_role === 'so')
-                                                <button type="button" class="org-settings-btn-subtle" data-account-action="turnover" aria-label="Turn over SO officer: {{ $user->name }}" @disabled(!$user->is_active || !$user->student_organization_id) title="{{ !$user->is_active || !$user->student_organization_id ? 'Turnover requires an enabled account with an assigned organization' : 'Turn over SO officer' }}">Turn over</button>
+                                                <button type="button" class="org-settings-btn-subtle org-action-icon-btn" data-account-action="turnover" data-tooltip="Turnover" aria-label="Turn over SO officer: {{ $user->name }}" @disabled(!$user->is_active || !$user->student_organization_id) title="{{ !$user->is_active || !$user->student_organization_id ? 'Turnover requires an enabled account with an assigned organization' : 'Turn over SO officer' }}"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></button>
                                             @endif
                                             @if ($user->office_role === 'so' && $user->is_active && $user->student_organization_id && $user->must_change_password)
-                                                <button type="button" class="org-settings-btn-subtle" data-account-action="retry-email" data-retry-url="{{ route('office.organizations.accounts.retry', $user) }}" aria-label="Email credentials: {{ $user->name }}" title="Generate a new temporary password, replace the previous temporary password, and email login credentials">Email credentials</button>
+                                                <button type="button" class="org-settings-btn-subtle org-action-icon-btn" data-account-action="retry-email" data-tooltip="Email Credentials" data-retry-url="{{ route('office.organizations.accounts.retry', $user) }}" aria-label="Email credentials: {{ $user->name }}" title="Generate a new temporary password, replace the previous temporary password, and email login credentials"><i class="bi bi-envelope-at" aria-hidden="true"></i></button>
                                             @endif
                                         @endif
                                     </div>
@@ -529,13 +514,13 @@
         </div>
     </div>
     </div>
-    {{-- Roles & Permissions Matrix & TOSA Authorized Users --}}
+    {{-- Roles & Permissions Matrix --}}
     <div class="org-settings-card">
         <div class="org-settings-card-header">
             <div class="org-settings-card-icon"><i class="bi bi-shield-shaded" aria-hidden="true"></i></div>
             <div>
-                <h3 class="org-settings-card-title">Role &amp; TOSA Access Guide</h3>
-                <p class="org-settings-card-desc">Account roles determine office access. TOSA clearance does not grant additional proposal or budget permissions.</p>
+                <h3 class="org-settings-card-title">Role Permissions Guide</h3>
+                <p class="org-settings-card-desc">Account roles determine office access.</p>
             </div>
         </div>
         <div class="org-settings-card-body">
@@ -544,15 +529,11 @@
                     <strong>OSO Office Accounts</strong>
                     <ul>
                         <li><i class="bi bi-check-circle-fill text-success"></i> Office settings and account management</li>
-                        <li><i class="bi bi-check-circle-fill text-success"></i> Automatic Level 3 Master TOSA access for active OSO accounts</li>
                     </ul>
                 </div>
                 <div class="org-settings-perm-card">
-                    <strong>TOSA Clearance</strong>
+                    <strong>Student Organization Accounts</strong>
                     <ul>
-                        <li><i class="bi bi-eye"></i> OVCAA: read-only TOSA access when enabled</li>
-                        <li><i class="bi bi-check-circle-fill text-success"></i> OSO: document verification and template management</li>
-                        <li><i class="bi bi-info-circle"></i> SO, SDO, and OC have no TOSA access</li>
                         <li><i class="bi bi-info-circle"></i> SO officers access only their assigned student organization. Turnover preserves its records and the outgoing officer's identity.</li>
                     </ul>
                 </div>
@@ -1056,16 +1037,24 @@
         }
         row.dataset.settingsUser = JSON.stringify(user);
         const isCurrent = id === Number(settingsOfficerId);
-        const isCleared = Boolean(user.tosa_clearance && user.tosa_clearance !== 'No Access');
-        const canEditClearance = user.office_role === 'so' || user.office_role === 'ovcaa';
         const isActive = Boolean(user.is_active);
 
         // Only fixed markup is parsed; every account-provided value uses textContent.
-        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name style="text-transform: uppercase;"></strong><small data-user-email></small></div></div></td><td><span data-user-college style="font-weight: 600; color: #2d3748;"></span></td><td style="text-align: center;"><div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;"><label class="org-toggle-switch" title="' + (isCleared ? 'Level 1 (Allowed)' : 'No Access (Restricted)') + '"><input type="checkbox" data-tosa-toggle="' + id + '"' + (isCleared ? ' checked' : '') + (!canEditClearance ? ' disabled' : '') + '><span class="org-toggle-slider"></span></label><span class="org-status-chip ' + (isCleared ? 'is-active' : 'is-inactive') + '" data-tosa-chip="' + id + '">' + (isCleared ? 'Level 1' : 'No Access') + '</span></div></td><td style="text-align: center;"><div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;"><label class="org-toggle-switch" title="' + (isActive ? 'Account Enabled' : 'Account Disabled') + '"><input type="checkbox" data-status-toggle="' + id + '"' + (isActive ? ' checked' : '') + (isCurrent ? ' disabled' : '') + '><span class="org-toggle-slider"></span></label><span class="org-status-chip ' + (isActive ? 'is-active' : 'is-inactive') + '" data-status-chip="' + id + '">' + (isActive ? 'Enable' : 'Disable') + '</span></div><small data-user-password-state style="display: block; font-size: 0.7rem; color: #dc2626; margin-top: 0.2rem;"></small></td><td data-user-updated></td><td><div class="org-settings-user-actions"></div></td>';
+        row.innerHTML = '<td><div class="org-settings-user-identity"><div class="org-settings-avatar-sm"></div><div><strong data-user-name style="text-transform: uppercase;"></strong><small data-user-email></small></div></div></td><td><span data-user-college style="font-weight: 600; color: #2d3748;"></span></td><td style="text-align: center;"><div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;"><label class="org-toggle-switch" title="' + (isActive ? 'Account Enabled' : 'Account Disabled') + '"><input type="checkbox" data-status-toggle="' + id + '"' + (isActive ? ' checked' : '') + (isCurrent ? ' disabled' : '') + '><span class="org-toggle-slider"></span></label><span class="org-status-chip ' + (isActive ? 'is-active' : 'is-inactive') + '" data-status-chip="' + id + '">' + (isActive ? 'Enable' : 'Disable') + '</span></div><small data-user-password-state style="display: block; font-size: 0.7rem; color: #dc2626; margin-top: 0.2rem;"></small></td><td data-user-updated></td><td style="white-space: nowrap;"><div class="org-settings-user-actions"></div></td>';
         const orgName = user.office_role === 'so' ? (user.organization_name || user.name) : user.name;
         row.querySelector('[data-user-name]').textContent = (orgName || '').toUpperCase();
         row.querySelector('[data-user-email]').textContent = user.email;
-        row.querySelector('.org-settings-avatar-sm').textContent = user.initials;
+        const avatar = row.querySelector('.org-settings-avatar-sm');
+        if (user.office_role === 'so' && user.org_logo_url) {
+            const image = document.createElement('img');
+            image.src = user.org_logo_url;
+            image.alt = orgName || '';
+            image.style.cssText = 'width: 100%; height: 100%; object-fit: contain;';
+            avatar.style.overflow = 'hidden';
+            avatar.appendChild(image);
+        } else {
+            avatar.textContent = user.initials;
+        }
         const collegeEl = row.querySelector('[data-user-college]');
         if (collegeEl) collegeEl.textContent = user.office_role === 'so' ? (user.college || '—') : (user.role || '—');
         row.querySelector('[data-user-password-state]').textContent = user.must_change_password ? 'Password change required' : '';
@@ -1078,34 +1067,31 @@
                 handleStatusToggleClick(event, id);
             });
         }
-        const tosaToggle = row.querySelector(`[data-tosa-toggle="${id}"]`);
-        if (tosaToggle) {
-            tosaToggle.addEventListener('click', (event) => {
-                handleTosaClearanceToggleClick(event, id);
-            });
-        }
         const actions = row.querySelector('.org-settings-user-actions');
-        const addAction = (action, label, accessibleLabel, disabled = false) => {
+        const addAction = (action, label, accessibleLabel, icon, disabled = false) => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'org-settings-btn-subtle';
+            button.className = 'org-settings-btn-subtle org-action-icon-btn';
             button.dataset.accountAction = action;
-            button.textContent = label;
+            button.dataset.tooltip = label;
+            const iconElement = document.createElement('i');
+            iconElement.className = `bi ${icon}`;
+            iconElement.setAttribute('aria-hidden', 'true');
+            button.appendChild(iconElement);
             button.disabled = disabled;
-            button.setAttribute('aria-label', `${accessibleLabel}: ${user.name}`);
-            button.title = accessibleLabel;
+            button.setAttribute('aria-label', action === 'own' ? accessibleLabel : `${accessibleLabel}: ${user.name}`);
             if (disabled) button.title = 'Turnover requires an enabled account with an assigned organization.';
             actions.appendChild(button);
             return button;
         };
         if (id === Number(settingsOfficerId)) {
-            addAction('own', 'My Account', 'My Account');
+            addAction('own', 'My Account', 'My Account', 'bi-person-circle');
         } else {
-            addAction('edit', 'Edit', 'Edit profile');
-            addAction('reset', 'Password', 'Reset temporary password');
-            if (user.office_role === 'so') addAction('turnover', 'Turn over', 'Turn over SO officer', !user.is_active || !user.student_organization_id);
+            addAction('edit', 'Edit', 'Edit profile', 'bi-pencil-square');
+            addAction('reset', 'Password', 'Reset temporary password', 'bi-key-fill');
+            if (user.office_role === 'so') addAction('turnover', 'Turnover', 'Turn over SO officer', 'bi-arrow-left-right', !user.is_active || !user.student_organization_id);
             if (user.office_role === 'so' && user.is_active && user.student_organization_id && user.must_change_password) {
-                const retryButton = addAction('retry-email', 'Email credentials', 'Email credentials');
+                const retryButton = addAction('retry-email', 'Email Credentials', 'Email credentials', 'bi-envelope-at');
                 retryButton.dataset.retryUrl = `${osoAccountRoutes.organizationRetryBase}/${id}/retry-email`;
                 retryButton.title = 'Generate a new temporary password, replace the previous temporary password, and email login credentials';
             }
@@ -1113,7 +1099,7 @@
         filterSettingsAccounts();
     }
 
-    function openAccountManagement(id, action) {
+    async function openAccountManagement(id, action) {
         const user = settingsAccounts.get(Number(id));
         if (!user || !settingsIsOso || settingsMutationPending) return;
         if (Number(id) === Number(settingsOfficerId)) {
@@ -1125,6 +1111,35 @@
         if (action === 'turnover' && (user.office_role !== 'so' || !user.is_active || !user.student_organization_id)) {
             showSettingsToast('Turnover requires an enabled SO account with an assigned organization.', 'error');
             return;
+        }
+        const confirmConfig = {
+            edit: {
+                title: 'Edit Officer Profile?',
+                message: `Are you sure you want to edit the profile for ${user.name}?`,
+                accept: 'Yes, Edit Profile'
+            },
+            reset: {
+                title: 'Reset Temporary Password?',
+                message: `Are you sure you want to reset the temporary password for ${user.name}?`,
+                accept: 'Yes, Reset Password'
+            },
+            turnover: {
+                title: 'Turn Over SO Officer?',
+                message: `Are you sure you want to turn over the account for ${user.name}? This will prepare the transition to an incoming officer.`,
+                accept: 'Yes, Proceed'
+            }
+        }[action];
+
+        if (confirmConfig) {
+            if (window.OrgActionConfirmations?.confirm) {
+                const confirmed = await window.OrgActionConfirmations.confirm(confirmConfig.message, {
+                    title: confirmConfig.title,
+                    accept: confirmConfig.accept
+                });
+                if (!confirmed) return;
+            } else if (!window.confirm(confirmConfig.message)) {
+                return;
+            }
         }
         const dialog = document.getElementById('settingsAccountModal');
         dialog.querySelector('form').reset();
@@ -1225,33 +1240,11 @@
         }, confirmMessage);
     }
 
-    function handleTosaClearanceToggleClick(event, id) {
-        if (event) {
-            event.preventDefault(); // Stop toggle switch from changing before confirmation!
-        }
-        const user = settingsAccounts.get(Number(id));
-        if (!user || settingsMutationPending) return;
-
-        const isCurrentlyCleared = Boolean(user.tosa_clearance && user.tosa_clearance !== 'No Access');
-        const targetClearance = isCurrentlyCleared ? 'No Access' : 'Level 1 Read-only';
-        const confirmMessage = isCurrentlyCleared
-            ? `Revoke TOSA clearance for ${user.name}?`
-            : `Grant TOSA Level 1 clearance to ${user.name}?`;
-
-        runSettingsMutation(async () => {
-            const data = await postSettingsJson(`${osoAccountRoutes.userStatusBase}/${id}`, { tosa_clearance: targetClearance }, 'PATCH');
-            upsertOsoUser(data.user);
-            showSettingsToast(data.message || 'TOSA clearance updated.', 'success');
-        }, confirmMessage);
-    }
 
     function toggleOsoUserStatus(id, isActive) {
         return handleStatusToggleClick(null, id);
     }
 
-    function toggleOsoTosaClearance(id, clearance) {
-        return handleTosaClearanceToggleClick(null, id);
-    }
 
     document.querySelectorAll('[data-settings-user]').forEach(row => {
         upsertOsoUser(JSON.parse(row.dataset.settingsUser));

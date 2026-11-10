@@ -70,8 +70,18 @@
                 {{-- Sidebar Footer Meta --}}
                 <div class="org-settings-nav-footer">
                     <div style="font-size: 0.72rem; color: #7a7074; font-weight: 600;">Signed in as:</div>
-                    <div style="font-size: 0.8rem; font-weight: 800; color: #1a1618; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $office->name ?? 'OSO Review Officer' }}</div>
-                    <div style="font-size: 0.7rem; color: #8b1828; font-weight: 700;">{{ $brand['role'] ?? 'Office User' }}</div>
+                    <div style="font-size: 0.82rem; font-weight: 800; color: #1a1618; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $office->name ?? 'OSO Officer' }}</div>
+                    @php
+                        $roleTitle = $brand['role'] ?? 'Office User';
+                        $nameStr = strtolower(trim((string) ($office->name ?? '')));
+                        $roleStr = strtolower(trim((string) $roleTitle));
+                        $isDuplicate = $nameStr === $roleStr || (str_contains($nameStr, 'oso') && str_contains($roleStr, 'oso')) || (str_contains($nameStr, 'office') && str_contains($roleStr, 'officer'));
+                    @endphp
+                    @if (!$isDuplicate)
+                        <div style="font-size: 0.7rem; color: #8b1828; font-weight: 700;">{{ $roleTitle }}</div>
+                    @else
+                        <div style="font-size: 0.7rem; color: #7a7074; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $office->email }}</div>
+                    @endif
                 </div>
             </aside>
             @endif
@@ -143,7 +153,7 @@
                         <div class="org-settings-card-header">
                             <div class="org-settings-card-icon"><i class="bi bi-image-alt"></i></div>
                             <div>
-                                <h4 class="org-settings-card-title">Institutional Logo &amp; Insignia</h4>
+                                <h4 class="org-settings-card-title">Institutional Logo</h4>
                                 <p class="org-settings-card-desc">The saved logo is used as the office portal favicon.</p>
                             </div>
                         </div>
@@ -368,7 +378,7 @@
                                     <i class="bi bi-file-earmark-excel text-success" style="font-size: 1.75rem;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Organization Registry</strong>
-                                        <span style="font-size: 0.74rem; color: #64748b;">Student organization roster and active status (.CSV)</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Student organization roster and active status (.XLSX)</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Organization Roster')">Export</button>
                                 </div>
@@ -377,7 +387,7 @@
                                     <i class="bi bi-file-earmark-spreadsheet text-danger" style="font-size: 1.75rem;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Activity &amp; Budget Summary</strong>
-                                        <span style="font-size: 0.74rem; color: #64748b;">Activity dates, budgets, and workflow status (.CSV)</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Activity dates, budgets, and workflow status (.XLSX)</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" onclick="exportDataPackage('Accomplishment Dossier')">Export</button>
                                 </div>
@@ -386,13 +396,13 @@
                                     <i class="bi bi-award text-primary" style="font-size: 1.75rem;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">TOSA Applicant Manifest</strong>
-                                        <span style="font-size: 0.74rem; color: #64748b;">Applicants, stage, and requirement counts (.CSV). Available to authorized TOSA accounts.</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">Applicants, stage, and requirement counts (.XLSX). Available to authorized TOSA accounts.</span>
                                     </div>
                                     <button type="button" class="org-settings-btn-subtle" title="Requires TOSA clearance" onclick="exportDataPackage('TOSA Manifest')">Export</button>
                                 </div>
 
                                 <div class="org-settings-export-box">
-                                    <i class="bi bi-journal-code" style="font-size: 1.75rem; color: #8b1828;"></i>
+                                    <i class="bi bi-journal-code" style="font-size: 1.75rem; color: #000000;"></i>
                                     <div>
                                         <strong style="font-size: 0.88rem; color: #1a1618; display: block;">Office Account &amp; Configuration Snapshot</strong>
                                         <span style="font-size: 0.74rem; color: #64748b;">Same configuration snapshot with checksum (.JSON), not event logs</span>
@@ -1373,11 +1383,10 @@
         font-size: 0.7rem;
         font-weight: 700;
     }
-    #setPanel-users .org-settings-table td:nth-child(2)::before { content: 'Role / Office'; }
-    #setPanel-users .org-settings-table td:nth-child(3)::before { content: 'TOSA Clearance'; }
-    #setPanel-users .org-settings-table td:nth-child(4)::before { content: 'Account Status'; }
-    #setPanel-users .org-settings-table td:nth-child(5)::before { content: 'Last Updated'; }
-    #setPanel-users .org-settings-table td:nth-child(6)::before { content: 'Actions'; }
+    #setPanel-users .org-settings-table td:nth-child(2)::before { content: 'College / Dept'; }
+    #setPanel-users .org-settings-table td:nth-child(3)::before { content: 'Account Status'; }
+    #setPanel-users .org-settings-table td:nth-child(4)::before { content: 'Last Updated'; }
+    #setPanel-users .org-settings-table td:nth-child(5)::before { content: 'Actions'; }
     #setPanel-users .org-settings-user-actions { width: 100%; }
 }
 </style>
@@ -1744,7 +1753,7 @@
     async function downloadSettingsFile(url, label) {
         showSettingsToast(`Preparing ${label} for download…`, 'info');
         try {
-            const response = await fetch(url, { headers: { Accept: 'application/json, text/csv', 'X-Requested-With': 'XMLHttpRequest' } });
+            const response = await fetch(url, { headers: { Accept: 'application/json, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv, */*', 'X-Requested-With': 'XMLHttpRequest' } });
             if (!response.ok) throw new Error(await osoSettingsError(response));
             const disposition = response.headers.get('content-disposition') || '';
             if (response.redirected || !disposition.toLowerCase().includes('attachment')) {

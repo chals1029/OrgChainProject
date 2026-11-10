@@ -66,10 +66,11 @@
         .tosa-message-col textarea { width:100%; flex:1; min-height:8rem; resize:vertical; box-sizing:border-box; }
         .tosa-deadline-field { width:100%; display:flex; flex-direction:column; gap:.35rem; margin-top:auto; }
         .tosa-deadline-wrap { position:relative; display:flex; align-items:center; width:100%; }
-        .tosa-deadline-input { width:100%; padding-right:2.85rem; color:#2b2427; font-size:.84rem; }
-        .tosa-deadline-input::-webkit-calendar-picker-indicator { background:transparent; color:transparent; cursor:pointer; position:absolute; right:0; top:0; width:2.85rem; height:100%; margin:0; padding:0; opacity:0; z-index:2; }
-        .tosa-deadline-input::-webkit-inner-spin-button, .tosa-deadline-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; display:none; }
-        .tosa-deadline-icon { position:absolute; right:.85rem; color:#8b1828; pointer-events:none; font-size:1.15rem; display:flex; align-items:center; justify-content:center; z-index:1; }
+        .tosa-deadline-input { width:100%; color:#2b2427; font-size:.84rem; }
+        .tosa-deadline-input::-webkit-calendar-picker-indicator { cursor:pointer; }
+        .tosa-deadline-wrap.is-empty:not(:focus-within) .tosa-deadline-input::-webkit-datetime-edit { color:transparent; }
+        .tosa-deadline-placeholder { position:absolute; left:.65rem; color:#757575; font-size:.84rem; font-weight:400; pointer-events:none; }
+        .tosa-deadline-wrap:not(.is-empty) .tosa-deadline-placeholder, .tosa-deadline-wrap:focus-within .tosa-deadline-placeholder { display:none; }
         .tosa-announcement-col-right { display:flex; flex-direction:column; height:100%; min-width:0; }
         .tosa-attachment-col { display:flex; flex-direction:column; height:100%; flex:1; min-width:0; }
         .tosa-attachment-col .tosa-dropzone { flex:1; width:100%; height:100%; min-height:13.5rem; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
@@ -122,6 +123,12 @@
         .tosa-icon-button:hover:not(:disabled) { background:#fbf1f3; border-color:#d7b9c0; }
         .tosa-icon-button:disabled { opacity:.4; cursor:not-allowed; }
         .tosa-icon-button:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
+        .tosa-template-row [data-tooltip] { position:relative; }
+        .tosa-template-row [data-tooltip]::before, .tosa-template-row [data-tooltip]::after { position:absolute; left:50%; z-index:5; opacity:0; pointer-events:none; transform:translateX(-50%); }
+        .tosa-template-row [data-tooltip]::before { content:attr(data-tooltip); bottom:calc(100% + 7px); padding:.3rem .5rem; border-radius:6px; background:#30262a; color:#fff; font-size:.72rem; font-weight:600; line-height:1; white-space:nowrap; }
+        .tosa-template-row [data-tooltip]::after { content:''; bottom:calc(100% + 2px); border:5px solid transparent; border-top-color:#30262a; border-bottom:0; }
+        .tosa-template-row [data-tooltip]:hover::before, .tosa-template-row [data-tooltip]:hover::after, .tosa-template-row [data-tooltip]:focus-visible::before, .tosa-template-row [data-tooltip]:focus-visible::after { opacity:1; }
+        .tosa-template-replace summary[data-tooltip] { position:absolute; }
         .tosa-template-row, .tosa-call, .tosa-candidate { padding:.75rem 0; border-top:1px solid #f1e9eb; }
         .tosa-template-row { position:relative; }
         .tosa-template-row .tosa-file-row { padding:0; border:0; }
@@ -129,8 +136,11 @@
         .tosa-template-replace summary { position:absolute; top:.75rem; right:0; list-style:none; }
         .tosa-template-replace summary::-webkit-details-marker { display:none; }
         .tosa-template-replace form { display:grid; gap:.5rem; margin-top:.75rem; padding:.75rem; border:1px solid #f1e9eb; border-radius:10px; }
-        .tosa-template-replace label { display:grid; gap:.35rem; font-size:.82rem; }
-        .tosa-template-replace input[type=file] { max-width:100%; }
+        .tosa-replace-title { color:#30262a; font-size:.85rem; }
+        .tosa-template-replace input[type=file] { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+        .tosa-replace-file-label { justify-self:start; cursor:pointer; }
+        .tosa-template-replace input[type=file]:focus-visible + label { outline:2px solid #8b1828; outline-offset:2px; }
+        .tosa-template-replace .tosa-note:not(.is-selected):not(.is-error) { display:none; }
         .tosa-template-replace button { justify-self:start; }
         .tosa-footer button:disabled, .org-btn:disabled { opacity:.5; cursor:not-allowed; }
         .tosa-call-form { display:grid; gap:.75rem; width:100%; max-width:100%; margin:.75rem 0 0; box-sizing:border-box; }
@@ -555,22 +565,55 @@
                             <div class="tosa-file-actions">
                                 @if (!empty($template['url']))
                                     @if ($reference['format'] === 'XLSX')
-                                        <button type="button" class="tosa-icon-button" title="View {{ $reference['title'] }}" aria-label="View {{ $reference['title'] }}" data-tosa-workbook-open data-workbook-url="{{ route('office.tosa.workbook.preview') }}" data-workbook-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                        <button type="button" class="tosa-icon-button" data-tooltip="View" aria-label="View {{ $reference['title'] }}" data-tosa-workbook-open data-workbook-url="{{ route('office.tosa.workbook.preview') }}" data-workbook-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
                                     @else
-                                        <button type="button" class="tosa-icon-button" title="View {{ $reference['title'] }}" aria-label="View {{ $reference['title'] }}" data-document-preview data-document-preview-url="{{ $template['preview_url'] ?: $template['url'] }}" data-document-preview-title="{{ $reference['title'] }}" data-document-original-name="{{ $template['name'] }}" data-document-preview-type="{{ strtolower($reference['format']) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                        <button type="button" class="tosa-icon-button" data-tooltip="View" aria-label="View {{ $reference['title'] }}" data-document-preview data-document-preview-url="{{ $template['preview_url'] ?: $template['url'] }}" data-document-preview-title="{{ $reference['title'] }}" data-document-original-name="{{ $template['name'] }}" data-document-preview-type="{{ strtolower($reference['format']) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $template['url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
                                     @endif
-                                    <a class="tosa-icon-button" href="{{ $template['url'] }}?download=1" title="Download {{ $reference['title'] }}" aria-label="Download {{ $reference['title'] }}"><i class="bi bi-download" aria-hidden="true"></i></a>
+                                    <a class="tosa-icon-button" href="{{ $template['url'] }}?download=1" data-tooltip="Download" aria-label="Download {{ $reference['title'] }}"><i class="bi bi-download" aria-hidden="true"></i></a>
                                 @endif
                             </div>
                         </div>
                         @if ($tosaCanManageTemplates)
                             <details class="tosa-template-replace">
-                                <summary class="tosa-icon-button" title="Replace {{ $reference['title'] }}" aria-label="Replace {{ $reference['title'] }}"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></summary>
+                                <summary class="tosa-icon-button" data-tooltip="Replace" aria-label="Replace {{ $reference['title'] }}"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></summary>
                                 <form method="post" action="{{ route('office.tosa.references.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Replace this reference file?">
                                     @csrf <input type="hidden" name="reference_key" value="{{ $key }}">
-                                    <label>Choose {{ $reference['format'] }} file <input type="file" name="template_file" accept="{{ implode(',', array_map(fn ($extension) => '.'.$extension, $reference['extensions'])) }}" required data-org-upload data-max-size="20480" data-upload-status-id="tosa-template-status-{{ $key }}"></label>
+                                    <strong class="tosa-replace-title">Replace {{ $reference['title'] }}</strong>
+                                    <input id="tosa-template-file-{{ $key }}" type="file" name="template_file" aria-label="Replacement file for {{ $reference['title'] }}" accept="{{ implode(',', array_map(fn ($extension) => '.'.$extension, $reference['extensions'])) }}" required data-org-upload data-max-size="20480" data-upload-status-id="tosa-template-status-{{ $key }}">
+                                    <label class="org-btn org-btn-ghost org-btn-sm tosa-replace-file-label" for="tosa-template-file-{{ $key }}">Choose file</label>
                                     <p id="tosa-template-status-{{ $key }}" class="tosa-note" aria-live="polite"></p>
-                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm">Save reference</button>
+                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload Replacement</button>
+                                </form>
+                            </details>
+                        @endif
+                    </div>
+                @endforeach
+            </section>
+            <section class="tosa-card" aria-labelledby="tosaLetterTemplatesHeading">
+                <h2 id="tosaLetterTemplatesHeading"><strong>Decision Letter Templates</strong></h2>
+                <p class="tosa-note">Customize the Recognition Day ceremony date, venue, committee signatories, or congratulatory text in Microsoft Word. Ensure your uploaded DOCX retains the @{{NAME}} and @{{PROGRAM}} placeholders.</p>
+                @foreach ($tosaLetterTemplates ?? [] as $letter)
+                    <div class="tosa-template-row {{ $tosaCanManageTemplates ? 'has-replace' : '' }}">
+                        <div class="tosa-file-row">
+                            <div class="tosa-file-info">
+                                <span class="tosa-file-icon is-word" aria-hidden="true"><i class="bi bi-file-earmark-word"></i></span>
+                                <span class="tosa-file-copy"><strong>{{ $letter['title'] }}</strong><small>{{ $letter['is_custom'] ? 'Custom DOCX' : 'DOCX' }}</small></span>
+                            </div>
+                            <div class="tosa-file-actions">
+                                <button type="button" class="tosa-icon-button" data-tooltip="View" aria-label="View {{ $letter['title'] }}" data-document-preview data-document-preview-url="{{ $letter['preview_url'] }}" data-document-preview-title="{{ $letter['title'] }}" data-document-original-name="{{ $letter['filename'] }}" data-document-preview-type="docx" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $letter['download_url'] }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                <a class="tosa-icon-button" href="{{ $letter['download_url'] }}?download=1" data-tooltip="Download" aria-label="Download {{ $letter['title'] }}"><i class="bi bi-download" aria-hidden="true"></i></a>
+                            </div>
+                        </div>
+                        @if ($tosaCanManageTemplates)
+                            <details class="tosa-template-replace">
+                                <summary class="tosa-icon-button" data-tooltip="Replace" aria-label="Replace {{ $letter['title'] }}"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></summary>
+                                <form method="post" action="{{ route('office.tosa.letters.template.store') }}" enctype="multipart/form-data" data-org-upload-form data-confirm-message="Replace this decision letter template?">
+                                    @csrf <input type="hidden" name="decision" value="{{ $letter['key'] }}">
+                                    <strong class="tosa-replace-title">Replace {{ $letter['title'] }}</strong>
+                                    <input id="tosa-letter-file-{{ $letter['key'] }}" type="file" name="template_file" aria-label="Replacement file for {{ $letter['title'] }}" accept=".docx" required data-org-upload data-max-size="20480" data-upload-status-id="tosa-letter-status-{{ $letter['key'] }}">
+                                    <label class="org-btn org-btn-ghost org-btn-sm tosa-replace-file-label" for="tosa-letter-file-{{ $letter['key'] }}">Choose file</label>
+                                    <p id="tosa-letter-status-{{ $letter['key'] }}" class="tosa-note" aria-live="polite"></p>
+                                    <button type="submit" class="org-btn org-btn-primary org-btn-sm"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload Replacement</button>
                                 </form>
                             </details>
                         @endif
@@ -598,9 +641,9 @@
                                 </div>
                                 <div class="tosa-form-field tosa-deadline-field">
                                     <label for="tosa-expires-at">APPLICATION DEADLINE (CLOSES ON) *</label>
-                                    <div class="tosa-deadline-wrap">
-                                        <input id="tosa-expires-at" class="tosa-input tosa-deadline-input" type="datetime-local" name="expires_at" value="{{ old('expires_at') }}" placeholder="mm/dd/yyyy --:-- --" required>
-                                        <span class="tosa-deadline-icon" aria-hidden="true"><i class="bi bi-calendar-event"></i></span>
+                                    <div class="tosa-deadline-wrap {{ old('expires_at') ? '' : 'is-empty' }}">
+                                        <input id="tosa-expires-at" class="tosa-input tosa-deadline-input" type="datetime-local" name="expires_at" value="{{ old('expires_at') }}" required>
+                                        <span class="tosa-deadline-placeholder" aria-hidden="true">mm/dd/yyyy --:-- --</span>
                                     </div>
                                 </div>
                             </div>
@@ -837,7 +880,7 @@
 
 
                     @if ($tosaCanManageWorkflow)
-                        <div class="tosa-caption-box">
+                        <div class="tosa-caption-box" hidden style="display:none !important;">
                             <h3>Student announcement captions</h3>
                             <div class="tosa-caption-grid">
                                 <div class="tosa-caption-field">
@@ -943,6 +986,9 @@
                     'selection_updated' => ['Top 10 selection updated', 'bi-sliders', ''],
                     'top10_published' => ['Top 10 published', 'bi-award', 'is-review'],
                     'top10_unpublished' => ['Top 10 unpublished', 'bi-eye-slash', 'is-returned'],
+                    'result_email_sent' => ['Result email sent', 'bi-envelope-check', 'is-review'],
+                    'result_email_failed' => ['Result email failed', 'bi-envelope-exclamation', 'is-returned'],
+                    'result_email_skipped' => ['Result email skipped (dummy)', 'bi-envelope-slash', ''],
                 ];
             @endphp
             <div class="tosa-history-shell">
@@ -1338,6 +1384,23 @@
                     msgInput.addEventListener('input', updateMsgCount);
                     updateMsgCount();
                 }
+                const deadlineInput = document.getElementById('tosa-expires-at');
+                if (deadlineInput) {
+                    const updateDeadlinePlaceholder = () => deadlineInput.closest('.tosa-deadline-wrap').classList.toggle('is-empty', !deadlineInput.value);
+                    deadlineInput.addEventListener('input', updateDeadlinePlaceholder);
+                    deadlineInput.addEventListener('click', (event) => {
+                        if (typeof deadlineInput.showPicker !== 'function') return;
+                        try {
+                            deadlineInput.showPicker();
+                            event.preventDefault();
+                        } catch (_) {
+                            // Leave the browser's native input behavior available.
+                        }
+                    });
+                    deadlineInput.addEventListener('change', updateDeadlinePlaceholder);
+                    updateDeadlinePlaceholder();
+                }
+
 
                 const fileInput = document.getElementById('tosa-attachment-input');
                 const dropText = document.getElementById('tosaDropzoneText');
@@ -1360,6 +1423,7 @@
                         const expInput = document.getElementById('tosa-expires-at');
                         if (expInput && btn.dataset.announcementExpires) {
                             expInput.value = btn.dataset.announcementExpires;
+                            expInput.dispatchEvent(new Event('input'));
                         }
                         document.getElementById('tosaComposeHeading')?.scrollIntoView({ behavior: 'smooth' });
                         msgInput?.focus();

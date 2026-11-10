@@ -79,3 +79,5 @@ storage/framework/lsp-*.php
 
 # Local Graphify export for the Obsidian vault
 /ORGCHAIN/Graphify Generated/
+/ORGCHAIN/.graphify-export*
+/ORGCHAIN/.graphify-backup*

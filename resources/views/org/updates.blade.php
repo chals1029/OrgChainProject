@@ -18,15 +18,6 @@
     </p>
 @endsection
 
-@section('actions')
-    <div class="org-top-action-group">
-        @if ($isOso)
-            <button type="button" class="org-btn org-btn-primary org-btn-sm" onclick="focusAnnouncementComposer()">
-                <i class="bi bi-megaphone-fill"></i> Create Announcement
-            </button>
-        @endif
-    </div>
-@endsection
 
 @section('content')
     <style>

@@ -91,6 +91,7 @@ class OfficeUser extends Authenticatable
             'employee_id' => $this->employee_id,
             'student_organization_id' => $this->student_organization_id,
             'organization_name' => $this->organizationName(),
+            'org_logo_url' => $this->office_role === 'so' ? $this->studentOrganization?->logoUrl() : null,
             'initials' => $this->initials(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'tosa_clearance' => $this->effectiveTosaClearance(),

@@ -7,10 +7,8 @@
     $selectedSemester = $selectedSemester ?? '';
     $bundle = $reportBundle ?? [];
     $record = $bundle['reports'][$selectedTab] ?? [];
-    $reportTitle = $selectedTab === 'fr' ? 'Financial Report' : 'Accomplishment Report';
     $documents = !empty($record['can_view']) ? collect($record['documents'] ?? []) : collect();
     $reportDate = fn ($value) => $value ? \Illuminate\Support\Carbon::parse($value)->setTimezone(config('app.timezone'))->format('M j, Y g:i A') : 'Not yet';
-    $periodQuery = ['organization' => $selectedOrganization, 'academic_year' => $selectedYear, 'semester' => $selectedSemester];
     $previewReports = $documents->mapWithKeys(function ($document) use ($selectedYear, $selectedSemester, $selectedTab) {
         $nativeAr = $selectedTab === 'ar' && $document->accomplishment_summary !== null;
         return [(string) $document->id => [
@@ -45,15 +43,6 @@
             <div class="sr-notice is-error" role="alert"><strong>The report action could not be completed.</strong><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
         @if (session('success'))<div class="sr-notice" role="status">{{ session('success') }}</div>@endif
-        <section class="sr-card sr-period-card" aria-labelledby="srPeriodTitle">
-            <div class="sr-head"><div><h2 id="srPeriodTitle">Reporting period</h2><p class="sr-muted">Organization reports for the selected period.</p></div></div>
-            <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters" data-report-period-form>
-                <input type="hidden" name="tab" value="{{ $selectedTab }}">
-                <label>Organization<select name="organization"><option value="">All organizations</option>@foreach (($organizations ?? []) as $name)<option value="{{ $name }}" @selected($selectedOrganization === $name)>{{ $name }}</option>@endforeach</select></label>
-                <label>Academic year<select name="academic_year">@foreach (($reportingYears ?? []) as $year)<option value="{{ $year }}" @selected($selectedYear === (string) $year)>{{ $year }}</option>@endforeach</select></label>
-                <label>Semester<select name="semester">@foreach (($reportingSemesters ?? []) as $semester)<option value="{{ $semester }}" @selected($selectedSemester === $semester)>{{ $semester }}</option>@endforeach</select></label>
-            </form>
-        </section>
 
         <section class="sr-card sr-submission-card" id="reportSubmissionControls" aria-labelledby="reportSubmissionControlsTitle">
             <div class="sr-head">
@@ -89,7 +78,12 @@
 
         <section class="sr-card" id="srOrganizationDirectory" aria-labelledby="srDirectoryTitle">
             <div class="sr-head"><div><h2 id="srDirectoryTitle">Organization report directory</h2><p class="sr-muted">AY {{ $selectedYear }} · {{ $selectedSemester }}</p></div><span class="sr-muted" id="srDirectoryCount" role="status">{{ count($reportDirectory ?? []) }} organizations</span></div>
-            <label class="sr-search" for="srDirectorySearch">Search organizations<input id="srDirectorySearch" type="search" placeholder="Organization, abbreviation or college" autocomplete="off"></label>
+            <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters" data-report-period-form>
+                <input type="hidden" name="tab" value="{{ $selectedTab }}">
+                <label>Organization<select name="organization"><option value="">All organizations</option>@foreach (($organizations ?? []) as $name)<option value="{{ $name }}" @selected($selectedOrganization === $name)>{{ $name }}</option>@endforeach</select></label>
+                <label>Academic year<select name="academic_year">@foreach (($reportingYears ?? []) as $year)<option value="{{ $year }}" @selected($selectedYear === (string) $year)>{{ $year }}</option>@endforeach</select></label>
+                <label>Semester<select name="semester">@foreach (($reportingSemesters ?? []) as $semester)<option value="{{ $semester }}" @selected($selectedSemester === $semester)>{{ $semester }}</option>@endforeach</select></label>
+            </form>
             <div class="sr-directory-wrap">
                 <table class="sr-directory">
                     <thead><tr><th scope="col">Organization</th><th scope="col">Accomplishment Report (AR)</th><th scope="col">Financial Report (FR)</th><th scope="col">Reports</th></tr></thead>
@@ -147,75 +141,6 @@
             </div>
         </section>
 
-        @if ($selectedOrganization !== '')
-        <section class="sr-card" id="srSelectedReport" aria-labelledby="srSelectedTitle">
-                <div class="sr-head"><div><h2 id="srSelectedTitle">{{ $selectedOrganization }}</h2><p class="sr-muted">{{ $bundle['college'] ?? '' }} · AY {{ $selectedYear }} · {{ $selectedSemester }}</p></div></div>
-                <nav class="sr-tabs" aria-label="Report type">
-                    @foreach (['ar' => 'Accomplishment Report (AR)', 'fr' => 'Financial Report (FR)'] as $type => $title)
-                        @php($tabReport = $bundle['reports'][$type] ?? [])
-                        <a class="sr-tab" href="{{ route('office.reports.index', array_merge($periodQuery, ['tab' => $type])) }}#srSelectedReport" @if ($selectedTab === $type) aria-current="page" @endif>{{ $title }}<span class="sr-status is-{{ $tabReport['state'] ?? 'draft' }}">{{ empty($tabReport['can_view']) ? 'Not submitted' : ($tabReport['state_label'] ?? 'Submitted') }}</span></a>
-                    @endforeach
-                </nav>
-                <div class="sr-head"><h3>{{ $reportTitle }}</h3><span class="sr-status is-{{ $record['state'] ?? 'draft' }}">{{ empty($record['can_view']) ? 'Not submitted' : ($record['state_label'] ?? 'Submitted') }}</span></div>
-                <dl class="sr-dates">
-                    <div><dt>Submitted to OSO</dt><dd>{{ $reportDate($record['submitted_at'] ?? null) }}</dd></div>
-                    <div><dt>Opened by OSO</dt><dd>{{ $reportDate($record['opened_at'] ?? null) }}</dd></div>
-                    <div><dt>Reviewed by OSO</dt><dd>{{ $reportDate($record['reviewed_at'] ?? null) }}</dd></div>
-                </dl>
-                <div class="sr-remarks"><strong>OSO remarks</strong><p>{{ ($record['notes'] ?? null) ?: 'No reviewer remarks recorded.' }}</p></div>
-                @if (!empty($record['can_view']))
-                    <div class="sr-documents" aria-label="Submitted {{ strtoupper($selectedTab) }} documents">
-                        @forelse ($documents as $document)
-                            <div class="sr-document">
-                                <div><strong>{{ $document->name ?: $document->original_name }}</strong><small>{{ $document->original_name }} · Saved {{ $reportDate($document->created_at) }}</small></div>
-                                <div class="sr-actions">
-                                    @if ($previewReports[(string) $document->id]['has_file'])
-                                        <button type="button" class="app-view-action" data-fin-view="{{ $document->id }}" aria-label="View {{ $document->original_name }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
-                                        <a class="org-btn org-btn-ghost org-btn-sm" href="{{ $previewReports[(string) $document->id]['download_url'] }}"><i class="bi bi-download"></i> Download original</a>
-                                    @else
-                                        <span class="sr-danger">The submitted file is missing or unreadable.</span>
-                                    @endif
-                                </div>
-                            </div>
-                        @empty
-                            <p class="sr-notice">No submitted {{ strtoupper($selectedTab) }} document is available for this period.</p>
-                        @endforelse
-                    </div>
-                @else
-                    <p class="sr-notice">@if (($record['state'] ?? '') === 'returned')Returned for revision. Documents become available after resubmission.@else Not submitted. Draft documents are private.@endif</p>
-                @endif
-                @if (!empty($record['can_review']))
-                    <h3>Review {{ strtoupper($selectedTab) }}</h3>
-                    <p class="sr-muted">These actions apply only to the selected {{ $reportTitle }}. Return for fixable issues.</p>
-                    <div class="sr-review-grid" style="grid-template-columns: 1fr;">
-                        @foreach (['return' => 'Return for Revision'] as $decision => $label)
-                            <form method="post" action="{{ route('office.reports.review', ['reportType' => $selectedTab]) }}" class="sr-review" data-sr-review-form>
-                                @csrf
-                                <input type="hidden" name="reportType" value="{{ $selectedTab }}">
-                                <input type="hidden" name="organization_name" value="{{ $selectedOrganization }}">
-                                <input type="hidden" name="semester" value="{{ $selectedSemester }}">
-                                <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
-                                <input type="hidden" name="decision" value="{{ $decision }}">
-                                <label>Revision reason (required)<textarea name="notes" rows="3" required>{{ old('decision') === $decision && old('reportType') === $selectedTab ? old('notes') : '' }}</textarea></label>
-                                <button type="submit" class="org-btn org-btn-ghost">{{ $label }} — {{ strtoupper($selectedTab) }}</button>
-                            </form>
-                        @endforeach
-                    </div>
-                    <form method="post" action="{{ route('office.reports.review', ['reportType' => $selectedTab]) }}" class="sr-actions sr-verify">
-                        @csrf
-                        <input type="hidden" name="reportType" value="{{ $selectedTab }}">
-                        <input type="hidden" name="organization_name" value="{{ $selectedOrganization }}">
-                        <input type="hidden" name="semester" value="{{ $selectedSemester }}">
-                        <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
-                        <input type="hidden" name="decision" value="accept">
-                        <button type="submit" class="org-btn org-btn-primary" @disabled(empty($record['has_document']))><i class="bi bi-check2-circle"></i> Verify &amp; archive {{ strtoupper($selectedTab) }}</button>
-                    </form>
-                    @if (empty($record['has_document']))<p class="sr-notice is-error">Verification and archiving require a readable submitted file. Return this {{ strtoupper($selectedTab) }} for revision.</p>@endif
-                @elseif (($record['state'] ?? '') === 'oso_review')
-                    <p class="sr-notice is-error">This report is not currently eligible for a review decision.</p>
-                @endif
-        </section>
-        @endif
     </div>
 
     <style>
@@ -615,14 +540,14 @@
             const rows = Array.from(document.querySelectorAll('[data-sr-directory-row]'));
             const pageSize = 5;
             const params = new URLSearchParams(location.search);
-            search.value = params.get('directory_search') || '';
+            if (search) search.value = params.get('directory_search') || '';
             let page = Math.max(1, Number.parseInt(params.get('directory_page'), 10) || 1);
             if (!params.has('directory_page')) {
                 const selectedIndex = rows.findIndex(row => row.classList.contains('is-selected'));
                 if (selectedIndex >= 0) page = Math.floor(selectedIndex / pageSize) + 1;
             }
             function renderDirectory() {
-                const query = search.value.trim().toLowerCase();
+                const query = search ? search.value.trim().toLowerCase() : '';
                 const matches = rows.filter(row => row.dataset.search.includes(query));
                 const pages = Math.max(1, Math.ceil(matches.length / pageSize));
                 page = Math.min(page, pages);
@@ -638,18 +563,18 @@
                 document.getElementById('srDirectoryNext').disabled = page === pages;
                 const url = new URL(location.href);
                 url.searchParams.set('directory_page', String(page));
-                if (search.value) url.searchParams.set('directory_search', search.value);
+                if (search?.value) url.searchParams.set('directory_search', search.value);
                 else url.searchParams.delete('directory_search');
                 history.replaceState(null, '', url);
                 document.querySelectorAll('[data-sr-view-submitted], .sr-tabs a').forEach(link => {
                     const target = new URL(link.href);
                     target.searchParams.set('directory_page', String(page));
-                    if (search.value) target.searchParams.set('directory_search', search.value);
+                    if (search?.value) target.searchParams.set('directory_search', search.value);
                     else target.searchParams.delete('directory_search');
                     link.href = target.href;
                 });
             }
-            search.addEventListener('input', () => { page = 1; renderDirectory(); });
+            search?.addEventListener('input', () => { page = 1; renderDirectory(); });
             function changePage(delta) {
                 page += delta;
                 renderDirectory();
