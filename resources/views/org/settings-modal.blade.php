@@ -70,10 +70,10 @@
                 {{-- Sidebar Footer Meta --}}
                 <div class="org-settings-nav-footer">
                     <div style="font-size: 0.72rem; color: #7a7074; font-weight: 600;">Signed in as:</div>
-                    <div style="font-size: 0.82rem; font-weight: 800; color: #1a1618; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $office->name ?? 'OSO Officer' }}</div>
+                    <div style="font-size: 0.82rem; font-weight: 800; color: #1a1618; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $office->displayName() }}</div>
                     @php
                         $roleTitle = $brand['role'] ?? 'Office User';
-                        $nameStr = strtolower(trim((string) ($office->name ?? '')));
+                        $nameStr = strtolower(trim($office->displayName()));
                         $roleStr = strtolower(trim((string) $roleTitle));
                         $isDuplicate = $nameStr === $roleStr || (str_contains($nameStr, 'oso') && str_contains($roleStr, 'oso')) || (str_contains($nameStr, 'office') && str_contains($roleStr, 'officer'));
                     @endphp
@@ -244,11 +244,18 @@
                         </div>
                         <div class="org-settings-card-body">
                             <div class="org-settings-profile-head">
-                                <div class="org-settings-avatar-big">
-                                    <span id="settingsProfileInitials">{{ $office->initials() ?? 'OSO' }}</span>
+                                <div class="org-settings-avatar-big" style="overflow: hidden; padding: 3px; background: #fff;">
+                                    @if (!empty($settingsLogoUrl))
+                                        <img src="{{ $settingsLogoUrl }}" alt="{{ $office->displayName() }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+                                    @else
+                                        <span id="settingsProfileInitials">{{ $office->initials() ?? 'OSO' }}</span>
+                                    @endif
                                 </div>
                                 <div>
-                                    <h4 id="settingsProfileName" style="margin: 0 0 0.15rem; font-size: 1.1rem; color: #1a1618;">{{ $office->name ?? 'Office Review Officer' }}</h4>
+                                    <h4 id="settingsProfileName" style="margin: 0 0 0.15rem; font-size: 1.1rem; color: #1a1618;">{{ $office->displayName() }}</h4>
+                                    @if ($office->studentOrganization)
+                                        <div style="margin-bottom: 0.35rem; font-size: 0.8rem; color: #64748b;">{{ $office->studentOrganization->name }}</div>
+                                    @endif
                                     <span style="font-size: 0.8rem; color: #8b1828; font-weight: 700; background: #fdf0f2; padding: 0.2rem 0.55rem; border-radius: 6px; display: inline-block;">
                                         <i class="bi bi-patch-check-fill"></i> Office Account
                                     </span>
@@ -261,7 +268,7 @@
                             <div class="org-settings-grid-2" style="margin-top: 1.25rem;">
                                 <div class="org-settings-field">
                                     <label for="setOfficerName" class="org-settings-label">Full Name &amp; Title</label>
-                                    <input type="text" id="setOfficerName" class="org-settings-input" value="{{ $office->name ?? 'Dr. Rosalinda M. Comia' }}">
+                                    <input type="text" id="setOfficerName" class="org-settings-input" value="{{ $office->displayName() }}">
                                 </div>
                                 <div class="org-settings-field">
                                     <label for="setOfficerDesignation" class="org-settings-label">Official Designation</label>

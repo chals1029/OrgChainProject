@@ -8,14 +8,12 @@
 
 @section('header')
     <h1><strong>Updates &amp; Announcements</strong></h1>
-    <p class="org-welcome">
-        @if ($isOso)
+    @if ($isOso)
+        <p class="org-welcome">
             Broadcast official notices, deadlines, guidelines, and manage official template documents for student organizations.
-        @else
-            Official announcements, notices, and compliance template downloads from the Office of Student Organizations.
-        @endif
-        <span data-organization-registry-total="{{ $organizationRegistry['registered'] }}">{{ $organizationRegistry['registered'] }} registered organizations · all academic years, including inactive records.</span>
-    </p>
+            <span data-organization-registry-total="{{ $organizationRegistry['registered'] }}">{{ $organizationRegistry['registered'] }} registered organizations · all academic years, including inactive records.</span>
+        </p>
+    @endif
 @endsection
 
 
@@ -1153,7 +1151,13 @@
         <section class="aso-composer" id="composerSection">
             <div class="aso-composer-header">
                 <div class="aso-composer-profile">
-                    <div class="aso-avatar">{{ $office->initials() }}</div>
+                    <div class="aso-avatar {{ !empty($brand['logo_url']) ? 'has-logo' : '' }}" style="overflow: hidden; @if(!empty($brand['logo_url'])) background: #fff; border: 1.5px solid var(--aso-border); padding: 2px; @endif">
+                        @if (!empty($brand['logo_url']))
+                            <img src="{{ $brand['logo_url'] }}" alt="{{ $office->name }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;">
+                        @else
+                            <span>{{ $office->initials() }}</span>
+                        @endif
+                    </div>
                     <div class="aso-composer-info">
                         <strong>{{ $office->name }} <i class="bi bi-patch-check-fill" style="color: #2563eb;" title="Verified University Entity"></i></strong>
                     </div>
@@ -1268,9 +1272,6 @@
                 <button type="button" class="aso-filter-btn is-active" data-filter="all" onclick="filterAnnouncements('all', this)">
                     All Updates ({{ count($announcements) }})
                 </button>
-                <button type="button" class="aso-filter-btn" data-filter="high" onclick="filterAnnouncements('high', this)">
-                    <i class="bi bi-exclamation-circle-fill" style="color: #ef4444;"></i> High Priority
-                </button>
                 <button type="button" class="aso-filter-btn" data-filter="General" onclick="filterAnnouncements('General', this)">
                     <i class="bi bi-megaphone-fill" aria-hidden="true"></i> General Announcement
                 </button>
@@ -1307,7 +1308,13 @@
                     <div>
                         <div class="aso-card-head">
                             <div class="aso-card-author">
-                                <div class="aso-card-avatar"><i class="bi bi-building"></i></div>
+                                <div class="aso-card-avatar" style="overflow: hidden; @if(!empty($brand['logo_url'])) background: #fff; border: 1px solid var(--aso-border); padding: 1px; @endif">
+                                    @if (!empty($brand['logo_url']))
+                                        <img src="{{ $brand['logo_url'] }}" alt="" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;">
+                                    @else
+                                        <i class="bi bi-building"></i>
+                                    @endif
+                                </div>
                                 <span class="aso-card-author-name">{{ $item['author'] }}</span>
                             </div>
                             <span class="aso-card-time">{{ $item['time'] }}</span>
@@ -1317,11 +1324,6 @@
                             <span class="aso-badge {{ $typeBadgeClass }}">
                                 {{ $type }}
                             </span>
-                            @if ($isHigh)
-                                <span class="aso-badge aso-badge-priority-high">HIGH</span>
-                            @else
-                                <span class="aso-badge aso-badge-priority-normal">NORMAL</span>
-                            @endif
                         </div>
 
                         <h3 class="aso-card-title">{{ $item['title'] }}</h3>
@@ -1395,9 +1397,6 @@
                                 <td style="white-space: nowrap;">
                                     <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
                                         <span class="aso-badge {{ $typeBadgeClass }}">{{ $type }}</span>
-                                        @if ($isHigh)
-                                            <span class="aso-badge aso-badge-priority-high">HIGH</span>
-                                        @endif
                                     </div>
                                 </td>
                                 <td class="aso-tbl-title-cell">
@@ -1634,6 +1633,9 @@
                     Announcement Subject
                 </h2>
                 <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--aso-ink-muted); margin-bottom: 1.15rem;">
+                    @if (!empty($brand['logo_url']))
+                        <img src="{{ $brand['logo_url'] }}" alt="" style="width: 20px; height: 20px; object-fit: contain; border-radius: 50%; border: 1px solid var(--aso-border); flex-shrink: 0;">
+                    @endif
                     <span style="font-weight: 700; color: var(--aso-ink-dark);" id="modalAnnounceAuthor">Office of Student Organizations</span>
                     <span>·</span>
                     <span id="modalAnnounceTime">2 hours ago</span>
@@ -1748,7 +1750,7 @@
         <div class="aso-modal-box" style="max-width:100%;">
             <div class="aso-modal-header">
                 <h3><i class="bi bi-file-earmark-ruled-fill" style="color: var(--aso-maroon);"></i> <span id="docxPreviewTitle">Document Preview</span></h3>
-                <button type="button" class="aso-modal-close" onclick="closeDocxPreviewModal()">&times;</button>
+                <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="closeDocxPreviewModal()" style="display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button>
             </div>
             <div id="docxPreviewBody" style="background:#f1f5f9;border:1px solid var(--aso-border);border-radius:12px;padding:1rem;max-height:62vh;overflow:auto;">
                 <p style="margin:0;font-size:0.85rem;color:var(--aso-ink-muted);">Loading preview…</p>
@@ -1760,7 +1762,6 @@
                 #docxPreviewBody img { min-height:0; max-height:58vh; object-fit:contain; }
             </style>
             <div style="display:flex;justify-content:flex-end;gap:0.65rem;margin-top:1rem;">
-                <button type="button" class="org-btn org-btn-ghost" onclick="closeDocxPreviewModal()">Close</button>
                 <a class="aso-btn-download" id="docxPreviewDownloadBtn" href="#" style="text-decoration:none;">
                     <i class="bi bi-download"></i> Download Document
                 </a>

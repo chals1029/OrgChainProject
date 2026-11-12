@@ -1,7 +1,25 @@
 (function () {
     'use strict';
 
+    if (window.initReceiptUpload) {
+        window.initReceiptUpload();
+        return;
+    }
+
+    let activeCleanup = null;
+    let activeController = null;
+
+    window.initReceiptUpload = function () {
+    activeController?.abort();
+    activeCleanup?.();
     const form = document.getElementById('soExpenseForm');
+    document.querySelectorAll('body > #soCameraModal').forEach((el) => {
+        if (!form || !form.contains(el)) el.remove();
+    });
+    activeController = new AbortController();
+    const signal = activeController.signal;
+    activeCleanup = null;
+
     if (!form) return;
 
     const mainInput = document.getElementById('soReceiptInput');
@@ -182,37 +200,37 @@
         mainInput.click();
     };
 
-    mainInput?.addEventListener('change', () => addFiles(mainInput.files));
+    mainInput?.addEventListener('change', () => addFiles(mainInput.files), { signal });
     document.getElementById('soUploadGalleryBtn')?.addEventListener('click', (event) => {
         event.stopPropagation();
         openGallery();
-    });
+    }, { signal });
     dropzone?.addEventListener('click', (event) => {
         if (!event.target.closest('button')) openGallery();
-    });
+    }, { signal });
     dropzone?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             openGallery();
         }
-    });
+    }, { signal });
     dropzone?.addEventListener('dragenter', (event) => {
         if (!transferHasFiles(event.dataTransfer)) return;
         event.preventDefault();
         dragDepth += 1;
         dropzone.classList.add('is-dragging');
-    });
+    }, { signal });
     dropzone?.addEventListener('dragover', (event) => {
         if (!transferHasFiles(event.dataTransfer)) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
         dropzone.classList.add('is-dragging');
-    });
+    }, { signal });
     dropzone?.addEventListener('dragleave', (event) => {
         if (!transferHasFiles(event.dataTransfer)) return;
         dragDepth = Math.max(0, dragDepth - 1);
         if (!dragDepth) dropzone.classList.remove('is-dragging');
-    });
+    }, { signal });
     dropzone?.addEventListener('drop', (event) => {
         if (!transferHasFiles(event.dataTransfer)) return;
         event.preventDefault();
@@ -220,18 +238,18 @@
         dragDepth = 0;
         dropzone.classList.remove('is-dragging');
         addFiles(filesFromTransfer(event.dataTransfer));
-    });
+    }, { signal });
 
     // Prevent the browser from navigating to a dropped image/PDF when the
     // pointer leaves the zone by a few pixels. The dropzone handler above
     // still owns drops inside the zone and imports the files into the input.
     document.addEventListener('dragover', (event) => {
         if (transferHasFiles(event.dataTransfer)) event.preventDefault();
-    });
+    }, { signal });
     document.addEventListener('drop', (event) => {
         if (!transferHasFiles(event.dataTransfer)) return;
         if (!event.target.closest?.('#soReceiptDropzone')) event.preventDefault();
-    });
+    }, { signal });
     previewBox?.addEventListener('click', (event) => {
         const remove = event.target.closest('[data-remove-file]');
         if (!remove) return;
@@ -244,7 +262,7 @@
         } else {
             setStatus('No receipt selected.');
         }
-    });
+    }, { signal });
 
     const modal = () => document.getElementById('soCameraModal');
     const video = () => document.getElementById('soCameraVideo');
@@ -278,6 +296,10 @@
             currentModal.style.display = '';
         }
     };
+    activeCleanup = () => {
+        stopCamera();
+        clearPreview();
+    };
 
     const appendCameraFile = (file) => {
         if (file) addFiles([file]);
@@ -297,6 +319,7 @@
                 throw error;
             }
         }
+        if (signal.aborted) return;
 
         if (currentModal.parentElement !== document.body) document.body.appendChild(currentModal);
         const box = errorBox();
@@ -309,8 +332,13 @@
                 video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
                 audio: false,
             });
+            if (signal.aborted) {
+                cameraStream.getTracks().forEach((track) => track.stop());
+                cameraStream = null;
+                return;
+            }
         } catch (error) {
-            stopCamera();
+            if (!signal.aborted) stopCamera();
             throw error;
         }
 
@@ -332,17 +360,17 @@
 
     document.getElementById('soOpenCameraBtn')?.addEventListener('click', () => {
         openCamera().catch((error) => {
-            if (error?.message !== 'camera-denied') cameraInput?.click();
+            if (!signal.aborted && error?.message !== 'camera-denied') cameraInput?.click();
         });
-    });
-    document.getElementById('soCameraCloseBtn')?.addEventListener('click', stopCamera);
+    }, { signal });
+    document.getElementById('soCameraCloseBtn')?.addEventListener('click', stopCamera, { signal });
     document.getElementById('soCameraPickerBtn')?.addEventListener('click', () => {
         stopCamera();
         cameraInput?.click();
-    });
+    }, { signal });
     modal()?.addEventListener('click', (event) => {
         if (event.target === modal()) stopCamera();
-    });
+    }, { signal });
     document.getElementById('soCameraSnapBtn')?.addEventListener('click', () => {
         const currentVideo = video();
         if (!currentVideo?.videoWidth) {
@@ -357,18 +385,18 @@
             stopCamera();
             if (blob) appendCameraFile(new File([blob], 'receipt-' + Date.now() + '.jpg', { type: 'image/jpeg' }));
         }, 'image/jpeg', 0.92);
-    });
+    }, { signal });
     cameraInput?.addEventListener('change', () => {
         const file = cameraInput.files?.[0];
         if (file) appendCameraFile(file);
         cameraInput.value = '';
-    });
+    }, { signal });
 
     const bindRow = (row) => {
         row.querySelector('[data-remove-row]')?.addEventListener('click', () => {
             row.remove();
             syncItemLabels();
-        });
+        }, { signal });
     };
 
     const syncItemLabels = () => {
@@ -421,7 +449,7 @@
         const row = addExpenseRow(index);
         syncItemLabels();
         row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+    }, { signal });
 
     form.addEventListener('submit', (event) => {
         if (selectedFiles.length && mainInput?.dataset.uploadInvalid !== 'true') {
@@ -432,7 +460,7 @@
         setStatus(selectedFiles.length ? 'Choose valid JPG, PNG, WebP, or PDF files up to 5 MB each.' : 'Upload at least one receipt or supporting document.', true);
         mainInput?.focus();
         document.getElementById('soReceiptCapture')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    }, { signal });
 
     form.addEventListener('reset', () => {
         stopCamera();
@@ -441,9 +469,12 @@
             clearFiles();
             syncItemLabels();
         }, 0);
-    });
+    }, { signal });
 
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) stopCamera();
-    });
+    }, { signal });
+    };
+
+    window.initReceiptUpload();
 })();

@@ -14,6 +14,7 @@ status: active
 
 > [!abstract] Governance Hierarchy
 > The OrgChain Administrative Desk (`/office-desk`) is structured around BatStateU's staged institutional review chain for student organizations. OVCAA reviews and endorses; the Office of the Chancellor (OC) records final approval.
+> The shared office sidebar highlights the active page without a static “New” badge on Dashboard.
 
 ---
 

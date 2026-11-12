@@ -25,6 +25,13 @@
         fit();
         return;
     }
+    let deskListeners;
+    let cleanupDesk;
+    window.initOrgAccomplishment = function () {
+    deskListeners?.abort();
+    cleanupDesk?.();
+    deskListeners = new AbortController();
+    const signal = deskListeners.signal;
 
     const payload = document.getElementById('orgAccomplishmentData');
     if (!payload) return;
@@ -39,6 +46,8 @@
     const evidenceList = document.getElementById('arEvidenceList');
     const evidenceError = document.getElementById('arEvidenceError');
     const objectUrls = new Set();
+    cleanupDesk = () => objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    window.addEventListener('pagehide', cleanupDesk, { signal });
     let photoIndex = 0;
     let printOnLoad = false;
     let opener = null;
@@ -99,7 +108,7 @@
         if (!link) return;
         event.preventDefault();
         showPreview(link.dataset.accPreview || link.href, link.dataset.accPreviewTitle || 'Semester accomplishment packet', link.dataset.accPreviewDownload, link, false);
-    });
+    }, { signal });
     const printPreview = () => {
         try { frame.contentWindow.focus(); frame.contentWindow.print(); }
         catch (_) { previewStatus.hidden = false; previewStatus.textContent = 'Printing could not start. Open the saved report and use your browser’s Print command.'; }
@@ -123,7 +132,7 @@
     const uploadForm = document.getElementById('arUploadForm');
     const uploadFile = document.getElementById('arUploadFile');
     if (upload && uploadForm) {
-        document.querySelectorAll('[data-ar-upload]').forEach((button) => button.addEventListener('click', () => openDialog(upload, button)));
+        document.querySelectorAll('[data-ar-upload]').forEach((button) => button.addEventListener('click', () => openDialog(upload, button), { signal }));
         uploadFile.addEventListener('change', () => {
             const file = uploadFile.files[0];
             const message = file && !/\.(docx?|pdf)$/i.test(file.name) ? 'Choose a DOC, DOCX or PDF report.' : file && file.size > 20 * 1024 * 1024 ? 'The report must be no larger than 20 MB.' : '';
@@ -289,5 +298,6 @@
         openDialog(editor);
         document.getElementById('arEditorErrors')?.focus();
     }
-    window.addEventListener('pagehide', () => objectUrls.forEach((url) => URL.revokeObjectURL(url)));
+    };
+    window.initOrgAccomplishment();
 })();

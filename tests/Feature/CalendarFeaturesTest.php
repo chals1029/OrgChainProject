@@ -110,9 +110,9 @@ class CalendarFeaturesTest extends TestCase
         $this->assertSame([$pending->id, $returned->id, $staleDisplay->id], $response->viewData('upcomingEvents')->pluck('id')->all());
     }
 
-    public function test_spanning_events_appear_each_day_and_midnight_end_is_exclusive(): void
+    public function test_short_spans_occupy_each_day_and_midnight_end_is_exclusive(): void
     {
-        $span = $this->activity(['starts_at' => '2026-10-30 09:00:00', 'ends_at' => '2026-11-02 17:00:00']);
+        $span = $this->activity(['starts_at' => '2026-10-30 09:00:00', 'ends_at' => '2026-11-01 17:00:00']);
         $midnight = $this->activity(['starts_at' => '2026-10-31 20:00:00', 'ends_at' => '2026-11-01 00:00:00']);
         $point = $this->activity(['starts_at' => '2026-10-31 08:00:00', 'ends_at' => null]);
         $october = $this->calendar(['month' => '2026-10']);
@@ -123,28 +123,39 @@ class CalendarFeaturesTest extends TestCase
         $this->assertNotContains($midnight->id, $this->idsForDate($october, '2026-11-01'));
         $this->assertContains($point->id, $this->idsForDate($october, '2026-10-31'));
         $this->assertNotContains($point->id, $this->idsForDate($october, '2026-11-01'));
-        $november = $this->calendar(['month' => '2026-11']);
-        $this->assertContains($span->id, $this->idsForDate($november, '2026-11-01'));
-        $this->assertContains($span->id, $this->idsForDate($november, '2026-11-02'));
-        $this->assertNotContains($span->id, $this->idsForDate($november, '2026-11-03'));
     }
 
-    public function test_year_crossing_long_spans_are_clipped_to_the_requested_grid(): void
+    public function test_long_spans_show_only_labeled_endpoints_across_months(): void
+    {
+        $long = $this->activity(['title' => 'Long activity', 'starts_at' => '2026-10-30 09:00:00', 'ends_at' => '2027-01-02 00:00:00']);
+        $october = $this->calendar(['month' => '2026-10']);
+        $this->assertSame('Long activity (Starts)', $october->viewData('eventsByDate')['2026-10-30'][0]['display_title']);
+        $this->assertNotContains($long->id, $this->idsForDate($october, '2026-10-31'));
+        $october->assertSee('Long activity (Starts)');
+
+        $december = $this->calendar(['month' => '2026-12']);
+        foreach ($december->viewData('days') as $day) {
+            if ($day['inMonth']) {
+                $this->assertNotContains($long->id, $this->idsForDate($december, $day['date']->toDateString()));
+            }
+        }
+        $january = $this->calendar(['month' => '2027-01']);
+        $this->assertSame('Long activity (Ends)', $january->viewData('eventsByDate')['2027-01-02'][0]['display_title']);
+        $this->assertNotContains($long->id, $this->idsForDate($january, '2027-01-01'));
+        $january->assertSee('Long activity (Ends)');
+    }
+
+    public function test_year_crossing_short_spans_are_clipped_to_the_requested_grid(): void
     {
         $span = $this->activity(['starts_at' => '2026-12-31 20:00:00', 'ends_at' => '2027-01-02 06:00:00']);
-        $long = $this->activity(['starts_at' => '2025-01-01 09:00:00', 'ends_at' => '2028-01-01 00:00:00']);
         $response = $this->calendar(['month' => '2027-01']);
         $days = $response->viewData('days');
         $this->assertSame('2026-12-28', $days[0]['date']->toDateString());
         $this->assertSame('2027-01-31', $days[count($days) - 1]['date']->toDateString());
         $this->assertSame(35, count($days));
-        foreach ($days as $day) {
-            $this->assertContains($long->id, $this->idsForDate($response, $day['date']->toDateString()));
-        }
         $this->assertContains($span->id, $this->idsForDate($response, '2027-01-01'));
         $this->assertContains($span->id, $this->idsForDate($response, '2027-01-02'));
         $this->assertNotContains($span->id, $this->idsForDate($response, '2027-01-03'));
-        $this->assertSame(count($days), count($response->viewData('eventsByDate')));
     }
 
     public function test_calendar_keeps_duplicate_title_identities_and_later_off_campus_events(): void

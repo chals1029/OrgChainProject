@@ -34,7 +34,7 @@
             <div class="budget-receipt-actions">
                 <a id="budgetReceiptPreviewDownload" class="org-file-action-btn" download><i class="bi bi-download"></i> Download Original</a>
                 <a id="budgetReceiptPreviewExternal" class="org-file-action-btn" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Open in Tab</a>
-                <button type="button" id="budgetReceiptPreviewClose" class="org-file-action-btn" aria-label="Close receipt preview" autofocus><i class="bi bi-x-lg"></i></button>
+                <button type="button" id="budgetReceiptPreviewClose" class="org-file-action-btn" aria-label="Close receipt preview" autofocus><i class="bi bi-x-lg"></i> Close</button>
             </div>
         </header>
         <nav class="budget-receipt-files" aria-label="Receipt attachments">

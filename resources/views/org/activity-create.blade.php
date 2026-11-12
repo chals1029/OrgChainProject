@@ -257,11 +257,6 @@
                     <i class="bi bi-info-circle"></i>
                     <span><strong>Submission rule:</strong> Complete and upload every required document. Unchanged templates and known unfinished Word placeholders are not accepted; OSO will review the contents and signatures.</span>
                 </div>
-                <label class="ap-rule">
-                    <input type="checkbox" name="documents_complete" value="1" required data-label="Confirm completed documents" @checked(old('documents_complete'))>
-                    <span>I have completed the required documents and checked that they are ready for review.</span>
-                </label>
-                @error('documents_complete') <p class="ap-upload-notice is-error" role="alert">{{ $message }}</p> @enderror
                 <div id="activityUploadNotice" class="ap-upload-notice" role="status" aria-live="polite" hidden></div>
                 @foreach ($requirementSets as $typeKey => $requirements)
                     <div class="ap-requirement-panel" data-requirement-type="{{ $typeKey }}" @if ($currentType !== $typeKey) hidden @endif>
@@ -292,20 +287,6 @@
                                         <a href="{{ route('office.activities.templates.download', ['type' => $typeKey, 'file' => $sourceFile]) }}"><i class="bi bi-download"></i> Download</a>
                                     </div>
                                     @error('attachments.'.$requirement['key']) <em>{{ $message }}</em> @enderror
-                                    @if ($hasFile && $submission->exists)
-                                        <div class="ap-document-links">
-                                            <button type="button" class="app-view-action" aria-label="View current {{ $requirement['title'] }} file" data-document-preview
-                                                    data-document-preview-url="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'preview' => 1]) }}"
-                                                    data-document-preview-title="{{ $storedFile['name'] ?? $requirement['title'] }}"
-                                                    data-document-original-name="{{ $storedFile['name'] ?? basename($storedFile['path']) }}"
-                                                    data-document-preview-type="{{ strtolower(pathinfo($storedFile['name'] ?? $storedFile['path'], PATHINFO_EXTENSION)) }}"
-                                                    data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
-                                                    data-document-preview-download="{{ route('office.activities.attachments.file', ['submission' => $submission->id, 'key' => $requirement['key'], 'download' => 1]) }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
-                                            <button type="button" data-attachment-delete
-                                                    data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $requirement['key']]) }}"
-                                                    data-attachment-name="{{ $storedFile['name'] ?? $requirement['title'] }}">Remove current file</button>
-                                        </div>
-                                    @endif
                                 </div>
                                 <div class="ap-requirement-upload">
                                     <span class="ap-file-status" data-file-status data-current-name="{{ $hasFile ? ($storedFile['name'] ?? basename($storedFile['path'])) : '' }}">
@@ -331,6 +312,11 @@
                         @endforeach
                     </div>
                 @endforeach
+                <label class="ap-rule" style="margin-top: 1rem;">
+                    <input type="checkbox" name="documents_complete" value="1" required data-label="Confirm completed documents" @checked(old('documents_complete', $submission->exists))>
+                    <span>I have completed the required documents and checked that they are ready for review.</span>
+                </label>
+                @error('documents_complete') <p class="ap-upload-notice is-error" role="alert">{{ $message }}</p> @enderror
             </section>
 
             @if ($previousUploads)
@@ -348,7 +334,6 @@
                                 <div class="ap-document-links">
                                     <button type="button" class="app-view-action" aria-label="View {{ $doc['name'] }}" data-document-preview data-document-preview-url="{{ $doc['url'] }}" data-document-preview-title="{{ $doc['name'] }}" data-document-original-name="{{ $doc['name'] }}" data-document-preview-type="{{ strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) }}" data-document-conversion-url="{{ route('office.documents.preview.convert') }}" data-document-preview-download="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</button>
                                     <a href="{{ $doc['download_url'] ?? $doc['url'] }}"><i class="bi bi-download"></i> Download</a>
-                                    <button type="button" data-attachment-delete data-attachment-delete-url="{{ route('office.activities.attachments.destroy', [$submission->id, $doc['key']]) }}" data-attachment-name="{{ $doc['name'] }}">Remove</button>
                                 </div>
                             </div>
                         @endforeach
@@ -365,14 +350,13 @@
                         <strong id="activityDocPreviewTitle" data-document-preview-title>Document preview</strong>
                         <small>Preview of the original selected or stored document.</small>
                     </div>
-                    <button type="button" class="org-doc-preview-close" data-document-preview-close aria-label="Close document preview">&times;</button>
+                    <button type="button" class="org-doc-preview-close" data-document-preview-close aria-label="Close document preview" style="width:auto;height:auto;padding:.35rem .75rem;border-radius:8px;font-size:.78rem;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button>
                 </div>
                 <div class="org-doc-preview-body document-preview-body" id="activityDocPreviewBody" data-document-preview-body>
                     <div class="org-doc-preview-loading"><div><i class="bi bi-hourglass-split"></i>Loading document…</div></div>
                 </div>
                 <div class="org-doc-preview-foot">
                     <a data-document-preview-external target="_blank" rel="noopener" hidden>Open preview in new tab</a>
-                    <button type="button" class="org-btn-cancel-link" data-document-preview-close>Close</button>
                     <a class="org-doc-preview-download" id="activityDocPreviewDownload" data-document-preview-download href="#">
                         <i class="bi bi-download"></i> Download original
                     </a>
@@ -387,7 +371,7 @@
             </div>
             <div class="ap-footer-actions">
                 <a href="{{ route('office.activities') }}" class="ap-button ap-button-quiet">Cancel</a>
-                <button type="submit" id="activitySubmitButton" class="ap-button ap-button-primary" disabled><i class="bi bi-arrow-right"></i> Submit for Review</button>
+                <button type="submit" id="activitySubmitButton" class="ap-button ap-button-primary" @disabled(!$submission->exists)><i class="bi bi-arrow-right"></i> Submit for Review</button>
             </div>
         </div>
     </form>
@@ -395,49 +379,6 @@
     <script src="{{ asset('js/vendor/jszip.min.js') }}"></script>
     <script src="{{ asset('js/vendor/docx-preview.min.js') }}"></script>
     <script src="{{ asset('js/document-preview.js') }}?v={{ filemtime(public_path('js/document-preview.js')) }}"></script>
-    <script>
-        (function () {
-            const deleteAttachment = (button) => {
-                const name = button.dataset.attachmentName || 'this document';
-
-                // Submit a standalone form so the activity edit form remains a
-                // PUT request when the user submits the activity.
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = button.dataset.attachmentDeleteUrl;
-                form.style.display = 'none';
-                form.dataset.confirmMessage = `Remove ${name}?`;
-
-                const token = document.querySelector('input[name="_token"]')?.value;
-                if (token) {
-                    const csrf = document.createElement('input');
-                    csrf.type = 'hidden';
-                    csrf.name = '_token';
-                    csrf.value = token;
-                    form.appendChild(csrf);
-                }
-
-                const method = document.createElement('input');
-                method.type = 'hidden';
-                method.name = '_method';
-                method.value = 'DELETE';
-                form.appendChild(method);
-                document.body.appendChild(form);
-                form.requestSubmit();
-            };
-
-
-            document.addEventListener('click', (event) => {
-                const deleteButton = event.target.closest('[data-attachment-delete]');
-                if (deleteButton) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    deleteAttachment(deleteButton);
-                    return;
-                }
-            });
-        })();
-    </script>
 
     <script src="{{ asset('js/activity-create.js') }}?v={{ filemtime(public_path('js/activity-create.js')) }}"></script>
 @endsection

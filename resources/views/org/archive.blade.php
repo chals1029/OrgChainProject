@@ -26,7 +26,6 @@
 @endsection
 
 @section('actions')
-    @if ($assignedArchiveOrganization !== null)
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
         <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="openNewFolderModal()">
             <i class="bi bi-folder-plus"></i> {{ $canCreateSubfolder ? 'New Subfolder' : 'New Folder' }}
@@ -35,7 +34,6 @@
             <i class="bi bi-cloud-upload-fill"></i> Upload Document
         </button>
     </div>
-    @endif
 @endsection
 
 @section('content')
@@ -1223,10 +1221,13 @@
                 </div>
 
                 <div class="arc-form-group">
-                    <label for="folderOrgInput">Organization Name</label>
-                    <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" placeholder="e.g., BSIT Society" value="{{ $assignedArchiveOrganization ?? ($currentFolder->organization_name ?? '') }}" maxlength="255" @readonly($assignedArchiveOrganization !== null)>
-                    @if ($assignedArchiveOrganization)
+                    <label for="folderOrgInput">Organization</label>
+                    @if ($assignedArchiveOrganization !== null)
+                        <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" value="{{ $assignedArchiveOrganization }}" readonly>
                         <small style="display: block; color: var(--g-ink-muted); margin-top: 0.35rem;">Folders belong to your assigned organization.</small>
+                    @else
+                        <input type="text" id="folderOrgInput" name="organization_name" class="arc-form-input" placeholder="e.g., Office of Student Organizations (OSO) or specific organization" value="{{ $currentFolder->organization_name ?? 'Office of Student Organizations (OSO)' }}" maxlength="255">
+                        <small style="display: block; color: var(--g-ink-muted); margin-top: 0.35rem;">As OSO, specify the student organization or leave as OSO institutional archive.</small>
                     @endif
                 </div>
 

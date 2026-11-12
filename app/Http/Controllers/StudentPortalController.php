@@ -87,10 +87,49 @@ class StudentPortalController extends Controller
 
         return back()->with('status', 'Your concern submission has been deleted.');
     }
-    public function updateProfile(Request $request): RedirectResponse
+    public function updateProfile(Request $request): RedirectResponse|JsonResponse
     {
-        // Profile is read-only by design (official records). Reject direct writes.
-        abort(403, 'Profile editing is disabled. Contact the registrar for corrections.');
+        $student = Auth::guard('student')->user();
+        abort_unless($student instanceof UserAccount, 401);
+
+        if ($request->hasAny(['full_name', 'name', 'college', 'program', 'year_level', 'sr_code', 'email', 'role'])
+            && ! $request->hasFile('avatar') && ! $request->boolean('remove_avatar')) {
+            abort(403, 'Official student record fields are read-only. Contact the registrar for corrections.');
+        }
+
+        $request->validate([
+            'avatar' => ['nullable', 'required_unless:remove_avatar,1', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_avatar' => ['nullable', 'boolean'],
+        ], [
+            'avatar.required_unless' => 'Please choose a profile picture to upload.',
+            'avatar.image' => 'The profile picture must be a valid image file.',
+            'avatar.mimes' => 'Please upload a JPG, PNG, or WEBP image.',
+            'avatar.max' => 'Profile picture size must not exceed 5 MB.',
+        ]);
+
+        $oldPath = trim((string) ($student->avatar_path ?? ''));
+        if ($request->boolean('remove_avatar')) {
+            if ($oldPath !== '' && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+            $student->forceFill(['avatar_path' => null])->save();
+            $message = 'Profile picture removed.';
+            $avatarUrl = null;
+        } else {
+            $path = $request->file('avatar')->store('avatars/students', 'public');
+            if ($oldPath !== '' && $oldPath !== $path && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+            $student->forceFill(['avatar_path' => $path])->save();
+            $message = 'Profile picture updated.';
+            $avatarUrl = asset('storage/'.$path);
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['ok' => true, 'avatar_url' => $avatarUrl, 'initials' => $student->initials(), 'message' => $message]);
+        }
+
+        return back()->with('status', $message);
     }
 
     /**

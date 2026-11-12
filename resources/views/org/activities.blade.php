@@ -64,7 +64,6 @@
             <p class="org-welcome">Review submitted student organization activity proposals, evaluate compliance documents, endorse workflows, or return for revision.</p>
         @elseif ($isSdo)
             <h1><strong>Proposals</strong></h1>
-            <p class="org-welcome">Review the organization-submitted DOCX files and Waste Policy Compliance Form (WPCF), then endorse the complete package to OVCAA. Objectives and SDGs are entered by the organization.</p>
         @elseif ($isOvcaa)
             <h1><strong>Proposals</strong></h1>
             <p class="org-welcome">Review SDO-verified activity proposals and endorse compliant packages to the Office of the Chancellor.</p>
@@ -343,6 +342,23 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
         }
 
+        .org-organization-filter:focus-within {
+            border-color: #8b1828;
+            box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.1);
+        }
+
+        @keyframes orgProposalFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .org-item-element.is-filtering-in { animation: orgProposalFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .org-activity-grid-container, .org-activity-table-card { transition: opacity 0.18s ease; }
+        .org-activity-grid-container.is-loading, .org-activity-table-card.is-loading { opacity: 0.55; pointer-events: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .org-item-element.is-filtering-in { animation: none; }
+            .org-activity-grid-container, .org-activity-table-card { transition: none; }
+        }
+
         .org-organization-filter label {
             font-size: 0.72rem;
             font-weight: 800;
@@ -406,7 +422,7 @@
         }
 
         .org-proposals-search-box input {
-            padding: 0.45rem 1rem 0.45rem 2.3rem;
+            padding: 0.45rem 2.2rem 0.45rem 2.3rem;
             font-size: 0.84rem;
             font-family: inherit;
             border: 1px solid #e8e2e4;
@@ -426,6 +442,18 @@
             box-shadow: 0 0 0 3px rgba(139, 24, 40, 0.1);
             background: #ffffff;
         }
+
+        .org-search-clear-btn {
+            position: absolute;
+            right: 0.55rem;
+            border: 0;
+            background: transparent;
+            color: #786f73;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .org-search-clear-btn:hover, .org-search-clear-btn:focus-visible { color: #8b1828; }
 
         /* View Mode Switcher Toggle */
         .org-view-toggle {
@@ -2163,14 +2191,13 @@
                         <strong id="activityDocumentPreviewTitle" data-document-preview-title>Document preview</strong>
                         <small id="activityDocumentPreviewStatus" data-document-preview-status aria-live="polite">Loading the original submitted document…</small>
                     </div>
-                    <button type="button" class="activity-document-preview-close" data-document-preview-close aria-label="Close document preview">&times;</button>
+                    <button type="button" class="activity-document-preview-close" data-document-preview-close aria-label="Close document preview" style="width:auto;height:auto;padding:.35rem .75rem;border-radius:8px;font-size:.78rem;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button>
                 </div>
                 <div class="activity-document-preview-body" id="activityDocumentPreviewBody" data-document-preview-body>
                 </div>
                 <div class="activity-document-preview-foot">
                     <a class="org-btn org-btn-outline" data-document-preview-external href="#" target="_blank" rel="noopener" hidden>Open in Tab</a>
                     <div class="activity-document-preview-actions">
-                        <button type="button" class="org-btn org-btn-outline" data-document-preview-close>Close</button>
                         <a class="activity-document-preview-download" id="activityDocumentPreviewDownload" data-document-preview-download href="#" download>
                             <i class="bi bi-download"></i> Download original
                         </a>
@@ -2291,7 +2318,7 @@
                         <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endforeach
                     <label for="orgOrganizationFilter"><i class="bi bi-building"></i> Organization</label>
-                    <select id="orgOrganizationFilter" name="organization" onchange="this.form.submit()">
+                    <select id="orgOrganizationFilter" name="organization">
                         <option value="">All Organizations</option>
                         @foreach (($organizations ?? collect()) as $organizationName)
                             <option value="{{ $organizationName }}" @selected(($selectedOrganization ?? '') === $organizationName)>{{ $organizationName }}</option>
@@ -2305,7 +2332,7 @@
                         <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endforeach
                     <label for="orgAcademicYearFilter"><i class="bi bi-calendar2-range"></i> Activity A.Y.</label>
-                    <select id="orgAcademicYearFilter" name="academic_year" onchange="this.form.submit()">
+                    <select id="orgAcademicYearFilter" name="academic_year">
                         <option value="">All Years</option>
                         @foreach (($activityAcademicYears ?? collect()) as $academicYear)
                             <option value="{{ $academicYear }}" @selected(($selectedAcademicYear ?? '') === $academicYear)>{{ $academicYear }}</option>
@@ -2319,7 +2346,7 @@
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                         @endforeach
                         <label for="orgCollegeFilter"><i class="bi bi-buildings"></i> College</label>
-                        <select id="orgCollegeFilter" name="college" onchange="this.form.submit()">
+                        <select id="orgCollegeFilter" name="college">
                             <option value="">All Colleges</option>
                             @foreach (($pipelineColleges ?? []) as $college)
                                 <option value="{{ $college }}" @selected(($pipelineFilters['college'] ?? '') === $college)>{{ $college }}</option>
@@ -2332,6 +2359,7 @@
                 <div class="org-proposals-search-box">
                     <i class="bi bi-search"></i>
                     <input type="text" id="orgProposalSearch" placeholder="Search {{ $isOso ? 'proposals' : 'activities' }}..." aria-label="Search proposals" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+                    <button type="button" id="orgSearchClearBtn" class="org-search-clear-btn" aria-label="Clear search" hidden><i class="bi bi-x-lg"></i></button>
                 </div>
 
                 {{-- Grid vs List Table View Switcher --}}
@@ -2354,13 +2382,23 @@
                 <a href="{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}"
                    class="org-grid-card org-item-element" 
                    data-category="{{ $item['filter_category'] }}"
+                   data-organization="{{ $item['organization'] ?? '' }}"
+                   data-academic-year="{{ $item['academic_year'] ?? '' }}"
+                   data-college="{{ $item['college_label'] ?? ($item['college'] ?? '') }}"
                    data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
                     
                     <div>
                         <div class="org-grid-card-head">
                             @if (!empty($item['organization']))
                                 <span class="org-grid-org-chip org-alias-chip" title="{{ $item['organization'] }}">
-                                    <i class="bi bi-building"></i> {{ $item['organization_alias'] ?? $item['organization'] }}
+                                    <span class="or-org-mark" aria-hidden="true" style="overflow: hidden; width: 24px; height: 24px; border-radius: 6px; background: #fff; border: 1px solid #ebd9dc; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        @if (!empty($item['organization_logo_url']))
+                                            <img src="{{ $item['organization_logo_url'] }}" alt="" style="width: 100%; height: 100%; object-fit: contain;">
+                                        @else
+                                            <span style="font-size: 0.6rem; font-weight: 800; color: #8b1828;">{{ $item['organization_initials'] ?? 'ORG' }}</span>
+                                        @endif
+                                    </span>
+                                    {{ $item['organization_alias'] ?? $item['organization'] }}
                                 </span>
                             @else
                                 <span></span>
@@ -2413,20 +2451,19 @@
                             <tr class="org-table-row org-item-element" 
                                 onclick="window.location.href='{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}'"
                                 data-category="{{ $item['filter_category'] }}"
+                                data-organization="{{ $item['organization'] ?? '' }}"
+                                data-academic-year="{{ $item['academic_year'] ?? '' }}"
+                                data-college="{{ $item['college_label'] ?? ($item['college'] ?? '') }}"
                                 data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
                                 <td>
                                     <div class="org-table-title-cell">
-                                        <div class="org-table-icon">
-                                            @if ($isSdo)
-                                                <i class="bi bi-leaf-fill"></i>
-                                            @elseif ($isOvcaa)
-                                                <i class="bi bi-patch-check-fill"></i>
-                                            @elseif ($isOc)
-                                                <i class="bi bi-shield-check"></i>
+                                        <span class="or-org-mark" title="{{ $item['organization_alias'] ?? $item['organization'] }}" aria-hidden="true" style="overflow: hidden; width: 34px; height: 34px; border-radius: 9px; background: #fff; border: 1.5px solid #ebd9dc; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                            @if (!empty($item['organization_logo_url']))
+                                                <img src="{{ $item['organization_logo_url'] }}" alt="" style="width: 100%; height: 100%; object-fit: contain;">
                                             @else
-                                                <i class="bi bi-file-earmark-check-fill"></i>
+                                                <span style="font-size: 0.68rem; font-weight: 800; color: #8b1828;">{{ $item['organization_initials'] ?? 'ORG' }}</span>
                                             @endif
-                                        </div>
+                                        </span>
                                         <div class="org-table-title-wrap">
                                             <a href="{{ route('office.activities', array_merge($pipelineQuery, ['activity' => $item['slug']])) }}" class="org-table-main-title">
                                                 {{ $item['title'] }}
@@ -2512,6 +2549,9 @@
                     @forelse ($activities as $index => $item)
                         <tr class="proposals-print-row"
                             data-category="{{ $item['filter_category'] }}"
+                            data-organization="{{ $item['organization'] ?? '' }}"
+                            data-academic-year="{{ $item['academic_year'] ?? '' }}"
+                            data-college="{{ $item['college_label'] ?? ($item['college'] ?? '') }}"
                             data-search="{{ strtolower($item['title'] . ' ' . ($item['organization'] ?? '') . ' ' . ($item['college'] ?? '') . ' ' . ($item['location'] ?? '') . ' ' . ($item['activity_type'] ?? '') . ' ' . $item['status']) }}">
                             <td class="text-center proposals-print-idx" style="text-align: center;">{{ $index + 1 }}</td>
                             <td><strong>{{ $item['organization'] ?? '—' }}</strong></td>
@@ -2557,6 +2597,9 @@
                 const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
                 const activeFilterBtn = document.querySelector('#orgFilterPills .org-filter-pill-btn.is-active');
                 const activeCat = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'all';
+                const organization = document.getElementById('orgOrganizationFilter')?.value || '';
+                const academicYear = document.getElementById('orgAcademicYearFilter')?.value || '';
+                const college = document.getElementById('orgCollegeFilter')?.value || '';
 
                 const rows = Array.from(reportEl.querySelectorAll('#proposalsPrintTableBody tr'));
                 let rowsHtml = '';
@@ -2572,7 +2615,9 @@
                     const matchesCat = activeCat === 'all' || rowCat === activeCat;
                     const matchesSearch = !searchVal || rowSearch.includes(searchVal);
 
-                    if (matchesCat && matchesSearch) {
+                    if (matchesCat && matchesSearch && (!organization || row.dataset.organization === organization)
+                        && (!academicYear || row.dataset.academicYear === academicYear)
+                        && (!college || row.dataset.college === college)) {
                         rowsHtml += `
                             <tr>
                                 <td style="text-align:center;">${visibleIdx++}</td>
@@ -2743,6 +2788,10 @@
                 const btnGrid = document.getElementById('viewToggleGrid');
                 const btnTable = document.getElementById('viewToggleTable');
                 const searchInput = document.getElementById('orgProposalSearch');
+                const searchClearBtn = document.getElementById('orgSearchClearBtn');
+                const orgSelect = document.getElementById('orgOrganizationFilter');
+                const yearSelect = document.getElementById('orgAcademicYearFilter');
+                const collegeSelect = document.getElementById('orgCollegeFilter');
                 const filterBtns = document.querySelectorAll('#orgFilterPills .org-filter-pill-btn');
                 const emptyState = document.getElementById('orgEmptyState');
                 const countText = document.getElementById('orgActivityCountText');
@@ -2756,6 +2805,12 @@
                 let currentView = localStorage.getItem('org_proposal_view_mode') || 'grid';
                 let currentFilter = 'all';
                 let currentSearch = '';
+                let currentOrg = orgSelect?.value || '';
+                let currentAcademicYear = yearSelect?.value || '';
+                let currentCollege = collegeSelect?.value || '';
+                let serverDropdownPreFiltered = @json($hasServerDropdownFilter ?? false);
+                let pendingFetch = null;
+                let searchTimer;
                 let currentPage = 1;
 
                 function setViewMode(mode) {
@@ -2782,10 +2837,66 @@
                 // Initialize view preference
                 setViewMode(currentView);
 
+                function matchesDropdowns(item) {
+                    return (!currentOrg || item.dataset.organization === currentOrg)
+                        && (!currentAcademicYear || item.dataset.academicYear === currentAcademicYear)
+                        && (!currentCollege || item.dataset.college === currentCollege);
+                }
+
                 function matches(item) {
-                    const matchesCategory = currentFilter === 'all' || item.getAttribute('data-category') === currentFilter;
-                    const matchesSearch = !currentSearch || item.getAttribute('data-search').includes(currentSearch);
-                    return matchesCategory && matchesSearch;
+                    return matchesDropdowns(item)
+                        && (currentFilter === 'all' || item.dataset.category === currentFilter)
+                        && (!currentSearch || (item.dataset.search || '').includes(currentSearch));
+                }
+
+                function updateDropdowns() {
+                    currentOrg = orgSelect?.value || '';
+                    currentAcademicYear = yearSelect?.value || '';
+                    currentCollege = collegeSelect?.value || '';
+                    const url = new URL(window.location.href);
+                    for (const [key, value] of [['organization', currentOrg], ['academic_year', currentAcademicYear], ['college', currentCollege]]) {
+                        if (value) url.searchParams.set(key, value);
+                        else url.searchParams.delete(key);
+                    }
+                    url.searchParams.delete('activity');
+                    window.history.replaceState(window.history.state, '', url.toString());
+                    if (!serverDropdownPreFiltered && !pendingFetch) {
+                        applyFilters(true);
+                        return;
+                    }
+
+                    if (pendingFetch) pendingFetch.abort();
+                    const request = new AbortController();
+                    pendingFetch = request;
+                    gridView.classList.add('is-loading');
+                    tableView.classList.add('is-loading');
+                    fetch(url.toString(), { signal: request.signal }).then(response => {
+                        if (!response.ok) throw new Error('Unable to load activities');
+                        return response.text();
+                    }).then(html => {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        for (const id of ['orgActivityGrid', 'orgProposalsTableBody', 'proposalsPrintTableBody']) {
+                            if (!doc.getElementById(id) || !document.getElementById(id)) throw new Error('Missing activity content');
+                        }
+                        for (const id of ['orgActivityGrid', 'orgProposalsTableBody', 'proposalsPrintTableBody']) {
+                            document.getElementById(id).replaceChildren(...doc.getElementById(id).childNodes);
+                        }
+                        const fetchedYears = doc.getElementById('orgAcademicYearFilter');
+                        if (yearSelect && fetchedYears) {
+                            const existing = new Set(Array.from(yearSelect.options, option => option.value));
+                            for (const option of fetchedYears.options) {
+                                if (!existing.has(option.value)) yearSelect.add(option.cloneNode(true));
+                            }
+                            yearSelect.value = currentAcademicYear;
+                        }
+                        serverDropdownPreFiltered = ['organization', 'academic_year', 'college'].some(key => !!url.searchParams.get(key));
+                        pendingFetch = null;
+                        gridView.classList.remove('is-loading');
+                        tableView.classList.remove('is-loading');
+                        applyFilters(true);
+                    }).catch(error => {
+                        if (error.name !== 'AbortError') window.location.href = url.toString();
+                    });
                 }
 
                 function renderPagination(total) {
@@ -2818,6 +2929,14 @@
                     const gridItems = gridView.querySelectorAll('.org-grid-card');
                     const tableItems = tableView.querySelectorAll('.org-table-row');
                     if (resetPage) currentPage = 1;
+                    const counts = { all: 0, for_approval: 0, approved: 0, in_review: 0, returned: 0 };
+                    gridItems.forEach(item => {
+                        if (!matchesDropdowns(item)) return;
+                        counts.all++;
+                        if (Object.hasOwn(counts, item.dataset.category)) counts[item.dataset.category]++;
+                    });
+                    const labels = { all: `All ${isOso ? 'Proposals' : 'Activities'}`, for_approval: 'For Approval', approved: 'Approved', in_review: 'In Review', returned: 'Returned' };
+                    filterBtns.forEach(btn => { btn.textContent = `${labels[btn.dataset.filter]} (${counts[btn.dataset.filter]})`; });
 
                     const matchingGridItems = Array.from(gridItems).filter(matches);
                     const matchingTableItems = Array.from(tableItems).filter(matches);
@@ -2827,12 +2946,17 @@
                     const startIndex = (currentPage - 1) * pageSize;
                     const pageItems = new Set(matchingItems.slice(startIndex, startIndex + pageSize));
 
-                    gridItems.forEach(item => {
-                        item.style.display = pageItems.has(item) ? 'flex' : 'none';
-                    });
-                    tableItems.forEach(item => {
-                        item.style.display = pageItems.has(item) ? '' : 'none';
-                    });
+                    const displayItem = (item, visible, display) => {
+                        const wasHidden = item.style.display === 'none';
+                        item.style.display = visible ? display : 'none';
+                        if (visible && wasHidden && resetPage) {
+                            item.classList.add('is-filtering-in');
+                        } else if (!visible) {
+                            item.classList.remove('is-filtering-in');
+                        }
+                    };
+                    gridItems.forEach(item => displayItem(item, pageItems.has(item), 'flex'));
+                    tableItems.forEach(item => displayItem(item, pageItems.has(item), ''));
 
                     // Handle empty state & count
                     if (visibleCount === 0) {
@@ -2865,25 +2989,42 @@
                     });
                 });
 
-                // Search Input Handler
+                const selects = [orgSelect, yearSelect, collegeSelect].filter(Boolean);
+                selects.forEach(select => select.addEventListener('change', updateDropdowns));
+                new Set(selects.map(select => select.form).filter(Boolean)).forEach(form => {
+                    form.addEventListener('submit', event => {
+                        event.preventDefault();
+                        updateDropdowns();
+                    });
+                });
+
                 if (searchInput) {
                     searchInput.addEventListener('input', function () {
                         currentSearch = this.value.toLowerCase().trim();
-                        applyFilters();
+                        searchClearBtn.hidden = !this.value;
+                        clearTimeout(searchTimer);
+                        searchTimer = setTimeout(() => applyFilters(true), 90);
+                    });
+                    searchClearBtn.addEventListener('click', () => {
+                        searchInput.value = '';
+                        currentSearch = '';
+                        searchClearBtn.hidden = true;
+                        clearTimeout(searchTimer);
+                        applyFilters(true);
+                        searchInput.focus();
                     });
                 }
 
-                // Reset Filters
                 if (resetBtn) {
                     resetBtn.addEventListener('click', function () {
                         currentFilter = 'all';
                         currentSearch = '';
-                        currentPage = 1;
+                        clearTimeout(searchTimer);
                         if (searchInput) searchInput.value = '';
-                        filterBtns.forEach(b => {
-                            b.classList.toggle('is-active', b.getAttribute('data-filter') === 'all');
-                        });
-                        applyFilters();
+                        if (searchClearBtn) searchClearBtn.hidden = true;
+                        [orgSelect, yearSelect, collegeSelect].filter(Boolean).forEach(select => { select.value = ''; });
+                        filterBtns.forEach(b => b.classList.toggle('is-active', b.dataset.filter === 'all'));
+                        updateDropdowns();
                     });
                 }
             });

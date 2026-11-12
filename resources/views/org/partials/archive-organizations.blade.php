@@ -1,5 +1,5 @@
 @if ($showOrganizationArchives)
-    <form method="get" action="{{ route('office.archive') }}" class="archive-filters">
+    <form id="archiveFiltersForm" method="get" action="{{ route('office.archive') }}" class="archive-filters">
         <label class="archive-filter">
             Academic year
             <select name="year">
@@ -26,7 +26,7 @@
         <a href="{{ route('office.archive') }}" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</a>
     </form>
 
-    <section class="archive-panel" aria-labelledby="archiveOrganizationsHeading">
+    <section id="archiveOrganizationsPanel" class="archive-panel" aria-labelledby="archiveOrganizationsHeading">
         <div class="archive-panel-heading">
             <div>
                 <h2 id="archiveOrganizationsHeading"><i class="bi bi-folder2-open"></i> Organization archives</h2>
@@ -69,6 +69,43 @@
             {{ $archiveOrganizations->links('components.pagination') }}
         </div>
     </section>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('archiveFiltersForm');
+            const search = form.querySelector('input[name="search"]');
+            let timer;
+            const swap = (url) => {
+                clearTimeout(timer);
+                window.OrgSmoothFilter.swap({ url, targets: ['#archiveOrganizationsPanel'] });
+            };
+            const applyFilters = () => {
+                const url = new URL(form.action);
+                url.search = new URLSearchParams(new FormData(form)).toString();
+                swap(url.toString());
+            };
+            form.querySelectorAll('select[name="year"], select[name="scope"]').forEach(select => select.addEventListener('change', applyFilters));
+            search.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(applyFilters, 220);
+            });
+            search.addEventListener('search', applyFilters);
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                applyFilters();
+            });
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('#archiveFiltersForm a[href], #archiveOrganizationsPanel .archive-pagination a[href]');
+                if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                if (form.contains(link)) {
+                    form.elements.year.value = 'all';
+                    form.elements.scope.value = 'all';
+                    search.value = '';
+                }
+                swap(link.href);
+            });
+        });
+    </script>
 @endif
 
 @if ($selectedArchiveOrganization)

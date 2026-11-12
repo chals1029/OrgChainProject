@@ -82,7 +82,7 @@
         progress.setAttribute('aria-valuenow', complete);
         progress.querySelector('span').style.width = (total ? 100 * complete / total : 0) + '%';
         remaining.textContent = missing ? missing + ' requirement' + (missing === 1 ? '' : 's') + ' remaining' : 'All required documents ready';
-        help.textContent = submitting ? 'Submitting your organization details and documents for review…' : 'Files are uploaded only when you submit for review. Save changes records names only.';
+        help.textContent = submitting ? 'Submitting your organization details and documents for review…' : 'Files are uploaded only when you submit for review. Save records names only.';
         var detailsComplete = details.every(function (input) { return input.value.trim() !== ''; });
         var changed = details.some(function (input, index) { return input.value !== savedNames[index]; });
         save.disabled = submitting || saving || !detailsComplete || !changed;
@@ -104,7 +104,7 @@
     edit.addEventListener('click', function () {
         if (saving || form.dataset.submitting === '1') return;
         details.forEach(function (input) { input.readOnly = false; });
-        informationStatus.textContent = 'Edit the adviser or dean name, then click Save changes.';
+        informationStatus.textContent = 'Edit the adviser or dean name, then click Save.';
         details[0].focus();
     });
     save.addEventListener('click', async function () {

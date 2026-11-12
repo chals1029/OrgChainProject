@@ -6,7 +6,7 @@ use DOMDocument;
 use DOMXPath;
 use ZipArchive;
 
-/** Detects unchanged official templates and known unfinished Word placeholders. */
+/** Validates that uploaded Word documents can be read. */
 class DocumentCompletion
 {
     private const MAX_XML_BYTES = 8 * 1024 * 1024;
@@ -17,22 +17,14 @@ class DocumentCompletion
             ? (is_dir(base_path('Local Off Campus')) ? base_path('Local Off Campus') : storage_path('Template/Creation Of Activties/Off Campus'))
             : (is_dir(base_path('In Campus')) ? base_path('In Campus') : storage_path('Template/Creation Of Activties/In Campus Activities'));
         $source = $sourceDir.DIRECTORY_SEPARATOR.$requirement['source_file'];
-        $placeholder = match ($requirement['key']) {
-            'project_proposal' => '/\binsert\s+text\s+here\b/i',
-            'resolution' => '/\binsert\s+table\s+here\b/i',
-            default => null,
-        };
 
-        return $this->issueAgainstTemplate($path, $name, $source, $placeholder);
+        return $this->issueAgainstTemplate($path, $name, $source);
     }
 
     public function issueAgainstTemplate(string $path, string $name, string $source, ?string $placeholder = null, bool $compareText = false): ?string
     {
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
-        if (is_file($source) && hash_file('sha256', $path) === hash_file('sha256', $source)) {
-            return 'This is the unchanged official template. Complete it before submitting.';
-        }
         if ($extension !== 'docx' && mime_content_type($path) !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             return null;
         }
@@ -40,22 +32,6 @@ class DocumentCompletion
         $document = $this->wordDocument($path);
         if ($document === null) {
             return 'This Word document is unreadable. Upload a valid, completed DOCX file.';
-        }
-        if (trim($document['text']) === '' && $document['media'] === []) {
-            return 'This Word document is empty. Upload a completed document.';
-        }
-        if (strtolower(pathinfo($source, PATHINFO_EXTENSION)) === 'docx' && is_file($source)) {
-            $template = $this->wordDocument($source);
-            $sameContent = $template !== null && ($compareText
-                ? $this->normalizedText($document['text']) === $this->normalizedText($template['text'])
-                : $this->withoutRevisionIds($document['xml']) === $this->withoutRevisionIds($template['xml']));
-            if ($sameContent && $document['media'] === $template['media']) {
-                return 'This is the unchanged official template. Complete it before submitting.';
-            }
-        }
-
-        if ($placeholder && preg_match($placeholder, $document['text'])) {
-            return 'This Word document still contains an unfilled template placeholder. Complete it before submitting.';
         }
 
         return null;
@@ -110,13 +86,4 @@ class DocumentCompletion
         }
     }
 
-    private function normalizedText(string $text): string
-    {
-        return preg_replace('/\s+/u', ' ', trim($text)) ?? trim($text);
-    }
-
-    private function withoutRevisionIds(string $xml): string
-    {
-        return preg_replace('/\s+w:rsid\w+="[^"]*"/', '', $xml) ?? $xml;
-    }
 }

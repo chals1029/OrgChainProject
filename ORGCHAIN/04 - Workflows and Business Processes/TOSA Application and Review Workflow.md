@@ -66,6 +66,8 @@ Submitted files stay available for private viewing or download. If OSO returns t
 
 OVCAA remains read-only; OSO alone may download the applicant ZIP, confirm reviews, manage references and calls, or manage/publish the Top 10.
 
+The student result notice uses a two-column phone layout so the title and program have room to wrap; the academic-year badge moves below the heading. Desktop keeps the horizontal header.
+
 
 ## Current routes
 

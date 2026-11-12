@@ -31,6 +31,7 @@
     $initials = $initials !== '' ? strtoupper($initials) : 'ORG';
 
     $packetStates = [
+        'draft' => ['Draft · Not Yet Submitted', 'is-muted', 'bi-pencil-square'],
         'submitted' => ['Submitted · Under Review', 'is-pending', 'bi-send-check'],
         'approved' => ['Approved', 'is-verified', 'bi-check-all'],
         'returned' => ['Returned for Revision', 'is-returned', 'bi-arrow-return-left'],
@@ -111,6 +112,8 @@
         @keyframes rsFade { from { opacity:0; } to { opacity:1; } }
         .rs-card { background:#fff; border:1.5px solid #f0e6e8; border-radius:14px; padding:0.9rem 1rem; box-shadow:0 4px 16px rgba(90,15,30,.03); margin-bottom:0.75rem; }
         .rs-alert { padding:0.7rem 0.9rem; border-radius:12px; font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+        .rs-notice { position:fixed; top:1rem; right:1rem; z-index:100; max-width:min(26rem, calc(100vw - 2rem)); padding:0.7rem 1rem; border-radius:10px; background:#166534; color:#fff; box-shadow:0 4px 18px rgba(0,0,0,.18); font-size:0.8rem; }
+        .rs-notice.is-error { background:#991b1b; }
         .rs-summary { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:0.85rem; background:linear-gradient(135deg,#fff 0%,#fffafb 100%); }
         .rs-avatar { display:grid; place-items:center; width:52px; height:52px; border-radius:14px; background:#fdf0f2; color:#8b1828; border:1px solid #f2dfe2; font-size:0.95rem; font-weight:900; letter-spacing:.02em; }
         .rs-summary-copy { min-width:0; }
@@ -235,6 +238,7 @@
     </style>
 
     <div class="rs-page">
+        <div class="rs-notice" id="rsNotice" role="status" aria-live="polite" hidden></div>
         <div class="rs-scroll">
             @if ($errors->any())
                 <div class="rs-alert" role="alert">
@@ -318,7 +322,7 @@
                             @endif
                         </p>
                     </div>
-                    <span class="rs-pill {{ $totalRequired > 0 && $verified === $totalRequired ? 'is-verified' : 'is-pending' }}">{{ $verified }}/{{ $totalRequired }} verified</span>
+                    <span id="rsVerifiedCount" class="rs-pill {{ $totalRequired > 0 && $verified === $totalRequired ? 'is-verified' : 'is-pending' }}">{{ $verified }}/{{ $totalRequired }} verified</span>
                 </div>
 
                 @forelse ($rows as $row)
@@ -330,7 +334,7 @@
                         $titleId = 'rsDocTitle'.$loop->index;
                         $fileVersion = $doc?->fileVersion();
                     @endphp
-                    <article class="rs-row {{ $doc ? '' : 'is-missing' }}" aria-labelledby="{{ $titleId }}">
+                    <article class="rs-row {{ $doc ? '' : 'is-missing' }}" aria-labelledby="{{ $titleId }}" data-review-status="{{ $row['status'] ?? 'missing' }}">
                         <span class="rs-letter" aria-hidden="true">{{ $row['letter'] }}</span>
                         <div class="rs-row-copy">
                             <span class="rs-attachment">{{ $row['label'] }}</span>
@@ -375,7 +379,7 @@
                                 <a class="rs-act is-download" href="{{ route('office.renewal.documents.file', [$doc, 'download' => 1]) }}" aria-label="Download {{ $row['title'] }}">
                                     <i class="bi bi-download" aria-hidden="true"></i> Download
                                 </a>
-                                <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}"
+                                <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}" data-rs-verify data-confirm="manual"
                                     data-confirm-title="Verify Requirement?"
                                     data-confirm-accept="Yes, Verify"
                                     data-confirm-message="Are you sure you want to verify {{ $row['label'] }} ({{ $row['title'] }})?">
@@ -395,6 +399,17 @@
                                     data-rs-submit="Return for Revision">
                                     <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return
                                 </button>
+                                @if ($isReviewable)
+                                    <noscript>
+                                        <form method="POST" action="{{ route('office.renewal.documents.review', $doc) }}">
+                                            @csrf
+                                            <input type="hidden" name="decision" value="returned">
+                                            <input type="hidden" name="file_version" value="{{ $fileVersion }}">
+                                            <label>Remarks <textarea name="remarks" maxlength="2000" required></textarea></label>
+                                            <button type="submit" class="rs-act is-return">Return for Revision</button>
+                                        </form>
+                                    </noscript>
+                                @endif
                             @else
                                 <span class="rs-missing-note">No file to review</span>
                             @endif
@@ -427,9 +442,9 @@
                 <button type="button" class="org-btn org-btn-sm rs-btn-return" @disabled(! $isReviewable)
                     data-rs-remarks="{{ route('office.renewal.review', $submission) }}"
                     data-rs-decision="returned"
-                    data-rs-heading="Return packet for revisions"
+                    data-rs-heading="Return submission for revisions"
                     data-rs-subject="{{ $fullName }}"
-                    data-rs-submit="Return Packet">
+                    data-rs-submit="Return Submission">
                     <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return for Revisions
                 </button>
                 <form method="POST" action="{{ route('office.renewal.review', $submission) }}"
@@ -438,7 +453,7 @@
                     data-confirm-message="Are you sure you want to approve the renewal packet for {{ $fullName }}?">
                     @csrf
                     <input type="hidden" name="decision" value="approved">
-                    <button type="submit" class="org-btn org-btn-primary org-btn-sm" aria-describedby="rsDecisionSummary" @disabled(! $canApprove)>
+                    <button type="submit" id="rsApproveButton" class="org-btn org-btn-primary org-btn-sm" aria-describedby="rsDecisionSummary" @disabled(! $canApprove)>
                         <i class="bi bi-check-lg" aria-hidden="true"></i> Approve Renewal
                     </button>
                 </form>
@@ -462,6 +477,7 @@
                 Remarks for the SO desk *
                 <textarea name="remarks" id="rsRemarksInput" rows="4" maxlength="2000" required placeholder="Explain what must be corrected."></textarea>
             </label>
+            <div class="rs-alert" id="rsRemarksError" role="alert" hidden></div>
             <div class="rs-dialog-actions">
                 <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-rs-close>Cancel</button>
                 <button type="submit" class="org-btn org-btn-primary org-btn-sm" id="rsRemarksSubmit">Submit</button>
@@ -479,7 +495,7 @@
                 <div class="rs-preview-tools">
                     <a id="rsPreviewDownload" href="#" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
                     <a id="rsPreviewOpen" href="#" target="_blank" rel="noopener" class="org-btn org-btn-ghost org-btn-sm"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open in Tab</a>
-                    <button type="button" class="rs-dialog-close" data-rs-close aria-label="Close preview"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                    <button type="button" class="rs-dialog-close org-btn org-btn-ghost org-btn-sm" data-rs-close aria-label="Close preview" style="display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button>
                 </div>
             </div>
             <div class="rs-preview-body">
@@ -496,6 +512,97 @@
             const previewDialog = document.getElementById('rsPreviewDialog');
             const previewFrame = document.getElementById('rsPreviewFrame');
             let opener = null;
+            let reviewBusy = false;
+            let noticeTimer;
+
+            const showNotice = (message, error = false) => {
+                const dialogError = document.getElementById('rsRemarksError');
+                if (error && remarksDialog.open) {
+                    dialogError.textContent = message;
+                    dialogError.hidden = false;
+                    return;
+                }
+                const notice = document.getElementById('rsNotice');
+                notice.textContent = message;
+                notice.classList.toggle('is-error', error);
+                notice.hidden = false;
+                clearTimeout(noticeTimer);
+                noticeTimer = setTimeout(() => { notice.hidden = true; }, error ? 8000 : 4000);
+            };
+
+            const updateReview = (row, result, remarks) => {
+                const states = {
+                    verified: ['Verified', 'bi-check-circle-fill'],
+                    returned: ['For Revision', 'bi-arrow-return-left'],
+                    rejected: ['Rejected', 'bi-x-circle-fill'],
+                };
+                const state = states[result.decision];
+                row.dataset.reviewStatus = result.decision;
+                const pill = row.querySelector(':scope > .rs-pill');
+                pill.className = `rs-pill is-${result.decision}`;
+                pill.replaceChildren();
+                const icon = document.createElement('i');
+                icon.className = `bi ${state[1]}`;
+                icon.setAttribute('aria-hidden', 'true');
+                pill.append(icon, ` ${state[0]}`);
+                row.querySelector('.is-verify').disabled = result.decision === 'verified';
+                row.querySelector('.rs-remarks')?.remove();
+                if (remarks.trim()) {
+                    const note = document.createElement('p');
+                    note.className = `rs-remarks is-${result.decision}`;
+                    const label = document.createElement('strong');
+                    label.textContent = result.decision === 'verified' ? 'OSO note:' : 'OSO remarks:';
+                    note.append(label, ` ${remarks.trim()}`);
+                    row.querySelector('.rs-row-copy').append(note);
+                }
+                const count = document.getElementById('rsVerifiedCount');
+                count.textContent = `${result.verified_count}/${result.required_count} verified`;
+                count.classList.toggle('is-verified', result.required_count > 0 && result.verified_count === result.required_count);
+                count.classList.toggle('is-pending', !(result.required_count > 0 && result.verified_count === result.required_count));
+                const progress = document.querySelector('.rs-progress');
+                progress.setAttribute('aria-valuenow', result.verified_count);
+                progress.setAttribute('aria-valuemax', result.required_count);
+                progress.querySelector('span').style.width = `${result.verified_percent}%`;
+                const summary = document.getElementById('rsDecisionSummary');
+                summary.querySelector('strong').textContent = result.can_approve ? 'Ready for renewal approval' : 'Document verification incomplete';
+                const details = summary.querySelector('small');
+                details.classList.toggle('is-warn', !result.can_approve);
+                details.textContent = result.can_approve
+                    ? `${result.verified_count} of ${result.required_count} verified. Approval records the packet decision only; organization status stays managed by OSO.`
+                    : `${result.verified_count} of ${result.required_count} verified. Approval needs every required document verified.`;
+                document.getElementById('rsApproveButton').disabled = !result.can_approve;
+            };
+
+            const submitReview = async (form, row) => {
+                if (reviewBusy) return false;
+                reviewBusy = true;
+                const payload = new FormData(form);
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': payload.get('_token') },
+                        body: payload,
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to review this document.');
+                    updateReview(row, result, payload.get('remarks') || '');
+                    showNotice(result.message);
+                    return true;
+                } catch (error) {
+                    showNotice(error.message || 'Unable to review this document. Please try again.', true);
+                    return false;
+                } finally {
+                    reviewBusy = false;
+                }
+            };
+
+            document.querySelectorAll('[data-rs-verify]').forEach((form) => {
+                form.addEventListener('submit', (event) => {
+                    if (!window.OrgActionConfirmations.confirmSubmit(event)) return;
+                    event.preventDefault();
+                    submitReview(form, form.closest('.rs-row'));
+                });
+            });
 
             const openDialog = (dialog, trigger) => {
                 opener = trigger;
@@ -528,6 +635,7 @@
                     document.getElementById('rsRemarksSubmit').textContent = remarksTrigger.dataset.rsSubmit;
                     remarksInput.value = '';
                     remarksInput.setCustomValidity('');
+                    document.getElementById('rsRemarksError').hidden = true;
                     openDialog(remarksDialog, remarksTrigger);
                     remarksInput.focus();
                     return;
@@ -569,7 +677,13 @@
                     remarksInput.reportValidity();
                     return;
                 }
-                window.OrgActionConfirmations.confirmSubmit(event);
+                if (!window.OrgActionConfirmations.confirmSubmit(event)) return;
+                const row = opener?.closest('.rs-row');
+                if (!row) return;
+                event.preventDefault();
+                submitReview(remarksForm, row).then((success) => {
+                    if (success && remarksDialog.open) closeDialog(remarksDialog);
+                });
             });
         })();
     </script>

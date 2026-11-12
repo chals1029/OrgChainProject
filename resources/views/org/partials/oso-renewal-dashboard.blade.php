@@ -11,8 +11,8 @@
 <div id="osoRenewalDashboard" class="or-dashboard">
     <section class="or-metrics" aria-label="Organization renewal totals">
         @foreach ([
-            ['label' => 'Registered organizations', 'value' => $orgStats['total'], 'hint' => 'All registry records, including inactive', 'icon' => 'people-fill'],
-            ['label' => 'Qualified to renew', 'value' => $orgStats['qualified'], 'hint' => 'OSO filing eligibility', 'icon' => 'check2-circle'],
+            ['label' => 'Registered organizations', 'value' => $orgStats['renewed'] ?? 0, 'hint' => 'Officially renewed in current period', 'icon' => 'people-fill'],
+            ['label' => 'Organizations submitted', 'value' => $orgStats['submitted'], 'hint' => 'Submitted in current renewal period', 'icon' => 'check2-circle'],
             ['label' => 'Not qualified', 'value' => $orgStats['not_qualified'], 'hint' => 'Unresolved filing eligibility', 'icon' => 'x-circle-fill'],
             ['label' => 'Inactive organizations', 'value' => $orgStats['inactive'], 'hint' => 'Inactive or not renewed', 'icon' => 'archive-fill'],
         ] as $metric)
@@ -60,20 +60,30 @@
 
     <section class="or-card" aria-labelledby="osoRenewalApplicationsHeading">
         <header class="or-card-head"><div><h2 id="osoRenewalApplicationsHeading">Renewal Applications</h2><p class="or-subtitle">Organization standing is based on the final OSO renewal decision, not account existence or uploads alone.</p></div><button id="osoRenewalExport" type="button" class="or-button is-small"><i class="bi bi-download" aria-hidden="true"></i> Export list</button></header>
-        <div class="or-note"><i class="bi bi-award" aria-hidden="true"></i><p><strong>Official OSO status basis:</strong> <strong>Active · Renewed</strong> requires final approval in the current period and operational eligibility. Other organizations remain inactive or not renewed; filing eligibility is managed separately.</p></div>
         <div class="or-filters"><label class="or-search"><i class="bi bi-search" aria-hidden="true"></i><input id="osoRenewalSearch" type="search" placeholder="Search organization or college…" aria-label="Search organization or college"></label><select id="osoRenewalStatusFilter" aria-label="Filter renewal applications"><option value="all">All statuses</option><option value="approved">Renewed</option><option value="submitted">Pending filing</option><option value="not_submitted">Not yet submitted</option><option value="active">Active · Renewed</option><option value="inactive">Inactive organizations</option><option value="qualified">Qualified to renew</option><option value="not_qualified">Not qualified</option></select></div>
         <div class="or-table-scroll">
-            <table id="osoRenewalApplicationsTable" class="or-table"><thead><tr><th scope="col">Organization</th><th scope="col">Official Status</th><th scope="col">Renewal Status</th><th scope="col">Action</th></tr></thead><tbody>
+            <table id="osoRenewalApplicationsTable" class="or-table"><thead><tr><th scope="col">Organization</th><th scope="col">Official Status</th><th scope="col">Renewal Status</th><th scope="col">Previous AY activity advisory</th><th scope="col">Action</th></tr></thead><tbody>
                 @foreach ($allOrganizations as $organization)
                     @php
                         $status = $organization['submission_status'];
-                        $standing = $organization['officially_active'] ? 'Active · Renewed' : ($status === 'approved' ? 'Inactive · Renewed' : 'Inactive · Not Renewed');
+                        $isOfficiallyRenewed = $status === 'approved' || (bool) $organization['officially_active'];
+                        $standing = $isOfficiallyRenewed ? 'Active · Renewed' : 'Inactive · Not Renewed';
                         $initials = mb_substr($organization['short_name'], 0, 4);
                     @endphp
-                    <tr data-renewal-row data-search="{{ $organization['name'].' '.$organization['short_name'].' '.$organization['college'] }}" data-status="{{ $status }}" data-official-active="{{ $organization['officially_active'] ? '1' : '0' }}" data-qualified="{{ $organization['can_file_renewal'] ? '1' : '0' }}" data-adviser="{{ $organization['adviser'] }}" data-academic-year="{{ $organization['academic_year'] }}" data-last-renewal-year="{{ $organization['last_renewal_year'] }}">
-                        <td><div class="or-org"><span class="or-org-mark" title="{{ $organization['short_name'] }}" aria-hidden="true" style="overflow: hidden;">@if (!empty($organization['logo_url']))<img src="{{ $organization['logo_url'] }}" alt="{{ $organization['short_name'] }}" style="width: 100%; height: 100%; object-fit: contain;">@else{{ $initials }}@endif</span><div class="or-org-copy"><strong class="or-name">{{ $organization['name'] }}</strong><small class="or-college">{{ $organization['college'] }}</small></div></div></td>
-                        <td><span class="or-pill or-official-status is-{{ $organization['officially_active'] ? 'green' : 'red' }}">{{ $standing }}</span></td>
+                    <tr data-renewal-row data-search="{{ $organization['name'].' '.$organization['short_name'].' '.$organization['college'] }}" data-status="{{ $status }}" data-official-active="{{ $isOfficiallyRenewed ? '1' : '0' }}" data-qualified="{{ $organization['can_file_renewal'] ? '1' : '0' }}" data-adviser="{{ $organization['adviser'] }}" data-academic-year="{{ $organization['academic_year'] }}" data-last-renewal-year="{{ $organization['last_renewal_year'] }}">
+                        <td><div class="or-org"><span class="or-org-mark {{ !empty($organization['logo_url']) ? 'has-logo' : '' }}" title="{{ $organization['short_name'] }}" aria-hidden="true" style="overflow: hidden;">@if (!empty($organization['logo_url']))<img src="{{ $organization['logo_url'] }}" alt="{{ $organization['short_name'] }}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: inherit;">@else{{ $initials }}@endif</span><div class="or-org-copy"><strong class="or-name">{{ $organization['name'] }}</strong><small class="or-college">{{ $organization['college'] }}</small></div></div></td>
+                        <td><span class="or-pill or-official-status is-{{ $isOfficiallyRenewed ? 'green' : 'red' }}">{{ $standing }}</span></td>
                         <td><span class="or-pill or-renewal-status is-{{ $statusColors[$status] ?? 'muted' }}">{{ $statusLabels[$status] ?? ucfirst($status) }}</span></td>
+                        <td>
+                            @if (($organization['activity_recommendation_count'] ?? null) !== null)
+                                <div class="or-activity-advisory">
+                                    <strong>AY {{ $organization['activity_recommendation_year'] }} · {{ $organization['activity_recommendation_count'] }} {{ $organization['activity_recommendation_count'] === 1 ? 'activity' : 'activities' }}</strong>
+                                    <span>{{ $organization['activity_recommendation_count'] >= 3 ? 'Meets activity requirement' : 'Below activity requirement — OSO review recommended' }}</span>
+                                </div>
+                            @else
+                                <span>Activity advisory unavailable</span>
+                            @endif
+                        </td>
                         <td><div class="or-row-actions">@if ($organization['submission_id'])<a class="app-view-action" href="{{ route('office.renewal.submissions.show', $organization['submission_id']) }}" aria-label="View renewal application for {{ $organization['name'] }}"><i class="bi bi-eye" aria-hidden="true"></i> View</a>@else<span class="app-view-action" aria-disabled="true" title="No renewal submission available"><i class="bi bi-eye" aria-hidden="true"></i> View</span>@endif<button type="button" class="or-button is-small" data-or-eligibility data-organization='@json($organization)' aria-label="Manage eligibility for {{ $organization['name'] }}" title="Manage filing eligibility"><i class="bi bi-sliders" aria-hidden="true"></i></button></div></td>
                     </tr>
                 @endforeach

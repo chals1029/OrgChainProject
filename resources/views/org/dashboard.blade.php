@@ -49,6 +49,44 @@
 
 @section('content')
     <style>
+        .ovcaa-charts-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 1.25rem; }
+        .ovcaa-chart-card { min-width: 0; padding: 1.4rem; background: #fff; border: 1px solid #f0e6e8; border-radius: 20px; box-shadow: 0 4px 20px rgba(90, 15, 30, .04); }
+        .ovcaa-chart-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+        .ovcaa-chart-header h2 { margin: 0; color: #1a1618; font-size: 1rem; font-weight: 800; }
+        .ovcaa-status-legend, .ovcaa-trend-legend { display: flex; gap: .65rem; padding: 0; margin: 0; list-style: none; color: #786f73; font-size: .75rem; font-weight: 700; }
+        .ovcaa-status-legend { flex-direction: column; }
+        .ovcaa-trend-legend { flex-wrap: wrap; }
+        .ovcaa-status-legend li, .ovcaa-trend-legend li { display: flex; align-items: center; gap: .4rem; white-space: nowrap; }
+        .ovcaa-status-legend span, .ovcaa-trend-legend span { width: .65rem; height: .65rem; border-radius: 3px; flex: 0 0 auto; }
+        .ovcaa-trend-controls { display: flex; align-items: center; flex-wrap: wrap; gap: .85rem; }
+        .ovcaa-trend-controls select { padding: .45rem .65rem; border: 1px solid #e7dadd; border-radius: 8px; background: #fff; color: #51484b; font-size: .78rem; }
+        .ovcaa-chart-canvas { position: relative; height: 280px; margin-top: 1rem; }
+        .ovcaa-chart-empty { position: absolute; inset: 0; display: grid; place-items: center; color: #786f73; font-size: .85rem; pointer-events: none; }
+        @media (max-width: 960px) { .ovcaa-charts-row { grid-template-columns: minmax(0, 1fr); } }
+        .oc-chart-card { min-width: 0; padding: 1.4rem; background: #fff; border: 1px solid #f0e6e8; border-radius: 20px; box-shadow: 0 4px 20px rgba(90, 15, 30, .04); }
+        .oc-chart-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+        .oc-chart-header h2 { margin: 0; color: #1a1618; font-size: 1rem; font-weight: 800; }
+        .oc-chart-sub { margin: .4rem 0 0; color: #786f73; font-size: .8rem; }
+        .oc-trend-controls, .oc-trend-legend { display: flex; align-items: center; flex-wrap: wrap; gap: .85rem; }
+        .oc-trend-legend button { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem 0; border: 0; background: transparent; color: #51484b; font-size: .75rem; font-weight: 700; cursor: pointer; }
+        .oc-trend-legend button.is-hidden { opacity: .4; text-decoration: line-through; }
+        .oc-trend-legend button:focus-visible { outline: 2px solid #8b1828; outline-offset: 3px; }
+        .oc-trend-legend span { width: 1rem; border-top: 3px solid var(--series-color); }
+        .oc-trend-legend .is-dashed { border-top-style: dashed; }
+        .oc-trend-controls select { padding: .45rem .65rem; border: 1px solid #e7dadd; border-radius: 8px; background: #fff; color: #51484b; font-size: .78rem; }
+        .oc-chart-canvas { position: relative; height: 300px; margin-top: 1rem; }
+        .sdo-charts-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.25rem; }
+        .sdo-chart-card { min-width: 0; padding: 1.4rem; background: #fff; border: 1px solid #f0e6e8; border-radius: 20px; box-shadow: 0 4px 20px rgba(90, 15, 30, .04); }
+        .sdo-chart-header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .sdo-chart-card h2 { margin: 0; color: #1a1618; font-size: 1rem; font-weight: 800; }
+        .sdo-chart-card p { margin: .4rem 0 0; color: #786f73; font-size: .8rem; }
+        .sdo-chart-header label { color: #51484b; font-size: .78rem; font-weight: 700; }
+        .sdo-chart-header select { display: block; margin-top: .3rem; padding: .45rem .65rem; border: 1px solid #d7c9cc; border-radius: 8px; background: #fff; color: #1a1618; }
+        .sdo-chart-canvas { position: relative; height: 260px; margin-top: 1rem; }
+        .sdo-chart-legend { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+        .sdo-chart-legend li { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .65rem; border: 1px solid #f0e6e8; border-radius: 999px; color: #51484b; font-size: .75rem; font-weight: 700; }
+        .sdo-chart-legend li span { width: .65rem; height: .65rem; border-radius: 50%; flex: 0 0 auto; }
+        @media (max-width: 900px) { .sdo-charts-row { grid-template-columns: minmax(0, 1fr); } }
         /* Dashboard Container & Cards */
         .org-dash-grid {
             display: flex;
@@ -299,6 +337,14 @@
             font-size: 0.92rem;
             letter-spacing: -0.01em;
             display: block;
+        }
+
+        .ovcaa-stat-card .ovcaa-stat-sub {
+            display: block;
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+            line-height: 1.35;
         }
 
         /* OVCAA Executive Overview Chart & Metrics */
@@ -2268,6 +2314,7 @@
                         <div class="org-kpi-num" id="kpiTotalOrgsNum">{{ $osoKpis['totalOrgs'] ?? 0 }}</div>
                     </div>
                     <h3 class="org-kpi-title">Recognized Organizations</h3>
+                    <p class="org-kpi-sub" id="kpiTotalOrgsSub">Officially Recognized Student Organizations</p>
                 </article>
 
                 {{-- Card 2: Total Activities --}}
@@ -2545,123 +2592,113 @@
             {{-- 1. Top 4 KPI Cards (cards first, pipeline below) --}}
             <div class="org-kpi-row">
                 @if ($isSdo)
-                    {{-- 1. Total Monitored --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="Total monitored document packages">
+                    <article class="ovcaa-stat-card liquid-glass is-maroon" style="cursor: default;" title="All submitted activities reviewed by SDO">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-maroon">
-                                <i class="bi bi-clipboard-data-fill"></i>
-                            </div>
+                            <div class="ovcaa-stat-icon is-maroon"><i class="bi bi-clipboard-data-fill"></i></div>
                             <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Total Monitored</span>
-                    </a>
+                        <span class="ovcaa-stat-title">Total Activities Reviewed</span>
+                        <small class="ovcaa-stat-sub">All submitted activities reviewed by SDO</small>
+                    </article>
 
-                    {{-- 2. Forwarded packages --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Packages forwarded beyond SDO review">
+                    <article class="ovcaa-stat-card liquid-glass is-blue" style="cursor: default;" title="Activities awaiting SDO review">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-green">
-                                <i class="bi bi-check2-circle"></i>
-                            </div>
-                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
-                        </div>
-                        <span class="ovcaa-stat-title">Forwarded by SDO</span>
-                    </a>
-
-                    {{-- 3. Awaiting SDO review --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Packages awaiting SDO review">
-                        <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-blue">
-                                <i class="bi bi-hourglass-split"></i>
-                            </div>
+                            <div class="ovcaa-stat-icon is-blue"><i class="bi bi-hourglass-split"></i></div>
                             <strong>{{ $reviewOverview['pending'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Awaiting SDO Review</span>
-                    </a>
+                        <span class="ovcaa-stat-title">Pending Evaluation</span>
+                        <small class="ovcaa-stat-sub">Activities awaiting SDO review</small>
+                    </article>
 
-                    {{-- 4. Final approvals --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Packages finally approved by OC">
-                        <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-amber">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
-                            </div>
-                            <strong>{{ $reviewOverview['finalApproved'] }}</strong>
-                        </div>
-                        <span class="ovcaa-stat-title">Finally Approved by OC</span>
-                    </a>
-                @elseif ($isOc)
-                    {{-- OC final approval desk KPIs --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Open activities awaiting OC final approval">
-                        <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-blue"><i class="bi bi-shield-check"></i></div>
-                            <strong>{{ $reviewOverview['pending'] }}</strong>
-                        </div>
-                        <span class="ovcaa-stat-title">Awaiting OC Approval</span>
-                    </a>
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="View activities approved by OC">
-                        <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-green"><i class="bi bi-check2-circle"></i></div>
-                            <strong>{{ $reviewOverview['finalApproved'] }}</strong>
-                        </div>
-                        <span class="ovcaa-stat-title">OC Approved</span>
-                    </a>
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="View activities returned for revision">
+                    <article class="ovcaa-stat-card liquid-glass is-amber" style="cursor: default;" title="Activities returned for revision">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-amber"><i class="bi bi-arrow-counterclockwise"></i></div>
-                            <strong>{{ $stats['returned'] ?? 0 }}</strong>
+                            <strong>{{ $reviewOverview['returned'] ?? 0 }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Return for Revision</span>
-                    </a>
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="View all activity packages">
+                        <span class="ovcaa-stat-title">For Revision</span>
+                        <small class="ovcaa-stat-sub">Activities returned for revision</small>
+                    </article>
+
+                    <article class="ovcaa-stat-card liquid-glass is-green" style="cursor: default;" title="Activities that passed evaluation">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-green"><i class="bi bi-patch-check-fill"></i></div>
+                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
+                        </div>
+                        <span class="ovcaa-stat-title">SDG Compliant</span>
+                        <small class="ovcaa-stat-sub">Activities that passed evaluation</small>
+                    </article>
+                @elseif ($isOc)
+                    <article class="ovcaa-stat-card liquid-glass is-maroon" style="cursor: default;">
                         <div class="ovcaa-stat-top">
                             <div class="ovcaa-stat-icon is-maroon"><i class="bi bi-collection-fill"></i></div>
                             <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Total Packages</span>
-                    </a>
-                @elseif ($isOvcaa)
-                    {{-- 1. Pending OVCAA review --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-blue" title="Packages awaiting OVCAA review">
+                        <span class="ovcaa-stat-title">Total Submissions</span>
+                        <small class="ovcaa-stat-sub">Total proposals received</small>
+                    </article>
+
+                    <article class="ovcaa-stat-card liquid-glass is-blue" style="cursor: default;">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-blue">
-                                <i class="bi bi-patch-check-fill"></i>
-                            </div>
+                            <div class="ovcaa-stat-icon is-blue"><i class="bi bi-patch-check-fill"></i></div>
                             <strong>{{ $reviewOverview['pending'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Awaiting OVCAA Review</span>
-                    </a>
+                        <span class="ovcaa-stat-title">Pending Evaluation</span>
+                        <small class="ovcaa-stat-sub">Awaiting OC review</small>
+                    </article>
 
-                    {{-- 2. Forwarded packages --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-green" title="Packages forwarded beyond OVCAA review">
+                    <article class="ovcaa-stat-card liquid-glass is-amber" style="cursor: default;">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-green">
-                                <i class="bi bi-check2-circle"></i>
-                            </div>
-                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
+                            <div class="ovcaa-stat-icon is-amber"><i class="bi bi-arrow-counterclockwise"></i></div>
+                            <strong>{{ $reviewOverview['returned'] ?? 0 }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Forwarded by OVCAA</span>
-                    </a>
+                        <span class="ovcaa-stat-title">For Revision</span>
+                        <small class="ovcaa-stat-sub">Returned for corrections</small>
+                    </article>
 
-                    {{-- 3. Final approvals --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-amber" title="Packages finally approved by OC">
+                    <article class="ovcaa-stat-card liquid-glass is-green" style="cursor: default;">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-amber">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </div>
+                            <div class="ovcaa-stat-icon is-green"><i class="bi bi-check2-circle"></i></div>
                             <strong>{{ $reviewOverview['finalApproved'] }}</strong>
                         </div>
-                        <span class="ovcaa-stat-title">Finally Approved by OC</span>
-                    </a>
-
-                    {{-- 4. Total Submissions --}}
-                    <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="View All Semester Submissions">
+                        <span class="ovcaa-stat-title">Total Final Approved</span>
+                        <small class="ovcaa-stat-sub">Officially approved by the Chancellor</small>
+                    </article>
+                @elseif ($isOvcaa)
+                    <article class="ovcaa-stat-card liquid-glass is-maroon" style="cursor: default;">
                         <div class="ovcaa-stat-top">
-                            <div class="ovcaa-stat-icon is-maroon">
-                                <i class="bi bi-collection-fill"></i>
-                            </div>
+                            <div class="ovcaa-stat-icon is-maroon"><i class="bi bi-collection-fill"></i></div>
                             <strong>{{ $reviewOverview['total'] }}</strong>
                         </div>
                         <span class="ovcaa-stat-title">Total Submissions</span>
-                    </a>
+                        <small class="ovcaa-stat-sub">Total proposals received</small>
+                    </article>
+
+                    <article class="ovcaa-stat-card liquid-glass is-blue" style="cursor: default;">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-blue"><i class="bi bi-patch-check-fill"></i></div>
+                            <strong>{{ $reviewOverview['pending'] }}</strong>
+                        </div>
+                        <span class="ovcaa-stat-title">Pending Evaluation</span>
+                        <small class="ovcaa-stat-sub">Awaiting OVCAA review</small>
+                    </article>
+
+                    <article class="ovcaa-stat-card liquid-glass is-amber" style="cursor: default;">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-amber"><i class="bi bi-arrow-counterclockwise"></i></div>
+                            <strong>{{ $reviewOverview['returned'] ?? 0 }}</strong>
+                        </div>
+                        <span class="ovcaa-stat-title">For Revision</span>
+                        <small class="ovcaa-stat-sub">Returned for corrections</small>
+                    </article>
+
+                    <article class="ovcaa-stat-card liquid-glass is-green" style="cursor: default;">
+                        <div class="ovcaa-stat-top">
+                            <div class="ovcaa-stat-icon is-green"><i class="bi bi-check2-circle"></i></div>
+                            <strong>{{ $reviewOverview['forwarded'] }}</strong>
+                        </div>
+                        <span class="ovcaa-stat-title">Endorsed to OC</span>
+                        <small class="ovcaa-stat-sub">Successfully forwarded to OC</small>
+                    </article>
                 @else
                     {{-- Student Org Top KPI Cards --}}
                     <a href="{{ route('office.activities') }}" class="ovcaa-stat-card liquid-glass is-maroon" title="Total Activities">
@@ -2706,11 +2743,295 @@
                 @endif
             </div>
 
+            @if ($isOc)
+                <section class="oc-chart-card" aria-labelledby="oc-approval-trend-title">
+                    <div class="oc-chart-header">
+                        <div>
+                            <h2 id="oc-approval-trend-title">Approval Trend</h2>
+                            <p class="oc-chart-sub">Monthly tracking of approved proposals, pending evaluations, and revision returns.</p>
+                        </div>
+                        <div class="oc-trend-controls">
+                            <div class="oc-trend-legend" aria-label="Approval trend legend">
+                                <button type="button" data-series="0" aria-pressed="true"><span style="--series-color:#8b1828"></span>Approved</button>
+                                <button type="button" data-series="1" aria-pressed="true"><span style="--series-color:#d97706"></span>Pending</button>
+                                <button type="button" data-series="2" aria-pressed="true"><span class="is-dashed" style="--series-color:#e11d48"></span>Returned for Revision</button>
+                            </div>
+                            <select id="ocApprovalTrendPeriod" aria-label="Approval trend period">
+                                <option value="last6" selected>Last 6 Months</option>
+                                <option value="ytd">Year to Date</option>
+                                <option value="fullYear">Full Year ({{ $ocApprovalTrendData['year'] }})</option>
+                                <option value="quarters">Quarters</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="oc-chart-canvas"><canvas id="ocApprovalTrendChart" role="img" aria-label="Approval trend for approved, pending, and returned proposals"></canvas></div>
+                </section>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    (function () {
+                        if (typeof Chart === 'undefined') return;
+                        const trend = @json($ocApprovalTrendData);
+                        const keys = ['approved', 'pending', 'returned'];
+                        const crosshair = {
+                            id: 'ocVerticalCrosshair',
+                            beforeDatasetsDraw(chart) {
+                                const active = chart.tooltip && chart.tooltip.getActiveElements();
+                                if (!active || !active.length) return;
+                                const ctx = chart.ctx, x = active[0].element.x;
+                                ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(139, 24, 40, 0.45)'; ctx.lineWidth = 1;
+                                ctx.beginPath(); ctx.moveTo(x, chart.chartArea.top); ctx.lineTo(x, chart.chartArea.bottom); ctx.stroke(); ctx.restore();
+                            }
+                        };
+                        const chart = new Chart(document.getElementById('ocApprovalTrendChart'), {
+                            type: 'line',
+                            data: { labels: trend.last6.labels, datasets: [
+                                { label: 'Approved', data: trend.last6.approved, borderColor: '#8b1828', borderWidth: 2.8, tension: 0.42, cubicInterpolationMode: 'monotone', clip: false, fill: true, backgroundColor: context => { const area = context.chart.chartArea; if (!area) return 'transparent'; const gradient = context.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom); gradient.addColorStop(0, 'rgba(139, 24, 40, 0.18)'); gradient.addColorStop(1, 'rgba(139, 24, 40, 0)'); return gradient; }, pointRadius: 4, pointBackgroundColor: '#ffffff', pointBorderColor: '#8b1828', pointBorderWidth: 2.2, pointHoverRadius: 6.5, pointHoverBorderWidth: 3 },
+                                { label: 'Pending', data: trend.last6.pending, borderColor: '#d97706', borderWidth: 2.2, tension: 0.42, cubicInterpolationMode: 'monotone', clip: false, fill: false, pointRadius: 3.5, pointBackgroundColor: '#ffffff', pointBorderColor: '#d97706', pointBorderWidth: 2, pointHoverRadius: 6 },
+                                { label: 'Returned for Revision', data: trend.last6.returned, borderColor: '#e11d48', borderWidth: 2.2, borderDash: [5, 4], tension: 0.42, cubicInterpolationMode: 'monotone', clip: false, fill: false, pointRadius: 3.5, pointBackgroundColor: '#ffffff', pointBorderColor: '#e11d48', pointBorderWidth: 2, pointHoverRadius: 6 }
+                            ] },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                layout: { padding: { top: 12, right: 16, bottom: 6, left: 6 } },
+                                interaction: { mode: 'index', intersect: false },
+                                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#fff', titleColor: '#1a1618', bodyColor: '#51484b', borderColor: '#f0e6e8', borderWidth: 1, padding: 12, boxWidth: 10, boxHeight: 10, boxPadding: 6, callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} ${ctx.parsed.y === 1 ? 'Proposal' : 'Proposals'}`, labelColor: ctx => ({ borderColor: ctx.dataset.borderColor, backgroundColor: ctx.dataset.borderColor, borderRadius: 3 }) } } },
+                                scales: { y: { beginAtZero: true, suggestedMax: Math.max(4, Math.max(0, ...keys.flatMap(key => trend.last6[key])) + 1), ticks: { precision: 0 }, grid: { color: '#f3edef' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } }
+                            },
+                            plugins: [crosshair]
+                        });
+                        const updateMax = () => {
+                            const values = chart.data.datasets.flatMap((dataset, index) => chart.isDatasetVisible(index) ? dataset.data : []);
+                            chart.options.scales.y.suggestedMax = Math.max(4, Math.max(0, ...values) + 1);
+                        };
+                        updateMax();
+                        document.getElementById('ocApprovalTrendPeriod').addEventListener('change', function () {
+                            const period = trend[this.value];
+                            chart.data.labels = period.labels;
+                            keys.forEach((key, index) => { chart.data.datasets[index].data = period[key]; });
+                            updateMax(); chart.update();
+                        });
+                        document.querySelectorAll('.oc-trend-legend button').forEach(button => {
+                            button.addEventListener('click', () => {
+                                const index = Number(button.dataset.series), visible = !chart.isDatasetVisible(index);
+                                chart.setDatasetVisibility(index, visible);
+                                button.classList.toggle('is-hidden', !visible);
+                                button.setAttribute('aria-pressed', String(visible));
+                                updateMax(); chart.update();
+                            });
+                        });
+                    })();
+                </script>
+            @endif
+
+            @if ($isOvcaa)
+                <div class="ovcaa-charts-row">
+                    <section class="ovcaa-chart-card" aria-labelledby="ovcaa-status-title">
+                        <div class="ovcaa-chart-header">
+                            <h2 id="ovcaa-status-title">Submission Status Distribution</h2>
+                            <ul class="ovcaa-status-legend" aria-label="Submission status legend">
+                                <li><span style="background:#d97706"></span>Pending</li>
+                                <li><span style="background:#8b1828"></span>Approved</li>
+                                <li><span style="background:#e11d48"></span>For Revision</li>
+                            </ul>
+                        </div>
+                        <div class="ovcaa-chart-canvas">
+                            <canvas id="ovcaaStatusDonutChart" role="img" aria-label="Submission status distribution: {{ $ovcaaStatusCounts['pending'] }} pending, {{ $ovcaaStatusCounts['approved'] }} approved, {{ $ovcaaStatusCounts['returned'] }} for revision"></canvas>
+                            @if (array_sum($ovcaaStatusCounts) === 0)
+                                <div class="ovcaa-chart-empty">No submissions yet</div>
+                            @endif
+                        </div>
+                    </section>
+                    <section class="ovcaa-chart-card" aria-labelledby="ovcaa-trend-title">
+                        <div class="ovcaa-chart-header">
+                            <h2 id="ovcaa-trend-title">Submission Trends Over Time</h2>
+                            <div class="ovcaa-trend-controls">
+                                <ul class="ovcaa-trend-legend" aria-label="Submission trend legend">
+                                    <li><span style="background:#c48b94"></span>Last Year</li>
+                                    <li><span style="background:#8b1828"></span>Current Year</li>
+                                </ul>
+                                <select id="ovcaaTrendPeriodSelect" aria-label="Submission trend period">
+                                    <option value="months" selected>Months</option>
+                                    <option value="quarters">Quarters</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="ovcaa-chart-canvas"><canvas id="ovcaaTrendsLineChart" role="img" aria-label="Submission trends comparing {{ $ovcaaTrendData['lastYearLabel'] }} and {{ $ovcaaTrendData['currentYearLabel'] }}"></canvas></div>
+                    </section>
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    (function () {
+                        if (typeof Chart === 'undefined') return;
+                        const counts = @json($ovcaaStatusCounts);
+                        const trend = @json($ovcaaTrendData);
+                        const values = [counts.pending, counts.approved, counts.returned];
+                        const colors = ['#d97706', '#8b1828', '#e11d48'];
+                        const hasValues = values.some(value => value > 0);
+                        const ovcaaDonutCallouts = {
+                            id: 'ovcaaDonutCallouts',
+                            afterDatasetsDraw(chart) {
+                                if (!hasValues) return;
+                                const ctx = chart.ctx;
+                                ctx.save();
+                                ctx.font = 'bold 13px sans-serif';
+                                ctx.textBaseline = 'middle';
+                                chart.getDatasetMeta(0).data.forEach((arc, index) => {
+                                    if (!values[index]) return;
+                                    const angle = values.filter(value => value > 0).length === 1 ? -Math.PI / 4 : (arc.startAngle + arc.endAngle) / 2;
+                                    const cos = Math.cos(angle), sin = Math.sin(angle);
+                                    const x1 = arc.x + cos * (arc.outerRadius + 2), y1 = arc.y + sin * (arc.outerRadius + 2);
+                                    const x2 = arc.x + cos * (arc.outerRadius + 15), y2 = arc.y + sin * (arc.outerRadius + 15);
+                                    const direction = cos >= 0 ? 1 : -1;
+                                    const x3 = x2 + direction * 12;
+                                    ctx.strokeStyle = colors[index];
+                                    ctx.fillStyle = colors[index];
+                                    ctx.lineWidth = 1.2;
+                                    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y2); ctx.stroke();
+                                    const backX = x1 + cos * 6;
+                                    const backY = y1 + sin * 6;
+                                    const perpX = -sin * 3.5;
+                                    const perpY = cos * 3.5;
+                                    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(backX + perpX, backY + perpY); ctx.lineTo(backX - perpX, backY - perpY); ctx.closePath(); ctx.fill();
+                                    ctx.textAlign = direction > 0 ? 'left' : 'right';
+                                    ctx.fillText(String(values[index]), x3 + direction * 4, y2);
+                                });
+                                ctx.restore();
+                            }
+                        };
+                        new Chart(document.getElementById('ovcaaStatusDonutChart'), {
+                            type: 'doughnut',
+                            data: { labels: ['Pending', 'Approved', 'For Revision'], datasets: [{ data: hasValues ? values : [1], backgroundColor: hasValues ? colors : ['#f1e7e9'], borderColor: '#ffffff', borderWidth: values.filter(v => v > 0).length > 1 ? 3 : 0 }] },
+                            options: { responsive: true, maintainAspectRatio: false, cutout: '62%', layout: { padding: { top: 32, right: 65, bottom: 32, left: 65 } }, plugins: { legend: { display: false }, tooltip: { enabled: hasValues } } },
+                            plugins: [ovcaaDonutCallouts]
+                        });
+                        const ovcaaVerticalCrosshair = {
+                            id: 'ovcaaVerticalCrosshair',
+                            beforeDatasetsDraw(chart) {
+                                const active = chart.tooltip && chart.tooltip.getActiveElements();
+                                if (!active || !active.length) return;
+                                const ctx = chart.ctx, x = active[0].element.x;
+                                ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(139, 24, 40, 0.45)'; ctx.lineWidth = 1;
+                                ctx.beginPath(); ctx.moveTo(x, chart.chartArea.top); ctx.lineTo(x, chart.chartArea.bottom); ctx.stroke(); ctx.restore();
+                            }
+                        };
+                        const gradient = (context, color) => {
+                            const area = context.chart.chartArea;
+                            if (!area) return 'transparent';
+                            const fill = context.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+                            fill.addColorStop(0, color); fill.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                            return fill;
+                        };
+                        const lineChart = new Chart(document.getElementById('ovcaaTrendsLineChart'), {
+                            type: 'line',
+                            data: { labels: trend.months.labels, datasets: [
+                                { label: 'Current Year (' + trend.currentYearLabel + ')', data: trend.months.current, clip: false, borderColor: '#8b1828', borderWidth: 2.5, tension: 0.42, cubicInterpolationMode: 'monotone', fill: true, backgroundColor: context => gradient(context, 'rgba(139, 24, 40, 0.22)'), pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#ffffff', pointHoverBorderColor: '#8b1828', pointHoverBorderWidth: 3 },
+                                { label: 'Last Year (' + trend.lastYearLabel + ')', data: trend.months.last, clip: false, borderColor: '#c48b94', borderWidth: 2, tension: 0.42, cubicInterpolationMode: 'monotone', fill: true, backgroundColor: context => gradient(context, 'rgba(196, 139, 148, 0.10)'), pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#ffffff', pointHoverBorderColor: '#c48b94', pointHoverBorderWidth: 3 }
+                            ] },
+                            options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 10, right: 12, bottom: 4, left: 4 } }, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#ffffff', titleColor: '#1a1618', bodyColor: '#51484b', borderColor: '#f0e6e8', borderWidth: 1, padding: 12, displayColors: true, boxWidth: 10, boxHeight: 10, boxPadding: 6, callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y} ${context.parsed.y === 1 ? 'Submission' : 'Submissions'}`, labelColor: context => ({ borderColor: context.dataset.borderColor, backgroundColor: context.dataset.borderColor, borderRadius: 3 }) } } }, scales: { y: { beginAtZero: true, suggestedMax: Math.max(4, Math.max(0, ...trend.months.current, ...trend.months.last) + 1), ticks: { precision: 0 }, grid: { color: '#f1e7e9' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } } },
+                            plugins: [ovcaaVerticalCrosshair]
+                        });
+                        document.getElementById('ovcaaTrendPeriodSelect').addEventListener('change', function () {
+                            const period = trend[this.value];
+                            lineChart.data.labels = period.labels;
+                            lineChart.data.datasets[0].data = period.current;
+                            lineChart.data.datasets[1].data = period.last;
+                            const maxVal = Math.max(0, ...period.current, ...period.last);
+                            lineChart.options.scales.y.suggestedMax = Math.max(4, maxVal + 1);
+                            lineChart.update();
+                        });
+                    })();
+                </script>
+            @endif
+
+            @if ($isSdo)
+                <div class="sdo-charts-row">
+                    <section class="sdo-chart-card" aria-labelledby="sdo-monthly-chart-title">
+                        <div class="sdo-chart-header">
+                            <div>
+                                <h2 id="sdo-monthly-chart-title">Monthly Sustainability Activities</h2>
+                                <p>Tracks the number of activities submitted for SDO evaluation each month.</p>
+                            </div>
+                            <div>
+                                <select id="sdo-chart-year" aria-label="Select Year">
+                                    <option value="">All Years</option>
+                                    @foreach (array_keys($sdoMonthlyCountsByYear) as $year)
+                                        <option value="{{ $year }}">{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="sdo-chart-canvas"><canvas id="sdoMonthlyBarChart" role="img" aria-label="Monthly activities submitted for SDO evaluation"></canvas></div>
+                        <p>Based on the first recorded handoff to SDO.</p>
+                    </section>
+                    <section class="sdo-chart-card" aria-labelledby="sdo-sdg-chart-title">
+                        <div class="sdo-chart-header">
+                            <div>
+                                <h2 id="sdo-sdg-chart-title">SDG Alignment Distribution</h2>
+                                <p>Proportion of Sustainable Development Goals across evaluated activities.</p>
+                            </div>
+                        </div>
+                        <div class="sdo-chart-canvas"><canvas id="sdoSdgDonutChart" role="img" aria-label="Distribution of SDG tags across evaluated activities"></canvas></div>
+                        <ul class="sdo-chart-legend" aria-label="SDG distribution legend">
+                            @foreach ($sdoSdgDistribution as $label => $item)
+                                <li title="{{ $label }}: {{ $item['name'] ?? '' }}"><span style="background-color: {{ $item['color'] }}"></span>{{ $label }} ({{ $item['count'] }})</li>
+                            @endforeach
+                        </ul>
+                    </section>
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    (function () {
+                        const monthlyCounts = @json($sdoMonthlyCounts);
+                        const countsByYear = @json($sdoMonthlyCountsByYear);
+                        const sdgDistribution = @json($sdoSdgDistribution);
+                        if (typeof Chart === 'undefined') return;
+                        const monthlyChart = new Chart(document.getElementById('sdoMonthlyBarChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                                datasets: [{ label: 'Activities', data: monthlyCounts, backgroundColor: '#8b1828', hoverBackgroundColor: '#19486a', borderRadius: 6, maxBarThickness: 34 }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+                        });
+                        const sdgItems = Object.values(sdgDistribution);
+                        new Chart(document.getElementById('sdoSdgDonutChart'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: Object.keys(sdgDistribution),
+                                datasets: [{ data: sdgItems.map(item => item.count), backgroundColor: sdgItems.map(item => item.color) }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '68%',
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { callbacks: {
+                                        title: function (context) {
+                                            const item = sdgItems[context[0].dataIndex];
+                                            const label = context[0].label;
+                                            return item && item.name ? `${label} — ${item.name}` : label;
+                                        },
+                                        label: function (context) {
+                                            const total = context.dataset.data.reduce((sum, count) => sum + count, 0);
+                                            const percentage = total ? (context.parsed / total * 100).toFixed(1) : '0.0';
+                                            const count = context.parsed;
+                                            return ` ${count} ${count === 1 ? 'activity' : 'activities'} (${percentage}%)`;
+                                        }
+                                    } }
+                                }
+                            }
+                        });
+                        document.getElementById('sdo-chart-year').addEventListener('change', function () {
+                            monthlyChart.data.datasets[0].data = this.value ? (countsByYear[this.value] || Array(12).fill(0)) : monthlyCounts;
+                            monthlyChart.update();
+                        });
+                    })();
+                </script>
+            @endif
+
             {{-- 2. Middle Section --}}
-            <div class="org-dash-2col {{ ($isSo ?? false) ? 'is-balanced' : '' }}">
-                @if ($isSdo || $isOvcaa || $isOc)
-                    @include('org.partials.review-dashboard')
-                @else
+            @if (!$isSdo && !$isOvcaa && !$isOc)
+                <div class="org-dash-2col {{ ($isSo ?? false) ? 'is-balanced' : '' }}">
                     {{-- Student Org: Budget Snapshot --}}
                     <section class="org-dash-card org-budget-snapshot" style="grid-column: 1 / -1;">
                         <div class="org-dash-card-header">
@@ -2789,9 +3110,6 @@
                             <h3 class="org-dash-card-title">
                                 <i class="bi bi-bar-chart-fill" style="color: #8b1828;"></i> Budget Utilization vs Actual
                             </h3>
-                            <a href="{{ route('office.budget') }}" class="app-view-action" aria-label="View budget utilization details">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
-                            </a>
                         </div>
                         @php
                             $soChartRows = ($soBudgetChart ?? collect());
@@ -2835,8 +3153,8 @@
                             <span style="font-weight:700;color:#1a1618;">{{ array_sum(($chartPayload['trendCounts'] ?? collect())->toArray()) }} Total Submissions</span>
                         </div>
                     </section>
-                @endif
-            </div>
+                </div>
+            @endif
 
             @if ($isSo)
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -3072,6 +3390,7 @@
                 @php
                     $osoLiveMetaPayload = [
                         'kpis' => $osoOverview['kpis'] ?? [],
+                        'totalOrgs' => $osoOverview['kpis']['totalOrgs'] ?? 4,
                         'typeBreakdown' => $osoOverview['typeBreakdown'] ?? [0, 0, 0, 0, 0],
                         'typeLabels' => $osoOverview['typeLabels'] ?? ['Activity Proposal', 'Renewal', 'Financial (FR)', 'Accomplishment (AR)', 'TOSA Award'],
                         'typeRows' => $osoOverview['typeRows'] ?? [],
@@ -3145,15 +3464,15 @@
                     (selectedMonth === 'all' || row.mon === selectedMonth) &&
                     (selectedScope === 'all' || (row.scope && row.scope === selectedScope));
                 const typeRows = allTypeRows.length ? allTypeRows.filter(matchesPeriod) : rows.map(() => ({ kind: 'proposal' }));
-                const academicYear = `${selectedYear}-${Number(selectedYear) + 1}`;
-                const recognitionKeys = new Set(osoLiveMeta.recognitionRows
-                    .filter(row => selectedYear === 'all' || row.academic_year === academicYear)
-                    .map(row => String(row.organization_key || '').trim().toLowerCase())
-                    .filter(Boolean));
                 const activityIds = new Set(rows.map(row => String(row.id)));
                 const returnEvents = osoLiveMeta.returnRows.filter(row =>
                     matchesPeriod(row) && activityIds.has(String(row.activity_id)));
                 const returnedActivities = new Set(returnEvents.map(row => row.activity_id)).size;
+                const academicYear = `${selectedYear}-${Number(selectedYear) + 1}`;
+                const recognitionKeys = new Set(osoLiveMeta.recognitionRows
+                    .filter(row => selectedYear === 'all' || row.academic_year === academicYear || row.academic_year === selectedYear)
+                    .map(row => String(row.organization_key || '').trim().toLowerCase())
+                    .filter(Boolean));
                 return {
                     totalOrgs: recognitionKeys.size,
                     pendingTrx: (unfiltered && rows.length === ((window.osoLiveRows || []).length))

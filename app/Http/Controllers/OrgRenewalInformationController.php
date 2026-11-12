@@ -70,7 +70,7 @@ class OrgRenewalInformationController extends Controller
         });
 
         return response()->json([
-            'message' => 'Organization information saved. Selected files have not been uploaded.',
+            'message' => 'Organization information has been successfully saved',
             'information' => [
                 'window_id' => $submission->renewal_window_id,
                 'organization_name' => $submission->organization_name,

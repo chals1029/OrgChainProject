@@ -68,11 +68,11 @@
 
 @section('header')
     <h1><strong>Financial Report</strong></h1>
-    <p class="org-welcome">{{ $fd['organization'] ?? '' }} · {{ $fd['period_label'] ?? '' }}</p>
+    <p class="org-welcome" id="soFinancialSubtitle">{{ $fd['organization'] ?? '' }} · {{ $fd['period_label'] ?? '' }}</p>
 @endsection
 
 @section('actions')
-    <div class="fin-header-actions">
+    <div class="fin-header-actions" id="soFinancialActions">
         <a href="{{ $fd['export_url'] ?? '#' }}" class="org-btn org-btn-ghost">
             <i class="bi bi-file-earmark-arrow-down"></i> Export Report
         </a>
@@ -83,6 +83,7 @@
 @endsection
 
 @section('content')
+    <div id="soFinancialRoot">
     <link rel="stylesheet" href="{{ asset('css/so-financial.css') }}?v={{ filemtime(public_path('css/so-financial.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/semester-reports.css') }}?v={{ filemtime(public_path('css/semester-reports.css')) }}">
 
@@ -644,7 +645,7 @@
                 </div>
                 <div class="fin-preview-actions">
                     <a href="#" class="org-btn org-btn-ghost org-btn-sm" id="finPreviewDownload"><i class="bi bi-download"></i> Download original</a>
-                    <button type="button" class="fin-icon-btn" data-fin-close aria-label="Close preview"><i class="bi bi-x-lg"></i></button>
+                    <button type="button" class="fin-icon-btn org-btn org-btn-ghost org-btn-sm" data-fin-close aria-label="Close preview" style="display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button>
                 </div>
             </header>
             <div class="fin-preview-body">
@@ -666,11 +667,10 @@
     @include('org.partials.document-preview')
 
     <script type="application/json" id="soFinancialData">@json($clientData)</script>
+    </div>
 @endsection
 
 @push('scripts')
-    @if (count($activities))
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    @endif
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ asset('js/so-financial.js') }}?v={{ filemtime(public_path('js/so-financial.js')) }}"></script>
 @endpush

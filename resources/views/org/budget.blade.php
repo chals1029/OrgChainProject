@@ -88,6 +88,7 @@
 @endsection
 
 @section('content')
+    <div id="orgBudgetRoot">
     <style>
         /* ---------------------------------------------------------
            Budget Utilization Theme & Tokens (Unslop / Impeccable Style)
@@ -504,10 +505,20 @@
             font-size: 1.15rem;
         }
 
-        .org-kpi-icon.is-pink { background: #fee2e2; color: #dc2626; }
-        .org-kpi-icon.is-amber { background: #fef3c7; color: #d97706; }
-        .org-kpi-icon.is-green { background: #dcfce7; color: #16a34a; }
-        .org-kpi-icon.is-blue { background: #e0f2fe; color: #0284c7; }
+        .org-kpi-icon.is-pink,
+        .org-kpi-icon.is-amber,
+        .org-kpi-icon.is-green,
+        .org-kpi-icon.is-blue {
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.12), rgba(139, 24, 40, 0.04));
+            color: #8b1828;
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.18);
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .org-kpi-card:hover .org-kpi-icon {
+            transform: scale(1.06);
+            background: linear-gradient(135deg, rgba(139, 24, 40, 0.18), rgba(139, 24, 40, 0.06));
+            box-shadow: inset 0 0 0 1px rgba(139, 24, 40, 0.28);
+        }
 
         .org-kpi-num {
             font-size: 1.85rem;
@@ -977,7 +988,7 @@
                     <input type="hidden" name="department" value="{{ request('department', '') }}">
                     <label for="budgetOrgSelector" class="org-filter-label-text"><i class="bi bi-building"></i> Organization</label>
                     <div class="org-select-pill-wrap">
-                        <select id="budgetOrgSelector" name="organization" class="org-select-pill" onchange="this.form.submit()">
+                        <select id="budgetOrgSelector" name="organization" class="org-select-pill" onchange="updateBudgetOrganizationFilter(this.value)">
                             <option value="">All Organizations</option>
                             @foreach (($organizations ?? collect()) as $orgName)
                                 <option value="{{ $orgName }}" @selected(($selectedOrganization ?? '') === $orgName)>{{ $orgName }}</option>
@@ -1301,7 +1312,7 @@
                 </div>
                 <h3 class="org-kpi-title">Budget Utilization Rate</h3>
                 <div class="org-mini-progress">
-                    <div class="org-mini-fill" id="kpiUtilProgressFill" style="width: 100%; background: #0284c7;"></div>
+                    <div class="org-mini-fill" id="kpiUtilProgressFill" style="width: 100%; background: #8b1828;"></div>
                 </div>
                 <p class="org-kpi-sub" id="kpiRateSub">Recorded spending ÷ approved allocation</p>
             </article>
@@ -1691,28 +1702,30 @@
         </dialog>
     @endif
 
-    @if (!$isOso || $osoSelectedActivity !== null || (!$osoHasActivityRequest && ($selectedOrganization ?? '') === '' && $osoFinancialOverview !== null))
-        @include('org.partials.budget-receipt-preview')
-    @endif
-    @if (!$isOso || $osoSelectedActivity !== null)
-        {{-- Load Chart.js only for pages with activity details. --}}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    @endif
+    @php
+        $orgBudgetPayload = ['liveBudgetEntries' => ($isOso && $osoSelectedActivity === null) ? null : ($liveBudgetEntries ?? null), 'liveScopeTotals' => ($isOso && $osoSelectedActivity === null) ? null : ($liveScopeTotals ?? null), 'budgetDefaultForRole' => $budgetDefaultForRole, 'isOso' => $isOso, 'osoSelectedActivityKey' => $osoSelectedActivityKey, 'selectedYear' => $selectedYear, 'selectedSemester' => $selectedSemester, 'requestedActivityId' => (int) request('activity_id', 0), 'printRoute' => route('office.budget.print'), 'budgetRoute' => route('office.budget', $osoNavigationFilters), 'selectedOrganization' => $selectedOrganization, 'department' => request('department', '')];
+    @endphp
+    <script type="application/json" id="orgBudgetPayload">@json($orgBudgetPayload)</script>
+    </div>
+    @include('org.partials.budget-receipt-preview')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Only final-approved activities are supplied by the controller.
-        // Never fall back to demo activities when the approved set is empty.
-        const liveBudgetEntries = @json(($isOso && $osoSelectedActivity === null) ? null : ($liveBudgetEntries ?? null));
-        const liveScopeTotals = @json(($isOso && $osoSelectedActivity === null) ? null : ($liveScopeTotals ?? null));
-        const liveBudgetDefault = @json($budgetDefaultForRole);
-        const isOsoBudget = @json($isOso);
-        const osoSelectedActivityKey = @json($osoSelectedActivityKey);
+        window.initOrgBudget = function () {
+        const payload = JSON.parse(document.getElementById('orgBudgetPayload').textContent);
+        window.__orgBudgetCharts?.forEach(chart => chart?.destroy());
+        window.__orgBudgetCharts = [];
+        const liveBudgetEntries = payload.liveBudgetEntries;
+        const liveScopeTotals = payload.liveScopeTotals;
+        const liveBudgetDefault = payload.budgetDefaultForRole;
+        const isOsoBudget = payload.isOso;
+        const osoSelectedActivityKey = payload.osoSelectedActivityKey;
 
         const budgetDataset = (liveBudgetEntries && Object.keys(liveBudgetEntries).length > 0) ? liveBudgetEntries : {};
 
         let donutChartInstance = null;
         let barChartInstance = null;
         let activeBudgetRows = [];
-        let activeBudgetPeriod = { year: @json($selectedYear), term: @json($selectedSemester) };
+        let activeBudgetPeriod = { year: payload.selectedYear, term: payload.selectedSemester };
         let budgetPeriodInitialized = false;
         let currentBudgetExpenseItems = [];
         let currentBudgetExpenseQuery = '';
@@ -1911,6 +1924,10 @@
         function initBudgetCharts() {
             if (donutChartInstance || barChartInstance || typeof Chart === 'undefined') return;
             if (isOsoBudget && (!osoSelectedActivityKey || !document.getElementById('osoBudgetCharts')?.open)) return;
+            Chart.getChart('budgetDonutChart')?.destroy();
+            Chart.getChart('budgetBarChart')?.destroy();
+            Chart.getChart('expenseDonutChart')?.destroy();
+            Chart.getChart('budgetVsActualBarChart')?.destroy();
             // 1. Donut Chart Initialization (scope split: In-Campus vs Off-Campus)
             const initKey = isOsoBudget ? osoSelectedActivityKey : (budgetDataset.all ? 'all' : Object.keys(budgetDataset)[0]);
             const initData = budgetDataset[initKey] || { categories: [], donutData: [] };
@@ -2021,6 +2038,7 @@
                     }
                 }
             });
+            window.__orgBudgetCharts = [donutChartInstance, barChartInstance];
         }
 
         function budgetPaginate(items, page, pageSize) {
@@ -2128,10 +2146,10 @@
         function selectBudgetActivity(key) {
             const selected = budgetDataset[key];
             if (isOsoBudget) {
-                if (!selected || key === 'all' || selected.orgName !== @json($selectedOrganization) || !budgetRowMatchesPeriod(selected, activeBudgetPeriod.year, activeBudgetPeriod.term)) return;
-                const url = new URL(@json(route('office.budget', $osoNavigationFilters)));
+                if (!selected || key === 'all' || selected.orgName !== payload.selectedOrganization || !budgetRowMatchesPeriod(selected, activeBudgetPeriod.year, activeBudgetPeriod.term)) return;
+                const url = new URL(payload.budgetRoute);
                 url.searchParams.set('activity_id', selected.activityId);
-                window.location.assign(url);
+                swapBudget(url);
                 return;
             }
             if (key !== 'all' && selected) {
@@ -2141,7 +2159,7 @@
                     url.searchParams.set('academic_year', period.year);
                     url.searchParams.set('semester', 'Annual');
                     url.searchParams.set('activity_id', selected.activityId);
-                    window.location.assign(url);
+                    swapBudget(url);
                     return;
                 }
                 if (!budgetRowMatchesPeriod(selected, activeBudgetPeriod.year, activeBudgetPeriod.term)) {
@@ -2167,12 +2185,12 @@
                 orgInput.style.height = Math.max(44, orgInput.scrollHeight) + 'px';
             }
             if (!isOsoBudget) {
-                const printUrl = new URL(@json(route('office.budget.print')));
-                printUrl.searchParams.set('organization', @json($selectedOrganization));
+                const printUrl = new URL(payload.printRoute);
+                printUrl.searchParams.set('organization', payload.selectedOrganization);
                 if (selected) printUrl.searchParams.set('activity_id', selected.activityId);
                 printUrl.searchParams.set('academic_year', activeBudgetPeriod.year);
                 printUrl.searchParams.set('semester', activeBudgetPeriod.term);
-                const reportDepartment = @json(request('department', ''));
+                const reportDepartment = payload.department;
                 if (reportDepartment) printUrl.searchParams.set('department', reportDepartment);
                 document.getElementById('budgetPrintLink').href = printUrl;
             }
@@ -2207,7 +2225,7 @@
             const fill = document.getElementById('kpiUtilProgressFill');
             if (fill) {
                 fill.style.width = Math.min(data.utilRate, 100) + '%';
-                fill.style.background = data.rateStatusColor || '#0284c7';
+                fill.style.background = data.rateStatusColor || '#8b1828';
             }
 
             const rateBadge = document.getElementById('kpiRateStatusBadge');
@@ -2255,13 +2273,13 @@
             const term = document.getElementById('budgetTermSelector').value;
             const orgSemester = document.getElementById('budgetOrgSemester');
             if (orgSemester) orgSemester.value = term;
-            if (yr !== @json($selectedYear) || (@json($isOso) && term !== @json($selectedSemester))) {
+            if (yr !== payload.selectedYear || (isOsoBudget && term !== payload.selectedSemester)) {
                 const url = new URL(window.location.href);
                 url.searchParams.set('academic_year', yr);
                 url.searchParams.set('semester', term);
                 url.searchParams.delete('activity_id');
                 url.searchParams.delete('cash_page');
-                window.location.assign(url);
+                swapBudget(url);
                 return;
             }
             activeBudgetPeriod = { year: yr, term };
@@ -2333,19 +2351,59 @@
                 if (org) params.set('organization', org);
             }
 
-            const url = @json(route('office.budget.print')) + '?' + params.toString();
+            const url = payload.printRoute + '?' + params.toString();
             window.open(url, '_blank', 'noopener');
             closeBudgetPrintFilterModal();
         };
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const yearSelect = document.getElementById('budgetYearSelector');
-            const year = @json($selectedYear);
+        window.selectBudgetActivity = selectBudgetActivity;
+        window.updateFilterPeriod = updateFilterPeriod;
+        window.goToBudgetExpensePage = goToBudgetExpensePage;
+        window.filterExpenseTable = filterExpenseTable;
+        function swapBudget(url) {
+            if (window.OrgSmoothFilter) {
+                window.OrgSmoothFilter.swap({ url: url.toString(), targets: ['#orgBudgetRoot'], onAfterSwap: () => {
+                    window.initOrgBudget?.();
+                    if (document.getElementById('soExpenseForm')) {
+                        if (typeof window.initReceiptUpload === 'function') {
+                            window.initReceiptUpload();
+                        } else if (!document.getElementById('receiptUploadScript')) {
+                            const script = document.createElement('script');
+                            script.id = 'receiptUploadScript';
+                            script.src = "{{ asset('js/receipt-upload.js') }}?v={{ filemtime(public_path('js/receipt-upload.js')) }}";
+                            document.head.appendChild(script);
+                        }
+                    }
+                } });
+            } else {
+                window.location.assign(url.toString());
+            }
+        }
+        window.updateBudgetOrganizationFilter = function (organization) {
+            const url = new URL(window.location.href);
+            if (organization) url.searchParams.set('organization', organization);
+            else url.searchParams.delete('organization');
+            url.searchParams.delete('activity_id');
+            url.searchParams.delete('cash_page');
+            swapBudget(url);
+        };
+        const root = document.getElementById('orgBudgetRoot');
+        root.onclick = function (event) {
+            const link = event.target.closest('a[href]');
+            if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target === '_blank' || link.classList.contains('print') || link.hasAttribute('download')) return;
+            const url = new URL(link.href, window.location.href);
+            const budgetUrl = new URL(payload.budgetRoute, window.location.href);
+            if (url.origin !== budgetUrl.origin || url.pathname !== budgetUrl.pathname) return;
+            event.preventDefault();
+            swapBudget(url);
+        };
+        const yearSelect = document.getElementById('budgetYearSelector');
+        const year = payload.selectedYear;
             if (!Array.from(yearSelect.options).some(o => o.value === year)) yearSelect.add(new Option('A.Y. '+year, year));
             yearSelect.value = year;
-            document.getElementById('budgetTermSelector').value = @json(request('semester', 'Annual'));
+            document.getElementById('budgetTermSelector').value = payload.selectedSemester;
             if (isOsoBudget && !osoSelectedActivityKey) return;
-            const requestedId = @json((int) request('activity_id', 0));
+            const requestedId = payload.requestedActivityId;
             const requestedKey = isOsoBudget ? osoSelectedActivityKey : (requestedId && budgetDataset['activity-'+requestedId] ? 'activity-'+requestedId : null);
             if (requestedKey && !isOsoBudget) {
                 const requestedPeriod = budgetAcademicPeriod(budgetDataset[requestedKey]);
@@ -2353,15 +2411,17 @@
                     const url = new URL(window.location.href);
                     url.searchParams.set('academic_year', requestedPeriod.year);
                     url.searchParams.set('semester', 'Annual');
-                    window.location.assign(url);
+                    swapBudget(url);
                     return;
                 }
                 document.getElementById('budgetActivitySelector').value = requestedKey;
             }
             updateFilterPeriod();
             initBudgetCharts();
+            window.__orgBudgetCharts = [donutChartInstance, barChartInstance];
             if (requestedKey && !isOsoBudget) selectBudgetActivity(requestedKey);
             else switchActivityData(document.getElementById('budgetActivitySelector')?.value || liveBudgetDefault);
-        });
+        };
+        document.addEventListener('DOMContentLoaded', () => window.initOrgBudget());
     </script>
 @endsection

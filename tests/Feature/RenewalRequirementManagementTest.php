@@ -523,6 +523,41 @@ class RenewalRequirementManagementTest extends TestCase
         $this->assertTrue($this->window->fresh()->is_open);
     }
 
+    public function test_oso_submission_metric_counts_current_window_submitted_organizations(): void
+    {
+        $this->submission('approved');
+        $current = $this->renewalWindow($this->definitions());
+
+        $assertMetric = function (int $expected): void {
+            $response = $this->actingAs($this->oso, 'office')->get(route('office.renewal'))->assertOk();
+            $document = new \DOMDocument();
+            @$document->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($document);
+            $metrics = $xpath->query('//article[contains(concat(" ", normalize-space(@class), " "), " or-metric ")][span[normalize-space()="Organizations submitted"]]');
+            $this->assertCount(1, $metrics);
+            $metric = $metrics->item(0);
+            $this->assertSame((string) $expected, trim($xpath->query('./div/strong', $metric)->item(0)->textContent));
+            $this->assertSame('Submitted in current renewal period', trim($xpath->query('./small', $metric)->item(0)->textContent));
+        };
+
+        $assertMetric(0);
+
+        foreach (['submitted', 'returned', 'approved', 'rejected', 'draft', 'missing_timestamp'] as $status) {
+            OrgRenewalSubmission::query()->create([
+                'renewal_window_id' => $current->id,
+                'organization_name' => $status === 'submitted' ? Str::upper($this->organization->name) : 'Unlisted '.$status.' '.$this->suffix,
+                'college' => $this->organization->college,
+                'submitted_by' => $this->so->id,
+                'adviser_name' => 'Fixture Adviser',
+                'dean_name' => 'Fixture Dean',
+                'status' => $status === 'missing_timestamp' ? 'submitted' : $status,
+                'submitted_at' => $status === 'missing_timestamp' ? null : now(),
+            ]);
+        }
+
+        $assertMetric(4);
+    }
+
     public function test_tracking_lists_each_registered_organization_with_its_current_window_decision(): void
     {
         $expected = [$this->organization->name => ['none', 'Not Renewed']];

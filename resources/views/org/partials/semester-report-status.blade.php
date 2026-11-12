@@ -81,7 +81,7 @@
                         <button type="submit" class="org-btn org-btn-ghost">Save FR document</button>
                     </form>
                 @endif
-                <form method="post" action="{{ route('office.reports.submit', ['reportType' => $reportType]) }}" class="sr-actions">
+                <form method="post" action="{{ route('office.reports.submit', ['reportType' => $reportType]) }}" class="sr-actions{{ ($embedReportStatus ?? false) && $reportType === 'ar' ? ' sr-ar-submit' : '' }}">
                     @csrf
                     <input type="hidden" name="reportType" value="{{ $reportType }}">
                     <input type="hidden" name="organization_name" value="{{ $selectedOrganization }}">
@@ -89,6 +89,7 @@
                     <input type="hidden" name="academic_year" value="{{ $selectedYear }}">
                     <button type="submit" class="org-btn org-btn-primary" @disabled($submissionLocked || empty($record['has_document']) || !$financialViewed)>Submit {{ strtoupper($reportType) }} to OSO</button>
                     @if (empty($record['has_document']))<span class="sr-muted">Save the {{ strtoupper($reportType) }} document before submitting.</span>@endif
+                    @if (($embedReportStatus ?? false) && $reportType === 'ar' && !empty($record['has_document']))<span class="sr-muted">Submit the saved AR to OSO when ready.</span>@endif
                     @if (!$financialViewed)<span class="sr-muted">View the latest Financial Report file before submitting FR.</span><a class="org-btn org-btn-ghost" href="{{ route('office.financial', ['academic_year' => $selectedYear, 'semester' => $selectedSemester]) }}">Open Financial Report</a>@endif
                 </form>
             @endif

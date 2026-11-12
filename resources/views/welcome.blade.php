@@ -15,7 +15,8 @@
     <link rel="canonical" href="{{ url('/') }}">
 
     <title>OrgChain | Batangas State University</title>
-    <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('orgchain-icon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     @fonts
 

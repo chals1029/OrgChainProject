@@ -645,15 +645,22 @@ input.or-search:focus {
     flex: 0 0 auto;
     display: inline-grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     background: linear-gradient(135deg, var(--or-burgundy), var(--or-burgundy-dark));
     color: #fff;
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.03em;
     text-transform: uppercase;
+}
+
+.or-org-mark.has-logo {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .or-org-copy {
@@ -674,6 +681,18 @@ input.or-search:focus {
     font-size: 0.7rem;
     line-height: 1.3;
     overflow-wrap: anywhere;
+}
+
+.or-activity-advisory {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 13rem;
+    max-width: 20rem;
+    line-height: 1.4;
+}
+
+.or-activity-advisory span {
+    white-space: normal;
 }
 
 .or-submitted-date {

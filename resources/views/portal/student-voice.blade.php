@@ -33,7 +33,7 @@
         .sv-form textarea { resize:vertical; min-height:100px; line-height:1.6; }
         .sv-form :focus-visible { outline:2px solid #8b1828; outline-offset:3px; }
         .sv-form small { font-weight:400; color:#8b7881; }
-        .sv-submit { justify-self:start; padding:.65rem 1.15rem; border:0; border-radius:10px; background:#8b1828; color:#fff; font:inherit; font-size:.82rem; font-weight:750; cursor:pointer; display:inline-flex; align-items:center; gap:.4rem; }
+        .sv-submit { justify-self:end; margin-left:auto; padding:.65rem 1.15rem; border:0; border-radius:10px; background:#8b1828; color:#fff; font:inherit; font-size:.82rem; font-weight:750; cursor:pointer; display:inline-flex; align-items:center; gap:.4rem; }
         .sv-submit:hover { background:#731421; }
 
         .sv-details-card { position:relative; box-sizing:border-box; background:#fff; border:1px solid #eadde2; border-radius:18px; box-shadow:0 4px 20px rgba(95,25,45,.04); padding:1.25rem; }

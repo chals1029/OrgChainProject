@@ -77,14 +77,14 @@
         </section>
 
         <section class="sr-card" id="srOrganizationDirectory" aria-labelledby="srDirectoryTitle">
-            <div class="sr-head"><div><h2 id="srDirectoryTitle">Organization report directory</h2><p class="sr-muted">AY {{ $selectedYear }} · {{ $selectedSemester }}</p></div><span class="sr-muted" id="srDirectoryCount" role="status">{{ count($reportDirectory ?? []) }} organizations</span></div>
+            <div class="sr-head"><div><h2 id="srDirectoryTitle">Organization report directory</h2><p class="sr-muted" id="srDirectorySubtitle">AY {{ $selectedYear }} · {{ $selectedSemester }}</p></div><span class="sr-muted" id="srDirectoryCount" role="status">{{ count($reportDirectory ?? []) }} organizations</span></div>
             <form method="get" action="{{ route('office.reports.index') }}" class="sr-filters" data-report-period-form>
                 <input type="hidden" name="tab" value="{{ $selectedTab }}">
                 <label>Organization<select name="organization"><option value="">All organizations</option>@foreach (($organizations ?? []) as $name)<option value="{{ $name }}" @selected($selectedOrganization === $name)>{{ $name }}</option>@endforeach</select></label>
                 <label>Academic year<select name="academic_year">@foreach (($reportingYears ?? []) as $year)<option value="{{ $year }}" @selected($selectedYear === (string) $year)>{{ $year }}</option>@endforeach</select></label>
                 <label>Semester<select name="semester">@foreach (($reportingSemesters ?? []) as $semester)<option value="{{ $semester }}" @selected($selectedSemester === $semester)>{{ $semester }}</option>@endforeach</select></label>
             </form>
-            <div class="sr-directory-wrap">
+            <div class="sr-directory-wrap" id="srDirectoryWrap">
                 <table class="sr-directory">
                     <thead><tr><th scope="col">Organization</th><th scope="col">Accomplishment Report (AR)</th><th scope="col">Financial Report (FR)</th><th scope="col">Reports</th></tr></thead>
                     <tbody>
@@ -250,7 +250,7 @@
         <div class="fin-preview-box">
             <header class="fin-dialog-head">
                 <div class="fin-dialog-heading"><span class="fin-dialog-icon"><i class="bi bi-file-earmark-text"></i></span><div><strong id="finPreviewTitle">Submitted report preview</strong><small id="finPreviewMeta"></small></div></div>
-                <div class="fin-preview-actions"><a href="" class="org-btn org-btn-ghost org-btn-sm" id="finPreviewDownload"><i class="bi bi-download"></i> Download original</a><button type="button" class="fin-icon-btn" data-fin-close aria-label="Close preview"><i class="bi bi-x-lg"></i></button></div>
+                <div class="fin-preview-actions"><a href="" class="org-btn org-btn-ghost org-btn-sm" id="finPreviewDownload"><i class="bi bi-download"></i> Download original</a><button type="button" class="fin-icon-btn org-btn org-btn-ghost org-btn-sm" data-fin-close aria-label="Close preview" style="display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button></div>
             </header>
             <div class="fin-preview-body">
                 <p class="fin-preview-status" id="finPreviewStatus" role="status"></p>
@@ -402,10 +402,12 @@
                     if (version === previewVersion) preview.replaceChildren(element('p', 'sr-danger', error.message || 'Unable to preview workbook.'));
                 }
             }
-            document.querySelectorAll('[data-oso-view]').forEach(button => button.addEventListener('click', () => {
+            document.getElementById('srOrganizationDirectory').addEventListener('click', event => {
+                const button = event.target.closest('[data-oso-view]');
+                if (!button) return;
                 const sourceRow = button.closest('[data-sr-directory-row]');
                 openOsoReportsModal(JSON.parse(sourceRow.dataset.reports), sourceRow);
-            }));
+            });
             document.getElementById('osoModalClose').addEventListener('click', () => { if (!pending) osoModal.close(); });
             document.getElementById('osoModalFooterClose').addEventListener('click', () => { if (!pending) osoModal.close(); });
             document.getElementById('osoModalBack').addEventListener('click', () => { if (!pending) showCards(); });
@@ -477,8 +479,9 @@
                 if (lockDialog.open) lockDialog.close();
                 if (opener?.isConnected) opener.focus({ preventScroll: true });
             }
-            document.querySelectorAll('[data-sr-submission-form]').forEach(form => {
-                form.addEventListener('submit', event => {
+            document.addEventListener('submit', event => {
+                    const form = event.target.closest('[data-sr-submission-form]');
+                    if (!form) return;
                     if (lockSubmitted) {
                         event.preventDefault();
                         return;
@@ -506,7 +509,6 @@
                     lockConfirm.disabled = false;
                     lockDialog.showModal();
                 });
-            });
             document.getElementById('srLockCancel').addEventListener('click', closeLockDialog);
             lockDialog.addEventListener('cancel', event => {
                 event.preventDefault();
@@ -537,7 +539,7 @@
             });
 
             const search = document.getElementById('srDirectorySearch');
-            const rows = Array.from(document.querySelectorAll('[data-sr-directory-row]'));
+            let rows = Array.from(document.querySelectorAll('[data-sr-directory-row]'));
             const pageSize = 5;
             const params = new URLSearchParams(location.search);
             if (search) search.value = params.get('directory_search') || '';
@@ -580,8 +582,15 @@
                 renderDirectory();
                 document.getElementById('srOrganizationDirectory').scrollIntoView({ block: 'start' });
             }
-            document.getElementById('srDirectoryPrevious').addEventListener('click', () => changePage(-1));
-            document.getElementById('srDirectoryNext').addEventListener('click', () => changePage(1));
+            document.getElementById('srDirectoryPagination').addEventListener('click', event => {
+                if (event.target.closest('#srDirectoryPrevious')) changePage(-1);
+                else if (event.target.closest('#srDirectoryNext')) changePage(1);
+            });
+            window.refreshSrDirectory = function () {
+                rows = Array.from(document.querySelectorAll('[data-sr-directory-row]'));
+                page = 1;
+                renderDirectory();
+            };
             renderDirectory();
             document.querySelectorAll('[data-sr-review-form]').forEach((form) => {
                 const reason = form.elements.namedItem('notes');

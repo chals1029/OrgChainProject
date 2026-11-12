@@ -8,6 +8,9 @@ use App\Models\InCampusActivitySubmission;
 use App\Models\OfficeAnnouncement;
 use App\Models\OfficeSetting;
 use App\Models\OfficeUser;
+use App\Models\OrgRenewalSubmission;
+use App\Models\OrgRenewalWindow;
+use App\Models\OrgReportStatus;
 use App\Models\OrgActivity;
 use App\Models\StudentOrganization;
 use App\Models\TosaApplicant;
@@ -126,6 +129,12 @@ class OfficeSecurityBoundaryTest extends TestCase
                 'to_status' => 'sdo_review', 'created_at' => now()->subMinute(),
             ]);
         }
+        foreach ([$own, $early] as $activity) {
+            DB::connection('mysql')->table('activity_workflow_events')->insert([
+                'org_activity_id' => $activity->id, 'role' => 'ovcaa', 'from_status' => 'ovcaa_review',
+                'to_status' => 'oc_review', 'created_at' => now()->subMinute(),
+            ]);
+        }
         $future = $this->activity($organization);
         DB::connection('mysql')->table('activity_workflow_events')->insert([
             'org_activity_id' => $future->id, 'role' => 'oc', 'from_status' => 'oc_review',
@@ -140,6 +149,67 @@ class OfficeSecurityBoundaryTest extends TestCase
             ->get('/office-desk/calendar')->assertOk()->viewData('officeNotifications');
         $this->assertTrue($downstream->contains('url', route('office.activities', ['activity' => $own->id])));
         $this->assertFalse($downstream->contains('url', route('office.activities', ['activity' => $early->id])));
+    }
+
+    public function test_notification_feed_scopes_decisions_and_uses_decision_identity(): void
+    {
+        $organization = $this->organization();
+        $foreign = $this->organization();
+        $so = $this->officer('so', $organization);
+        $oso = $this->officer('oso');
+        $window = OrgRenewalWindow::create([
+            'academic_year' => '2026-2027', 'semester' => '1st Semester', 'is_open' => false, 'required_docs' => [],
+        ]);
+        $renewal = OrgRenewalSubmission::create([
+            'renewal_window_id' => $window->id, 'organization_name' => $organization->name,
+            'status' => 'returned', 'submitted_at' => now()->subDays(3), 'reviewed_at' => now()->subDay(),
+        ]);
+        OrgRenewalSubmission::create([
+            'renewal_window_id' => $window->id, 'organization_name' => $foreign->name,
+            'status' => 'rejected', 'submitted_at' => now()->subDays(3), 'reviewed_at' => now()->subDay(),
+        ]);
+        foreach (['ar', 'fr'] as $type) {
+            OrgReportStatus::create([
+                'report_type' => $type, 'organization_name' => $organization->name, 'semester' => '1st Semester',
+                'academic_year' => '2026-2027', 'status' => $type === 'ar' ? 'archived' : 'rejected',
+                'reviewed_at' => now()->subHour(), 'reviewed_by' => $oso->id,
+            ]);
+        }
+        OrgReportStatus::create([
+            'report_type' => 'ar', 'organization_name' => $foreign->name, 'semester' => '1st Semester',
+            'academic_year' => '2026-2027', 'status' => 'returned', 'reviewed_at' => now()->subHour(), 'reviewed_by' => $oso->id,
+        ]);
+        $own = $this->activity($organization);
+        $other = $this->activity($foreign);
+        $draft = $this->activity($organization);
+        $draft->update(['workflow_status' => 'created']);
+        foreach ([$own, $other, $draft] as $activity) {
+            DB::connection('mysql')->table('activity_workflow_events')->insert([
+                'org_activity_id' => $activity->id, 'role' => 'oso', 'actor_id' => $oso->id,
+                'from_status' => 'oso_review', 'to_status' => 'sdo_review', 'created_at' => now()->subMinute(),
+            ]);
+        }
+
+        $feed = collect($this->actingAs($so, 'office')->getJson(route('office.notifications'))
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private')->json('notifications'));
+        $this->assertTrue($feed->contains('url', route('office.activities', ['activity' => $own->id])));
+        $this->assertFalse($feed->contains('url', route('office.activities', ['activity' => $other->id])));
+        $this->assertFalse($feed->contains('url', route('office.activities', ['activity' => $draft->id])));
+        $this->assertCount(2, $feed->where('type', 'report'));
+        $this->assertTrue($feed->contains('url', route('office.financial', ['semester' => '1st Semester', 'academic_year' => '2026-2027'])));
+        $this->assertTrue($feed->contains('url', route('office.accomplishment', ['semester' => '1st Semester', 'academic_year' => '2026-2027'])));
+        $this->assertFalse($feed->contains('title', $foreign->name));
+        $oldId = $feed->firstWhere('type', 'renewal')['id'];
+        $renewal->update(['status' => 'rejected', 'reviewed_at' => now()]);
+        $updated = collect($this->getJson(route('office.notifications'))->assertOk()->json('notifications'));
+        $this->assertNotSame($oldId, $updated->firstWhere('type', 'renewal')['id']);
+        $this->assertSame('Renewal Rejected by OSO', $updated->firstWhere('type', 'renewal')['detail']);
+        $this->assertArrayHasKey('time_label', $updated->first());
+        $this->assertNotEmpty(\Carbon\Carbon::parse($updated->first()['at']));
+
+        $institutionFeed = collect($this->actingAs($oso, 'office')->getJson(route('office.notifications'))->assertOk()->json('notifications'));
+        $this->assertFalse($institutionFeed->contains('type', 'report'));
+        $this->assertFalse($institutionFeed->contains('title', $organization->name));
     }
 
     public function test_unassigned_and_inactive_organization_so_cannot_enter_or_export(): void

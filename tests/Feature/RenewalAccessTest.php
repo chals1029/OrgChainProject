@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\OrgActivity;
 use App\Models\OrgRenewalWindow;
+use App\Models\StudentOrganization;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Support\UsesLaragonDatabase;
 use Tests\TestCase;
 
@@ -173,6 +176,75 @@ class RenewalAccessTest extends TestCase
             'is_qualified_for_renewal' => true,
             'disqualification_reason' => null,
         ]);
+    }
+
+    public function test_oso_activity_recommendations_count_only_matching_completed_final_approved_activities(): void
+    {
+        $suffix = (string) Str::uuid();
+        $two = StudentOrganization::create(['name' => 'Two '.$suffix, 'is_qualified_for_renewal' => true]);
+        $zero = StudentOrganization::create(['name' => 'Zero '.$suffix, 'is_qualified_for_renewal' => true]);
+        $three = StudentOrganization::create(['name' => 'Three '.$suffix, 'is_qualified_for_renewal' => false]);
+        OrgRenewalWindow::create(['academic_year' => '2026-2027', 'semester' => 'Annual', 'is_open' => false]);
+
+        $activity = static function (string $organization, string $date, string $status = 'completed', string $workflow = 'oc_approved'): void {
+            OrgActivity::create(['title' => 'Recommendation test', 'organization_name' => $organization,
+                'starts_at' => $date, 'status' => $status, 'workflow_status' => $workflow]);
+        };
+        $activity($two->name, '2025-08-01 00:00:00');
+        $activity($two->name, '2026-07-31 23:59:59');
+        $activity($two->name, '2025-07-31 23:59:59');
+        $activity($two->name, '2026-08-01 00:00:00');
+        $activity($two->name, '2026-01-01', 'ongoing');
+        $activity($two->name, '2026-01-01', 'completed', 'oc_review');
+        $activity(strtoupper($two->name), '2026-01-01');
+        $activity('Other '.$suffix, '2026-01-01');
+        foreach (['2025-09-01', '2026-01-01', '2026-07-01'] as $date) {
+            $activity($three->name, $date);
+        }
+
+        $response = $this->actingAs($this->ensureOfficeUser('oso'), 'office')->get('/office-desk/renewal')->assertOk();
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($document);
+        foreach ([
+            [$two->name, '2 activities', 'Below activity requirement — OSO review recommended'],
+            [$three->name, '3 activities', 'Meets activity requirement'],
+        ] as [$name, $count, $label]) {
+            $matchingRows = $xpath->query('//tr[.//strong[@class="or-name" and text()="'.$name.'"]]');
+            $this->assertSame(1, $matchingRows->length);
+            $text = $matchingRows->item(0)->textContent;
+            $this->assertStringContainsString('AY 2025-2026 · '.$count, $text);
+            $this->assertStringContainsString($label, $text);
+        }
+        $rows = $response->viewData('allOrganizations')->keyBy('id');
+        $this->assertSame('2025-2026', $rows[$two->id]['activity_recommendation_year']);
+        $this->assertSame(2, $rows[$two->id]['activity_recommendation_count']);
+        $this->assertTrue($rows[$two->id]['can_file_renewal']);
+        $this->assertSame(3, $rows[$three->id]['activity_recommendation_count']);
+        $this->assertFalse($rows[$three->id]['can_file_renewal']);
+        $this->assertTrue($two->fresh()->is_qualified_for_renewal);
+        $this->assertSame(0, $rows[$zero->id]['activity_recommendation_count']);
+        $this->assertFalse($three->fresh()->is_qualified_for_renewal);
+    }
+
+    public function test_activity_recommendation_is_unavailable_without_a_valid_latest_window(): void
+    {
+        $org = StudentOrganization::create(['name' => 'Unavailable '.Str::uuid(), 'is_qualified_for_renewal' => true]);
+        OrgRenewalWindow::query()->delete();
+        $this->actingAs($this->ensureOfficeUser('oso'), 'office');
+
+        foreach ([null, 'invalid', '2026-2028'] as $year) {
+            if ($year !== null) {
+                OrgRenewalWindow::create(['academic_year' => $year, 'semester' => 'Annual', 'is_open' => false]);
+            }
+            $row = $this->get('/office-desk/renewal')->assertOk()->viewData('allOrganizations')->firstWhere('id', $org->id);
+            if ($year === null) {
+                OrgRenewalWindow::create(['academic_year' => '2026-2027', 'semester' => 'Annual', 'is_open' => false]);
+            }
+            $this->assertNull($row['activity_recommendation_year']);
+            $this->assertNull($row['activity_recommendation_count']);
+            $this->assertTrue($row['can_file_renewal']);
+        }
     }
 }
 

@@ -1,11 +1,12 @@
 <link rel="stylesheet" href="{{ asset('css/tosa-workbook-preview.css') }}?v={{ filemtime(public_path('css/tosa-workbook-preview.css')) }}">
 <dialog class="document-preview-dialog tosa-workbook-dialog" data-tosa-workbook-dialog aria-labelledby="tosaWorkbookTitle">
     <div class="document-preview-box">
-        <header class="document-preview-head">
+        <header class="document-preview-head" style="display:flex;align-items:center;justify-content:space-between;">
             <div class="document-preview-heading">
                 <span class="document-preview-icon" aria-hidden="true"><i class="bi bi-file-earmark-spreadsheet"></i></span>
                 <div class="document-preview-title"><strong id="tosaWorkbookTitle">TOSA COMPUTATION</strong><small>Read-only workbook preview</small></div>
             </div>
+            <button type="button" class="document-preview-action" data-workbook-close aria-label="Close workbook preview"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button>
         </header>
         <div class="tosa-workbook-main">
             <p class="tosa-workbook-note">Read-only, simplified layout. Formula cells show saved values and are not recalculated. Download the original to edit or calculate.</p>
@@ -20,7 +21,6 @@
             </nav>
         </div>
         <footer class="document-preview-actions">
-            <button type="button" class="document-preview-action" data-workbook-close>Close</button>
             <a class="document-preview-action document-preview-action-primary" data-workbook-download href="#">Download original</a>
         </footer>
     </div>

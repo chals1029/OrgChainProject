@@ -159,9 +159,21 @@ class OfficeUser extends Authenticatable
         return $this->studentOrganization?->name;
     }
 
+    public function displayName(): string
+    {
+        if ($this->office_role === 'so') {
+            $shortName = trim((string) $this->studentOrganization?->short_name);
+            if ($shortName !== '') {
+                return $shortName;
+            }
+        }
+
+        return $this->name;
+    }
+
     public function initials(): string
     {
-        $parts = preg_split('/\s+/', trim($this->name)) ?: [];
+        $parts = preg_split('/\s+/', trim($this->displayName())) ?: [];
         $first = mb_substr($parts[0] ?? 'O', 0, 1);
         $last = mb_substr($parts[count($parts) - 1] ?? '', 0, 1);
 

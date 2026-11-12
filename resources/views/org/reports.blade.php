@@ -91,7 +91,7 @@
         }
     </style>
 
-    <div class="office-review-kpis" aria-label="Student feedback totals">
+    <div id="srReviewKpis" class="office-review-kpis" aria-label="Student feedback totals">
         @foreach ([['total', 'Total reports', 'chat-square-text', 'Matching submitted feedback'], ['pending', 'Pending review', 'hourglass-split', 'Awaiting an OSO decision'], ['verified', 'Acknowledged', 'check2-circle', 'Acknowledged by OSO'], ['resolved', 'Resolved', 'check-all', 'Resolved by OSO']] as [$key, $label, $icon, $hint])
             <div class="office-review-kpi {{ ($filters['status'] ?? '') === ($key === 'total' ? '' : $key) ? 'is-active' : '' }}">
                 <div class="office-review-kpi-head">
@@ -104,7 +104,7 @@
         @endforeach
     </div>
 
-    <form method="GET" action="{{ route('office.student-reports') }}" class="sr-card sr-filters" aria-label="Filter student concerns">
+    <form id="srFilterForm" method="GET" action="{{ route('office.student-reports') }}" class="sr-card sr-filters" aria-label="Filter student concerns">
         <label>Search concerns<input type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Student or concern details…"></label>
         <label>Status<select name="status"><option value="">All statuses</option>@foreach (['pending', 'verified', 'resolved', 'dismissed'] as $status)<option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ $status === 'verified' ? 'Acknowledged' : ucfirst($status) }}</option>@endforeach</select></label>
         <label>College<select name="college"><option value="">All colleges</option>@foreach ($colleges as $college)<option value="{{ $college }}" @selected(($filters['college'] ?? '') === $college)>{{ $college }}</option>@endforeach</select></label>
@@ -112,7 +112,7 @@
         <a href="{{ route('office.student-reports') }}" class="org-btn org-btn-ghost org-btn-sm">Reset</a>
     </form>
 
-    <div class="sr-workspace">
+    <div id="srWorkspace" class="sr-workspace">
         <section class="sr-card" aria-labelledby="srQueueTitle">
             <div class="sr-heading">
                 <h2 id="srQueueTitle" style="font-weight: 800;"><i class="bi bi-inbox" aria-hidden="true"></i> <strong>Concern queue</strong></h2>
@@ -296,5 +296,47 @@
         }
         const firstConcern = document.querySelector('.sr-queue-item');
         if (firstConcern) openStudentReportDetails(firstConcern, false);
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('srFilterForm');
+            const search = form.querySelector('input[name="q"]');
+            let timer;
+            const swap = (url) => {
+                clearTimeout(timer);
+                window.OrgSmoothFilter.swap({
+                    url,
+                    targets: ['#srReviewKpis', '#srWorkspace'],
+                    onAfterSwap: () => {
+                        const firstConcern = document.querySelector('.sr-queue-item');
+                        if (firstConcern) openStudentReportDetails(firstConcern, false);
+                    },
+                });
+            };
+            const applyFilters = () => {
+                const url = new URL(form.action);
+                url.search = new URLSearchParams(new FormData(form)).toString();
+                swap(url.toString());
+            };
+            form.querySelectorAll('select[name="status"], select[name="college"]').forEach(select => select.addEventListener('change', applyFilters));
+            search.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(applyFilters, 220);
+            });
+            search.addEventListener('search', applyFilters);
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                applyFilters();
+            });
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('#srFilterForm a[href], #srWorkspace .app-pagination a[href]');
+                if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                if (form.contains(link)) {
+                    search.value = '';
+                    form.elements.status.value = '';
+                    form.elements.college.value = '';
+                }
+                swap(link.href);
+            });
+        });
     </script>
 @endsection

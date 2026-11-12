@@ -17,6 +17,8 @@ The authenticated Student Portal (`/portal`) combines organization-budget visibi
 
 Both grid and list detail dialogs omit the unsupported attendee year-demographic chart, QR/ledger participation attestation and RSVP/certificate panel. Their hardcoded breakdowns, browser-only registration mutations/toasts and exclusive styles were removed. Remaining tabs and backend registration records/endpoints are unchanged; no historical attendance data was deleted.
 
+The student activity-details modal uses a compact four-tab desktop navigation and a two-column mobile layout; budget cards stack on narrow screens. Wide receipt tables scroll within the modal, and long values wrap instead of overflowing it.
+
 ## SDG highlights
 
 - A compact panel displays coloured goal symbols, the actual activity count and up to three activity titles per goal. Symbols and colours share `SdgCatalogue` and the existing activity-creation icon partial.
@@ -29,6 +31,8 @@ Both grid and list detail dialogs omit the unsupported attendee year-demographic
 
 - Compact **In-Campus / Off-Campus** rows use circular scope icons, inline desktop bars/percentages, and separate **Actual** / **Total / Budget** columns with dividers and a category count. Narrow cards place the bar below the label/amounts without horizontal overflow. Values remain the actual scope totals, not the example amounts in the design reference.
 - The budget gauge and breakdown align to equal desktop row heights with consistent section/card gutters. Upcoming/recent activity and announcement footers use compact spacing; those three cards stack on tablet/mobile without changing data or five-row pagination.
+- The overall utilization label sits below the gauge arc to avoid overlapping the progress stroke; the percentage remains inside the arc.
+
 - `StudentPortalController::portal()` sums `org_activities.approved_budget` and `implemented_budget` from student-visible final-approved activities. Legacy `budget_items` categories are not added again to these allocations.
 - No sample category amounts or demonstration pie-chart values establish current spending.
 - Public receipt summaries include sealed eligible receipt rows linked to student-visible activities, with item amounts, hashes and node counts. Pending seals are not presented as confirmed public receipts.

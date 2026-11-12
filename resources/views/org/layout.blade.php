@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') | {{ $brand['title'] }}</title>
-    <link rel="icon" type="image/png" href="{{ !empty(data_get($officeSettings ?? [], 'general.logo_path')) ? asset('storage/'.data_get($officeSettings, 'general.logo_path')) : asset('Orgchain logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('orgchain-icon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     @fonts
 
@@ -22,6 +23,14 @@
     <link rel="stylesheet" href="{{ asset('css/action-confirmations.css') }}?v={{ filemtime(public_path('css/action-confirmations.css')) }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script src="{{ asset('js/action-confirmations.js') }}?v={{ filemtime(public_path('js/action-confirmations.js')) }}"></script>
+    <style>
+        .org-smooth-loading { opacity: .6; transition: opacity .18s ease; }
+        .org-smooth-reveal { animation: orgSmoothReveal .22s ease; }
+        @keyframes orgSmoothReveal { from { opacity: .6; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .org-smooth-loading { transition: none; } .org-smooth-reveal { animation: none; } }
+    </style>
+    <script src="{{ asset('js/smooth-filters.js') }}?v={{ filemtime(public_path('js/smooth-filters.js')) }}" defer></script>
+    <script src="{{ asset('js/office-notifications.js') }}?v={{ filemtime(public_path('js/office-notifications.js')) }}" defer></script>
 </head>
 @php
     $officeRole = $office->office_role ?? '';
@@ -37,7 +46,7 @@
     <div class="org-shell">
         <aside class="org-sidebar liquid-glass" id="orgSidebar">
             <div class="org-sidebar-brand">
-                <div class="org-brand-mark" aria-hidden="true">
+                <div class="org-brand-mark" aria-hidden="true" style="overflow: hidden; padding: 2px; background: #fff;">
                     @if (!empty($brand['logo_url']))
                         <img src="{{ $brand['logo_url'] }}" alt="{{ $brand['title'] }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
                     @else
@@ -55,11 +64,8 @@
                 <a href="{{ route('office.home') }}" class="org-nav-link {{ ($activeNav ?? '') === 'dashboard' ? 'is-active' : '' }}">
                     <i class="bi bi-grid-1x2-fill is-ico-maroon"></i>
                     <span>Dashboard</span>
-                    @if (($activeNav ?? '') === 'dashboard')
-                        <em class="org-badge-new">New</em>
-                    @endif
                 </a>
-                @if (!$isStudentOrgDesk)
+                @if (!$isStudentOrgDesk && ($office->office_role ?? '') !== 'sdo')
                     <a href="{{ route('office.analytics') }}" class="org-nav-link {{ ($activeNav ?? '') === 'analytics' ? 'is-active' : '' }}">
                         <i class="bi bi-bar-chart-fill is-ico-maroon"></i>
                         <span>Analytics</span>
@@ -82,8 +88,8 @@
                     <span>Calendar</span>
                 </a>
 
-                {{-- Budget Utilization is limited to SO/OSO/SDO desks; approval desks do not configure funds. --}}
-                @if (!in_array(($office->office_role ?? ''), ['ovcaa', 'oc'], true))
+                {{-- Budget Utilization is limited to SO and OSO desks; review desks (SDO, OVCAA, OC) do not manage budgets. --}}
+                @if (in_array(($office->office_role ?? ''), ['so', 'oso'], true))
                 <a href="{{ route('office.budget') }}" class="org-nav-link {{ ($activeNav ?? '') === 'budget' ? 'is-active' : '' }}">
                     <i class="bi bi-wallet2 is-ico-maroon"></i>
                     <span>Budget Utilization</span>
@@ -178,10 +184,10 @@
                     @yield('actions')
                     
                     @php $notificationCount = ($officeNotifications ?? collect())->count(); @endphp
-                    <div class="org-bell-wrap">
+                    <div class="org-bell-wrap" data-notifications-url="{{ route('office.notifications') }}" data-office-id="{{ $office->id }}">
                         <button type="button" class="org-bell" id="orgNotificationsButton" aria-label="Notifications" aria-controls="orgNotificationsDropdown" aria-expanded="false" onclick="toggleOrgNotifications(event)">
                             <i class="bi bi-bell-fill" aria-hidden="true"></i>
-                            <span class="org-bell-badge" id="orgBellBadge" @if (!$notificationCount) hidden @endif>{{ min($notificationCount, 99) }}</span>
+                            <span class="org-bell-badge" id="orgBellBadge" hidden style="display: none">{{ min($notificationCount, 99) }}</span>
                         </button>
                         <section id="orgNotificationsDropdown" class="org-notifications-dropdown liquid-glass" aria-labelledby="orgNotificationsHeading">
                             <div class="org-notif-header">
@@ -189,23 +195,23 @@
                                     <h2 class="org-notif-title" id="orgNotificationsHeading"><i class="bi bi-bell-fill" aria-hidden="true"></i> Notifications</h2>
                                     <span class="org-notif-count-pill" id="orgNotifCount">{{ $notificationCount }} new</span>
                                 </div>
-                                <p class="org-notif-subtitle">Recent activity updates &amp; announcements</p>
-                                <button type="button" class="org-notif-mark-read" id="orgNotifMarkReadBtn" onclick="markAllOfficeNotificationsRead(event)" @if (!$notificationCount) disabled @endif>Mark all read</button>
+                                <p class="org-notif-subtitle">Recent activity updates, announcements, renewal filings &amp; reports</p>
+                                <button type="button" class="org-notif-mark-read" id="orgNotifMarkReadBtn" @if (!$notificationCount) disabled @endif>Mark all read</button>
                             </div>
                             <div class="org-notif-list">
-                                @forelse (($officeNotifications ?? collect()) as $notification)
-                                    @php $isAnnouncement = $notification['detail'] === 'Announcement'; @endphp
-                                    <a class="org-notif-item" href="{{ $notification['url'] }}" data-notification-at="{{ $notification['at']->toIso8601String() }}">
-                                        <span class="org-notif-item-icon {{ $isAnnouncement ? 'is-announcement' : 'is-activity' }}" aria-hidden="true"><i class="bi {{ $isAnnouncement ? 'bi-megaphone-fill' : 'bi-file-earmark-check-fill' }}"></i></span>
+                                @foreach (($officeNotifications ?? collect()) as $notification)
+                                    @php $notifId = $notification['id']; $type = $notification['type']; @endphp
+                                    <a class="org-notif-item" href="{{ $notification['url'] }}" data-notif-id="{{ $notifId }}">
+                                        <span class="org-notif-item-icon {{ $type === 'announcement' ? 'is-announcement' : ($type === 'renewal' ? 'is-renewal' : 'is-activity') }}" aria-hidden="true"><i class="bi {{ $type === 'announcement' ? 'bi-megaphone-fill' : ($type === 'renewal' ? 'bi-arrow-repeat' : ($type === 'report' ? 'bi-file-earmark-bar-graph' : 'bi-file-earmark-check-fill')) }}"></i></span>
                                         <span class="org-notif-item-content">
-                                            <span class="org-notif-item-meta"><span class="org-notif-tag">{{ $isAnnouncement ? 'ANNOUNCEMENT' : strtoupper($notification['detail']) }}</span><time datetime="{{ $notification['at']->toIso8601String() }}">{{ $notification['at']->diffForHumans() }}</time></span>
+                                            <span class="org-notif-item-meta"><span class="org-notif-tag">{{ $type === 'renewal' ? 'RENEWAL' : ($type === 'announcement' ? 'ANNOUNCEMENT' : ($type === 'report' ? 'REPORT' : strtoupper($notification['detail']))) }}</span><time datetime="{{ $notification['at']->toIso8601String() }}">{{ $notification['at']->diffForHumans() }}</time></span>
                                             <strong class="org-notif-item-title">{{ $notification['title'] }}</strong>
+                                            @if (in_array($type, ['renewal', 'report'], true))<span class="org-notif-item-detail">{{ $notification['detail'] }}</span>@endif
                                         </span>
                                         <i class="bi bi-chevron-right org-notif-chevron" aria-hidden="true"></i>
                                     </a>
-                                @empty
-                                    <div class="org-notif-empty"><div class="org-notif-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></div><strong>All caught up!</strong><p>No new activity updates or announcements.</p></div>
-                                @endforelse
+                                @endforeach
+                                <div class="org-notif-empty" id="orgNotifEmptyState" @if(($officeNotifications ?? collect())->isNotEmpty()) hidden @endif><div class="org-notif-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></div><strong>All caught up!</strong><p>No new activity updates, announcements, renewal filings, or reports.</p></div>
                             </div>
                             <div class="org-notif-footer"><a class="org-notif-footer-link" href="{{ route('office.updates') }}">View All Announcements <span aria-hidden="true">→</span></a></div>
                         </section>
@@ -214,11 +220,15 @@
                     {{-- User Profile Pill Menu (Right side of Bell) --}}
                     <div class="org-user-menu-wrap">
                         <button type="button" class="org-user-pill" id="orgUserMenuBtn" aria-expanded="false" aria-haspopup="true" aria-label="User menu" onclick="toggleOrgUserDropdown(event)">
-                            <div class="org-user-avatar">
-                                <span>{{ $office->initials() }}</span>
+                            <div class="org-user-avatar" style="overflow: hidden; padding: 2px; background: #fff;">
+                                @if (!empty($brand['logo_url']))
+                                    <img src="{{ $brand['logo_url'] }}" alt="{{ $office->displayName() }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+                                @else
+                                    <span>{{ $office->initials() }}</span>
+                                @endif
                             </div>
                             <div class="org-user-pill-info">
-                                <span class="org-user-pill-name">{{ $office->name }}</span>
+                                <span class="org-user-pill-name">{{ $office->displayName() }}</span>
                                 <span class="org-user-pill-role">{{ strtoupper($office->office_role ?? '') }} Desk</span>
                             </div>
                             <i class="bi bi-chevron-down org-user-chevron"></i>
@@ -226,14 +236,18 @@
 
                         <div class="org-user-dropdown liquid-glass" id="orgUserDropdown">
                             <div class="org-dropdown-header">
-                                <div class="org-dropdown-avatar">
-                                    <span>{{ $office->initials() }}</span>
+                                <div class="org-dropdown-avatar" style="overflow: hidden; padding: 2px; background: #fff;">
+                                    @if (!empty($brand['logo_url']))
+                                        <img src="{{ $brand['logo_url'] }}" alt="{{ $office->displayName() }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+                                    @else
+                                        <span>{{ $office->initials() }}</span>
+                                    @endif
                                 </div>
                                 <div class="org-dropdown-user-meta">
-                                    <strong class="org-dropdown-name">{{ $office->name }}</strong>
+                                    <strong class="org-dropdown-name">{{ $office->displayName() }}</strong>
                                     @php
                                         $ddRole = $brand['role'] ?? '';
-                                        $nameS = strtolower(trim((string) ($office->name ?? '')));
+                                        $nameS = strtolower(trim($office->displayName()));
                                         $roleS = strtolower(trim((string) $ddRole));
                                         $isRedundantRole = $nameS === $roleS || (str_contains($nameS, 'oso') && str_contains($roleS, 'oso')) || (str_contains($nameS, 'office') && str_contains($roleS, 'officer'));
                                     @endphp
@@ -320,32 +334,6 @@
             document.getElementById('orgNotificationsButton')?.setAttribute('aria-expanded', 'false');
         }
 
-        function updateOfficeNotificationReadState(readTimestamp) {
-            let unread = 0;
-            document.querySelectorAll('.org-notif-item').forEach((item) => {
-                const isRead = readTimestamp > 0 && Date.parse(item.dataset.notificationAt) <= readTimestamp;
-                item.classList.toggle('is-read', isRead);
-                if (!isRead) unread++;
-            });
-            const badge = document.getElementById('orgBellBadge');
-            if (badge) {
-                badge.hidden = unread === 0;
-                badge.textContent = Math.min(unread, 99);
-            }
-            const count = document.getElementById('orgNotifCount');
-            if (count) count.textContent = `${unread} new`;
-            const markRead = document.getElementById('orgNotifMarkReadBtn');
-            if (markRead) markRead.disabled = unread === 0;
-        }
-
-        function markAllOfficeNotificationsRead(e) {
-            e.stopPropagation();
-            const timestamp = Date.now();
-            updateOfficeNotificationReadState(timestamp);
-            try { localStorage.setItem('org_office_notif_read_ts', timestamp.toString()); } catch (error) { /* Storage may be unavailable. */ }
-        }
-
-        try { updateOfficeNotificationReadState(Number(localStorage.getItem('org_office_notif_read_ts')) || 0); } catch (error) { /* Keep notifications unread if storage is unavailable. */ }
         window.addEventListener('resize', positionOrgNotifications);
         window.addEventListener('scroll', positionOrgNotifications, true);
         function toggleOrgUserDropdown(e) {

@@ -54,6 +54,11 @@ class UserAccount extends Authenticatable
         return $this->full_name ?: $this->sr_code ?: $this->email;
     }
 
+    public function avatarUrl(): ?string
+    {
+        return filled($this->avatar_path) ? asset('storage/'.$this->avatar_path) : null;
+    }
+
     public function initials(): string
     {
         $name = $this->full_name ?: $this->sr_code ?: $this->email ?: 'U';

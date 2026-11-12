@@ -235,7 +235,7 @@
             @if ($isLockedPacket)
                 <div class="rn-alert ok" role="status" style="margin-bottom:0.75rem;">
                     <i class="bi {{ $my->status === 'approved' ? 'bi-check-all' : 'bi-hourglass-split' }}" aria-hidden="true"></i>
-                    {{ $my->status === 'approved' ? 'Renewal packet approved by OSO. This packet can no longer be edited or resubmitted.' : 'Renewal packet submitted for OSO review. Changes are locked unless OSO returns or rejects the packet for revision.' }}
+                    {{ $my->status === 'approved' ? 'Renewal packet approved by OSO. This packet can no longer be edited or resubmitted.' : 'Renewal Submitted for OSO review. Changes are locked unless OSO returns or rejects the packet for revision.' }}
                     @if ($my->review_remarks)
                         <div style="margin-top:0.35rem;font-weight:600;"><strong>OSO remarks:</strong> {{ $my->review_remarks }}</div>
                     @endif
@@ -261,7 +261,7 @@
                                 <i class="bi bi-pencil-square"></i> Edit information
                             </button>
                             <button type="button" id="soRenewalSaveInfo" class="org-btn org-btn-primary org-btn-sm" @disabled($isLockedPacket || ! $canSubmitPacket)>
-                                <i class="bi bi-check-lg"></i> Save changes
+                                <i class="bi bi-check-lg"></i> Save
                             </button>
                         </div>
                     </div>
@@ -288,9 +288,6 @@
                             </label>
                         </div>
                         <p id="soRenewalInformationStatus" class="rn-muted" role="status" aria-live="polite"></p>
-                        @unless ($isLockedPacket)
-                            <p class="rn-muted">Save changes records only the adviser and dean names. Selected files stay on this page until Submit for Review; leaving or reloading discards files that have not been submitted.</p>
-                        @endunless
                     </form>
                 </section>
 
@@ -321,7 +318,12 @@
                             <h3><i class="bi bi-cloud-upload-fill"></i> Renewal Requirements</h3>
                             <p class="rn-muted">{{ $window->instructions ?: 'View or download each template, complete and sign it, then select the finished document.' }}</p>
                         </div>
-                        <span id="soRenewalCount" class="rn-pill {{ $remainingCount === 0 ? 'ok' : 'wait' }}">{{ $completedCount }}/{{ count($docs) }} ready</span>
+                        <div class="so-renewal-section-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ route('office.renewal.templates.zip') }}" class="org-btn org-btn-ghost org-btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;" title="Download all renewal requirement templates as a ZIP archive">
+                                <i class="bi bi-file-earmark-zip-fill" style="color: #8b1828;"></i> Download Zip File
+                            </a>
+                            <span id="soRenewalCount" class="rn-pill {{ $remainingCount === 0 ? 'ok' : 'wait' }}">{{ $completedCount }}/{{ count($docs) }} ready</span>
+                        </div>
                     </div>
                     <div id="soRenewalProgress" class="rn-progress" role="progressbar" aria-label="Renewal requirements ready" aria-valuemin="0" aria-valuemax="{{ count($docs) }}" aria-valuenow="{{ $completedCount }}">
                         <span style="width:{{ $pct }}%"></span>
@@ -353,7 +355,7 @@
                                                data-document-preview-title="{{ $label }}: {{ $doc['title'] }}" data-document-preview-type="{{ $officialFile['preview_type'] ?? '' }}"><i class="bi bi-eye"></i> View</a>
                                         @endif
                                         @if ($tmplDocx)
-                                            <a href="{{ $tmplDocxUrl }}" download class="rn-link"><i class="bi bi-download"></i> Download</a>
+                                            <a href="{{ $tmplDocxUrl }}" download class="rn-link app-view-action" aria-label="Download {{ $doc['title'] }}"><i class="bi bi-download"></i> Download</a>
                                         @endif
                                     </div>
                                     @if ($uploaded)
@@ -386,11 +388,7 @@
                                    data-document-conversion-url="{{ route('office.documents.preview.convert') }}"
                                    @if ($hasUploadedFile) href="{{ route('office.renewal.documents.file', ['document' => $uploaded, 'v' => $uploaded->fileVersion()]) }}" @else hidden @endif
                                    >{{ $hasUploadedFile ? ($uploaded->file_name ?: basename($uploaded->file_path)) : '' }}</a>
-                                @if ($isLockedPacket)
-                                    <button type="button" class="org-btn org-btn-ghost org-btn-sm" disabled title="This packet is locked">
-                                        <i class="bi bi-lock"></i> Packet {{ $my->status }}
-                                    </button>
-                                @else
+                                @if (! $isLockedPacket)
                                     <div class="so-renewal-file-form">
                                         <input id="renewalDocumentInput{{ $doc['key'] }}" type="file" name="documents[{{ $doc['key'] }}]" form="soRenewalSubmissionForm" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" data-so-renewal-document data-uploaded="{{ $hasUploadedFile ? '1' : '0' }}" style="display:none;" @disabled(! $canSubmitPacket)>
                                         <button type="button" class="org-btn org-btn-ghost org-btn-sm" data-so-renewal-upload-button @disabled(! $canSubmitPacket)>
@@ -407,15 +405,15 @@
                 <div class="so-renewal-footer">
                     <div>
                         @if ($isLockedPacket)
-                            <strong>Renewal packet {{ $my->status }}</strong>
+                            <strong>{{ $my->status === 'submitted' ? 'Renewal Submitted' : 'Renewal packet '.$my->status }}</strong>
                             <small>{{ $my->status === 'approved' ? 'OSO has approved this packet. Uploads, edits and resubmission are closed.' : 'Awaiting OSO review. Uploads, edits and resubmission are locked until returned or rejected.' }}</small>
                         @else
                             <strong id="soRenewalRemaining">{{ $remainingCount }} requirement{{ $remainingCount === 1 ? '' : 's' }} remaining</strong>
-                            <small id="soRenewalHelp">Files are uploaded only when you submit for review. Save changes records names only.</small>
+                            <small id="soRenewalHelp">Files are uploaded only when you submit for review. Save records names only.</small>
                         @endif
                     </div>
                     <button id="soRenewalSubmit" type="submit" form="soRenewalSubmissionForm" class="org-btn org-btn-primary" @disabled($isLockedPacket || $remainingCount > 0 || ! $canSubmitPacket)>
-                        <i class="bi {{ $isLockedPacket ? 'bi-lock-fill' : 'bi-send-fill' }}"></i> {{ $isLockedPacket ? 'Packet Locked' : 'Submit for Review' }}
+                        <i class="bi {{ $isLockedPacket ? 'bi-lock-fill' : 'bi-send-fill' }}"></i> {{ $isLockedPacket ? 'Submission Locked' : 'Submit for Review' }}
                     </button>
                 </div>
             </div>
@@ -437,18 +435,10 @@
             if (nameEl) nameEl.textContent = org.name || '';
             if (collegeEl) collegeEl.textContent = org.college || 'Campus Wide';
 
-            const isActive = org.is_active !== undefined ? !!org.is_active : true;
             const isQualified = org.is_qualified_for_renewal !== undefined ? !!org.is_qualified_for_renewal : true;
 
-            const activeTrue = document.getElementById('modalActiveTrue');
-            const activeFalse = document.getElementById('modalActiveFalse');
             const qualTrue = document.getElementById('modalQualifiedTrue');
             const qualFalse = document.getElementById('modalQualifiedFalse');
-
-            if (activeTrue && activeFalse) {
-                activeTrue.checked = isActive;
-                activeFalse.checked = !isActive;
-            }
 
             if (qualTrue && qualFalse) {
                 qualTrue.checked = isQualified;
@@ -481,29 +471,11 @@
         }
 
         function handleModalStatusChange() {
-            const activeTrue = document.getElementById('modalActiveTrue');
             const qualTrue = document.getElementById('modalQualifiedTrue');
-            const qualFalse = document.getElementById('modalQualifiedFalse');
             const reasonWrapper = document.getElementById('modalReasonWrapper');
-            const reasonEl = document.getElementById('modalDisqualificationReason');
-
-            const isActive = activeTrue ? activeTrue.checked : true;
-            let isQualified = qualTrue ? qualTrue.checked : true;
-
-            if (!isActive && isQualified && qualFalse) {
-                qualFalse.checked = true;
-                isQualified = false;
-            }
 
             if (reasonWrapper) {
-                if (isQualified && isActive) {
-                    reasonWrapper.style.opacity = '0.5';
-                } else {
-                    reasonWrapper.style.opacity = '1';
-                    if (reasonEl && !reasonEl.value.trim() && !isActive) {
-                        reasonEl.value = 'Inactive organization — no active executive council roster filed for current academic year.';
-                    }
-                }
+                reasonWrapper.style.opacity = qualTrue && qualTrue.checked ? '0.5' : '1';
             }
         }
 
@@ -553,7 +525,7 @@
     @endif
 
     @if ($isOso)
-        {{-- OSO Manage Organization Qualification & Status Modal --}}
+        {{-- OSO Manage Filing Eligibility Modal --}}
         <dialog id="manageOrgQualificationModal" style="border: none; border-radius: 16px; margin:auto; padding: 0; width: 92vw; max-width: 580px; max-height:90dvh; overflow-y:auto; animation:none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); background: #ffffff;">
             <form id="manageOrgQualificationForm" method="POST" action="" style="display: flex; flex-direction: column; height: 100%; margin: 0;">
                 @csrf
@@ -563,9 +535,9 @@
                             <i class="bi bi-sliders"></i>
                         </div>
                         <div>
-                            <strong style="font-size: 1rem; color: #1a1618; display: block;">Manage Organization Status</strong>
+                            <strong style="font-size: 1rem; color: #1a1618; display: block;">Manage Filing Eligibility</strong>
                             <small style="color: #786f73; font-size: 0.76rem;">Office of Student Organizations (OSO) Clearance</small>
-                            <small style="display:block;color:#786f73;font-size:0.72rem;">Administrative flags do not approve a renewal packet.</small>
+                            <small style="display:block;color:#786f73;font-size:0.72rem;">Filing eligibility does not approve a renewal packet.</small>
                         </div>
                     </div>
                     <button type="button" class="org-btn org-btn-ghost org-btn-sm" onclick="closeManageQualificationModal()" style="padding: 0.35rem 0.65rem; font-size: 0.85rem;">
@@ -581,33 +553,12 @@
                         <small id="modalOrgCollege" style="color: #786f73; font-size: 0.76rem;"></small>
                     </div>
 
-                    {{-- Operational Status (Active vs Inactive) --}}
-                    <div>
-                        <label style="font-weight: 800; font-size: 0.82rem; color: #1a1618; display: block; margin-bottom: 0.4rem;">
-                            1. Operational Status
-                        </label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
-                            <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; cursor: pointer;">
-                                <input type="radio" name="is_active" id="modalActiveTrue" value="1" style="accent-color: #16a34a;" onchange="handleModalStatusChange()">
-                                <div>
-                                    <strong style="display: block; font-size: 0.82rem; color: #166534;">Active</strong>
-                                    <small style="display: block; font-size: 0.68rem; color: #15803d;">Operating organization</small>
-                                </div>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; background: #f8fafc; border-radius: 10px; cursor: pointer;">
-                                <input type="radio" name="is_active" id="modalActiveFalse" value="0" style="accent-color: #475569;" onchange="handleModalStatusChange()">
-                                <div>
-                                    <strong style="display: block; font-size: 0.82rem; color: #334155;">Inactive / Dormant</strong>
-                                    <small style="display: block; font-size: 0.68rem; color: #64748b;">No active student council</small>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
+                    <p style="margin: 0; color: #166534; font-size: 0.8rem;">Active · Renewed status is automatically granted upon renewal approval.</p>
 
                     {{-- Renewal Qualification --}}
                     <div>
                         <label style="font-weight: 800; font-size: 0.82rem; color: #1a1618; display: block; margin-bottom: 0.4rem;">
-                            2. Renewal Filing Qualification
+                            Renewal Filing Eligibility
                         </label>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
                             <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border: 1.5px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; cursor: pointer;">

@@ -28,8 +28,10 @@ status: active
 ## Organization Eligibility & Qualification Monitor (OSO)
 
 OSO maintains institutional control over all 32 student organizations across BatStateU ARASOF-Nasugbu:
+- **Submitted applications metric**: Counts distinct organizations with an actual submission in the current window, including returned, approved and rejected applications. Names-only drafts and other windows are excluded.
 - **Operational Status**: Toggle between **Active** and **Inactive / Dormant** (for clubs undergoing charter revision or lacking an active council).
 - **Renewal Qualification**: Mark as **Qualified to Renew** (cleared) or **Not Qualified** (blocked from submitting).
+- **Activity recommendation**: OSO sees the number of completed, final-approved activities whose start dates fall within the academic year before the current renewal window (August 1–July 31). Three or more meets the activity recommendation; two or fewer prompts OSO review. This advisory does not change filing eligibility; OSO retains the final decision. If the renewal year is unavailable or invalid, the recommendation is unavailable.
 - **Disqualification Reason Presets**:
   - *Unliquidated Financial Report (FR) — pending year-end liquidation clearance.*
   - *Incomplete Accomplishment Report (AR) — missing required activity documentation.*
@@ -42,6 +44,7 @@ OSO maintains institutional control over all 32 student organizations across Bat
 
 The workflow supports the institution's document/signature process. Private storage and authorized access are controls, not a claim of independently certified legal compliance.
 1. **Download Official Template (.docx)**: Student leaders download the clean university template for each requirement.
+   View and Download use matching compact action cards on each requirement row; Download still retrieves the official template.
 2. **Edit locally**: Complete the official file in a compatible editor and review its layout before signing.
 3. **Print & Collect Physical Signatures**: Hardcopies are signed with authentic wet-ink signatures by the Student President, Faculty Adviser, and College Dean.
 4. **Choose and preview files locally**: Select completed scans/documents; valid local selections and actual saved originals update readiness. Selection alone uploads nothing.
@@ -89,7 +92,9 @@ sequenceDiagram
 
 ## Save and confirmation boundaries
 
-Populated adviser/dean names start read-only. **Edit information → Save changes** posts names only to `/office-desk/renewal/information`, without reloading or discarding selected files. A names-only draft is not an OSO-submitted packet. **Submit for Review** uploads the complete packet once and immediately locks editing. OSO Return or Reject reopens that packet while filing is open; this renewal rule is distinct from TOSA's Revision-only unlock and AR/FR's returned-report-only revision.
+Populated adviser/dean names start read-only. **Edit information → Save** posts names only to `/office-desk/renewal/information`, without reloading or discarding selected files. A names-only draft is not an OSO-submitted packet. **Submit for Review** uploads the complete packet once and immediately locks editing. OSO Return or Reject reopens that packet while filing is open; this renewal rule is distinct from TOSA's Revision-only unlock and AR/FR's returned-report-only revision.
+
+After submission, the SO page shows the **Renewal Submitted** status explaining the review lock; it does not add a second duplicate success banner or repeat the packet status in each requirement row. Uploaded-file links remain available.
 
 Submission, review, filing-window, qualification and template/settings changes require confirmation. Read-only previews/downloads and local file selection/cancellation do not. Requirement-template selection stays local until explicit upload/save. Source: current README, `public/js/so-renewal.js`, renewal controller guards and `routes/web.php`.
 

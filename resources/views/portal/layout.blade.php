@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Student Portal | OrgChain</title>
-    <link rel="icon" type="image/png" href="{{ asset('Orgchain logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('orgchain-icon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     @fonts
 
@@ -22,6 +23,62 @@
     <link rel="stylesheet" href="{{ asset('css/view-actions.css') }}?v={{ filemtime(public_path('css/view-actions.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/student-mobile.css') }}?v={{ filemtime(public_path('css/student-mobile.css')) }}">
     <style>.sp-sidebar .sp-nav-link span { font-weight:800; } .sp-sidebar .sp-brand-text span { white-space:normal; line-height:1.4; }</style>
+    <style>
+        #spProfileModal .sp-modal-box { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+        .sp-profile-avatar-card { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .85rem; border: 1px solid #f0e2e6; border-radius: 14px; background: #fdf9fa; }
+        .sp-profile-avatar-preview { width: 76px; height: 76px; flex: 0 0 76px; display: grid; place-items: center; border-radius: 50%; overflow: hidden; border: 2.5px solid #fff; box-shadow: 0 6px 18px rgba(139, 24, 40, 0.16); background: linear-gradient(135deg, #8b1828, #b83c50); color: white; font-weight: 700; }
+        [data-student-avatar] img, .sp-comment-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+        .sp-profile-avatar-controls { flex: 1; min-width: 200px; }
+        .sp-profile-avatar-controls strong, .sp-profile-avatar-controls small { display: block; }
+        .sp-profile-avatar-controls small { color: #777; margin-top: .2rem; }
+        .sp-profile-avatar-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .65rem; }
+        .sp-btn-outline { display: inline-flex; align-items: center; gap: .38rem; padding: .55rem .95rem; border: 1px solid rgba(139, 24, 40, .28); border-radius: 999px; background: #fff; color: #8b1828; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .sp-btn-outline:hover { background: #fdf4f6; border-color: #8b1828; }
+        .sp-btn-danger-ghost { color: #b42336; }
+        .sp-profile-avatar-status { margin: .5rem 0 0; color: #187443; font-size: .85rem; }
+        .sp-profile-avatar-status.is-error { color: #b42336; }
+        .sp-profile-divider { border: 0; border-top: 1px solid #ead8de; margin: .25rem 0; }
+        .sp-profile-avatar-actions [hidden], .sp-profile-avatar-status[hidden] { display: none !important; }
+    </style>
+    <style>
+        .org-smooth-loading { opacity: .6; transition: opacity .18s ease; }
+        .org-smooth-reveal { animation: orgSmoothReveal .22s ease; }
+        @keyframes orgSmoothReveal { from { opacity: .6; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .org-smooth-loading { transition: none; } .org-smooth-reveal { animation: none; } }
+        .sp-bell-badge { position: absolute; top: 0; right: 0; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 999px; background: #e11d48; color: #fff; font-size: .62rem; font-weight: 800; line-height: 1; }
+        .sp-bell-badge[hidden] { display: none; }
+        .sp-notifications-dropdown { width: 380px; max-width: calc(100vw - 1.5rem); max-height: min(620px, calc(100dvh - 110px)); overflow: hidden; padding: 0; border-radius: 20px; background: rgba(255,255,255,.96); box-shadow: 0 16px 40px rgba(90,15,30,.16), 0 2px 8px rgba(0,0,0,.05); backdrop-filter: blur(20px); }
+        .sp-notifications-dropdown.is-open { display: flex; flex-direction: column; }
+        .sp-notif-header { padding: 1.1rem 1.2rem .9rem; border-bottom: 1px solid #ead8de; }
+        .sp-notif-title-row { display: flex; align-items: center; gap: .6rem; }
+        .sp-notif-title-row h2 { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: 1rem; font-weight: 800; }
+        .sp-notif-count-pill { padding: .2rem .55rem; border-radius: 999px; background: #fff0f2; color: #8b1828; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+        .sp-notif-subtitle { margin: .4rem 0 0; color: #8c8c9a; font-size: .75rem; }
+        .sp-notif-mark-read { margin-top: .7rem; padding: 0; border: 0; background: transparent; color: var(--color-bsu-red); font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; }
+        .sp-notif-mark-read:disabled { color: #8c8c9a; cursor: default; }
+        .sp-notifications-dropdown .sp-notif-list { display: block; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; }
+        .sp-notifications-dropdown .sp-notif-item { display: flex; align-items: center; gap: .75rem; padding: .85rem 1.2rem; border-bottom: 1px solid #ead8de; border-radius: 0; color: inherit; text-decoration: none; }
+        .sp-notifications-dropdown .sp-notif-item:hover, .sp-notifications-dropdown .sp-notif-item:focus-visible { background: #fff5f7; }
+        .sp-notif-item-icon { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 13px; font-size: 1rem; }
+        .sp-notif-item-icon.is-announcement { background: rgba(139,24,40,.1); color: #8b1828; }
+        .sp-notif-item-icon.is-feedback { background: #e6f5eb; color: #21834a; }
+        .sp-notif-item-icon.is-community { background: #e7f0ff; color: #316dc0; }
+        .sp-notif-item-content { flex: 1; min-width: 0; }
+        .sp-notif-item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .6rem; color: #8c8c9a; font-size: .68rem; }
+        .sp-notif-tag { color: #8b1828; font-size: .62rem; font-weight: 800; letter-spacing: .03em; }
+        .sp-notif-item-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; margin-top: .25rem; font-size: .82rem; line-height: 1.35; overflow-wrap: anywhere; }
+        .sp-notif-chevron { flex: none; color: #8c8c9a; font-size: .72rem; }
+        .sp-notifications-dropdown .sp-notif-empty { display: block; padding: 2rem 1.2rem; text-align: center; color: inherit; }
+        .sp-notif-empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto .75rem; border-radius: 16px; background: #fff0f2; color: #8b1828; }
+        .sp-notifications-dropdown .sp-notif-empty strong { font-size: .9rem; }
+        .sp-notifications-dropdown .sp-notif-empty p { margin: .35rem 0 0; color: #8c8c9a; font-size: .75rem; }
+        .sp-notif-footer { padding: .85rem 1.2rem; text-align: center; }
+        .sp-notif-footer-link { color: var(--color-bsu-red); font-size: .78rem; font-weight: 800; text-decoration: none; }
+        .sp-notif-footer-link:hover { text-decoration: underline; }
+        .sp-notif-mark-read:focus-visible, .sp-notif-footer-link:focus-visible { outline: 2px solid var(--color-bsu-red); outline-offset: 3px; }
+        @media (max-width: 640px) { .sp-notifications-dropdown { width: auto; } }
+    </style>
+    <script src="{{ asset('js/smooth-filters.js') }}?v={{ filemtime(public_path('js/smooth-filters.js')) }}" defer></script>
     <script src="{{ asset('js/sdg-highlights.js') }}?v={{ filemtime(public_path('js/sdg-highlights.js')) }}" defer></script>
 </head>
 <body class="landing-body portal-body" data-portal-tab="{{ $tab ?? 'home' }}">
@@ -46,7 +103,7 @@
             </div>
 
             <div class="sp-profile">
-                <div class="sp-avatar" aria-hidden="true">
+                <div class="sp-avatar" aria-hidden="true" data-student-avatar>
                     @if (!empty($student->avatar_path))
                         <img src="{{ asset('storage/'.$student->avatar_path) }}" alt="">
                     @else
@@ -107,11 +164,9 @@
                     <form method="get" action="{{ route('portal.community') }}" class="sp-search-box" id="spTopSearchBox" @if(($tab ?? '') !== 'community') style="display: none;" @endif role="search">
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <input type="search" name="community_q" id="communitySearchInput" value="{{ $communitySearch ?? '' }}" placeholder="Search community posts…" aria-label="Search community posts">
-                        @if (!empty($communitySearch))
-                            <a href="{{ route('portal.community', ['sort' => $feedSort ?? 'recent']) }}" class="sp-search-clear-link" title="Clear search and view all posts" aria-label="Clear search" style="color: #94808a; display: inline-flex; align-items: center; text-decoration: none; font-size: 0.95rem; margin-right: 2px;">
-                                <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
-                            </a>
-                        @endif
+                        <button type="button" id="spCommunitySearchClear" class="sp-search-clear-link" title="Clear search and view all posts" aria-label="Clear search" @if (empty($communitySearch)) hidden @endif style="color: #94808a; align-items: center; font-size: 0.95rem; margin-right: 2px; border: 0; background: transparent; cursor: pointer;">
+                            <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                        </button>
                         <input type="hidden" name="sort" value="{{ $feedSort ?? 'recent' }}">
                         <input type="hidden" name="community_audience" value="{{ $communityAudience ?? 'all' }}">
                         <input type="hidden" name="community_period" value="{{ $communityPeriod ?? 'all' }}">
@@ -134,25 +189,26 @@
                         </div>
                     </div>
                     <div class="sp-top-menu-wrap">
-                        <button type="button" class="sp-bell-btn" id="spBellBtn" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-haspopup="true">
-                            <i class="bi bi-bell"></i>
-                            <span class="sp-bell-dot" id="spBellDot"></span>
+                        <button type="button" class="sp-bell-btn" id="spBellBtn" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-haspopup="true" aria-controls="spBellDropdown">
+                            <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                            <span class="sp-bell-badge" id="spBellBadge" hidden></span>
                         </button>
-                        <div class="sp-user-dropdown sp-top-dropdown liquid-glass" id="spBellDropdown">
-                            <div class="sp-dropdown-header sp-dropdown-header-row">
-                                <div>
-                                    <strong>Notifications</strong>
-                                    <small>Latest from OSO</small>
+                        <section class="sp-user-dropdown sp-top-dropdown sp-notifications-dropdown liquid-glass" id="spBellDropdown" aria-labelledby="spNotifHeading">
+                            <div class="sp-notif-header">
+                                <div class="sp-notif-title-row">
+                                    <h2 id="spNotifHeading"><i class="bi bi-bell-fill" style="color: var(--color-bsu-red);" aria-hidden="true"></i> Notifications</h2>
+                                    <span class="sp-notif-count-pill" id="spNotifCount"></span>
                                 </div>
-                                <button type="button" class="sp-link-btn" id="spMarkReadBtn">Mark all read</button>
+                                <p class="sp-notif-subtitle">Recent activity updates &amp; announcements</p>
+                                <button type="button" class="sp-notif-mark-read" id="spMarkReadBtn">Mark all read</button>
                             </div>
-                            <div class="sp-dropdown-divider"></div>
                             <div class="sp-notif-list" id="spNotifList"></div>
-                        </div>
+                            <div class="sp-notif-footer"><a class="sp-notif-footer-link" href="#announcements" id="spNotifViewAll">View All Announcements <span aria-hidden="true">→</span></a></div>
+                        </section>
                     </div>
                     <div class="sp-user-menu-wrap">
                         <button type="button" class="sp-user-pill" id="spUserMenuBtn" aria-expanded="false" aria-haspopup="true" aria-label="User menu">
-                            <div class="sp-user-avatar">
+                            <div class="sp-user-avatar" data-student-avatar>
                                 @if (!empty($student->avatar_path))
                                     <img src="{{ asset('storage/'.$student->avatar_path) }}" alt="">
                                 @else
@@ -225,6 +281,29 @@
                 <button type="button" class="sp-modal-close-btn" data-close-profile aria-label="Close"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="sp-profile-form">
+                <form id="spProfileAvatarForm" class="sp-profile-avatar-card" method="POST" action="{{ route('portal.profile.update') }}" enctype="multipart/form-data" data-confirm="off">
+                    @csrf
+                    @method('PUT')
+                    <div class="sp-profile-avatar-preview" id="spProfileAvatarPreview" data-student-avatar>
+                        @if (!empty($student->avatar_path))
+                            <img src="{{ asset('storage/'.$student->avatar_path) }}" alt="">
+                        @else
+                            <span>{{ $student->initials() }}</span>
+                        @endif
+                    </div>
+                    <div class="sp-profile-avatar-controls">
+                        <strong>Profile picture</strong>
+                        <small>JPG, PNG, or WEBP · up to 5 MB</small>
+                        <input type="file" id="spProfileAvatarInput" name="avatar" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" hidden>
+                        <div class="sp-profile-avatar-actions">
+                            <button type="button" id="spChooseAvatarBtn" class="sp-btn-outline"><i class="bi bi-camera"></i> Change photo</button>
+                            <button type="submit" id="spSaveAvatarBtn" class="sp-btn-primary" hidden><i class="bi bi-check2"></i> Save photo</button>
+                            <button type="button" id="spRemoveAvatarBtn" class="sp-btn-ghost sp-btn-danger-ghost" @if (empty($student->avatar_path)) hidden @endif><i class="bi bi-trash3"></i> Remove</button>
+                        </div>
+                        <p id="spProfileAvatarStatus" class="sp-profile-avatar-status" role="status" hidden></p>
+                    </div>
+                </form>
+                <hr class="sp-profile-divider">
                 <p class="sp-profile-readonly-note">Official student record. Contact the registrar for corrections.</p>
                 <label>
                     <span>Full name</span>
@@ -411,6 +490,24 @@
                 const totalItemsEl = document.getElementById('spAnnounceTotalItems');
                 const countBadgeEl = document.getElementById('spAnnounceCountBadge');
                 const emptyRow = document.getElementById('spAnnounceEmptyRow');
+                const grid = document.getElementById('spAnnouncementsGrid');
+                const tableView = document.getElementById('spAnnouncementsTableView');
+                const gridEmpty = document.getElementById('spAnnounceGridEmpty');
+                const cards = Array.from(document.querySelectorAll('#spAnnouncementsGrid .sp-announce-card'));
+                const cardsByIndex = new Map(cards.map((card) => [card.dataset.announceIndex, card]));
+
+                window.setSpAnnouncementView = (view) => {
+                    const isGrid = view !== 'list';
+                    if (grid) grid.style.display = isGrid ? 'grid' : 'none';
+                    if (tableView) tableView.style.display = isGrid ? 'none' : '';
+                    [['spBtnAnnounceGrid', isGrid], ['spBtnAnnounceList', !isGrid]].forEach(([id, active]) => {
+                        const button = document.getElementById(id);
+                        if (button) {
+                            button.classList.toggle('is-active', active);
+                            button.setAttribute('aria-pressed', String(active));
+                        }
+                    });
+                };
 
                 const getAllRows = () => Array.from(document.querySelectorAll('#spAnnouncementsTbody tr.sp-announce-tbl-row'));
 
@@ -423,7 +520,8 @@
                         const prio = row.dataset.announcePriority || '';
                         const search = row.dataset.announceSearch || '';
 
-                        const matchCat = activeCat === 'all' || cat === activeCat;
+                        const matchCat = activeCat === 'all'
+                            || (activeCat === 'high' ? prio === 'high' : cat === activeCat || (activeCat === 'deadlines' && cat === 'dates'));
                         const matchPrio = activePriority === 'all' || prio === activePriority;
                         const matchSearch = !searchQuery || search.includes(searchQuery.toLowerCase());
 
@@ -444,13 +542,23 @@
 
                     // 3. Hide all rows first
                     allRows.forEach((r) => (r.style.display = 'none'));
+                    cards.forEach((card) => (card.style.display = 'none'));
 
                     // 4. Show current page slice
                     const startIndex = (currentPage - 1) * PAGE_SIZE;
                     const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
                     const pageRows = filtered.slice(startIndex, endIndex);
 
-                    pageRows.forEach((r) => (r.style.display = ''));
+                    pageRows.forEach((row) => {
+                        row.style.display = '';
+                        row.parentElement.appendChild(row);
+                        const card = cardsByIndex.get(row.dataset.announceIndex);
+                        if (card) {
+                            card.style.display = '';
+                            grid.insertBefore(card, gridEmpty);
+                        }
+                    });
+                    if (gridEmpty) gridEmpty.hidden = totalItems !== 0;
 
                     // 5. Empty state handling
                     if (emptyRow) {
@@ -462,7 +570,7 @@
                     if (pageRangeEl) pageRangeEl.textContent = `${startDisplay}–${endIndex}`;
                     if (totalItemsEl) totalItemsEl.textContent = totalItems;
                     if (countBadgeEl) {
-                        countBadgeEl.textContent = `Showing ${startDisplay}–${endIndex} of ${totalItems} bulletins`;
+                        countBadgeEl.textContent = `${totalItems} bulletins`;
                     }
 
                     if (pageNumbersContainer) {
@@ -762,7 +870,7 @@
                     if (dock !== except) dock.hidden = true;
                 });
             };
-            document.querySelectorAll('.sp-like-action-wrap').forEach((wrap) => {
+            const setupPostReactionDocks = (root) => root.querySelectorAll('.sp-like-action-wrap').forEach((wrap) => {
                 const dock = wrap.querySelector('.sp-reactions-dock');
                 if (!dock) return;
                 let holdTimer;
@@ -811,7 +919,9 @@
                     }
                 });
             };
-            document.querySelectorAll('.sp-comment-like-wrap').forEach(setupCommentReactionDock);
+            const setupCommentReactionDocks = (root) => root.querySelectorAll('.sp-comment-like-wrap').forEach(setupCommentReactionDock);
+            setupPostReactionDocks(document);
+            setupCommentReactionDocks(document);
             const sendCommentReaction = async (wrap, reaction = null) => {
                 const button = wrap?.querySelector('.sp-comment-like-btn');
                 if (!button || button.disabled) return;
@@ -943,7 +1053,9 @@
 
             // Notifications reflect persisted announcements and this student's acknowledgments.
             const notifList = document.getElementById('spNotifList');
-            const bellDot = document.getElementById('spBellDot');
+            const bellBadge = document.getElementById('spBellBadge');
+            const notifCount = document.getElementById('spNotifCount');
+            const markReadBtn = document.getElementById('spMarkReadBtn');
             const announcementsFeed = @json(($announcements ?? []));
             const feedbackFeed = @json(($feedbackNotifications ?? []));
             const communityFeed = @json(($communityNotifications ?? []));
@@ -956,28 +1068,41 @@
             const notificationVersion = JSON.stringify(notificationFeed.map((item) => [item.id, item.acknowledgedAt || item.published_at || item.time]));
             if (notifList) {
                 if (!notificationFeed.length) {
-                    notifList.innerHTML = '<div class="sp-notif-empty"><i class="bi bi-bell-slash"></i><span>No notifications yet.</span></div>';
+                    notifList.innerHTML = '<div class="sp-notif-empty"><div class="sp-notif-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></div><strong>All caught up!</strong><p>No new activity updates or announcements.</p></div>';
                 }
                 notificationFeed.forEach((notice) => {
+                    const type = notice.community ? 'community' : (notice.feedback ? 'feedback' : 'announcement');
+                    const icon = { announcement: 'megaphone', feedback: 'patch-check', community: 'chat-heart' }[type];
                     const item = document.createElement('a');
-                    item.className = 'sp-notif-item' + (notice.priority === 'high' ? ' is-high' : '');
-                    item.href = notice.url || tabUrls.announcements;
-                    item.innerHTML = '<span class="sp-notif-dot" aria-hidden="true"></span><span class="sp-notif-text"><strong></strong><small></small></span>';
+                    item.className = 'sp-notif-item';
+                    item.href = notice.url || urls.announcements;
+                    item.innerHTML = `<span class="sp-notif-item-icon is-${type}" aria-hidden="true"><i class="bi bi-${icon}-fill"></i></span><span class="sp-notif-item-content"><span class="sp-notif-item-meta"><span class="sp-notif-tag"></span><time></time></span><strong class="sp-notif-item-title"></strong></span><i class="bi bi-chevron-right sp-notif-chevron" aria-hidden="true"></i>`;
+                    item.querySelector('.sp-notif-tag').textContent = type.toUpperCase();
+                    item.querySelector('time').textContent = notice.time || '';
                     item.querySelector('strong').textContent = notice.title || 'Announcement';
-                    item.querySelector('small').textContent = `${notice.author || 'OSO'} · ${notice.time || ''}`;
-                    if (notice.feedback) item.querySelector('small').textContent += ' · Acknowledged';
-                    if (notice.community) item.querySelector('small').textContent += ' · Community';
                     notifList.appendChild(item);
                 });
             }
-            const syncBellDot = () => {
-                if (bellDot) bellDot.hidden = !notificationFeed.length || localStorage.getItem(notifReadKey) === notificationVersion;
+            const syncBellCount = () => {
+                let readItems = [];
+                try { readItems = JSON.parse(localStorage.getItem(notifReadKey) || '[]'); } catch (_) { /* Treat invalid data as unread. */ }
+                const readVersions = new Set(Array.isArray(readItems) ? readItems.map((item) => JSON.stringify(item)) : []);
+                const unread = notificationFeed.filter((item) => !readVersions.has(JSON.stringify([item.id, item.acknowledgedAt || item.published_at || item.time]))).length;
+                if (bellBadge) { bellBadge.textContent = unread; bellBadge.hidden = unread === 0; }
+                if (notifCount) notifCount.textContent = `${unread} new`;
+                if (markReadBtn) markReadBtn.disabled = unread === 0;
             };
-            document.getElementById('spMarkReadBtn')?.addEventListener('click', () => {
+            markReadBtn?.addEventListener('click', () => {
                 localStorage.setItem(notifReadKey, notificationVersion);
-                syncBellDot();
+                syncBellCount();
             });
-            syncBellDot();
+            window.addEventListener('storage', (event) => { if (event.key === notifReadKey) syncBellCount(); });
+            document.getElementById('spNotifViewAll')?.addEventListener('click', (event) => {
+                event.preventDefault();
+                closeTopDropdowns();
+                switchTab('announcements');
+            });
+            syncBellCount();
             document.querySelectorAll('[data-success-flash]').forEach((flash) => {
                 window.setTimeout(() => flash.remove(), 4000);
             });
@@ -1062,22 +1187,60 @@
                     input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
-            // Auto-reload all community posts when search input is cleared / 'x' is clicked
+            const communitySearchForm = document.getElementById('spTopSearchBox');
             const communitySearchInput = document.getElementById('communitySearchInput');
-            if (communitySearchInput) {
-                communitySearchInput.addEventListener('search', function () {
-                    if (!this.value.trim()) {
-                        const form = this.closest('form');
-                        if (form) form.submit();
-                    }
-                });
-                communitySearchInput.addEventListener('input', function () {
-                    if (!this.value.trim() && new URLSearchParams(window.location.search).has('community_q') && new URLSearchParams(window.location.search).get('community_q') !== '') {
-                        const form = this.closest('form');
-                        if (form) form.submit();
-                    }
-                });
-            }
+            const communitySearchClear = document.getElementById('spCommunitySearchClear');
+            let communitySearchTimer;
+            const updateCommunityClear = () => { if (communitySearchClear) communitySearchClear.hidden = !communitySearchInput.value; };
+            const swapCommunity = (url, historyMode = 'replace') => window.OrgSmoothFilter.swap({
+                url, targets: ['#spCommunityFeedSection'], historyMode,
+                onAfterSwap: () => {
+                    const feed = document.getElementById('spCommunityFeedSection');
+                    setupPostReactionDocks(feed);
+                    setupCommentReactionDocks(feed);
+                    setupCommentForms(feed);
+                },
+            });
+            const searchCommunity = () => {
+                clearTimeout(communitySearchTimer);
+                updateCommunityClear();
+                if (!window.OrgSmoothFilter || !document.getElementById('spCommunityFeedSection')) return;
+                swapCommunity(window.OrgSmoothFilter.buildUrl(communitySearchForm, { page: null }));
+            };
+            communitySearchForm?.addEventListener('submit', (event) => {
+                if (!window.OrgSmoothFilter || !document.getElementById('spCommunityFeedSection')) return;
+                event.preventDefault();
+                searchCommunity();
+            });
+            communitySearchInput?.addEventListener('input', () => {
+                updateCommunityClear();
+                clearTimeout(communitySearchTimer);
+                communitySearchTimer = setTimeout(searchCommunity, 240);
+            });
+            communitySearchInput?.addEventListener('search', () => { if (!communitySearchInput.value) searchCommunity(); });
+            communitySearchClear?.addEventListener('click', () => {
+                communitySearchInput.value = '';
+                communitySearchInput.focus();
+                searchCommunity();
+            });
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('#spCommunityFeedSection .sp-pagination a, #spCommunityFeedSection .sp-feed > .sp-post[role="status"] a');
+                if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !window.OrgSmoothFilter) return;
+                event.preventDefault();
+                clearTimeout(communitySearchTimer);
+                const url = new URL(link.href);
+                communitySearchInput.value = url.searchParams.get('community_q') || '';
+                updateCommunityClear();
+                swapCommunity(url, 'push');
+            });
+            window.addEventListener('popstate', () => {
+                if (!window.OrgSmoothFilter || !document.getElementById('spCommunityFeedSection') || location.pathname !== new URL(communitySearchForm.action).pathname) return;
+                clearTimeout(communitySearchTimer);
+                const url = new URL(location.href);
+                communitySearchInput.value = url.searchParams.get('community_q') || '';
+                updateCommunityClear();
+                swapCommunity(url, 'none');
+            });
 
 
             // Check URL hash or initial tab
@@ -1088,6 +1251,76 @@
             }
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+            const avatarForm = document.getElementById('spProfileAvatarForm');
+            const avatarInput = document.getElementById('spProfileAvatarInput');
+            const avatarPreview = document.getElementById('spProfileAvatarPreview');
+            const chooseAvatarBtn = document.getElementById('spChooseAvatarBtn');
+            const saveAvatarBtn = document.getElementById('spSaveAvatarBtn');
+            const removeAvatarBtn = document.getElementById('spRemoveAvatarBtn');
+            const avatarStatus = document.getElementById('spProfileAvatarStatus');
+            let previewUrl = null;
+            let currentAvatarUrl = @json($student->avatarUrl());
+            let currentInitials = @json($student->initials());
+            const renderAvatar = (container, url, initials) => {
+                const child = document.createElement(url ? 'img' : 'span');
+                if (url) { child.src = url; child.alt = ''; } else { child.textContent = initials; }
+                container.replaceChildren(child);
+            };
+            const revokePreview = () => {
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                previewUrl = null;
+            };
+            const syncStudentAvatars = (avatarUrl, initials) => {
+                revokePreview();
+                currentAvatarUrl = avatarUrl;
+                currentInitials = initials;
+                document.querySelectorAll('[data-student-avatar]').forEach((container) => renderAvatar(container, avatarUrl, initials));
+            };
+            const showAvatarStatus = (message, error = false) => {
+                avatarStatus.textContent = message;
+                avatarStatus.classList.toggle('is-error', error);
+                avatarStatus.hidden = !message;
+            };
+            chooseAvatarBtn?.addEventListener('click', () => avatarInput.click());
+            avatarInput?.addEventListener('change', () => {
+                const file = avatarInput.files[0];
+                if (!file) return;
+                revokePreview();
+                if (!/\.(jpe?g|png|webp)$/i.test(file.name) || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+                    avatarInput.value = '';
+                    saveAvatarBtn.hidden = true;
+                    renderAvatar(avatarPreview, currentAvatarUrl, currentInitials);
+                    showAvatarStatus('Please choose a JPG, PNG, or WEBP image up to 5 MB.', true);
+                    return;
+                }
+                previewUrl = URL.createObjectURL(file);
+                renderAvatar(avatarPreview, previewUrl, currentInitials);
+                saveAvatarBtn.hidden = false;
+                showAvatarStatus('');
+            });
+            const submitAvatar = async (removing) => {
+                const body = removing ? new FormData() : new FormData(avatarForm);
+                if (removing) { body.append('_method', 'PUT'); body.append('remove_avatar', '1'); }
+                [chooseAvatarBtn, saveAvatarBtn, removeAvatarBtn].forEach((button) => { button.disabled = true; });
+                try {
+                    const response = await fetch(avatarForm.action, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Could not update profile picture.');
+                    syncStudentAvatars(data.avatar_url, data.initials);
+                    avatarInput.value = '';
+                    saveAvatarBtn.hidden = true;
+                    removeAvatarBtn.hidden = removing;
+                    showAvatarStatus(data.message);
+                } catch (error) {
+                    showAvatarStatus(error.message || 'Could not update profile picture.', true);
+                } finally {
+                    [chooseAvatarBtn, saveAvatarBtn, removeAvatarBtn].forEach((button) => { button.disabled = false; });
+                }
+            };
+            avatarForm?.addEventListener('submit', (event) => { event.preventDefault(); submitAvatar(false); });
+            removeAvatarBtn?.addEventListener('click', () => submitAvatar(true));
+            window.addEventListener('pagehide', revokePreview);
 
             const postJson = async (url, body = null) => {
                 const options = {
@@ -1115,7 +1348,7 @@
                 return res.json();
             };
 
-            document.querySelectorAll('[data-comment-form]').forEach((form) => {
+            const setupCommentForms = (root) => root.querySelectorAll('[data-comment-form]').forEach((form) => {
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const card = form.closest('.community-post');
@@ -1132,15 +1365,12 @@
                             const thread = document.createElement('div');
                             thread.className = 'sp-comment-thread';
                             thread.id = 'comment-thread-' + data.comment.id;
-                            const initials = (data.comment.student_name || 'S').substring(0, 2).toUpperCase();
                             thread.innerHTML = `
-                                <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
-                                    <span>${initials}</span>
-                                </div>
+                                <div class="sp-avatar sp-avatar-sm sp-comment-avatar" data-student-avatar></div>
                                 <div class="sp-comment-content">
                                     <div class="sp-comment-bubble">
-                                        <strong>${data.comment.student_name}</strong>
-                                        <p>${data.comment.body}</p>
+                                        <strong></strong>
+                                        <p></p>
                                     </div>
                                     <div class="sp-comment-subactions">
                                         <span class="sp-comment-like-wrap">
@@ -1151,13 +1381,18 @@
                                         </span>
                                         <span class="sp-comment-like-count" hidden>0</span>
                                         <span class="sp-sub-dot">·</span>
-                                        <button type="button" class="sp-sub-btn" onclick="document.getElementById('${input.id}')?.focus()">Reply</button>
+                                        <button type="button" class="sp-sub-btn sp-comment-reply">Reply</button>
                                         <span class="sp-sub-dot">·</span>
                                         <span class="sp-sub-time">Just now</span>
-                                        ${data.comment.delete_url ? `<span class="sp-sub-dot">·</span><button type="button" class="sp-sub-btn is-delete" style="color: #dc2626;" onclick="deleteCommunityComment(${data.comment.id}, '${data.comment.delete_url}')">Delete</button>` : ''}
+                                        ${data.comment.delete_url ? '<span class="sp-sub-dot">·</span><button type="button" class="sp-sub-btn is-delete" style="color: #dc2626;">Delete</button>' : ''}
                                     </div>
                                 </div>
                             `;
+                            renderAvatar(thread.querySelector('[data-student-avatar]'), data.comment.student_avatar_url, data.comment.student_initials || 'S');
+                            thread.querySelector('.sp-comment-bubble strong').textContent = data.comment.student_name || 'Student';
+                            thread.querySelector('.sp-comment-bubble p').textContent = data.comment.body;
+                            thread.querySelector('.sp-comment-reply').addEventListener('click', () => input.focus());
+                            thread.querySelector('.is-delete')?.addEventListener('click', () => deleteCommunityComment(data.comment.id, data.comment.delete_url));
                             thread.querySelector('.sp-comment-like-btn').dataset.likeUrl = data.comment.like_url;
                             setupCommentReactionDock(thread.querySelector('.sp-comment-like-wrap'));
                             list.appendChild(thread);
@@ -1177,6 +1412,7 @@
                     }
                 });
             });
+            setupCommentForms(document);
 
             window.deleteCommunityComment = async function (commentId, deleteUrl) {
                 if (!confirm('Are you sure you want to delete this comment?')) return;
@@ -1328,6 +1564,7 @@
                 modalEl.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
             };
+            window.openSpAnnouncementDetailModal = openAnnouncementModal;
             const requestedAnnouncement = new URLSearchParams(window.location.search).get('announcement');
             if (requestedAnnouncement && /^\d+$/.test(requestedAnnouncement)) {
                 const requestedRow = document.querySelector(`[data-announcement-id="${requestedAnnouncement}"]`);
@@ -1648,11 +1885,7 @@
                             remaining: 3150,
                             rate: 91.0,
                             tx_hash: '0x8f7e6d5c4b3a210987654321fedcba0987654321',
-                            items: [
-                                { category: 'Venue Logistics & Audio-Visual Setup', allocated: 15750, spent: 15200, variance: 550, status: 'Receipt Verified' },
-                                { category: 'Participant Kits & Handouts', allocated: 12250, spent: 11800, variance: 450, status: 'Receipt Verified' },
-                                { category: 'Refreshments & Volunteer Tokens', allocated: 7000, spent: 4850, variance: 2150, status: 'Audited by OSO' }
-                            ]
+                            items: []
                         }
                     };
                 }
@@ -1809,13 +2042,11 @@
 
                 const bgtTbody = document.getElementById('spActBudgetItemsTbody');
                 if (bgtTbody) {
-                    const items = bgt.items && bgt.items.length > 0 ? bgt.items : [
-                        { category: 'Venue Logistics & Audio-Visual Setup', allocated: bgt.allocated * 0.45, spent: bgt.utilized * 0.45, variance: (bgt.allocated - bgt.utilized) * 0.45, status: 'Receipt Verified' },
-                        { category: 'Participant Handouts & Leadership Kits', allocated: bgt.allocated * 0.35, spent: bgt.utilized * 0.35, variance: (bgt.allocated - bgt.utilized) * 0.35, status: 'Receipt Verified' },
-                        { category: 'Refreshments & Volunteer Tokens', allocated: bgt.allocated * 0.20, spent: bgt.utilized * 0.20, variance: (bgt.allocated - bgt.utilized) * 0.20, status: 'Audited by OSO' }
-                    ];
+                    const items = bgt.items && bgt.items.length > 0 ? bgt.items : [];
 
-                    bgtTbody.innerHTML = items
+                    bgtTbody.innerHTML = items.length === 0
+                        ? '<tr><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i> No recorded expense liquidations yet.</td></tr>'
+                        : items
                         .map((it) => `
                             <tr>
                                 <td><strong>${it.category}</strong></td>

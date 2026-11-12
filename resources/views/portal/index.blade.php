@@ -881,11 +881,7 @@
                                     'variance' => 0,
                                     'status' => 'Receipt Verified',
                                 ])->all()
-                                : [
-                                    ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
-                                    ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
-                                    ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
-                                ]
+                                : []
                         ]
                     ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                 @endphp
@@ -1032,11 +1028,7 @@
                                                 'variance' => 0,
                                                 'status' => 'Receipt Verified',
                                             ])->all()
-                                            : [
-                                                ['category' => 'Venue Logistics & Audio-Visual Setup', 'allocated' => $budgetAlloc * 0.45, 'spent' => $budgetSpent * 0.46, 'variance' => ($budgetAlloc * 0.45) - ($budgetSpent * 0.46), 'status' => 'Receipt Verified'],
-                                                ['category' => 'Participant Handouts & Leadership Kits', 'allocated' => $budgetAlloc * 0.35, 'spent' => $budgetSpent * 0.34, 'variance' => ($budgetAlloc * 0.35) - ($budgetSpent * 0.34), 'status' => 'Receipt Verified'],
-                                                ['category' => 'Refreshments & Volunteer Tokens', 'allocated' => $budgetAlloc * 0.20, 'spent' => $budgetSpent * 0.20, 'variance' => 0, 'status' => 'Audited by OSO']
-                                            ]
+                                            : []
                                     ]
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                             @endphp
@@ -1113,7 +1105,7 @@
             <div class="sp-announcements-tabs" id="spAnnounceTabs">
                 <button type="button" class="sp-announcements-tab-btn is-active" data-announce-tab="all">
                     <i class="bi bi-megaphone-fill"></i>
-                    <span>All Bulletins</span>
+                    <span>All Updates</span>
                 </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="general">
                     <i class="bi bi-megaphone"></i>
@@ -1123,25 +1115,9 @@
                     <i class="bi bi-award-fill"></i>
                     <span>Call for TOSA</span>
                 </button>
-                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="dates">
-                    <i class="bi bi-calendar-event"></i>
-                    <span>Important Dates</span>
-                </button>
                 <button type="button" class="sp-announcements-tab-btn" data-announce-tab="deadlines">
-                    <i class="bi bi-clock-history"></i>
+                    <i class="bi bi-hourglass-split"></i>
                     <span>Deadline Notice</span>
-                </button>
-                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="guidelines">
-                    <i class="bi bi-journal-text"></i>
-                    <span>Policy &amp; Guideline</span>
-                </button>
-                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="reminders">
-                    <i class="bi bi-bell"></i>
-                    <span>Compliance Reminder</span>
-                </button>
-                <button type="button" class="sp-announcements-tab-btn" data-announce-tab="oso">
-                    <i class="bi bi-info-circle"></i>
-                    <span>OSO Notices</span>
                 </button>
             </div>
             <div class="sp-announcements-readonly-badge">
@@ -1151,21 +1127,57 @@
         </div>
 
 
-        {{-- Announcements Table Card --}}
-        <div class="sp-announcements-table-card liquid-glass">
-
-            {{-- Filter & Search Toolbar --}}
-            <div class="sp-announcements-filter-bar">
-                <div class="sp-ann-filter-group">
+        {{-- Published announcements --}}
+        <section class="sp-announcements-table-card liquid-glass">
+            <style>
+                .sp-published-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+                .sp-published-header h2 { margin:0 0 .3rem; font-size:1.2rem; font-weight:800; color:#1f2937; }
+                .sp-published-header p { margin:0; color:#64748b; font-size:.85rem; }
+                .sp-published-actions { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; }
+                .sp-view-switcher { display:flex; padding:3px; gap:3px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; }
+                .sp-view-toggle { border:0; border-radius:6px; padding:.45rem .65rem; background:transparent; color:#64748b; cursor:pointer; }
+                .sp-view-toggle.is-active { background:#8b1828; color:#fff; }
+                .sp-announce-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%, 340px),1fr)); gap:1.25rem; }
+                .sp-announce-card { min-width:0; display:flex; flex-direction:column; justify-content:space-between; padding:1.35rem; background:#fff; border:1px solid #e2e8f0; border-top:3px solid #8b1828; border-radius:12px; box-shadow:0 2px 8px rgba(15,23,42,.05); transition:transform .2s, box-shadow .2s; }
+                .sp-announce-card.is-high-priority { border-top-color:#ef4444; }
+                .sp-announce-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,23,42,.1); }
+                .sp-card-head, .sp-card-author, .sp-card-badges, .sp-card-footer { display:flex; align-items:center; gap:.5rem; }
+                .sp-card-head, .sp-card-badges, .sp-card-footer { justify-content:space-between; flex-wrap:wrap; }
+                .sp-card-head { margin-bottom:.85rem; }
+                .sp-card-avatar { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#fbeaec; color:#8b1828; font-size:.75rem; }
+                .sp-card-author-name { color:#1f2937; font-size:.82rem; font-weight:700; }
+                .sp-card-time { color:#64748b; font-size:.74rem; }
+                .sp-card-badges { margin-bottom:.65rem; }
+                .sp-card-priority { padding:.25rem .55rem; border-radius:6px; background:#f1f5f9; color:#64748b; font-size:.7rem; font-weight:800; }
+                .sp-card-priority.is-high { background:#fef2f2; color:#dc2626; }
+                .sp-card-title, .sp-card-snippet { display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+                .sp-card-title { margin:0 0 .45rem; color:#1f2937; font-size:1.05rem; font-weight:800; line-height:1.35; }
+                .sp-card-snippet { margin:0 0 .95rem; color:#64748b; font-size:.85rem; line-height:1.5; }
+                .sp-card-attach-pill { display:inline-flex; align-items:center; gap:.4rem; max-width:100%; margin-bottom:.85rem; padding:.25rem .6rem; border:1px solid #e2e8f0; border-radius:6px; background:#f8fafc; color:#475569; font-size:.76rem; overflow-wrap:anywhere; }
+                .sp-card-attach-pill i { color:#8b1828; }
+                .sp-card-footer { padding-top:.75rem; border-top:1px solid #f1f5f9; }
+                .sp-btn-view-notice { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .85rem; border:1px solid #efcbd0; border-radius:8px; background:#fbeaec; color:#8b1828; font-size:.8rem; font-weight:700; cursor:pointer; text-decoration:none; }
+                .sp-btn-view-notice:hover { background:#8b1828; color:#fff; }
+                .sp-ann-grid-empty { grid-column:1 / -1; padding:2.5rem 1rem; text-align:center; color:#6b7280; }
+            </style>
+            <div class="sp-published-header">
+                <div>
+                    <h2><i class="bi bi-megaphone-fill" style="color: #8b1828;"></i> Published Official Announcements</h2>
+                    <p>Broadcast feed of official guidelines, deadlines, memos, and directives for students and student organizations.</p>
+                </div>
+                <div class="sp-published-actions">
                     <div class="sp-ann-search-wrap">
                         <i class="bi bi-search"></i>
-                        <input type="search" id="spAnnounceSearchInput" placeholder="Search bulletins, keywords, authors..." autocomplete="off">
+                        <input type="search" id="spAnnounceSearchInput" placeholder="Search notices, keywords, authors..." autocomplete="off" aria-label="Search announcements">
                     </div>
-                    <select id="spAnnouncePriorityFilter" class="sp-ann-select" aria-label="Filter by priority">
-                        <option value="all">All Priorities</option>
-                        <option value="high">High Priority</option>
-                        <option value="normal">Normal Priority</option>
-                    </select>
+                    <div class="sp-view-switcher" role="group" aria-label="Announcements view options">
+                        <button type="button" class="sp-view-toggle is-active" id="spBtnAnnounceGrid" onclick="setSpAnnouncementView('grid')" title="Card Grid View" aria-label="Card Grid View" aria-pressed="true"><i class="bi bi-grid-fill"></i></button>
+                        <button type="button" class="sp-view-toggle" id="spBtnAnnounceList" onclick="setSpAnnouncementView('list')" title="List Table View" aria-label="List Table View" aria-pressed="false"><i class="bi bi-view-list"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="sp-announcements-filter-bar">
+                <div class="sp-ann-filter-group">
                     <select id="spAnnounceSortSelect" class="sp-ann-select" aria-label="Sort bulletins">
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -1176,8 +1188,44 @@
                 </div>
             </div>
 
+            @php $announcementsList = $bulletins ?? []; @endphp
+            <div class="sp-announce-grid" id="spAnnouncementsGrid">
+                @foreach ($announcementsList as $item)
+                    <article class="sp-announce-card {{ $item['priority'] === 'high' ? 'is-high-priority' : 'is-normal-priority' }}"
+                        data-announce-index="{{ $loop->index }}"
+                        data-announce-cat="{{ $item['category'] }}"
+                        data-announce-priority="{{ $item['priority'] }}"
+                        data-announce-order="{{ $item['sort'] ?? 0 }}"
+                        data-announce-search="{{ strtolower($item['title'] . ' ' . $item['body'] . ' ' . $item['author'] . ' ' . $item['tag']) }}">
+                        <div>
+                            <div class="sp-card-head">
+                                <div class="sp-card-author"><div class="sp-card-avatar"><i class="bi bi-building"></i></div><span class="sp-card-author-name">{{ $item['author'] }}</span></div>
+                                <span class="sp-card-time">{{ $item['time'] ?? $item['date'] }}</span>
+                            </div>
+                            <div class="sp-card-badges">
+                                <span class="sp-announcement-category-pill {{ $item['pill_class'] }}">{{ $item['tag'] }}</span>
+                            </div>
+                            <h3 class="sp-card-title">{{ $item['title'] }}</h3>
+                            <p class="sp-card-snippet">{{ $item['body'] }}</p>
+                            @if (!empty($item['attachment']))
+                                <div class="sp-card-attach-pill"><i class="bi bi-paperclip"></i> <span>{{ $item['attachment'] }}</span></div>
+                            @endif
+                        </div>
+                        <div class="sp-card-footer">
+                            <button type="button" class="sp-btn-view-notice app-view-action" onclick="openSpAnnouncementDetailModal(this)"
+                                data-modal-title="{{ $item['title'] }}" data-modal-body="{{ $item['body'] }}" data-modal-author="{{ $item['author'] }}"
+                                data-modal-time="Posted on {{ $item['date'] }}" data-modal-priority="{{ $item['priority'] }}"><i class="bi bi-eye"></i> View</button>
+                            @if (!empty($item['attachment_url']))
+                                <a class="sp-btn-view-notice" href="{{ $item['attachment_url'] }}" aria-label="Download attachment for {{ $item['title'] }}"><i class="bi bi-download"></i></a>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+                <div class="sp-ann-grid-empty" id="spAnnounceGridEmpty" hidden><i class="bi bi-inbox fs-1 d-block mb-2"></i><strong>No matching bulletins found</strong><p>Try adjusting your search query, priority, or category filter.</p></div>
+            </div>
+
             {{-- Responsive Table --}}
-            <div class="sp-table-responsive">
+            <div class="sp-table-responsive" id="spAnnouncementsTableView" style="display:none;">
                 <table class="sp-announcements-table">
                     <thead>
                         <tr>
@@ -1185,17 +1233,14 @@
                             <th>Category</th>
                             <th>Bulletin Headline</th>
                             <th>Issued By</th>
-                            <th>Priority</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody id="spAnnouncementsTbody">
-                        @php
-                            $announcementsList = $bulletins ?? [];
-                        @endphp
 
                         @foreach ($announcementsList as $item)
                             <tr class="sp-announce-tbl-row"
+                                data-announce-index="{{ $loop->index }}"
                                 data-announcement-id="{{ $item['announcement_id'] ?? '' }}"
                                 data-announce-cat="{{ $item['category'] }}"
                                 data-announce-priority="{{ $item['priority'] }}"
@@ -1221,11 +1266,6 @@
                                 <td class="sp-col-author">
                                     <span class="sp-ann-author-badge">
                                         <i class="bi bi-person-badge"></i> {{ $item['author'] }}
-                                    </span>
-                                </td>
-                                <td class="sp-col-priority">
-                                    <span class="sp-chip sp-chip-{{ $item['priority'] }}">
-                                        <i class="bi bi-circle-fill"></i> {{ ucfirst($item['priority']) }}
                                     </span>
                                 </td>
                                 <td class="sp-col-action text-end">
@@ -1271,7 +1311,7 @@
                     </button>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 
     {{-- ============================ TOSA APPLICATIONS PANEL ============================ --}}
@@ -1285,6 +1325,31 @@
             [data-panel="tosa"] { min-width: 0; width: 100%; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
             [data-panel="tosa"] [hidden] { display: none !important; }
             [data-panel="tosa"] .sp-tosa-submissions-view { display: grid; gap: .4rem; min-width: 0; width: 100%; max-width: none; padding-bottom: .35rem; }
+            [data-panel="tosa"] .sp-tosa-hero-notice { min-width: 0; overflow: hidden; margin-bottom: .6rem; border: 1px solid #e2e8f0; border-radius: 16px; background: linear-gradient(135deg, #fff, #f8fafc); box-shadow: 0 8px 24px rgba(15, 23, 42, .08); color: #1e293b; overflow-wrap: anywhere; }
+            [data-panel="tosa"] .sp-tosa-hero-notice.is-qualified { border: 1.5px solid #f3ccd4; background: linear-gradient(135deg, #ffffff 0%, #fffbfc 100%); box-shadow: 0 10px 28px rgba(139, 24, 40, .08); }
+            [data-panel="tosa"] .sp-tosa-hero-accent-bar { height: 5px; background: linear-gradient(90deg, #64748b, #cbd5e1); }
+            [data-panel="tosa"] .is-qualified .sp-tosa-hero-accent-bar { background: linear-gradient(90deg, #8b1828, #b91c1c, #d97706); }
+            [data-panel="tosa"] .sp-tosa-hero-content { padding: clamp(1rem, 3vw, 1.75rem); }
+            [data-panel="tosa"] .sp-tosa-hero-header { display: flex; align-items: flex-start; gap: 1rem; }
+            [data-panel="tosa"] .sp-tosa-hero-icon { display: grid; place-items: center; flex: 0 0 auto; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #e2e8f0; color: #475569; font-size: 1.45rem; }
+            [data-panel="tosa"] .is-qualified .sp-tosa-hero-icon { background: linear-gradient(135deg, #fdf0f2, #fae0e5); color: #8b1828; border: 1.5px solid #f4cdd5; }
+            [data-panel="tosa"] .sp-tosa-hero-heading { min-width: 0; flex: 1; }
+            [data-panel="tosa"] .sp-tosa-hero-pill, [data-panel="tosa"] .sp-tosa-hero-term { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .6rem; border-radius: 999px; background: #fdf0f2; color: #8b1828; border: 1px solid #f6ccd5; font-size: .72rem; font-weight: 700; }
+            [data-panel="tosa"] .sp-tosa-hero-term { background: #fdf5f7; color: #786670; border: 1px solid #f0e1e5; }
+            [data-panel="tosa"] .sp-tosa-hero-heading h3 { margin: .55rem 0 .25rem; color: #1e293b; font-size: clamp(1.15rem, 2.5vw, 1.5rem); line-height: 1.2; }
+            [data-panel="tosa"] .sp-tosa-hero-heading p { margin: 0; color: #475569; font-size: .85rem; line-height: 1.5; }
+            [data-panel="tosa"] .sp-tosa-citation-box { margin-top: 1.2rem; padding: 1rem 1.1rem; border: 1px solid #e2e8f0; border-radius: 12px; background: rgba(255, 255, 255, .8); }
+            [data-panel="tosa"] .is-qualified .sp-tosa-citation-box { border-color: #f3ccd4; border-left: 3.5px solid #8b1828; background: #fffbfa; }
+            [data-panel="tosa"] .sp-tosa-citation-box p { margin: 0 0 .65rem; font-size: .875rem; line-height: 1.6; }
+            [data-panel="tosa"] .sp-tosa-citation-box p:last-child { margin-bottom: 0; }
+            [data-panel="tosa"] .sp-tosa-citation-caption { white-space: pre-wrap; }
+            [data-panel="tosa"] .sp-tosa-verification { display: flex; align-items: flex-start; gap: .4rem; color: #8b1828; font-size: .75rem; font-weight: 700; line-height: 1.4; }
+            [data-panel="tosa"] .sp-tosa-hero-actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1rem; }
+            [data-panel="tosa"] .sp-tosa-hero-action { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.6rem; padding: .6rem .85rem; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #334155; font: inherit; font-size: .78rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+            [data-panel="tosa"] .sp-tosa-hero-action:hover { background: #f1f5f9; }
+            [data-panel="tosa"] .sp-tosa-hero-action.is-primary { border-color: #8b1828; background: #8b1828; color: #fff; }
+            [data-panel="tosa"] .sp-tosa-hero-action.is-primary:hover { background: #701321; }
+            @media (max-width: 520px) { [data-panel="tosa"] .sp-tosa-hero-header { display: grid; grid-template-columns: auto minmax(0, 1fr); } [data-panel="tosa"] .sp-tosa-hero-term { grid-column: 2; justify-self: start; max-width: 100%; } [data-panel="tosa"] .sp-tosa-hero-actions { flex-direction: column; } }
             [data-panel="tosa"] .sp-tosa-card { min-width: 0; padding: .6rem; margin: 0; border: 1px solid #ead8de; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
             [data-panel="tosa"] .sp-tosa-accordion { padding: 0; }
             [data-panel="tosa"] .sp-tosa-section-summary { display: flex; align-items: center; gap: .55rem; padding: .55rem .65rem; list-style: none; cursor: pointer; background: #fff8fa; border-radius: 12px; }
@@ -1357,6 +1422,44 @@
             }
         </style>
         <div class="sp-tosa-submissions-view">
+            @if ($tosaApplicant && $tosaApplicant->status === 'submitted' && $tosaDecision)
+                <section class="sp-tosa-hero-notice" aria-labelledby="tosaNoticeHeading" style="border: 1.5px solid #f3ccd4; background: linear-gradient(135deg, #ffffff 0%, #fffbfc 100%); box-shadow: 0 10px 28px rgba(139, 24, 40, .08);">
+                    <div class="sp-tosa-hero-accent-bar" aria-hidden="true" style="background: linear-gradient(90deg, #8b1828, #b91c1c, #d97706);"></div>
+                    <div class="sp-tosa-hero-content">
+                        <div class="sp-tosa-hero-header">
+                            <span class="sp-tosa-hero-icon" aria-hidden="true" style="background: linear-gradient(135deg, #fdf0f2, #fae0e5); color: #8b1828; border: 1.5px solid #f4cdd5;">
+                                <i class="bi bi-envelope-check-fill"></i>
+                            </span>
+                            <div class="sp-tosa-hero-heading">
+                                <span class="sp-tosa-hero-pill" style="background: #fdf0f2; color: #8b1828; border: 1px solid #f6ccd5;">
+                                    <i class="bi bi-megaphone-fill" aria-hidden="true"></i> Official Announcement
+                                </span>
+                                <h3 id="tosaNoticeHeading" style="color: #8b1828; text-transform: uppercase; letter-spacing: -0.01em; margin: .5rem 0 .25rem;">
+                                    <strong>TOSA Application Result is Out!</strong>
+                                </h3>
+                                <p style="margin: 0; color: #475569; font-size: .88rem; font-weight: 600;">
+                                    <i class="bi bi-person-fill" aria-hidden="true"></i> {{ $tosaApplicant->full_name }}
+                                    @if (!empty($tosaApplicant->program))
+                                        · <i class="bi bi-mortarboard-fill" aria-hidden="true"></i> {{ $tosaApplicant->program }}
+                                    @endif
+                                </p>
+                            </div>
+                            <span class="sp-tosa-hero-term">AY {{ $tosaApplicant->academic_year ?? '2026–2027' }}</span>
+                        </div>
+                        <div class="sp-tosa-citation-box" style="border-color: #f3ccd4; border-left: 3.5px solid #8b1828; background: #fffbfa; margin-top: 1rem;">
+                            <p style="font-size: .92rem; color: #1e293b; font-weight: 600; margin: 0 0 .4rem;">
+                                Dear {{ $tosaApplicant->full_name }},
+                            </p>
+                            <p style="font-size: .88rem; color: #334155; line-height: 1.6; margin: 0 0 .6rem;">
+                                Your official TOSA application evaluation result is now available. An official notification with your complete result and attached formal letter has been sent to your registered institutional student email address (<strong>{{ $tosaApplicant->email }}</strong>).
+                            </p>
+                            <p style="font-size: .82rem; color: #786670; line-height: 1.5; margin: 0;">
+                                <i class="bi bi-info-circle-fill" style="color: #8b1828;" aria-hidden="true"></i> Please check your official email inbox (and your Spam or Junk folder). For any questions or clarifications, please coordinate directly with the Office of Student Organizations.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            @endif
 
             @if ($errors->any())
                 <div role="alert" style="color: #a12638; margin-bottom: 1rem;">
@@ -1383,18 +1486,6 @@
                     @endif
                 </div>
             @endunless
-            @if ($tosaDecision && is_array($tosaNotice) && !empty($tosaNotice['name']))
-                <section class="sp-tosa-card" aria-labelledby="tosaNoticeHeading">
-                    <h3 id="tosaNoticeHeading">Your TOSA result notice</h3>
-                    <p><strong>{{ $tosaNotice['name'] }}</strong>@if (!empty($tosaNotice['program']))<br>{{ $tosaNotice['program'] }}@endif</p>
-                    <p>Dear {{ $tosaNotice['name'] }},</p>
-                    <p style="white-space: pre-wrap">{{ $tosaNotice['caption'] ?? ($tosaDecision === 'qualified' ? 'Congratulations! You have been selected as one of the Top 10 TOSA applicants.' : 'Thank you for applying to TOSA. You were not selected for the Top 10.') }}</p>
-                    <div class="sp-tosa-document-links">
-                        <a href="{{ route('portal.tosa.letter') }}" class="sp-tosa-control app-view-action" data-document-preview data-document-preview-url="{{ route('portal.tosa.letter') }}" data-document-preview-title="TOSA result letter" data-document-preview-type="docx" data-document-preview-download="{{ route('portal.tosa.letter', ['download' => 1]) }}"><i class="bi bi-eye" aria-hidden="true"></i> View letter</a>
-                        <a href="{{ route('portal.tosa.letter', ['download' => 1]) }}" class="sp-tosa-control"><i class="bi bi-download" aria-hidden="true"></i> Download DOCX</a>
-                    </div>
-                </section>
-            @endif
 
 
             @php
@@ -1651,7 +1742,7 @@
             <form class="sp-composer liquid-glass" method="post" action="{{ route('portal.community.posts.store') }}" enctype="multipart/form-data" data-confirm-message="Publish this post to your selected audience?">
                 @csrf
                 <div class="sp-composer-row">
-                    <div class="sp-avatar sp-avatar-sm" aria-hidden="true">
+                    <div class="sp-avatar sp-avatar-sm" aria-hidden="true" data-student-avatar>
                         @if (!empty($student->avatar_path))
                             <img src="{{ asset('storage/'.$student->avatar_path) }}" alt="">
                         @else
@@ -1829,7 +1920,7 @@
             }
         </style>
         {{-- Community feed --}}
-        <section class="sp-section">
+        <section class="sp-section" id="spCommunityFeedSection">
             @php
                 $feedHasFilters = ($communityAudience ?? 'all') !== 'all' || ($communityPeriod ?? 'all') !== 'all';
                 $feedQuery = [
@@ -1849,7 +1940,7 @@
                 @forelse ($posts as $post)
                     <article id="post-{{ $post->id }}" class="sp-post liquid-glass community-post" data-post-id="{{ $post->id }}">
                         <header class="sp-post-head">
-                            <div class="sp-avatar sp-avatar-sm sp-feed-avatar">
+                            <div class="sp-avatar sp-avatar-sm sp-feed-avatar" @if ((int) $post->student_id === (int) $student->user_id) data-student-avatar @endif>
                                 @if (!empty($post->student->avatar_path))
                                     <img src="{{ asset('storage/'.$post->student->avatar_path) }}" alt="">
                                 @else
@@ -1958,8 +2049,12 @@
                             @if ($post->comments->isNotEmpty())
                                 @foreach ($post->comments as $comment)
                                     <div class="sp-comment-thread {{ $loop->index >= 5 ? 'sp-comment-extra' : '' }}" @if ($loop->index >= 5) hidden @endif id="comment-thread-{{ $comment->id }}">
-                                        <div class="sp-avatar sp-avatar-sm sp-comment-avatar">
-                                            <span>{{ strtoupper(substr($comment->student->name ?? 'J', 0, 2)) }}</span>
+                                        <div class="sp-avatar sp-avatar-sm sp-comment-avatar" @if ((int) ($comment->student_id ?? 0) === (int) $student->user_id) data-student-avatar @endif>
+                                            @if (!empty($comment->student?->avatar_path))
+                                                <img src="{{ asset('storage/'.$comment->student->avatar_path) }}" alt="">
+                                            @else
+                                                <span>{{ $comment->student?->initials() ?? 'S' }}</span>
+                                            @endif
                                         </div>
                                         <div class="sp-comment-content">
                                             <div class="sp-comment-bubble">
@@ -1998,7 +2093,7 @@
                         {{-- Modern Comment Composer Capsule Input (Picture 1) --}}
                         <form class="sp-comment-form" method="post" data-comment-form action="{{ route('portal.community.posts.comment', $post) }}" data-confirm="off">
                             @csrf
-                            <div class="sp-avatar sp-avatar-sm sp-comment-composer-avatar">
+                            <div class="sp-avatar sp-avatar-sm sp-comment-composer-avatar" data-student-avatar>
                                 @if (!empty($student->avatar_path))
                                     <img src="{{ asset('storage/'.$student->avatar_path) }}" alt="">
                                 @else

@@ -72,7 +72,7 @@ class OfficePortalController extends Controller
     private function deskContext(): array
     {
         $office = Auth::guard('office')->user();
-        $this->assignedOrganizationName($office);
+        $assigned = $this->assignedOrganizationName($office);
         $isOso = ($office?->office_role ?? '') === 'oso';
         $officeSettings = OfficeSetting::valuesFor('oso');
         $brand = $this->brandFor($office->office_role);
@@ -83,20 +83,21 @@ class OfficePortalController extends Controller
         }
         if ($isOso) {
             $brand['title'] = data_get($officeSettings, 'general.office_name', $brand['title']);
+            $brand['logo_url'] = !empty(data_get($officeSettings, 'general.logo_path'))
+                ? asset('storage/'.data_get($officeSettings, 'general.logo_path'))
+                : asset('images/oso-logo.png');
+        }
+        if (in_array(($office->office_role ?? ''), ['sdo', 'ovcaa', 'oc'], true)) {
+            $brand['logo_url'] = asset('images/bsu-logo.png');
         }
         $registry = StudentOrganization::query()->selectRaw('COUNT(*) AS registered, COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) AS enabled')->first();
-        $workflow = app(OrgWorkflowService::class);
-        $visibleActivities = $this->constrainToOfficeOrganization(OrgActivity::query())
-            ->get(['id', 'title', 'workflow_status', 'starts_at'])
-            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails($office->office_role, $activity->workflow_status ?: 'created'))
-            ->keyBy('id');
 
         return [
             'office' => $office,
             'brand' => $brand,
             'officeSettings' => $officeSettings,
             'organizationRegistry' => ['registered' => (int) $registry->registered, 'enabled' => (int) $registry->enabled],
-            'officeNotifications' => $this->officeNotifications($visibleActivities),
+            'officeNotifications' => $this->officeNotifications($office, $assigned),
             'officeUsers' => $isOso
                 ? OfficeUser::query()->with('studentOrganization')->whereIn('office_role', ['so', 'oso', 'sdo', 'ovcaa', 'oc'])->latest('id')->get()
                 : collect(),
@@ -106,28 +107,125 @@ class OfficePortalController extends Controller
         ];
     }
 
-    private function officeNotifications(Collection $activities): Collection
+    public function notifications(): JsonResponse
+    {
+        $office = Auth::guard('office')->user();
+        $assigned = $this->assignedOrganizationName($office);
+
+        return response()->json(['notifications' => $this->officeNotifications($office, $assigned)
+            ->map(fn (array $notification): array => array_merge($notification, [
+                'at' => $notification['at']->toIso8601String(),
+                'time_label' => $notification['at']->diffForHumans(),
+            ]))])->header('Cache-Control', 'no-store, private');
+    }
+
+    private function officeNotifications(OfficeUser $office, ?string $assignedOrg): Collection
     {
         $workflow = app(OrgWorkflowService::class);
+        $activities = $this->constrainToOfficeOrganization(OrgActivity::query())
+            ->get(['id', 'title', 'workflow_status', 'starts_at'])
+            ->filter(fn (OrgActivity $activity): bool => $office->office_role !== 'so' || ($activity->workflow_status ?: 'created') !== 'created')
+            ->filter(fn (OrgActivity $activity): bool => $workflow->canViewActivityDetails($office->office_role, $activity->workflow_status ?: 'created'))
+            ->keyBy('id');
+        $officeRole = $office?->office_role;
+        $recipientStatuses = match ($officeRole) {
+            'oso' => ['oso_review', 'oc_approved'],
+            'sdo' => ['sdo_review'],
+            'ovcaa' => ['ovcaa_review'],
+            'oc' => ['oc_review'],
+            'so' => ['sdo_review', 'ovcaa_review', 'oc_review', 'oc_approved', 'returned'],
+            default => [],
+        };
         $updates = DB::connection('mysql')->table('activity_workflow_events')
             ->whereIn('org_activity_id', $activities->keys())
-            ->where('created_at', '<=', now())->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get()
+            ->whereIn('to_status', $recipientStatuses)
+            ->when($officeRole === 'so', fn ($query) => $query->whereIn('role', ['oso', 'sdo', 'ovcaa', 'oc', 'college_reviewer']))
+            ->when($office, fn ($query) => $query
+                ->where('role', '!=', $officeRole)
+                ->where(fn ($query) => $query->whereNull('actor_id')->orWhere('actor_id', '!=', $office->id)))
+            ->where('created_at', '<=', now())->orderByDesc('created_at')->orderByDesc('id')->limit(15)->get()
             ->map(fn ($event): array => [
+                'id' => 'act-'.$event->id,
+                'type' => 'activity',
                 'title' => $activities[$event->org_activity_id]->title,
-                'detail' => $workflow->label($event->to_status),
+                'detail' => match ($event->to_status) {
+                    'oso_review' => 'Proposal Submitted for OSO Review',
+                    'sdo_review' => 'Proposal Endorsed for SDO Review',
+                    'ovcaa_review' => 'Proposal Endorsed for OVCAA Review',
+                    'oc_review' => 'Proposal Endorsed for OC Final Approval',
+                    'oc_approved' => 'Activity Proposal Approved',
+                    'returned' => 'Activity Proposal Returned for Revision',
+                },
                 'url' => route('office.activities', ['activity' => $event->org_activity_id]),
                 'at' => Carbon::parse($event->created_at),
             ]);
+        $acknowledgedIds = $office ? OfficeAnnouncementAcknowledgment::query()
+            ->where('office_user_id', $office->id)
+            ->pluck('office_announcement_id')->all() : [];
         $announcements = OfficeAnnouncement::query()->published()->where('created_at', '<=', now())
-            ->latest()->orderByDesc('id')->limit(10)->get()
+            ->whereNotIn('id', $acknowledgedIds)
+            ->latest()->orderByDesc('id')->limit(15)->get()
             ->map(fn (OfficeAnnouncement $announcement): array => [
+                'id' => 'ann-'.$announcement->id,
+                'type' => 'announcement',
                 'title' => $announcement->title,
                 'detail' => 'Announcement',
                 'url' => route('office.updates', ['announcement' => $announcement->id]),
                 'at' => $announcement->created_at,
             ]);
 
-        return $updates->concat($announcements)->sortByDesc('at')->take(10)->values();
+        if ($office?->office_role === 'oso') {
+            $renewalSubmissions = OrgRenewalSubmission::query()->where('status', 'submitted')
+                ->whereNotNull('submitted_at')->where('submitted_at', '<=', now())->latest('submitted_at')->limit(15)->get();
+        } elseif ($officeRole === 'so' && $assignedOrg !== null) {
+            $renewalSubmissions = OrgRenewalSubmission::query()->where('organization_name', $assignedOrg)
+                ->whereIn('status', ['approved', 'returned', 'rejected'])
+                ->whereNotNull('reviewed_at')->where('reviewed_at', '<=', now())
+                ->latest('reviewed_at')->limit(15)->get();
+        } else {
+            $renewalSubmissions = collect();
+        }
+
+        $renewals = $renewalSubmissions->map(fn (OrgRenewalSubmission $sub): array => [
+                'id' => 'ren-'.$sub->id.'-'.$sub->status.'-'.($sub->status === 'submitted' ? $sub->submitted_at->format('U.u') : $sub->reviewed_at->format('U.u')),
+                'title' => $sub->organization_name,
+                'detail' => match ($sub->status) {
+                    'submitted' => 'Renewal Application Submitted',
+                    'approved' => 'Renewal Approved by OSO',
+                    'returned' => 'Renewal Returned for Revision',
+                    'rejected' => 'Renewal Rejected by OSO',
+                    default => 'Renewal Update',
+                },
+                'url' => ($office?->office_role ?? '') === 'oso'
+                    ? route('office.renewal.submissions.show', $sub)
+                    : route('office.renewal'),
+                'at' => $sub->status === 'submitted' ? $sub->submitted_at : $sub->reviewed_at,
+                'type' => 'renewal',
+            ]);
+
+        $reports = $officeRole === 'so' && $assignedOrg !== null
+            ? OrgReportStatus::query()->where('organization_name', $assignedOrg)
+                ->whereIn('report_type', ['ar', 'fr'])
+                ->whereIn('status', ['returned', 'rejected', 'verified', 'archived'])
+                ->whereNotNull('reviewed_by')->whereNotNull('reviewed_at')->where('reviewed_at', '<=', now())
+                ->latest('reviewed_at')->limit(15)->get()
+                ->map(fn (OrgReportStatus $report): array => [
+                    'id' => 'report-'.$report->id.'-'.$report->status.'-'.$report->reviewed_at->format('U.u'),
+                    'type' => 'report',
+                    'title' => ($report->report_type === 'ar' ? 'Accomplishment Report' : 'Financial Report').' · '.$report->semester.' · AY '.$report->academic_year,
+                    'detail' => match ($report->status) {
+                        'returned' => 'Report Returned for Revision by OSO',
+                        'rejected' => 'Report Rejected by OSO',
+                        default => 'Report Approved by OSO',
+                    },
+                    'url' => route($report->report_type === 'ar' ? 'office.accomplishment' : 'office.financial', [
+                        'semester' => $report->semester, 'academic_year' => $report->academic_year,
+                    ]),
+                    'at' => $report->reviewed_at,
+                ])
+            : collect();
+
+        return $updates->concat($announcements)->concat($renewals)->concat($reports)->sortByDesc('at')->take(15)->values();
     }
 
     /**
@@ -459,6 +557,62 @@ class OfficePortalController extends Controller
                 $activity->workflow_status ?: 'created',
             ))
             ->values();
+        $sdoActivities = null;
+        $sdoYears = [now()->year];
+        $sdoMonthlyCounts = array_fill(0, 12, 0);
+        $sdoMonthlyCountsByYear = [];
+        $sdoSdgDistribution = [];
+        if ($officeRole === 'sdo') {
+            $sdoActivities = $dbActivities->map(function (OrgActivity $activity) use ($workflow): array {
+                $date = $activity->starts_at ?? $activity->created_at;
+                return [
+                    'id' => (int) $activity->id,
+                    'title' => $activity->title,
+                    'organization' => $activity->organization_name,
+                    'location' => $activity->location ?: 'BatStateU ARASOF-Nasugbu Campus',
+                    'scope' => $activity->activity_scope === 'local_off_campus' ? 'Off-Campus' : 'In-Campus',
+                    'status' => $workflow->label($activity->workflow_status ?: 'created'),
+                    'status_key' => $activity->workflow_status ?: 'created',
+                    'budget' => (float) ($activity->approved_budget ?? 0),
+                    'sdg_goals' => is_array($activity->sdg_goals) ? array_values($activity->sdg_goals) : [],
+                    'year' => (int) ($date?->format('Y') ?? now()->year),
+                    'month' => (int) ($date?->format('n') ?? 1),
+                    'month_short' => strtoupper($date?->format('M') ?? 'NOV'),
+                    'day' => $date?->format('d') ?? '01',
+                    'formatted_date' => $date?->format('M j, Y') ?? '',
+                    'formatted_time' => $date?->format('g:i A') ?? '',
+                    'url' => route('office.activities', ['activity' => $activity->id]),
+                ];
+            })->values();
+            $sdoYears = $sdoActivities->pluck('year')->unique()->sortDesc()->values()->all() ?: $sdoYears;
+            // Count the first handoff to SDO, rather than the scheduled activity date.
+            $handoffs = DB::connection('mysql')->table('activity_workflow_events')
+                ->whereIn('org_activity_id', $dbActivities->pluck('id')->all())
+                ->where('to_status', 'sdo_review')
+                ->selectRaw('org_activity_id, MIN(created_at) as submitted_at')
+                ->groupBy('org_activity_id')->get();
+            foreach ($handoffs as $handoff) {
+                $date = Carbon::parse($handoff->submitted_at);
+                $year = $date->year;
+                $sdoMonthlyCountsByYear[$year] ??= array_fill(0, 12, 0);
+                $sdoMonthlyCounts[$date->month - 1]++;
+                $sdoMonthlyCountsByYear[$year][$date->month - 1]++;
+            }
+            krsort($sdoMonthlyCountsByYear);
+
+            foreach (\App\Services\SdgCatalogue::GOALS as $number => $goal) {
+                $goalKey = 'SDG '.$number;
+                $count = $dbActivities->filter(function (OrgActivity $activity) use ($goalKey): bool {
+                    $goals = is_array($activity->sdg_goals) ? $activity->sdg_goals : [];
+                    return in_array($goalKey, $goals, true);
+                })->count();
+
+                if ($count > 0) {
+                    $sdoSdgDistribution[$goalKey] = ['count' => $count, 'color' => $goal[2], 'name' => $goal[0]];
+                }
+            }
+        }
+
         $approved = $dbActivities->whereIn('workflow_status', ['oc_approved', 'completed'])->count();
         $pending = $dbActivities->count() - $approved;
         $reviewStages = ['college_review', 'oso_review', 'sdo_review', 'ovcaa_review', 'oc_review', 'verification', 'pending'];
@@ -494,9 +648,15 @@ class OfficePortalController extends Controller
             };
             $forwarded = $dbActivities->whereIn('workflow_status', $forwardedStages)->count();
             $total = $dbActivities->count();
+            $returnedCount = \Illuminate\Support\Facades\DB::connection('mysql')->table('activity_workflow_events')
+                ->where('role', $officeRole)
+                ->where('to_status', 'returned')
+                ->distinct('org_activity_id')
+                ->count('org_activity_id');
             $reviewOverview = [
                 'total' => $total,
                 'pending' => $queue->count(),
+                'returned' => $returnedCount,
                 'forwarded' => $forwarded,
                 'finalPending' => $kpiOc,
                 'finalApproved' => $approved,
@@ -508,6 +668,122 @@ class OfficePortalController extends Controller
                     'organization' => $activity->organization_name,
                     'status' => $workflow->label($activity->workflow_status),
                 ])->values()->all(),
+            ];
+        }
+
+        $ovcaaStatusCounts = null;
+        $ovcaaTrendData = null;
+        if ($officeRole === 'ovcaa') {
+            $ovcaaStatusCounts = [
+                'pending' => (int) ($reviewOverview['pending'] ?? 0),
+                'approved' => (int) ($reviewOverview['forwarded'] ?? 0),
+                'returned' => (int) ($reviewOverview['returned'] ?? 0),
+            ];
+            $currentYear = now()->year;
+            $lastYear = $currentYear - 1;
+            $currentMonths = array_fill(0, 12, 0);
+            $lastMonths = array_fill(0, 12, 0);
+            $handoffs = DB::connection('mysql')->table('activity_workflow_events')
+                ->whereIn('org_activity_id', $dbActivities->pluck('id')->all())
+                ->where('to_status', 'ovcaa_review')
+                ->selectRaw('org_activity_id, MIN(created_at) as submitted_at')
+                ->groupBy('org_activity_id')
+                ->pluck('submitted_at', 'org_activity_id');
+
+            foreach ($dbActivities as $activity) {
+                $date = $handoffs->get($activity->id) ?? $activity->created_at;
+                if (! $date) {
+                    continue;
+                }
+                $date = Carbon::parse($date);
+                if ($date->year === $currentYear) {
+                    $currentMonths[$date->month - 1]++;
+                } elseif ($date->year === $lastYear) {
+                    $lastMonths[$date->month - 1]++;
+                }
+            }
+            $sumQuarters = static fn (array $months): array => [
+                $months[0] + $months[1] + $months[2],
+                $months[3] + $months[4] + $months[5],
+                $months[6] + $months[7] + $months[8],
+                $months[9] + $months[10] + $months[11],
+            ];
+            $ovcaaTrendData = [
+                'currentYearLabel' => (string) $currentYear,
+                'lastYearLabel' => (string) $lastYear,
+                'months' => [
+                    'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    'current' => $currentMonths,
+                    'last' => $lastMonths,
+                ],
+                'quarters' => [
+                    'labels' => ['Q1', 'Q2', 'Q3', 'Q4'],
+                    'current' => $sumQuarters($currentMonths),
+                    'last' => $sumQuarters($lastMonths),
+                ],
+            ];
+        }
+
+        $ocApprovalTrendData = null;
+        if ($officeRole === 'oc') {
+            $now = now();
+            $currentYear = $now->year;
+            $events = DB::connection('mysql')->table('activity_workflow_events')
+                ->whereIn('org_activity_id', $dbActivities->pluck('id')->all())
+                ->whereIn('to_status', ['oc_approved', 'oc_review'])
+                ->orderByDesc('created_at')->orderByDesc('id')->get()->groupBy('org_activity_id');
+            $returnedEvents = DB::connection('mysql')->table('activity_workflow_events')
+                ->where('role', 'oc')
+                ->where('to_status', 'returned')
+                ->selectRaw('org_activity_id, MAX(created_at) as event_at')
+                ->groupBy('org_activity_id')
+                ->get();
+            $monthly = ['approved' => [], 'pending' => [], 'returned' => []];
+            $totals = array_fill_keys(array_keys($monthly), 0);
+            foreach ($dbActivities as $activity) {
+                $activityEvents = $events->get($activity->id, collect());
+                $categories = [];
+                if (in_array($activity->workflow_status, ['oc_approved', 'completed'], true)) {
+                    $categories['approved'] = $activityEvents->firstWhere('to_status', 'oc_approved');
+                } elseif ($activity->workflow_status === 'oc_review') {
+                    $categories['pending'] = $activityEvents->firstWhere('to_status', 'oc_review');
+                }
+                foreach ($categories as $category => $event) {
+                    $totals[$category]++;
+                    $date = $event->created_at ?? $activity->updated_at ?? $activity->created_at;
+                    if ($date) {
+                        $key = Carbon::parse($date)->format('Y-m');
+                        $monthly[$category][$key] = ($monthly[$category][$key] ?? 0) + 1;
+                    }
+                }
+            }
+            foreach ($returnedEvents as $event) {
+                $totals['returned']++;
+                if ($event->event_at) {
+                    $key = Carbon::parse($event->event_at)->format('Y-m');
+                    $monthly['returned'][$key] = ($monthly['returned'][$key] ?? 0) + 1;
+                }
+            }
+            $period = static function (array $dates, string $format) use ($monthly): array {
+                $result = ['labels' => array_map(fn ($date) => $date->format($format), $dates)];
+                foreach ($monthly as $category => $counts) {
+                    $result[$category] = array_map(fn ($date) => $counts[$date->format('Y-m')] ?? 0, $dates);
+                }
+                return $result;
+            };
+            $months = array_map(fn ($month) => $now->copy()->startOfYear()->addMonths($month), range(0, 11));
+            $fullYear = $period($months, 'M');
+            $quarters = ['labels' => ['Q1', 'Q2', 'Q3', 'Q4']];
+            foreach (array_keys($monthly) as $category) {
+                $quarters[$category] = array_map('array_sum', array_chunk($fullYear[$category], 3));
+            }
+            $ocApprovalTrendData = [
+                'year' => (string) $currentYear,
+                'totals' => $totals,
+                'last6' => $period(array_map(fn ($offset) => $now->copy()->startOfMonth()->subMonths($offset), range(5, 0)), 'M Y'),
+                'ytd' => $period(array_slice($months, 0, $now->month), 'M'),
+                'fullYear' => $fullYear,
+                'quarters' => $quarters,
             ];
         }
 
@@ -585,6 +861,14 @@ class OfficePortalController extends Controller
             'soBudgetChart' => $soBudgetChart,
             'osoOverview' => $this->buildOsoOverview($dbActivities),
             'reviewOverview' => $reviewOverview,
+            'ovcaaStatusCounts' => $ovcaaStatusCounts,
+            'ovcaaTrendData' => $ovcaaTrendData,
+            'ocApprovalTrendData' => $ocApprovalTrendData,
+            'sdoActivities' => $sdoActivities,
+            'sdoYears' => $sdoYears,
+            'sdoMonthlyCounts' => $sdoMonthlyCounts,
+            'sdoMonthlyCountsByYear' => $sdoMonthlyCountsByYear,
+            'sdoSdgDistribution' => $sdoSdgDistribution,
             'recentUpdates' => $recentUpdates,
             'workflowStages' => OrgWorkflowService::FLOW,
             'upcoming' => $upcoming,
@@ -597,6 +881,8 @@ class OfficePortalController extends Controller
 
     public function analytics(): View
     {
+        abort_if(in_array(Auth::guard('office')->user()?->office_role ?? '', ['so', 'sdo'], true), 403);
+
         return view('org.analytics', array_merge($this->deskContext(), $this->buildAnalyticsData(), [
             'activeNav' => 'analytics',
         ]));
@@ -604,6 +890,8 @@ class OfficePortalController extends Controller
 
     public function exportAnalytics(SpreadsheetExportService $exports): BinaryFileResponse
     {
+        abort_if(in_array(Auth::guard('office')->user()?->office_role ?? '', ['so', 'sdo'], true), 403);
+
         $path = $exports->exportAnalytics($this->buildAnalyticsData());
         try {
             return response()->download($path, 'analytics-financial-report-'.now()->format('Ymd-His').'.xlsx', [
@@ -1151,6 +1439,7 @@ class OfficePortalController extends Controller
             'pipelineFilters' => $pipelineFilters,
             'pipelineColleges' => $pipelineColleges,
             'pipelineContextActive' => $pipelineContextActive,
+            'hasServerDropdownFilter' => $organization !== '' || $academicYear !== '' || ($pipelineFilters['college'] ?? '') !== '',
             'forApprovalCount' => collect($allActivities)->where('filter_category', 'for_approval')->count(),
             'approvedCount' => collect($allActivities)->where('filter_category', 'approved')->count(),
             'inReviewCount' => collect($allActivities)->where('filter_category', 'in_review')->count(),
@@ -1741,6 +2030,17 @@ class OfficePortalController extends Controller
         $lastDay = $month->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY)->startOfDay();
         $eventsByDate = [];
         foreach ($events as $event) {
+            $start = Carbon::parse($event['date_key'], $timezone);
+            $last = Carbon::parse($event['last_date_key'], $timezone);
+            if ($start->diffInDays($last) >= 3) {
+                $endDate = Carbon::parse($event['ends_at'], $timezone)->toDateString();
+                foreach ([$event['date_key'] => 'Starts', $endDate => 'Ends'] as $dateKey => $label) {
+                    if ($dateKey >= $firstDay->toDateString() && $dateKey <= $lastDay->toDateString()) {
+                        $eventsByDate[$dateKey][] = array_merge($event, ['display_title' => $event['title'].' ('.$label.')']);
+                    }
+                }
+                continue;
+            }
             $from = max($firstDay->toDateString(), $event['date_key']);
             $to = min($lastDay->toDateString(), $event['last_date_key']);
             if ($from > $to) {
@@ -1781,6 +2081,8 @@ class OfficePortalController extends Controller
 
     public function budget(): View
     {
+        abort_unless(in_array(Auth::guard('office')->user()?->office_role ?? '', ['so', 'oso'], true), 403);
+
         $budgetService = app(\App\Services\ActivityBudgetService::class);
         $selectedYear = (string) request('academic_year', $budgetService->period()['academic_year']);
         $selectedSemester = (string) request('semester', 'Annual');
@@ -2958,7 +3260,7 @@ class OfficePortalController extends Controller
         $submissions = collect();
         $mySubmission = null;
         $allOrganizations = collect();
-        $orgStats = ['total' => 0, 'qualified' => 0, 'not_qualified' => 0, 'inactive' => 0];
+        $orgStats = ['total' => 0, 'qualified' => 0, 'submitted' => 0, 'not_qualified' => 0, 'inactive' => 0, 'renewed' => 0];
 
         if ($role === 'oso') {
             $submissions = $window
@@ -2969,17 +3271,34 @@ class OfficePortalController extends Controller
                     ->latest('id')->get()
                 : collect();
             $submissionsByOrganization = $submissions->keyBy(fn (OrgRenewalSubmission $sub) => mb_strtolower($sub->organization_name));
+            $recommendationYear = null;
+            $activityCounts = collect();
+            $year = $window?->academic_year;
+            if (is_string($year) && preg_match('/^(\d{4})-(\d{4})$/', $year, $matches)
+                && (int) $matches[1] > 1 && (int) $matches[2] === (int) $matches[1] + 1) {
+                $startYear = (int) $matches[1];
+                $recommendationYear = sprintf('%04d-%04d', $startYear - 1, $startYear);
+                $activityCounts = OrgActivity::query()
+                    ->where('status', 'completed')
+                    ->where('workflow_status', 'oc_approved')
+                    ->where('starts_at', '>=', sprintf('%04d-08-01 00:00:00', $startYear - 1))
+                    ->where('starts_at', '<', sprintf('%04d-08-01 00:00:00', $startYear))
+                    ->selectRaw('BINARY organization_name as organization_name, COUNT(*) as activity_count')
+                    ->groupByRaw('BINARY organization_name')
+                    ->pluck('activity_count', 'organization_name');
+            }
+
 
             $allOrganizations = StudentOrganization::query()
                 ->orderBy('name')
                 ->get()
-                ->map(function (StudentOrganization $org) use ($submissionsByOrganization, $requiredDocs, $window) {
+                ->map(function (StudentOrganization $org) use ($submissionsByOrganization, $requiredDocs, $window, $recommendationYear, $activityCounts) {
                     $sub = $submissionsByOrganization->get(mb_strtolower($org->name));
                     $review = $sub?->requiredDocumentReview($requiredDocs)
                         ?? ['required' => count($requiredDocs), 'verified' => 0, 'missing' => count($requiredDocs)];
                     // Final approval is authoritative, including approvals made before
                     // later template/checklist edits. Administrative flags stay separate.
-                    $officiallyActive = (bool) $org->is_active && $sub?->status === 'approved';
+                    $officiallyActive = (bool) ($sub?->status === 'approved');
                     $currentAcademicYear = $window?->academic_year ?? '2026-2027';
                     $lastRenewalYear = $officiallyActive ? $currentAcademicYear : ($org->academic_year ?: '—');
                     $adviserName = $sub?->adviser_name ?: '—';
@@ -2991,7 +3310,9 @@ class OfficePortalController extends Controller
                         'college' => $org->college ?: 'Campus Wide',
                         'is_active' => (bool) $org->is_active,
                         'is_qualified_for_renewal' => (bool) ($org->is_qualified_for_renewal ?? true),
-                        'can_file_renewal' => (bool) $org->is_active && (bool) ($org->is_qualified_for_renewal ?? true),
+                        'can_file_renewal' => (bool) ($org->is_qualified_for_renewal ?? true),
+                        'activity_recommendation_year' => $recommendationYear,
+                        'activity_recommendation_count' => $recommendationYear === null ? null : (int) $activityCounts->get($org->name, 0),
                         'disqualification_reason' => $org->disqualification_reason,
                         'status_updated_at' => $org->status_updated_at ? $org->status_updated_at->format('M j, Y g:i A') : null,
                         'submission_status' => $sub?->status ?? 'none',
@@ -3013,8 +3334,10 @@ class OfficePortalController extends Controller
             $orgStats = [
                 'total' => $allOrganizations->count(),
                 'qualified' => $allOrganizations->where('can_file_renewal', true)->count(),
+                'submitted' => $submissionsByOrganization->count(),
                 'not_qualified' => $allOrganizations->where('can_file_renewal', false)->count(),
                 'inactive' => $allOrganizations->where('officially_active', false)->count(),
+                'renewed' => $allOrganizations->where('officially_active', true)->count(),
             ];
         } else {
             $assignedOrg = $this->assignedOrganizationName();
@@ -3072,6 +3395,7 @@ class OfficePortalController extends Controller
             'targetOrgModel' => $targetOrgModel,
             'allOrganizations' => $allOrganizations,
             'orgStats' => $orgStats,
+            'currentAcademicYear' => $window?->academic_year ?? '2026-2027',
             'officialRequirementFiles' => $officialRequirementFiles,
             'otherRenewalSubmissions' => $submissions->whereNotIn('id', $allOrganizations->pluck('submission_id')->filter())->values(),
             'orgChoices' => [$targetOrg],
@@ -3281,6 +3605,64 @@ class OfficePortalController extends Controller
         return redirect()->route('office.renewal')->with('success', 'Official template replaced. Submitted organization files are unchanged.');
     }
 
+    public function downloadRenewalTemplatesZip(): BinaryFileResponse|StreamedResponse
+    {
+        $office = Auth::guard('office')->user();
+        abort_unless($office && in_array($office->office_role, ['so', 'oso', 'sdo', 'ovcaa', 'oc'], true), 403);
+
+        $templateFiles = [
+            '0. BatStateU-FO-SOA-01 Master Application Form.docx' => 'BatStateU-FO-SOA-01_Application for Recognition, Renewal of Student Organization_Rev. 03.docx',
+            'Attachment A - Commitment Letter of the Adviser.docx' => 'Attachment A_ Commitment Letter of the Adviser.docx',
+            'Attachment B - Certification of Academic Qualifications.docx' => 'Attachment B_ Certificate for Academic Qualifications.docx',
+            'Attachment C - Profile of Student Organization.docx' => 'Attachment C_ Profile of Student Organization _.docx',
+            'Attachment D - List of Members.docx' => 'Attachment D_ List of Members.docx',
+            'Attachment E - History of Student Organization.docx' => 'Attachment E_ History of Student Organization.docx',
+            'Attachment F - Declaration of Revolving Fund.docx' => 'Attachment F. Declaration of Organization_s Revolving Fund.docx',
+            'Attachment G - Constitution and By-Laws.docx' => 'Attachment G_ Organization_s Constitution and By-Laws.docx',
+            'Attachment H - Adviser and Officers Profile.docx' => 'Attachment H_ Student Organization  Adviser and Officers Profile.docx',
+            'Attachment I - Plan of Activities.docx' => 'Attachment I_ Plan of Activities.docx',
+            'Attachment J - Specimen Signatures.docx' => 'Attachment J_ Specimen Signatures.docx',
+        ];
+
+        $files = [];
+        foreach ($templateFiles as $name => $filename) {
+            $publicPath = public_path('templates/renewal/'.$filename);
+            $storagePath = storage_path('Template/Student Organizations Renewal/'.$filename);
+            $path = is_file($publicPath) ? $publicPath : $storagePath;
+            abort_unless(is_file($path), 404, 'An official renewal template is missing.');
+            $files[$name] = $path;
+        }
+
+        abort_unless(class_exists(ZipArchive::class), 500, 'ZIP support is unavailable.');
+        $zipPath = tempnam(sys_get_temp_dir(), 'renewal-templates-');
+        abort_if($zipPath === false, 500, 'The template compilation could not be created.');
+
+        try {
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException('The template archive could not be opened.');
+            }
+            try {
+                foreach ($files as $name => $path) {
+                    if (! $zip->addFile($path, $name)) {
+                        throw new \RuntimeException('An official renewal template could not be added.');
+                    }
+                }
+            } catch (\Throwable $error) {
+                $zip->close();
+                throw $error;
+            }
+            if (! $zip->close()) {
+                throw new \RuntimeException('The template archive could not be completed.');
+            }
+
+            return response()->download($zipPath, 'OrgChain-Renewal-Requirements-Templates.zip')->deleteFileAfterSend(true);
+        } catch (\Throwable $error) {
+            @unlink($zipPath);
+            throw $error;
+        }
+    }
+
     public function renewalRequirementFile(Request $request, string $docKey): BinaryFileResponse
     {
         abort_unless(in_array(Auth::guard('office')->user()?->office_role, ['oso', 'so'], true), 403);
@@ -3409,8 +3791,8 @@ class OfficePortalController extends Controller
                     }
                 }
                 $orgModel = StudentOrganization::where('name', $validated['organization_name'])->first();
-                if ($orgModel && (! ($orgModel->is_qualified_for_renewal ?? true) || ! $orgModel->is_active)) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'Renewal submission blocked: '.($orgModel->disqualification_reason ?: 'This organization is Not Qualified to Renew or Inactive by OSO.')]);
+                if ($orgModel && (! ($orgModel->is_qualified_for_renewal ?? true))) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['renewal' => 'Renewal submission blocked: '.($orgModel->disqualification_reason ?: 'This organization is Not Qualified to Renew by OSO.')]);
                 }
                 $documents = $existing?->documents()->get()->keyBy('doc_key') ?? collect();
                 $unlisted = array_diff(array_keys($files), array_column($requiredDocs, 'key'));
@@ -3469,7 +3851,7 @@ class OfficePortalController extends Controller
             throw $error;
         }
 
-        return redirect()->route('office.renewal')->with('success', 'Renewal packet submitted for review.');
+        return redirect()->route('office.renewal');
     }
 
     public function archive(Request $request): View
@@ -4912,9 +5294,12 @@ class OfficePortalController extends Controller
             ->get()
             ->groupBy('org_activity_id');
         $rsvpsByActivity = ActivityRegistration::query()->whereIn('org_activity_id', $db->modelKeys())->orderByDesc('created_at')->get()->groupBy('org_activity_id');
-        $organizationAliases = StudentOrganization::query()->pluck('short_name', 'name')->all();
+        $allOrgsByName = StudentOrganization::query()->get()->keyBy('name');
 
-        return $db->map(function (OrgActivity $activity) use ($workflow, $officeRole, $submissionFiles, $rsvpsByActivity, $organizationAliases): array {
+        return $db->map(function (OrgActivity $activity) use ($workflow, $officeRole, $submissionFiles, $rsvpsByActivity, $allOrgsByName, $collegeMap): array {
+            $orgModel = $allOrgsByName->get($activity->organization_name);
+            $shortName = $orgModel?->short_name ?: $activity->organization_name;
+            $orgInitials = mb_strtoupper(mb_substr($shortName ?: 'ORG', 0, 4));
             $statusKey = $activity->workflow_status ?: 'created';
             $canViewDocuments = $workflow->canViewActivityDocuments($officeRole, $statusKey);
             $reviewDeskRole = in_array($officeRole, ['oso', 'sdo', 'ovcaa', 'oc'], true);
@@ -5118,8 +5503,11 @@ class OfficePortalController extends Controller
                 'end_time' => optional($activity->ends_at)->format('F j, Y g:i A') ?? 'TBA',
                 'budget' => (float) $activity->approved_budget,
                 'organization' => $activity->organization_name ?: 'Student Organization',
-                'organization_alias' => $organizationAliases[$activity->organization_name] ?? ($activity->organization_name ?: 'Student Organization'),
+                'organization_alias' => $orgModel?->short_name ?? ($activity->organization_name ?: 'Student Organization'),
+                'organization_logo_url' => $orgModel?->logoUrl(),
+                'organization_initials' => $orgInitials,
                 'college' => $activity->college,
+                'college_label' => $this->departmentLabel($activity->college ?: $collegeMap->get($activity->organization_name)),
                 'program' => $activity->program,
                 'rationale' => $submission?->rationale ?: ($activity->description ?: 'No rationale recorded.'),
                 'participants_plan' => $submission?->participants,
@@ -5892,7 +6280,7 @@ class OfficePortalController extends Controller
         $pendingRows = $rows->whereIn('bucket', ['pending', 'revision'])->sortByDesc('id')->take(8)->values();
         $transactions = $pendingRows->map(function ($r) use ($dbActivities) {
             $a = $dbActivities->firstWhere('id', $r['id']);
-            $days = $a?->starts_at ? now()->diffInDays($a->starts_at, false) : null;
+            $days = $a?->starts_at ? (int) ceil(now()->diffInDays($a->starts_at, false)) : null;
             if ($r['bucket'] === 'revision') {
                 $sla = ['text' => 'Returned', 'class' => 'oso-sla-high', 'icon' => 'bi-arrow-counterclockwise'];
             } elseif ($days === null) {
@@ -5987,10 +6375,10 @@ class OfficePortalController extends Controller
             $addRecognition($renewal->organization_name, $renewal->window?->academic_year);
         }
         $recognitionRows = $recognitionRows->unique(fn (array $row): string => $row['organization_key'].'|'.$row['academic_year'])->values();
-        $selectedRosterYear = now()->year.'-'.(now()->year + 1);
         $pendingSubmissions = $pending + $revision;
         $pendingTrx = $pendingSubmissions + $renewalPending + $pendingReports + $tosaPending;
         $currentAcademicYear = $this->academicPeriod(now())['academic_year'];
+        $renewedCount = $recognitionRows->where('academic_year', $currentAcademicYear)->unique('organization_key')->count();
 
         $typeLabels = $hideSemesterReportMetrics
             ? ['Activity Proposal', 'Renewal', 'TOSA Award']
@@ -6015,7 +6403,7 @@ class OfficePortalController extends Controller
             'collegeRanking' => $collegeRanking,
             'transactions' => $transactions,
             'kpis' => [
-                'totalOrgs' => $recognitionRows->where('academic_year', $selectedRosterYear)->unique('organization_key')->count(),
+                'totalOrgs' => $renewedCount,
                 'totalActivities' => $total,
                 'activitiesSub' => $inCampus.' In-Campus · '.$offCampus.' Off-Campus',
                 'pendingTrx' => $pendingTrx,
@@ -6023,6 +6411,7 @@ class OfficePortalController extends Controller
                 'totalSubmissions' => $total,
                 'revisionRate' => $total > 0 ? round(($returnRows->unique('activity_id')->count() / $total) * 100, 1).'%' : '0%',
             ],
+            'renewedCount' => $renewedCount,
             'currentAcademicYear' => $currentAcademicYear,
             'recognitionRows' => $recognitionRows->all(),
             'typeLabels' => $typeLabels,
@@ -6033,14 +6422,13 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * OSO detail page for one submitted renewal packet, checked against the
+     * OSO detail page for one renewal packet, checked against the
      * checklist of the packet's own renewal window.
      */
     public function showRenewalSubmission(OrgRenewalSubmission $submission): View
     {
         abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
-        abort_unless(in_array($submission->status, ['submitted', 'returned', 'approved', 'rejected'], true)
-            && $submission->submitted_at !== null, 404);
+        abort_unless(in_array($submission->status, ['submitted', 'returned', 'approved', 'rejected', 'draft'], true), 404);
 
         $submission->load(['documents', 'window']);
         $window = $submission->window;
@@ -6063,7 +6451,7 @@ class OfficePortalController extends Controller
     /**
      * OSO verifies, returns (For Revision), or rejects one renewal document.
      */
-    public function reviewRenewalDocument(Request $request, OrgRenewalDocument $document): RedirectResponse
+    public function reviewRenewalDocument(Request $request, OrgRenewalDocument $document): RedirectResponse|JsonResponse
     {
         $office = Auth::guard('office')->user();
         abort_unless(($office?->office_role ?? '') === 'oso', 403);
@@ -6109,10 +6497,34 @@ class OfficePortalController extends Controller
         });
 
         if ($error !== null) {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'message' => $error], 422);
+            }
+
             return back()->withErrors(['renewal' => $error]);
         }
 
+        $submission = $document->submission->fresh(['documents', 'window']);
+        $window = $submission->window;
+        $requiredDocs = $window?->requiredDocList() ?? OrgRenewalWindow::defaultRequiredDocs();
+        $review = $submission->requiredDocumentReview($requiredDocs);
         $label = OrgRenewalDocument::reviewStatusLabels()[$validated['decision']];
+        $canApprove = $submission->canBeApproved($requiredDocs);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => "{$document->title} marked {$label}.",
+                'decision' => $validated['decision'],
+                'decision_label' => $label,
+                'document_id' => $document->id,
+                'verified_count' => $review['verified'],
+                'missing_count' => $review['missing'],
+                'required_count' => $review['required'],
+                'verified_percent' => $review['required'] > 0 ? round(($review['verified'] / $review['required']) * 100) : 0,
+                'can_approve' => $canApprove,
+            ]);
+        }
 
         return back()->with('success', "{$document->title} marked {$label}.");
     }
@@ -6171,6 +6583,13 @@ class OfficePortalController extends Controller
                 if (! $locked->canBeApproved($requiredDocs)) {
                     return 'Verify every required document before approving this renewal packet.';
                 }
+                $targetOrg = StudentOrganization::where('name', $locked->organization_name)->first();
+                if ($targetOrg) {
+                    $targetOrg->update([
+                        'is_active' => true,
+                        'academic_year' => $locked->window?->academic_year ?? $targetOrg->academic_year,
+                    ]);
+                }
             }
 
             $remarks = trim((string) ($validated['remarks'] ?? ''));
@@ -6195,20 +6614,19 @@ class OfficePortalController extends Controller
     }
 
     /**
-     * OSO updates an organization's qualification status (Qualified vs Not Qualified) and Active/Inactive state.
+     * OSO updates an organization's renewal qualification status.
      */
     public function updateOrganizationQualification(Request $request, StudentOrganization $organization): RedirectResponse
     {
         abort_unless((Auth::guard('office')->user()?->office_role ?? '') === 'oso', 403);
 
         $validated = $request->validate([
-            'is_active' => ['required', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
             'is_qualified_for_renewal' => ['required', 'boolean'],
             'disqualification_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $isQualified = (bool) $validated['is_qualified_for_renewal'];
-        $isActive = (bool) $validated['is_active'];
 
         $reason = $validated['disqualification_reason'] ?? null;
         if (! $isQualified && empty(trim((string) $reason))) {
@@ -6217,18 +6635,20 @@ class OfficePortalController extends Controller
             $reason = null;
         }
 
-        $organization->update([
-            'is_active' => $isActive,
+        $updates = [
             'is_qualified_for_renewal' => $isQualified,
             'disqualification_reason' => $reason,
             'status_updated_at' => now(),
-        ]);
+        ];
+        if (array_key_exists('is_active', $validated)) {
+            $updates['is_active'] = (bool) $validated['is_active'];
+        }
+        $organization->update($updates);
 
         $statusLabel = $isQualified ? 'Qualified to Renew' : 'Not Qualified to Renew';
-        $activeLabel = $isActive ? 'Active' : 'Inactive';
 
         return redirect()->route('office.renewal')
-            ->with('success', "{$organization->name} status updated: {$statusLabel} ({$activeLabel}).");
+            ->with('success', "{$organization->name} status updated: {$statusLabel}.");
     }
 
     /**

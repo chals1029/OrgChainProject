@@ -36,15 +36,18 @@
 @section('title', 'Accomplishment Report')
 @section('header')
     <h1><strong>Accomplishment Report</strong></h1>
-    <p class="org-welcome">{{ $organization ?: 'Select an organization to review its report' }} · {{ $semester }} · AY {{ $year }}</p>
+    <p class="org-welcome" id="orgAccomplishmentSubtitle">{{ $organization ?: 'Select an organization to review its report' }} · {{ $semester }} · AY {{ $year }}</p>
 @endsection
 @section('actions')
-    @if ($canEdit)
-        <button type="button" class="org-btn org-btn-primary" data-ar-upload><i class="bi bi-plus-lg"></i> Create activity report</button>
-    @endif
+    <span id="orgAccomplishmentActions">
+        @if ($canEdit)
+            <button type="button" class="org-btn org-btn-primary" data-ar-upload><i class="bi bi-plus-lg"></i> Create activity report</button>
+        @endif
+    </span>
 @endsection
 
 @section('content')
+    <div id="orgAccomplishmentRoot">
     <link rel="stylesheet" href="{{ asset('css/org-accomplishment.css') }}?v={{ filemtime(public_path('css/org-accomplishment.css')) }}">
     <div class="ar-desk">
         @if ($errors->any() && !$uploadErrors && (!$editorErrors || !$canEdit))
@@ -72,7 +75,7 @@
         <section class="ar-card" aria-labelledby="arPacketTitle">
             <div class="ar-section-head"><div><span class="ar-eyebrow">Semester accomplishment report</span><h2 id="arPacketTitle">{{ $packetDocument && !$packetIsNative ? 'Uploaded AR report' : 'Compiled AR packet' }}</h2><p class="ar-muted">{{ $semester }} · AY {{ $year }}</p></div><span class="ar-status">{{ data_get($reportBundle ?? [], 'reports.ar.state', 'draft') === 'draft' ? 'Not submitted' : data_get($reportBundle ?? [], 'reports.ar.state_label', 'Not submitted') }}</span></div>
             @if (!empty($ad['locked']))<p class="ar-alert"><i class="bi bi-lock"></i> This AR is locked for editing.</p>@endif
-            @if (!$packetDocument)<p class="ar-muted">No saved report for this period.</p>@elseif (!$packetDocument->hasStoredFile())<p class="ar-alert is-error">The saved report file is missing or unreadable.</p>@endif
+            @if ($packetDocument && !$packetDocument->hasStoredFile())<p class="ar-alert is-error">The saved report file is missing or unreadable.</p>@endif
             @include('org.partials.semester-report-status', ['reportType' => 'ar', 'reportBundle' => $reportBundle ?? [], 'selectedOrganization' => $organization, 'selectedSemester' => $semester, 'selectedYear' => $year, 'hideReportPeriodControls' => true, 'embedReportStatus' => true])
         </section>
 
@@ -156,9 +159,10 @@
     @endif
 
     <dialog class="ar-dialog ar-preview-dialog" id="arPreviewDialog" aria-labelledby="arPreviewTitle">
-        <div class="ar-preview-box"><header class="ar-dialog-head"><div><span class="ar-eyebrow">Saved report</span><h2 id="arPreviewTitle">Accomplishment preview</h2></div><div class="ar-actions"><a href="" class="org-btn org-btn-ghost" id="arPreviewDownload" hidden><i class="bi bi-file-earmark-word"></i> Word</a><button type="button" class="org-btn org-btn-ghost" id="arPreviewPrint"><i class="bi bi-printer"></i> Print / PDF</button><button type="button" class="ar-icon-button" data-ar-close aria-label="Close report preview"><i class="bi bi-x-lg"></i></button></div></header><p class="ar-preview-status" id="arPreviewStatus" role="status">Loading saved report…</p><iframe id="arPreviewFrame" title="Saved accomplishment report" src="about:blank"></iframe></div>
+        <div class="ar-preview-box"><header class="ar-dialog-head"><div><span class="ar-eyebrow">Saved report</span><h2 id="arPreviewTitle">Accomplishment preview</h2></div><div class="ar-actions"><a href="" class="org-btn org-btn-ghost" id="arPreviewDownload" hidden><i class="bi bi-file-earmark-word"></i> Word</a><button type="button" class="org-btn org-btn-ghost" id="arPreviewPrint"><i class="bi bi-printer"></i> Print / PDF</button><button type="button" class="ar-icon-button org-btn org-btn-ghost org-btn-sm" data-ar-close aria-label="Close report preview" style="display:inline-flex;align-items:center;gap:.35rem;"><i class="bi bi-x-lg"></i> Close</button></div></header><p class="ar-preview-status" id="arPreviewStatus" role="status">Loading saved report…</p><iframe id="arPreviewFrame" title="Saved accomplishment report" src="about:blank"></iframe></div>
     </dialog>
     <script type="application/json" id="orgAccomplishmentData">@json($clientData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)</script>
+    </div>
 @endsection
 
 @push('scripts')

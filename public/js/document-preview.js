@@ -30,21 +30,22 @@
     }
     status.setAttribute('aria-live', 'polite');
     heading.append(title, status);
-    head.append(heading);
+    var headClose = document.createElement('button');
+    headClose.type = 'button';
+    headClose.className = 'document-preview-action';
+    headClose.setAttribute('data-document-preview-close', '');
+    headClose.setAttribute('aria-label', 'Close document preview');
+    headClose.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i> Close';
+    head.append(heading, headClose);
     var foot = document.createElement('footer');
     foot.className = 'document-preview-actions';
-    var close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'document-preview-action';
-    close.setAttribute('data-document-preview-close', '');
-    close.textContent = 'Close';
     external.className = 'document-preview-action';
     external.textContent = 'Open in Tab';
     external.target = '_blank';
     external.rel = 'noopener';
     download.className = 'document-preview-action document-preview-action-primary';
     download.textContent = 'Download original';
-    foot.append(close, external, download);
+    foot.append(external, download);
     box.replaceChildren(head, body, foot);
 
     function clearPreview() {

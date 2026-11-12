@@ -35,6 +35,7 @@
 @endsection
 
 @section('content')
+    <div id="orgAnalyticsRoot">
     <style>
         /* Force containment on parent grid/shell to prevent blowout */
         .org-content,
@@ -1362,17 +1363,27 @@
         </div>
     </div>
     </div>
+        @php
+            $orgAnalyticsPayload = ['activityFinancials' => $activityFinancials ?? [], 'allActivityFinancials' => $allActivityFinancials ?? $activityFinancials ?? [], 'organizationStats' => $organizationStats->values(), 'directoryView' => $directoryView, 'currentCalendarYear' => (string) now()->year];
+        @endphp
+        <script type="application/json" id="orgAnalyticsPayload">@json($orgAnalyticsPayload)</script>
+    </div>
 
     {{-- Load Chart.js --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        window.initOrgAnalytics = function () {
+        const payload = JSON.parse(document.getElementById('orgAnalyticsPayload').textContent);
+        window.__orgAnalyticsCharts?.forEach(chart => chart?.destroy());
+        Chart.getChart('utilVsAllocChart')?.destroy();
+        Chart.getChart('trendAnalysisChart')?.destroy();
         let utilVsAllocChartInstance = null;
         let trendChartInstance = null;
-        const analyticsRows = @json($activityFinancials ?? []);
-        const allAnalyticsRows = @json($allActivityFinancials ?? $activityFinancials ?? []);
-        const organizationStats = @json($organizationStats->values());
-        const directoryView = @json($directoryView);
-        const currentCalendarYear = @json((string) now()->year);
+        const analyticsRows = payload.activityFinancials;
+        const allAnalyticsRows = payload.allActivityFinancials;
+        const organizationStats = payload.organizationStats;
+        const directoryView = payload.directoryView;
+        const currentCalendarYear = payload.currentCalendarYear;
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const semesterNames = { sem1: '1st Semester', sem2: '2nd Semester', midyear: 'Midyear' };
         const semesterMonths = { sem1: [8, 9, 10, 11, 12], sem2: [1, 2, 3, 4, 5], midyear: [6, 7] };
@@ -1828,15 +1839,19 @@
             updateAnalyticsData();
         }
 
-        function updateAnalyticsOrganizationFilter(organization) {
+        window.updateAnalyticsOrganizationFilter = function (organization) {
             const url = new URL(window.location.href);
             if (organization) {
                 url.searchParams.set('organization', organization);
             } else {
                 url.searchParams.delete('organization');
             }
-            window.location.assign(url.toString());
-        }
+            if (window.OrgSmoothFilter) {
+                window.OrgSmoothFilter.swap({ url: url.toString(), targets: ['#orgAnalyticsRoot'], onAfterSwap: () => window.initOrgAnalytics?.() });
+            } else {
+                window.location.assign(url.toString());
+            }
+        };
 
         function updateAnalyticsData() {
             const filters = getAnalyticsFilters();
@@ -1880,19 +1895,19 @@
             }
         }
 
-        window.addEventListener('resize', function() {
-            if (utilVsAllocChartInstance) {
-                utilVsAllocChartInstance.resize();
-            }
-            if (trendChartInstance) {
-                trendChartInstance.resize();
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            initOrganizationDirectory();
-            initCharts();
-            updateAnalyticsData();
-        });
+        window.updateAnalyticsData = updateAnalyticsData;
+        window.resetAnalyticsFilters = resetAnalyticsFilters;
+        if (!window.__orgAnalyticsResizeBound) {
+            window.__orgAnalyticsResizeBound = true;
+            window.addEventListener('resize', function () {
+                window.__orgAnalyticsCharts?.forEach(chart => chart?.resize());
+            });
+        }
+        initOrganizationDirectory();
+        initCharts();
+        window.__orgAnalyticsCharts = [utilVsAllocChartInstance, trendChartInstance];
+        updateAnalyticsData();
+        };
+        document.addEventListener('DOMContentLoaded', () => window.initOrgAnalytics());
     </script>
 @endsection

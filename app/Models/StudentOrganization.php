@@ -51,23 +51,6 @@ class StudentOrganization extends Model
                 return asset($path);
             }
         }
-
-        $college = Str::lower($this->college ?? '');
-        foreach ([
-            'informatics' => 'cics.png',
-            'accountancy' => 'cabeihm.png',
-            'health' => 'chs.png',
-            'teacher' => 'ctec.png',
-            'laboratory' => 'sbo.png',
-            'campus wide' => 'ssc.png',
-        ] as $keyword => $file) {
-            if (Str::contains($college, $keyword)) {
-                $path = "images/organizations/{$file}";
-
-                return file_exists(public_path($path)) ? asset($path) : null;
-            }
-        }
-
         return null;
     }
 

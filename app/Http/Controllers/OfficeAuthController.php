@@ -113,6 +113,6 @@ class OfficeAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('office.login');
     }
 }

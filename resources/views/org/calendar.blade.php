@@ -95,9 +95,9 @@
                             <button type="button" @class(['cal-day', 'is-outside' => !$day['inMonth'], 'is-today' => $dateKey === $todayKey]) data-cal-day="{{ $dateKey }}" data-date-label="{{ $day['date']->format('l, F j, Y') }}" aria-label="{{ $day['date']->format('l, F j, Y') }}: {{ count($day['events']) }} {{ count($day['events']) === 1 ? 'activity' : 'activities' }}">
                                 <span class="cal-day-number">{{ $day['date']->day }}<span class="cal-sr-only">{{ $dateKey === $todayKey ? ' (Today)' : '' }}</span></span>
                                 @foreach (array_slice($day['events'], 0, 2) as $event)
-                                    <span class="cal-day-event cal-scope-{{ $event['scope_key'] }}" title="{{ $event['title'] }} · {{ $event['status'] }} · {{ $event['date_label'] }} · {{ $event['time_label'] }}">
+                                    <span class="cal-day-event cal-scope-{{ $event['scope_key'] }}" title="{{ $event['display_title'] ?? $event['title'] }} · {{ $event['status'] }} · {{ $event['date_label'] }} · {{ $event['time_label'] }}">
                                         <i class="bi {{ $statusIcon($event['status_key']) }}" aria-hidden="true"></i>
-                                        <span>{{ $event['title'] }}</span>
+                                        <span>{{ $event['display_title'] ?? $event['title'] }}</span>
                                     </span>
                                 @endforeach
                                 @if (count($day['events']) > 2)<span class="cal-more">+{{ count($day['events']) - 2 }} more</span>@endif

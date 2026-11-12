@@ -103,11 +103,49 @@
         .tosa-feedback { border-radius:10px; padding:.75rem .9rem; border:1px solid #ebd7dc; background:#f8f1f3; color:#73303a; font-size:.85rem; overflow-wrap:anywhere; }
         .tosa-inline-error { margin:.25rem 0 0; padding:.5rem .7rem; border-radius:8px; border:1px solid #f1c6cc; background:#fdf2f4; color:#922032; font-size:.79rem; font-weight:600; }
         .tosa-inline-error[hidden] { display:none !important; }
-        .tosa-modal { box-sizing:border-box; position:fixed; inset:0; margin:auto; border:1px solid #eadfe2; border-radius:14px; padding:0; width:min(760px, calc(100vw - 2rem)); max-width:none; max-height:calc(100dvh - 2rem); overflow:auto; color:#30262a; background:#fff; animation:none; transform:none; }
-        .tosa-modal::backdrop { background:rgba(28,16,23,.55); }
+        .tosa-modal { box-sizing:border-box; position:fixed; inset:0; margin:auto; border:1px solid #ead8dc; border-radius:22px; padding:0; width:min(820px, calc(100vw - 2rem)); max-width:none; max-height:min(90dvh, 860px); overflow:hidden; color:#30262a; background:#fff; box-shadow:0 28px 65px rgba(56,12,24,.22); animation:none; transform:none; }
+        .tosa-modal[open] { display:flex; flex-direction:column; }
+        .tosa-modal::backdrop { background:rgba(24,14,19,.56); backdrop-filter:blur(4px); }
         .tosa-modal-body { padding:1.15rem; }
-        .tosa-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; margin-bottom:.35rem; }
-        .tosa-close { display:inline-flex; align-items:center; justify-content:center; width:2.2rem; height:2.2rem; border:1px solid transparent; border-radius:8px; background:transparent; color:#5a4d52; font-size:1.35rem; line-height:1; cursor:pointer; }
+        .tosa-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; padding:1rem 1.25rem; background:linear-gradient(135deg,#fdf7f8 0%,#fff 72%); border-bottom:1px solid #f0e3e6; flex:0 0 auto; }
+        .tosa-modal-identity { display:flex; align-items:center; gap:.9rem; min-width:0; }
+        .tosa-applicant-avatar { display:grid; place-items:center; width:48px; height:48px; flex:0 0 auto; border-radius:14px; background:linear-gradient(135deg,#8b1828,#b22438); color:#fff; font-size:.95rem; font-weight:800; box-shadow:0 6px 14px rgba(139,24,40,.2); }
+        .tosa-modal-identity-copy { min-width:0; }
+        .tosa-modal-heading-row { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem .6rem; }
+        .tosa-modal-eyebrow { color:#8b1828; font-size:.67rem; font-weight:800; letter-spacing:.06em; }
+        .tosa-modal-head h2 { margin:.2rem 0 .35rem; color:#1a1618; font-size:1.15rem; font-weight:800; overflow-wrap:anywhere; }
+        .tosa-modal-meta { display:flex; flex-wrap:wrap; gap:.35rem; }
+        .tosa-modal-meta span { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; border:1px solid #eee2e5; border-radius:999px; background:#fff; color:#66565c; font-size:.73rem; overflow-wrap:anywhere; }
+        .tosa-modal-meta i { color:#9a263a; }
+        .tosa-modal-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; padding:1rem 1.25rem 1.25rem; display:flex; flex-direction:column; gap:.85rem; }
+        .tosa-modal-scroll > * { flex:0 0 auto; }
+        .tosa-modal-callout { display:flex; align-items:flex-start; gap:.55rem; margin:0; padding:.65rem .85rem; border:1px solid #eee0e3; border-radius:12px; background:#faf6f7; color:#65545a; font-size:.82rem; line-height:1.45; }
+        .tosa-modal-callout i { color:#8b1828; flex:none; }
+        .tosa-modal-callout.is-amber { border-color:#f1d3a7; background:#fff8ed; color:#80530f; }
+        .tosa-modal-callout.is-amber i { color:#a36513; }
+        .tosa-docs-section-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; margin-bottom:.45rem; }
+        .tosa-docs-section-head h3 { margin:0; color:#30262a; font-size:.92rem; }
+        .tosa-attachment-count { padding:.25rem .6rem; border:1px solid #bfe3cb; border-radius:999px; background:#ebf8ef; color:#1f6837; font-size:.73rem; font-weight:700; }
+        .tosa-attachment-count.is-missing { border-color:#f1d3a7; background:#fff6e8; color:#8f5109; }
+        .tosa-docs-list { display:grid; gap:.45rem; }
+        .tosa-docs-list .tosa-file-row { gap:.85rem; padding:.58rem .85rem; border:1px solid #efe4e7; border-radius:14px; background:#fff; transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+        .tosa-docs-list .tosa-file-row:hover { border-color:#d7b4bc; background:#fffdfd; box-shadow:0 4px 14px rgba(139,24,40,.06); }
+        .tosa-docs-list .tosa-file-icon { background:#fdf0f3; color:#9a263a; }
+        .tosa-docs-list .tosa-file-icon.is-word { background:#edf3fc; color:#2f5a9c; }
+        .tosa-docs-list .tosa-file-icon.is-missing { background:#f4f1f2; color:#8a7c81; }
+        .tosa-file-title { display:flex; align-items:baseline; flex-wrap:wrap; gap:.4rem; }
+        .tosa-req-badge { flex:none; padding:.1rem .4rem; border-radius:6px; background:#f8ecee; color:#8b1828; font-size:.7rem; font-weight:800; }
+        .tosa-file-meta { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; margin-top:.25rem; color:#786c70; font-size:.72rem; }
+        .tosa-ext-pill { padding:.1rem .4rem; border-radius:999px; background:#f8edf0; color:#8b1828; font-weight:700; }
+        .tosa-ext-pill.is-missing { background:#f4f1f2; color:#786c70; }
+        .tosa-file-name { overflow-wrap:anywhere; }
+        .tosa-doc-view-btn { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:2.5rem; padding:0 .75rem; border:1px solid #eadfe2; border-radius:10px; background:#fff; color:#842335; font:inherit; font-size:.8rem; font-weight:700; cursor:pointer; }
+        .tosa-doc-view-btn:hover { background:#fbf1f3; border-color:#d7b9c0; }
+        .tosa-doc-view-btn:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
+        .tosa-modal-workflow-card { display:grid; gap:.55rem; padding:.85rem 1rem; border:1px solid #ede0e3; border-radius:14px; background:#faf6f7; }
+        .tosa-modal-workflow-card .tosa-footer { margin-top:0; justify-content:space-between; }
+        .tosa-modal-workflow-card .tosa-note { margin:0; }
+        .tosa-close { display:inline-flex; align-items:center; justify-content:center; flex:none; width:2.2rem; height:2.2rem; border:1px solid #ecdce0; border-radius:10px; background:#fff; color:#5a4d52; font-size:1.35rem; line-height:1; cursor:pointer; }
         .tosa-close:hover { background:#f8eef0; color:#8b1828; }
         .tosa-close:focus-visible { outline:2px solid #8b1828; outline-offset:2px; }
         .tosa-file-row { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.65rem 0; border-bottom:1px solid #f1e9eb; }
@@ -146,10 +184,15 @@
         .tosa-call-form { display:grid; gap:.75rem; width:100%; max-width:100%; margin:.75rem 0 0; box-sizing:border-box; }
         .tosa-call-form label { display:grid; gap:.3rem; font-size:.83rem; font-weight:700; color:#3d3135; }
         .tosa-call-form textarea { width:100%; min-height:6.5rem; resize:vertical; font-weight:400; box-sizing:border-box; }
-        .tosa-correction { margin-top:.9rem; padding-top:.85rem; border-top:1px solid #f1e9eb; }
-        .tosa-correction summary { cursor:pointer; font-weight:700; color:#842335; padding:.2rem 0; }
-        .tosa-correction summary:focus-visible { outline:2px solid #8b1828; outline-offset:2px; border-radius:6px; }
-        .tosa-correction form { display:grid; gap:.75rem; margin-top:.75rem; }
+        .tosa-correction { margin-top:0; padding:0; border:1px solid #efdce0; border-radius:14px; background:#fff; }
+        .tosa-correction summary { display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.85rem 1rem; border-radius:13px; background:#fdf9fa; color:#8b1828; font-size:.85rem; font-weight:700; list-style:none; cursor:pointer; }
+        .tosa-correction[open] summary { border-radius:13px 13px 0 0; }
+        .tosa-correction summary::-webkit-details-marker { display:none; }
+        .tosa-correction-summary-label { display:inline-flex; align-items:center; gap:.5rem; }
+        .tosa-correction-chevron { flex:none; transition:transform .18s ease; }
+        .tosa-correction[open] .tosa-correction-chevron { transform:rotate(180deg); }
+        .tosa-correction summary:focus-visible { outline:2px solid #8b1828; outline-offset:-2px; border-radius:6px; }
+        .tosa-correction form { display:grid; gap:.75rem; margin-top:0; padding:.9rem 1rem 1rem; border-top:1px solid #f0e4e7; }
         .tosa-correction-fieldset { margin:0; padding:.75rem .85rem; border:1px solid #eadfe2; border-radius:10px; background:#fcf9fa; min-width:0; }
         .tosa-correction-fieldset legend { padding:0 .35rem; font-size:.8rem; font-weight:700; color:#3d3135; }
         .tosa-correction-checks { display:grid; grid-template-columns:repeat(auto-fill, minmax(15rem, 1fr)); gap:.45rem .75rem; margin-top:.35rem; }
@@ -277,6 +320,17 @@
         .tosa-history-reset { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border:1px solid #ead6da; border-radius:999px; background:#fff; color:#8b1828; font-size:.78rem; font-weight:700; text-decoration:none; }
         .tosa-history-reset:hover { background:#fbf2f4; border-color:#8b1828; color:#8b1828; }
 
+        @media (max-width:640px) {
+            .tosa-modal { width:calc(100vw - 1rem); max-height:calc(100dvh - 1rem); border-radius:16px; }
+            .tosa-modal-head, .tosa-modal-scroll { padding:.95rem 1rem; }
+            .tosa-applicant-avatar { width:40px; height:40px; font-size:.85rem; }
+            .tosa-docs-list .tosa-file-row { flex-wrap:wrap; }
+            .tosa-docs-list .tosa-file-actions { margin-left:auto; }
+        }
+        @media (prefers-reduced-motion:reduce) {
+            .tosa-docs-list .tosa-file-row, .tosa-correction-chevron { transition:none; }
+        }
+
         @media (max-width:700px) {
             .tosa-toolbar, .tosa-history-toolbar { padding:.8rem; }
             .tosa-toolbar form, .tosa-history-toolbar form { flex:1 1 100%; width:100%; gap:.6rem; }
@@ -363,9 +417,9 @@
                         </select>
                     </div>
                 </form>
-                <span class="tosa-filter-count"><i class="bi bi-people-fill" aria-hidden="true"></i> {{ $tosaApplicants->total() }} {{ \Illuminate\Support\Str::plural('applicant', $tosaApplicants->total()) }}</span>
+                <span id="tosaSubmissionsCount" class="tosa-filter-count"><i class="bi bi-people-fill" aria-hidden="true"></i> {{ $tosaApplicants->total() }} {{ \Illuminate\Support\Str::plural('applicant', $tosaApplicants->total()) }}</span>
             </div>
-            <section class="tosa-card" aria-labelledby="tosaSubmissionsHeading">
+            <section id="tosaSubmissionsCard" class="tosa-card" aria-labelledby="tosaSubmissionsHeading">
                 <h2 id="tosaSubmissionsHeading">Applications</h2>
                 <div class="tosa-table-wrap" role="region" aria-label="Submitted applications" tabindex="0">
                     <table class="tosa-table">
@@ -447,53 +501,93 @@
                     </div>
                 </div>
                 <noscript><p class="tosa-note">Enable JavaScript to open document review.</p></noscript>
-            </section>
 
             @foreach ($tosaReviewApplicants as $applicant)
                 @php
                     $returned = $applicant->subsection === 'returned';
-                    $hasUnavailable = false;
+                    $documents = [];
+                    $availableCount = 0;
                     $inDraft = in_array((int) $applicant->id, $globalDraftIds, true);
                     $alreadyReviewed = app(\App\Services\TosaWorkflowService::class)->isVerified($applicant);
+                    $publishedDecision = $shortlistModel?->decisionFor($applicant, $alreadyReviewed);
+                    if ($returned) {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['for_correction', 'For correction', 'is-for-correction', 'bi-arrow-return-left'];
+                    } elseif ($globalPublished && $publishedDecision === 'qualified') {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['qualified', 'Qualified', 'is-qualified', 'bi-check-circle-fill'];
+                    } elseif ($globalPublished && $publishedDecision === 'not_qualified') {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['not_qualified', 'Not qualified', 'is-not-qualified', 'bi-x-circle'];
+                    } elseif (!$globalPublished && $alreadyReviewed && $inDraft) {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['qualified', 'Qualified (In Top 10)', 'is-qualified', 'bi-check-circle-fill'];
+                    } elseif ($alreadyReviewed) {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['reviewed', 'Reviewed', 'is-reviewed', 'bi-check-circle'];
+                    } else {
+                        [$statusKey, $statusLabel, $statusClass, $statusIcon] = ['pending_review', 'Pending review', 'is-pending-review', 'bi-hourglass-split'];
+                    }
+                    $nameParts = preg_split('/\s+/u', trim($applicant->full_name), -1, PREG_SPLIT_NO_EMPTY);
+                    $initials = collect($nameParts)->take(2)->map(fn ($part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))->implode('');
+                    foreach (\App\Services\TosaRequirements::SUBMISSIONS as $key => $requirement) {
+                        $path = $applicant->requirementPath($key);
+                        $available = $path !== null && $applicant->requirementFile($key) !== null;
+                        $availableCount += (int) $available;
+                        $documents[$key] = compact('requirement', 'path', 'available');
+                    }
+                    $hasUnavailable = $availableCount < count(\App\Services\TosaRequirements::SUBMISSIONS);
                 @endphp
                 <dialog class="tosa-modal" id="tosa-review-{{ $applicant->id }}" aria-labelledby="tosa-review-title-{{ $applicant->id }}">
-                    <div class="tosa-modal-body">
-                        <header class="tosa-modal-head">
-                            <div><h2 id="tosa-review-title-{{ $applicant->id }}">{{ $applicant->full_name }}</h2><p class="tosa-note">{{ $applicant->sr_code }} · {{ $applicant->program }}</p></div>
-                            <button type="button" class="tosa-close" data-tosa-close aria-label="Close document review">&times;</button>
-                        </header>
+                    <header class="tosa-modal-head">
+                        <div class="tosa-modal-identity">
+                            <span class="tosa-applicant-avatar" aria-hidden="true">{{ $initials }}</span>
+                            <div class="tosa-modal-identity-copy">
+                                <div class="tosa-modal-heading-row"><span class="tosa-modal-eyebrow">TOSA APPLICATION DOSSIER</span><span class="tosa-status {{ $statusClass }}" data-status="{{ $statusKey }}"><i class="bi {{ $statusIcon }}" aria-hidden="true"></i> {{ $statusLabel }}</span></div>
+                                <h2 id="tosa-review-title-{{ $applicant->id }}">{{ $applicant->full_name }}</h2>
+                                <div class="tosa-modal-meta">
+                                    <span><i class="bi bi-person-badge" aria-hidden="true"></i> {{ $applicant->sr_code }}</span>
+                                    <span><i class="bi bi-mortarboard" aria-hidden="true"></i> {{ $applicant->program ?: 'Program not recorded' }}</span>
+                                    @if ($applicant->latest_submission_at)<span><i class="bi bi-calendar3" aria-hidden="true"></i> {{ \Carbon\Carbon::parse($applicant->latest_submission_at)->format('M j, Y') }}</span>@endif
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="tosa-close" data-tosa-close aria-label="Close document review">&times;</button>
+                    </header>
+                    <div class="tosa-modal-scroll">
                         @if ($returned)
-                            <p class="tosa-note"><span class="tosa-status is-for-correction"><i class="bi bi-arrow-return-left" aria-hidden="true"></i> For correction</span> Waiting for the student to resubmit the requested documents.</p>
+                            <p class="tosa-modal-callout is-amber"><i class="bi bi-arrow-return-left" aria-hidden="true"></i><span>Waiting for the student to resubmit the requested documents.</span></p>
                         @elseif ($tosaCanManageWorkflow)
-                            <p class="tosa-note">Review all seven files, then mark the application as reviewed. Only reviewed applications can be qualified and added to the Top 10 selection.</p>
+                            <p class="tosa-modal-callout"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Review all seven files, then mark the application as reviewed. Only reviewed applications can be qualified and added to the Top 10 selection.</span></p>
                         @else
-                            <p class="tosa-note">Open a file to review it.</p>
+                            <p class="tosa-modal-callout"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Open a file to review it.</span></p>
                         @endif
-                        @foreach (\App\Services\TosaRequirements::SUBMISSIONS as $key => $requirement)
+                        <section aria-label="Submitted Requirements">
+                            <div class="tosa-docs-section-head"><h3>Submitted Requirements</h3><span class="tosa-attachment-count {{ $hasUnavailable ? 'is-missing' : '' }}">{{ $availableCount }}/{{ count(\App\Services\TosaRequirements::SUBMISSIONS) }} Attached</span></div>
+                            <div class="tosa-docs-list">
+                        @foreach ($documents as $key => $document)
                             @php
-                                $path = $applicant->requirementPath($key);
-                                $available = $path !== null && $applicant->requirementFile($key) !== null;
-                                $hasUnavailable = $hasUnavailable || !$available;
+                                ['requirement' => $requirement, 'path' => $path, 'available' => $available] = $document;
+                                $extension = $available ? strtolower(pathinfo($path, PATHINFO_EXTENSION)) : '';
+                                $isWord = in_array($extension, ['doc', 'docx'], true);
                                 $name = data_get($applicant->requirements, $key.'.name') ?: ($path ? basename($path) : $requirement['title']);
                                 $url = $available ? route('office.tosa.documents.download', ['applicant' => $applicant->id, 'key' => $key]) : null;
                             @endphp
                             <div class="tosa-document tosa-file-row">
                                 <div class="tosa-file-info">
-                                    <span class="tosa-file-icon {{ $available && strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'docx' ? 'is-word' : '' }}" aria-hidden="true">
-                                        <i class="bi {{ $available ? (strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'docx' ? 'bi-file-earmark-word' : 'bi-file-earmark-pdf') : 'bi-file-earmark-x' }}"></i>
+                                    <span class="tosa-file-icon {{ !$available ? 'is-missing' : ($isWord ? 'is-word' : '') }}" aria-hidden="true">
+                                        <i class="bi {{ $available ? ($isWord ? 'bi-file-earmark-word' : 'bi-file-earmark-pdf') : 'bi-file-earmark-x' }}"></i>
                                     </span>
-                                    <span class="tosa-file-copy"><strong>{{ $requirement['code'] }}. {{ $requirement['title'] }}</strong><small>{{ $available ? strtoupper(pathinfo($path, PATHINFO_EXTENSION)) : 'Unavailable' }}</small></span>
+                                    <span class="tosa-file-copy"><span class="tosa-file-title"><span class="tosa-req-badge">{{ $requirement['code'] }}</span><strong>{{ $requirement['title'] }}</strong></span><span class="tosa-file-meta"><span class="tosa-ext-pill {{ $available ? '' : 'is-missing' }}">{{ $available ? strtoupper($extension) : 'Unavailable' }}</span>@if ($available)<span class="tosa-file-name">{{ $name }}</span>@endif</span></span>
                                 </div>
                                 <div class="tosa-file-actions">
                                     @if ($available)
-                                        <button type="button" class="tosa-icon-button" title="View {{ $requirement['title'] }}" aria-label="View {{ $requirement['title'] }}" data-document-preview data-document-preview-url="{{ $url }}" data-document-preview-title="{{ $requirement['title'] }}" data-document-original-name="{{ $name }}" data-document-preview-type="{{ strtolower(pathinfo($path, PATHINFO_EXTENSION)) }}" data-document-preview-download="{{ $url }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                        <button type="button" class="app-view-action tosa-doc-view-btn" title="View {{ $requirement['title'] }}" aria-label="View {{ $requirement['title'] }}" data-document-preview data-document-preview-url="{{ $url }}" data-document-preview-title="{{ $requirement['title'] }}" data-document-original-name="{{ $name }}" data-document-preview-type="{{ strtolower(pathinfo($path, PATHINFO_EXTENSION)) }}" data-document-preview-download="{{ $url }}?download=1"><i class="bi bi-eye" aria-hidden="true"></i><span>View</span></button>
                                         <a class="tosa-icon-button" href="{{ $url }}?download=1" title="Download {{ $requirement['title'] }}" aria-label="Download {{ $requirement['title'] }}"><i class="bi bi-download" aria-hidden="true"></i></a>
                                     @endif
                                 </div>
                             </div>
                         @endforeach
-                        @if ($hasUnavailable)<p class="tosa-note">Unavailable files cannot be viewed. Ask the student to upload the actual documents.</p>@endif
+                            </div>
+                            @if ($hasUnavailable)<p class="tosa-inline-error">Unavailable files cannot be viewed. Ask the student to upload the actual documents.</p>@endif
+                        </section>
                         @if ($tosaCanManageWorkflow && !$returned)
+                            <div class="tosa-modal-workflow-card">
                             <div class="tosa-footer">
                                 @if (!$alreadyReviewed)
                                     <form method="post" action="{{ route('office.tosa.review', $applicant) }}" data-confirm-message="Have you reviewed all seven documents? Mark this application as reviewed?">
@@ -518,10 +612,11 @@
                             </div>
                             @if (!$inDraft && $globalDraftCount >= 10 && $canEditShortlist)<p class="tosa-note">The Top 10 selection is full (10/10). Remove an applicant in the Top 10 tab first.</p>@endif
                             @if ($globalPublished && !$canEditShortlist)<p class="tosa-note">Results are currently published. Unpublish in the Top 10 tab to change the selection.</p>@endif
+                            </div>
                         @endif
                         @if ($tosaCanManageWorkflow && !$returned)
                             <details class="tosa-correction">
-                                <summary>Return for correction (Document correction)</summary>
+                                <summary><span class="tosa-correction-summary-label"><i class="bi bi-arrow-return-left" aria-hidden="true"></i> Return for correction (Document correction)</span><i class="bi bi-chevron-down tosa-correction-chevron" aria-hidden="true"></i></summary>
                                 <form method="post" action="{{ route('office.tosa.subsection', $applicant) }}" data-tosa-correction-form data-confirm="manual" data-confirm-title="Return for Correction?" data-confirm-accept="Yes, Return" data-confirm-message="Return the selected document(s) for correction and email the student? If this applicant is in the Top 10 selection, they will be removed automatically.">
                                     @csrf
                                     <input type="hidden" name="subsection" value="returned">
@@ -548,6 +643,7 @@
                     </div>
                 </dialog>
             @endforeach
+            </section>
         @elseif ($tosaTab === 'documents')
             <section class="tosa-card" aria-labelledby="tosaDocumentsHeading">
                 <h2 id="tosaDocumentsHeading"><strong>Official Documents</strong></h2>
@@ -1009,10 +1105,10 @@
                             </select>
                         </div>
                     </form>
-                    <span class="tosa-history-count">{{ $tosaEvents->total() }} {{ \Illuminate\Support\Str::plural('record', $tosaEvents->total()) }}</span>
+                    <span id="tosaHistoryCount" class="tosa-history-count">{{ $tosaEvents->total() }} {{ \Illuminate\Support\Str::plural('record', $tosaEvents->total()) }}</span>
                 </div>
 
-                <section class="tosa-history" aria-label="TOSA history">
+                <section id="tosaHistorySection" class="tosa-history" aria-label="TOSA history">
 
                     @if ($tosaEvents->isNotEmpty())
                         <div class="tosa-history-table-wrap" role="region" aria-label="TOSA activity log" tabindex="0">
@@ -1134,6 +1230,7 @@
     @push('scripts')
         <script>
             (function () {
+                const setupReviewActions = () => {
                 document.querySelectorAll('[data-tosa-open]').forEach((button) => {
                     button.addEventListener('click', () => {
                         document.getElementById('tosa-review-' + button.dataset.tosaOpen)?.showModal();
@@ -1195,6 +1292,8 @@
                         }
                     });
                 });
+                };
+                setupReviewActions();
 
                 // Top 10 workspace: internal tabs, live caption counters, validation, and unsaved caption guard
                 const workspace = document.querySelector('[data-tosa-top-workspace]');
@@ -1323,57 +1422,49 @@
                     });
                 }
 
-                // Automatic filter navigation for Submissions and History
-                const setupAutoFilter = (formId, searchInputId, selectId) => {
+                const setupAutoFilter = (formId, searchInputId, selectId, targets, paginationSelector) => {
                     const form = document.getElementById(formId);
                     if (!form) return;
                     const searchInput = document.getElementById(searchInputId);
                     const select = document.getElementById(selectId);
                     let debounceTimer;
-
-                    if (select) {
-                        select.addEventListener('change', () => {
-                            form.submit();
-                        });
-                    }
-
-                    if (searchInput) {
-                        searchInput.addEventListener('input', () => {
-                            clearTimeout(debounceTimer);
-                            debounceTimer = setTimeout(() => {
-                                sessionStorage.setItem('tosa_focus_search', searchInputId);
-                                form.submit();
-                            }, 380);
-                        });
-                        searchInput.addEventListener('search', () => {
-                            clearTimeout(debounceTimer);
-                            sessionStorage.setItem('tosa_focus_search', searchInputId);
-                            form.submit();
-                        });
-                        searchInput.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                clearTimeout(debounceTimer);
-                                sessionStorage.setItem('tosa_focus_search', searchInputId);
-                                form.submit();
-                            }
-                        });
-                    }
+                    const swap = (url) => {
+                        clearTimeout(debounceTimer);
+                        window.OrgSmoothFilter.swap({ url, targets, onAfterSwap: formId === 'tosa-submissions-filter-form' ? setupReviewActions : undefined });
+                    };
+                    const applyFilters = () => {
+                        const url = new URL(form.action);
+                        url.search = new URLSearchParams(new FormData(form)).toString();
+                        swap(url.toString());
+                    };
+                    select?.addEventListener('change', applyFilters);
+                    form.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        applyFilters();
+                    });
+                    searchInput?.addEventListener('input', () => {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(applyFilters, 220);
+                    });
+                    searchInput?.addEventListener('search', applyFilters);
+                    searchInput?.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            applyFilters();
+                        }
+                    });
+                    document.addEventListener('click', (event) => {
+                        const link = event.target.closest(paginationSelector);
+                        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                        event.preventDefault();
+                        swap(link.href);
+                    });
                 };
 
-                setupAutoFilter('tosa-submissions-filter-form', 'tosa-search', 'tosa-result');
-                setupAutoFilter('tosa-history-filter-form', 'tosa-history-search', 'tosa-history-activity');
-
-                const focusInputId = sessionStorage.getItem('tosa_focus_search');
-                if (focusInputId) {
-                    sessionStorage.removeItem('tosa_focus_search');
-                    const inputToFocus = document.getElementById(focusInputId);
-                    if (inputToFocus) {
-                        inputToFocus.focus();
-                        const valLen = inputToFocus.value.length;
-                        inputToFocus.setSelectionRange(valLen, valLen);
-                    }
-                }
+                document.addEventListener('DOMContentLoaded', () => {
+                    setupAutoFilter('tosa-submissions-filter-form', 'tosa-search', 'tosa-result', ['#tosaSubmissionsCount', '#tosaSubmissionsCard'], '#tosaSubmissionsCard .tosa-pagination a[href]');
+                    setupAutoFilter('tosa-history-filter-form', 'tosa-history-search', 'tosa-history-activity', ['#tosaHistoryCount', '#tosaHistorySection'], '#tosaHistorySection .tosa-history-pagination a[href]');
+                });
                 const msgInput = document.getElementById('tosa-announcement-body');
                 const msgCounter = document.getElementById('tosa-announcement-counter');
                 if (msgInput && msgCounter) {

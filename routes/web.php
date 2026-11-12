@@ -87,6 +87,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/password/change', [OfficeAuthController::class, 'showPasswordChange'])->name('password.change');
     Route::post('/password/change', [OfficeAuthController::class, 'completePasswordChange'])->name('password.complete');
     Route::get('/', [OfficePortalController::class, 'dashboard'])->name('home');
+    Route::get('/notifications', [OfficePortalController::class, 'notifications'])->name('notifications');
     Route::get('/analytics', [OfficePortalController::class, 'analytics'])->name('analytics');
     Route::get('/analytics/export', [OfficePortalController::class, 'exportAnalytics'])->name('analytics.export');
     Route::get('/activities', [OfficePortalController::class, 'activities'])->name('activities');
@@ -159,6 +160,7 @@ Route::middleware('office.auth')->prefix('office-desk')->name('office.')->group(
     Route::get('/settings/snapshot', [OfficePortalController::class, 'downloadOsoSnapshot'])->name('settings.snapshot');
     Route::get('/settings/exports/{type}', [OfficePortalController::class, 'downloadOsoDataPackage'])->name('settings.exports');
     Route::get('/renewal', [OfficePortalController::class, 'renewal'])->name('renewal');
+    Route::get('/renewal/templates/zip', [OfficePortalController::class, 'downloadRenewalTemplatesZip'])->name('renewal.templates.zip');
     Route::post('/renewal/window', [OfficePortalController::class, 'updateRenewalWindow'])->name('renewal.window');
     Route::post('/renewal/requirements/template', [OfficePortalController::class, 'storeRenewalRequirementTemplate'])->name('renewal.requirements.template');
     Route::post('/renewal/requirements', [OfficePortalController::class, 'storeRenewalRequirement'])->name('renewal.requirements.store');

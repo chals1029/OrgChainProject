@@ -716,7 +716,6 @@
     box-shadow: 0 10px 24px rgba(74, 10, 21, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
-.org-badge-new,
 .org-badge-count {
     margin-left: auto;
     font-style: normal;
@@ -724,11 +723,6 @@
     font-weight: 800;
     border-radius: 999px;
     padding: 0.18rem 0.5rem;
-}
-
-.org-badge-new {
-    background: #fff;
-    color: var(--org-red);
 }
 
 .org-badge-count {

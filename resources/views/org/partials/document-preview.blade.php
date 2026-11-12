@@ -7,13 +7,12 @@
                     <strong id="sharedDocumentPreviewTitle" data-document-preview-title>Document Preview</strong>
                     <small data-document-preview-status aria-live="polite">Original document</small>
                 </div>
-                <button type="button" class="document-preview-action" data-document-preview-close aria-label="Close preview" title="Close" style="border: 0; background: transparent; font-size: 1.35rem; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; line-height: 1; padding: 0;">
-                    <i class="bi bi-x-lg"></i>
+                <button type="button" class="document-preview-action" data-document-preview-close aria-label="Close preview" title="Close">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i> Close
                 </button>
             </header>
             <div class="document-preview-body" data-document-preview-body tabindex="0" aria-label="Document contents; scroll to read"></div>
             <footer class="document-preview-actions">
-                <button type="button" class="document-preview-action" data-document-preview-close>Close</button>
                 <a class="document-preview-action" data-document-preview-external target="_blank" rel="noopener" hidden>Open in Tab</a>
                 <a class="document-preview-action document-preview-action-primary" data-document-preview-download download>Download original</a>
             </footer>

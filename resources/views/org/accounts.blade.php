@@ -15,6 +15,13 @@
 @endphp
 
 <style>
+    .org-settings-avatar-sm.has-logo {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
     .org-accounts-page {
         display: flex !important;
         flex-direction: column;
@@ -456,7 +463,7 @@
                             <tr data-settings-user-id="{{ $user->id }}" data-settings-user="{{ json_encode($userData) }}" @if ($user->office_role !== 'so') hidden @endif>
                                 <td>
                                     <div class="org-settings-user-identity">
-                                        <div class="org-settings-avatar-sm" style="overflow: hidden;">@if ($userData['org_logo_url'])<img src="{{ $userData['org_logo_url'] }}" alt="{{ $orgName }}" style="width: 100%; height: 100%; object-fit: contain;">@else{{ $displayInitials }}@endif</div>
+                                        <div class="org-settings-avatar-sm {{ $userData['org_logo_url'] ? 'has-logo' : '' }}" style="overflow: hidden; border-radius: 8px;">@if ($userData['org_logo_url'])<img src="{{ $userData['org_logo_url'] }}" alt="{{ $orgName }}" style="width: 100%; height: 100%; object-fit: contain; display: block; border-radius: inherit;">@else{{ $displayInitials }}@endif</div>
                                         <div>
                                             <strong data-user-name style="text-transform: uppercase;">{{ strtoupper($orgName) }}</strong>
                                             <small data-user-email>{{ $user->email }}</small>
@@ -1049,8 +1056,10 @@
             const image = document.createElement('img');
             image.src = user.org_logo_url;
             image.alt = orgName || '';
-            image.style.cssText = 'width: 100%; height: 100%; object-fit: contain;';
+            image.style.cssText = 'width: 100%; height: 100%; object-fit: contain; display: block; border-radius: inherit;';
+            avatar.classList.add('has-logo');
             avatar.style.overflow = 'hidden';
+            avatar.style.borderRadius = '8px';
             avatar.appendChild(image);
         } else {
             avatar.textContent = user.initials;

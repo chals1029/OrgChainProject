@@ -1,6 +1,16 @@
 /* SO Financial Report dashboard: chart, history filters, cash, create and preview dialogs. */
 (() => {
     'use strict';
+    let listeners;
+    let chart;
+    let cleanupPreview;
+    window.initSoFinancial = function () {
+    listeners?.abort();
+    cleanupPreview?.();
+    chart?.destroy();
+    chart = null;
+    listeners = new AbortController();
+    const signal = listeners.signal;
 
     const dataEl = document.getElementById('soFinancialData');
     if (!dataEl) return;
@@ -23,7 +33,18 @@
     if (filterForm) {
         filterForm.querySelectorAll('[data-fin-autosubmit]').forEach((select) => {
             select.addEventListener('change', () => {
-                if (filterForm.method.toLowerCase() === 'get') filterForm.requestSubmit();
+                if (filterForm.method.toLowerCase() !== 'get') return;
+                if (!window.OrgSmoothFilter) { filterForm.requestSubmit(); return; }
+                const sharedPreview = byId('sharedDocumentPreviewDialog');
+                window.OrgSmoothFilter.swap({
+                    url: window.OrgSmoothFilter.buildUrl(filterForm),
+                    targets: ['#soFinancialRoot', '#soFinancialSubtitle', '#soFinancialActions'],
+                    onAfterSwap: () => {
+                        const replacement = byId('sharedDocumentPreviewDialog');
+                        if (sharedPreview && replacement) replacement.replaceWith(sharedPreview);
+                        window.initSoFinancial?.();
+                    },
+                });
             });
         });
     }
@@ -34,7 +55,8 @@
         const activities = Array.isArray(data.activities) ? data.activities : [];
         if (typeof window.Chart === 'function') {
             const labels = activities.map((activity) => String(activity.name));
-            new window.Chart(chartCanvas, {
+            window.Chart.getChart(chartCanvas)?.destroy();
+            chart = new window.Chart(chartCanvas, {
                 type: 'bar',
                 data: {
                     labels,
@@ -147,7 +169,7 @@
         button.addEventListener('click', () => {
             openDialog(createDialog);
             createForm.querySelector('input[name="name"]')?.focus();
-        });
+        }, { signal });
     });
     if (createDialog?.hasAttribute('data-open-on-load')) openDialog(createDialog);
 
@@ -240,6 +262,7 @@
         previewLimit.textContent = '';
         setStatus('');
     };
+    cleanupPreview = resetPreview;
 
     const responseError = async (response) => {
         try {
@@ -492,9 +515,11 @@
     document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-fin-view]');
         if (button) openPreview(button.dataset.finView, button);
-    });
+    }, { signal });
     previewDialog.addEventListener('click', (event) => {
         if (event.target === previewDialog) previewDialog.close();
     });
     previewDialog.addEventListener('close', resetPreview);
+    };
+    window.initSoFinancial();
 })();

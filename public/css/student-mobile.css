@@ -1,4 +1,119 @@
 /* Student portal phone and tablet layout. Desktop keeps the main application styles. */
+.sp-gauge-arch-wrap {
+    margin-bottom: 1.35rem;
+}
+
+.sp-gauge-title {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+}
+
+/* Keep activity details readable without hiding tab labels or long values. */
+#spActivityModal .sp-act-tab-panel,
+#spActivityModal .sp-act-budget-content,
+#spActivityModal .sp-budget-card,
+#spActivityModal .sp-act-liquidation-box,
+#spActivityModal .sp-ledger-stamp-left,
+#spActivityModal .sp-ledger-stamp-left > div {
+    min-width: 0;
+}
+
+#spActivityModal .sp-budget-card-val,
+#spActivityModal .sp-act-modal-title,
+#spActivityModal .sp-act-desc-text,
+#spActivityModal #spActTxHash {
+    overflow-wrap: anywhere;
+}
+
+#spActivityModal .sp-table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+#spActivityModal .sp-liq-table {
+    min-width: 36rem;
+}
+
+#spActivityModal .sp-act-modal-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.15rem;
+    padding: 0.25rem;
+    overflow: visible;
+    margin-inline: 0;
+    background: rgba(155, 27, 48, 0.04);
+    box-shadow: none;
+}
+
+#spActivityModal .sp-act-modal-tab {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: center;
+    min-width: 0;
+    min-height: 58px;
+    padding: 0.45rem 0.35rem;
+    gap: 0.3rem;
+    align-items: center;
+    white-space: normal;
+    overflow-wrap: normal;
+    line-height: 1.2;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+#spActivityModal .sp-act-modal-tab > i {
+    display: none;
+}
+
+#spActivityModal .sp-act-modal-tab.is-active {
+    background: #fff;
+    border-color: rgba(155, 27, 48, 0.16);
+    color: var(--color-bsu-red-dark);
+    box-shadow: 0 2px 8px rgba(74, 10, 21, 0.1);
+    transform: none;
+}
+
+#spActivityModal .sp-act-modal-tab.is-active .sp-tab-badge {
+    background: rgba(155, 27, 48, 0.1);
+    color: var(--color-bsu-red-dark);
+}
+
+#spActivityModal .sp-act-modal-tab .sp-tab-badge {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    #spActivityModal .sp-act-modal-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #spActivityModal .sp-act-budget-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #spActivityModal .sp-act-ledger-stamp {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+}
+@media (max-width: 480px) {
+    #spActivityModal .sp-act-budget-summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #spActivityModal .sp-act-modal-tab {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #spActivityModal .sp-act-modal-tab .sp-tab-badge {
+        justify-self: center;
+    }
+
+}
+
+
 html,
 body.portal-body {
     width: 100%;
